@@ -135,25 +135,41 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
   
   completeOnboarding: async () => {
-    // Mock completion - would call AI to generate documents
-    await new Promise(resolve => setTimeout(resolve, 2000))
     
-    const newOrg: Organization = {
-      id: 'new-org-' + Date.now(),
-      name: String(get().onboardingAnswers.find(a => a.questionId === 'business_name')?.value || 'עסק חדש'),
-      businessId: String(get().onboardingAnswers.find(a => a.questionId === 'business_id')?.value || ''),
-      tier: get().subscription?.tier || 'basic',
-      status: 'active',
-      riskLevel: 'standard',
-      dpoId: 'dpo-1',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    try {
+              const state = get()
+              const { businessId, tier, onboardingAnswers, user } = state
+
+              const response = await fetch('/api/organizations', {
+                          method: 'POST',
+                          headers: {
+                                        'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                                        name: onboardingAnswers.businessName || '',
+                                        businessId: businessId || '',
+                                        tier: tier || 'basic',
+                                        answers: onboardingAnswers,
+                                        userId: user?.id,
+                          }),
+              })
+
+              if (!response.ok) {
+                          const error = await response.json()
+                          throw new Error(error.message || 'Failed to complete onboarding')
+              }
+
+              const organization = await response.json()
+
+              set((state) => ({
+                          organization: organization.data || organization,
+                          onboardingStep: 5,
+              }))
+    } catch (error) {
+              console.error('Error completing onboarding:', error)
+              throw error
     }
-    
-    set({ 
-      organization: newOrg,
-      documents: mockDocuments.map(d => ({ ...d, orgId: newOrg.id }))
-    })
+        
   },
   
   // Documents
