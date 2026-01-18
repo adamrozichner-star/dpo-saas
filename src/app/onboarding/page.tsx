@@ -40,14 +40,12 @@ function OnboardingContent() {
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string>('')
 
-  // Redirect if not logged in
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login')
     }
   }, [loading, user, router])
 
-  // Check for tier in URL
   useEffect(() => {
     const tier = searchParams.get('tier')
     if (tier === 'basic' || tier === 'extended') {
@@ -77,7 +75,7 @@ function OnboardingContent() {
 
   const canProceed = () => {
     if (!currentStepData) return false
-    return currentStepData.questions.every(q => {
+    return currentStepData.questions.every((q: OnboardingQuestion) => {
       if (!q.required) return true
       const answer = getAnswer(q.id)
       if (Array.isArray(answer)) return answer.length > 0
@@ -110,16 +108,12 @@ function OnboardingContent() {
     setStatus('יוצרים את הארגון שלכם...')
 
     try {
-      // Get business name from answers
       const businessNameAnswer = answers.find(a => a.questionId === 'business_name')
       const businessIdAnswer = answers.find(a => a.questionId === 'business_id')
       
       const businessName = businessNameAnswer?.value as string || 'עסק חדש'
       const businessId = businessIdAnswer?.value as string || ''
 
-      console.log('Creating organization:', { businessName, businessId, tier: selectedTier })
-
-      // 1. Create organization
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
         .insert({
@@ -132,42 +126,29 @@ function OnboardingContent() {
         .single()
 
       if (orgError) {
-        console.error('Org creation error:', orgError)
         throw new Error('שגיאה ביצירת הארגון: ' + orgError.message)
       }
 
-      console.log('Organization created:', orgData)
       setStatus('מעדכנים את פרטי המשתמש...')
 
-      // 2. Update user with org_id
-      const { error: userError } = await supabase
+      await supabase
         .from('users')
         .update({ org_id: orgData.id })
         .eq('auth_user_id', user.id)
 
-      if (userError) {
-        console.error('User update error:', userError)
-        // Don't throw - organization was created
-      }
-
-      // 3. Save organization profile
       setStatus('שומרים את פרופיל הארגון...')
-      const { error: profileError } = await supabase
+      
+      await supabase
         .from('organization_profiles')
         .insert({
           org_id: orgData.id,
           profile_data: { answers, completedAt: new Date().toISOString() }
         })
 
-      if (profileError) {
-        console.error('Profile save error:', profileError)
-        // Don't throw - organization was created
-      }
-
-      // 4. Generate documents
       setStatus('מייצרים מסמכים...')
+      
       try {
-        const response = await fetch('/api/generate-documents', {
+        await fetch('/api/generate-documents', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -177,25 +158,17 @@ function OnboardingContent() {
             answers: answers
           })
         })
-
-        if (response.ok) {
-          console.log('Documents generated successfully')
-        } else {
-          console.log('Document generation returned non-ok status, continuing anyway')
-        }
       } catch (docError) {
-        console.log('Document generation failed, continuing anyway:', docError)
+        console.log('Document generation skipped')
       }
 
       setStatus('הושלם! מעבירים ללוח הבקרה...')
       
-      // Redirect to dashboard
       setTimeout(() => {
         router.push('/dashboard')
       }, 1000)
 
     } catch (err: any) {
-      console.error('Onboarding error:', err)
       setError(err.message || 'אירעה שגיאה בתהליך ההרשמה')
       setIsGenerating(false)
     }
@@ -209,7 +182,6 @@ function OnboardingContent() {
     )
   }
 
-  // Generating screen
   if (isGenerating) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
@@ -225,7 +197,6 @@ function OnboardingContent() {
     )
   }
 
-  // Tier Selection Screen
   if (showTierSelection) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4">
@@ -330,7 +301,6 @@ function OnboardingContent() {
     )
   }
 
-  // Questions Screen
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4">
       <div className="max-w-2xl mx-auto">
@@ -345,7 +315,6 @@ function OnboardingContent() {
           </div>
         </div>
 
-        {/* Progress */}
         <div className="mb-8">
           <div className="flex justify-between text-sm text-gray-600 mb-2">
             <span>שלב {currentStep + 1} מתוך {totalSteps}</span>
@@ -354,7 +323,6 @@ function OnboardingContent() {
           <Progress value={progress} className="h-2" />
         </div>
 
-        {/* Error message */}
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
             <AlertCircle className="h-5 w-5" />
@@ -362,94 +330,63 @@ function OnboardingContent() {
           </div>
         )}
 
-        {/* Current Step */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-3">
-              {stepIcons[currentStep] && (() => {
-                const Icon = stepIcons[currentStep]
-                return <Icon className="h-6 w-6 text-primary" />
-              })()}
-              <div>
-                <CardTitle>{currentStepData?.title}</CardTitle>
-                <CardDescription>מלאו את הפרטים הבאים</CardDescription>
-              </div>
-            </div>
+            <CardTitle>{currentStepData?.title}</CardTitle>
+            <CardDescription>מלאו את הפרטים הבאים</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             {currentStepData?.questions.map((question: OnboardingQuestion) => (
-  <div key={question.id} className="space-y-2">
-    <label className="block font-medium">
-      {question.text}
-      {question.required && <span className="text-red-500 mr-1">*</span>}
-    </label>
-    
-    {question.type === 'text' && (
-      <Input
-        value={(getAnswer(question.id) as string) || ''}
-        onChange={(e) => handleAnswer(question.id, e.target.value)}
-      />
-    )}
+              <div key={question.id} className="space-y-2">
+                <label className="block font-medium">
+                  {question.text}
+                  {question.required && <span className="text-red-500 mr-1">*</span>}
+                </label>
+                
+                {question.type === 'text' && (
+                  <Input
+                    value={(getAnswer(question.id) as string) || ''}
+                    onChange={(e) => handleAnswer(question.id, e.target.value)}
+                    placeholder="הקלידו כאן..."
+                  />
+                )}
 
-    {(question.type === 'single_choice' || question.type === 'multi_choice') && (
-      <div className="grid grid-cols-2 gap-2">
-        {question.options?.map((option) => (
-          <Button
-            key={option.value}
-            variant={getAnswer(question.id) === option.value ? 'default' : 'outline'}
-            className="justify-start"
-            onClick={() => handleAnswer(question.id, option.value)}
-          >
-            {option.label}
-          </Button>
-        ))}
-      </div>
-    )}
+                {(question.type === 'single_choice' || question.type === 'multi_choice') && question.options && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {question.options.map((option) => (
+                      <Button
+                        key={option.value}
+                        type="button"
+                        variant={getAnswer(question.id) === option.value ? 'default' : 'outline'}
+                        className="justify-start"
+                        onClick={() => handleAnswer(question.id, option.value)}
+                      >
+                        {option.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
 
-    {question.type === 'number' && (
-      <Input
-        type="number"
-        value={(getAnswer(question.id) as number) || ''}
-        onChange={(e) => handleAnswer(question.id, parseInt(e.target.value) || 0)}
-      />
-    )}
-
-    {question.type === 'boolean' && (
-      <div className="flex gap-4">
-        <Button
-          variant={getAnswer(question.id) === true ? 'default' : 'outline'}
-          onClick={() => handleAnswer(question.id, true)}
-        >
-          כן
-        </Button>
-        <Button
-          variant={getAnswer(question.id) === false ? 'default' : 'outline'}
-          onClick={() => handleAnswer(question.id, false)}
-        >
-          לא
-        </Button>
-      </div>
-    )}
-  </div>
-))}
                 {question.type === 'number' && (
                   <Input
                     type="number"
                     value={(getAnswer(question.id) as number) || ''}
                     onChange={(e) => handleAnswer(question.id, parseInt(e.target.value) || 0)}
-                    placeholder={question.placeholder}
+                    placeholder="0"
                   />
                 )}
 
                 {question.type === 'boolean' && (
                   <div className="flex gap-4">
                     <Button
+                      type="button"
                       variant={getAnswer(question.id) === true ? 'default' : 'outline'}
                       onClick={() => handleAnswer(question.id, true)}
                     >
                       כן
                     </Button>
                     <Button
+                      type="button"
                       variant={getAnswer(question.id) === false ? 'default' : 'outline'}
                       onClick={() => handleAnswer(question.id, false)}
                     >
@@ -462,7 +399,6 @@ function OnboardingContent() {
           </CardContent>
         </Card>
 
-        {/* Navigation */}
         <div className="flex justify-between mt-6">
           <Button
             variant="outline"
