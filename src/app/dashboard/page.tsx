@@ -417,7 +417,21 @@ function DocumentsTab({ documents }: { documents: any[] }) {
   }
 
   const downloadDocument = (doc: any) => {
-    const blob = new Blob([doc.content || ''], { type: 'text/plain;charset=utf-8' })
+    // Create nicely formatted content
+    const header = `${'═'.repeat(50)}
+${doc.title}
+${'═'.repeat(50)}
+
+`
+    const footer = `
+
+${'─'.repeat(50)}
+נוצר על ידי DPO-Pro
+תאריך: ${new Date().toLocaleDateString('he-IL')}
+`
+    const content = header + (doc.content || '') + footer
+    
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
