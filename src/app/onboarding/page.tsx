@@ -380,7 +380,7 @@ function OnboardingContent() {
             {currentStepData?.questions.map((question: OnboardingQuestion) => (
               <div key={question.id} className="space-y-2">
                 <label className="block font-medium">
-                  {question.question}
+                  {question.text}
                   {question.required && <span className="text-red-500 mr-1">*</span>}
                 </label>
                 
