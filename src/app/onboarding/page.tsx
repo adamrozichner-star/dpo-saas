@@ -378,60 +378,60 @@ function OnboardingContent() {
           </CardHeader>
           <CardContent className="space-y-6">
             {currentStepData?.questions.map((question: OnboardingQuestion) => (
-              <div key={question.id} className="space-y-2">
-                <label className="block font-medium">
-                  {question.text}
-                  {question.required && <span className="text-red-500 mr-1">*</span>}
-                </label>
-                
-                {question.type === 'text' && (
-                  <Input
-                    value={(getAnswer(question.id) as string) || ''}
-                    onChange={(e) => handleAnswer(question.id, e.target.value)}
-                    placeholder={question.placeholder}
-                  />
-                )}
+  <div key={question.id} className="space-y-2">
+    <label className="block font-medium">
+      {question.text}
+      {question.required && <span className="text-red-500 mr-1">*</span>}
+    </label>
+    
+    {question.type === 'text' && (
+      <Input
+        value={(getAnswer(question.id) as string) || ''}
+        onChange={(e) => handleAnswer(question.id, e.target.value)}
+      />
+    )}
 
-                {question.type === 'select' && (
-                  <div className="grid grid-cols-2 gap-2">
-                    {question.options?.map((option) => (
-                      <Button
-                        key={option}
-                        variant={getAnswer(question.id) === option ? 'default' : 'outline'}
-                        className="justify-start"
-                        onClick={() => handleAnswer(question.id, option)}
-                      >
-                        {option}
-                      </Button>
-                    ))}
-                  </div>
-                )}
+    {(question.type === 'single_choice' || question.type === 'multi_choice') && (
+      <div className="grid grid-cols-2 gap-2">
+        {question.options?.map((option) => (
+          <Button
+            key={option.value}
+            variant={getAnswer(question.id) === option.value ? 'default' : 'outline'}
+            className="justify-start"
+            onClick={() => handleAnswer(question.id, option.value)}
+          >
+            {option.label}
+          </Button>
+        ))}
+      </div>
+    )}
 
-                {question.type === 'multiselect' && (
-                  <div className="grid grid-cols-2 gap-2">
-                    {question.options?.map((option) => {
-                      const currentValues = (getAnswer(question.id) as string[]) || []
-                      const isSelected = currentValues.includes(option)
-                      return (
-                        <Button
-                          key={option}
-                          variant={isSelected ? 'default' : 'outline'}
-                          className="justify-start"
-                          onClick={() => {
-                            if (isSelected) {
-                              handleAnswer(question.id, currentValues.filter(v => v !== option))
-                            } else {
-                              handleAnswer(question.id, [...currentValues, option])
-                            }
-                          }}
-                        >
-                          {option}
-                        </Button>
-                      )
-                    })}
-                  </div>
-                )}
+    {question.type === 'number' && (
+      <Input
+        type="number"
+        value={(getAnswer(question.id) as number) || ''}
+        onChange={(e) => handleAnswer(question.id, parseInt(e.target.value) || 0)}
+      />
+    )}
 
+    {question.type === 'boolean' && (
+      <div className="flex gap-4">
+        <Button
+          variant={getAnswer(question.id) === true ? 'default' : 'outline'}
+          onClick={() => handleAnswer(question.id, true)}
+        >
+          כן
+        </Button>
+        <Button
+          variant={getAnswer(question.id) === false ? 'default' : 'outline'}
+          onClick={() => handleAnswer(question.id, false)}
+        >
+          לא
+        </Button>
+      </div>
+    )}
+  </div>
+))}
                 {question.type === 'number' && (
                   <Input
                     type="number"
