@@ -372,7 +372,7 @@ function OnboardingContent() {
               })()}
               <div>
                 <CardTitle>{currentStepData?.title}</CardTitle>
-                <CardDescription>{currentStepData?.description}</CardDescription>
+                <CardDescription>מלאו את הפרטים הבאים</CardDescription>
               </div>
             </div>
           </CardHeader>
