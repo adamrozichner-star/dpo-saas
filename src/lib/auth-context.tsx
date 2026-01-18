@@ -1,19 +1,15 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode, useMemo } from 'react'
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react'
 import { createClient, SupabaseClient, User, Session } from '@supabase/supabase-js'
 
-// Create client lazily to avoid build-time errors
-function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  return createClient(supabaseUrl, supabaseAnonKey)
-}
+// CRITICAL: No Supabase initialization at module level or in useMemo
+// Everything must happen inside useEffect to avoid build-time errors
 
 interface AuthContextType {
   user: User | null
   session: Session | null
-  supabase: SupabaseClient
+  supabase: SupabaseClient | null
   signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
@@ -26,20 +22,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
-  
-  // Create supabase client once on mount
-  const supabase = useMemo(() => getSupabaseClient(), [])
+  const [supabaseClient, setSupabaseClient] = useState<SupabaseClient | null>(null)
 
+  // Initialize Supabase client only on client-side, inside useEffect
   useEffect(() => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing Supabase environment variables')
+      setLoading(false)
+      return
+    }
+
+    const client = createClient(supabaseUrl, supabaseAnonKey)
+    setSupabaseClient(client)
+
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    client.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
     })
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription } } = client.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session)
         setUser(session?.user ?? null)
@@ -51,7 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signUp = async (email: string, password: string, name: string) => {
-    const { data, error } = await supabase.auth.signUp({
+    if (!supabaseClient) return { error: new Error('Supabase not initialized') }
+
+    const { data, error } = await supabaseClient.auth.signUp({
       email,
       password,
       options: {
@@ -61,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (!error && data.user) {
       // Create user profile in our users table
-      await supabase.from('users').insert({
+      await supabaseClient.from('users').insert({
         auth_user_id: data.user.id,
         email: email,
         name: name,
@@ -73,7 +82,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    if (!supabaseClient) return { error: new Error('Supabase not initialized') }
+
+    const { error } = await supabaseClient.auth.signInWithPassword({
       email,
       password
     })
@@ -81,14 +92,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    if (supabaseClient) {
+      await supabaseClient.auth.signOut()
+    }
   }
 
   return (
     <AuthContext.Provider value={{
       user,
       session,
-      supabase,
+      supabase: supabaseClient,
       signUp,
       signIn,
       signOut,

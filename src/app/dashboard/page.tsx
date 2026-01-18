@@ -42,17 +42,17 @@ export default function DashboardPage() {
   }, [loading, session, router])
 
   useEffect(() => {
-    if (user) {
+    if (user && supabase) {
       // Get user name from metadata
       setUserName(user.user_metadata?.name || user.email?.split('@')[0] || 'משתמש')
       
       // Load user's organization
       loadUserData()
     }
-  }, [user])
+  }, [user, supabase])
 
   const loadUserData = async () => {
-    if (!user) return
+    if (!user || !supabase) return
 
     // Get user profile and organization
     const { data: userData } = await supabase
@@ -85,29 +85,30 @@ export default function DashboardPage() {
   }
 
   const handleAskQuestion = async () => {
-    if (!question.trim() || !organization) return
+    if (!question.trim() || !organization || !supabase) return
     setIsAsking(true)
     
     try {
-      // For now, generate a mock AI response
-      // TODO: Connect to Claude API
-      const mockAnswer = generateMockAnswer(question)
-      
-      // Save to database
-      const { data, error } = await supabase
-        .from('qa_interactions')
-        .insert({
-          org_id: organization.id,
-          question: question,
-          answer: mockAnswer,
-          confidence_score: 0.85,
-          escalated: false
+      // Call AI Q&A API
+      const response = await fetch('/api/qa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question,
+          orgId: organization.id,
+          userId: user?.id
         })
-        .select()
-        .single()
+      })
 
-      if (data) {
-        setQaHistory([data, ...qaHistory])
+      if (response.ok) {
+        const data = await response.json()
+        setQaHistory([{
+          id: data.id || Date.now(),
+          question,
+          answer: data.answer,
+          confidence_score: data.confidenceScore,
+          created_at: new Date().toISOString()
+        }, ...qaHistory])
       }
       setQuestion('')
     } catch (err) {
@@ -248,73 +249,127 @@ export default function DashboardPage() {
   )
 }
 
-function NavButton({ icon, label, active, onClick }: { 
-  icon: React.ReactNode
-  label: string
-  active: boolean
-  onClick: () => void 
-}) {
+function NavButton({ icon, label, active, onClick }: any) {
   return (
     <button
       onClick={onClick}
-      className={`
-        w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm transition-colors
-        ${active 
-          ? 'bg-primary/10 text-primary font-medium' 
-          : 'text-gray-600 hover:bg-gray-100'}
-      `}
+      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+        active 
+          ? 'bg-primary text-white' 
+          : 'text-gray-700 hover:bg-gray-100'
+      }`}
     >
       {icon}
-      {label}
+      <span>{label}</span>
     </button>
   )
 }
 
-function OverviewTab({ organization, documents }: any) {
-  const complianceScore = organization?.status === 'active' ? 92 : 45
-
+function OverviewTab({ organization, documents }: { organization: any, documents: any[] }) {
+  const complianceScore = documents.length > 0 ? 92 : 0
+  
   return (
     <div className="space-y-6">
-      {/* Status Cards */}
-      <div className="grid md:grid-cols-3 gap-6">
+      {/* Stats Grid */}
+      <div className="grid md:grid-cols-4 gap-4">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">ציון תאימות</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end gap-2">
-              <span className={`text-3xl font-bold ${complianceScore > 80 ? 'text-green-600' : 'text-yellow-600'}`}>
-                {complianceScore}%
-              </span>
-              <span className="text-sm text-gray-500 mb-1">{complianceScore > 80 ? 'תקין' : 'דרוש שיפור'}</span>
-            </div>
-            <Progress value={complianceScore} className="mt-2" />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">מסמכים פעילים</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end gap-2">
-              <span className="text-3xl font-bold">{documents.length}</span>
-              <span className="text-sm text-gray-500 mb-1">מסמכים</span>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">ציון ציות</p>
+                <p className="text-2xl font-bold">{complianceScore}%</p>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">סטטוס</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Badge variant={organization?.status === 'active' ? 'success' : 'warning'} className="text-base">
-              {organization?.status === 'active' ? 'פעיל ומוגן' : 'בתהליך הקמה'}
-            </Badge>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">מסמכים פעילים</p>
+                <p className="text-2xl font-bold">{documents.length}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                <User className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">זמן DPO שנוצל</p>
+                <p className="text-2xl font-bold">0 דק׳</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
+                <Shield className="h-5 w-5 text-yellow-600" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">חבילה</p>
+                <p className="text-2xl font-bold">{organization?.tier === 'extended' ? 'מורחבת' : 'בסיסית'}</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Compliance Progress */}
+      <Card>
+        <CardHeader>
+          <CardTitle>התקדמות בציות</CardTitle>
+          <CardDescription>סטטוס העמידה בדרישות תיקון 13</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Progress value={complianceScore} className="h-4 mb-4" />
+          <div className="grid md:grid-cols-3 gap-4 text-center">
+            <div className="p-3 rounded-lg bg-green-50">
+              <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
+              <p className="text-sm font-medium">DPO ממונה</p>
+            </div>
+            <div className={`p-3 rounded-lg ${documents.length > 0 ? 'bg-green-50' : 'bg-gray-50'}`}>
+              {documents.length > 0 ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-gray-400 mx-auto mb-1" />
+              )}
+              <p className="text-sm font-medium">מדיניות פרטיות</p>
+            </div>
+            <div className={`p-3 rounded-lg ${documents.length > 1 ? 'bg-green-50' : 'bg-gray-50'}`}>
+              {documents.length > 1 ? (
+                <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
+              ) : (
+                <AlertCircle className="h-5 w-5 text-gray-400 mx-auto mb-1" />
+              )}
+              <p className="text-sm font-medium">רישום מאגרים</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Status Card */}
+      <Card>
+        <CardContent className="p-6">
+          <Badge variant={organization?.status === 'active' ? 'success' : 'warning'} className="text-lg px-4 py-2">
+            {organization?.status === 'active' ? 'פעיל ומוגן' : 'בתהליך הקמה'}
+          </Badge>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions */}
       <Card>
@@ -534,19 +589,4 @@ function SettingsTab({ organization, user }: any) {
       </Card>
     </div>
   )
-}
-
-// Helper function to generate mock AI answers
-function generateMockAnswer(question: string): string {
-  const questionLower = question.toLowerCase()
-  
-  if (questionLower.includes('מחיקה') || questionLower.includes('למחוק')) {
-    return 'בהתאם לזכות המחיקה בחוק הגנת הפרטיות, יש לטפל בבקשת מחיקה תוך 30 יום. יש לתעד את הבקשה, לבצע את המחיקה מכל המערכות, ולשלוח אישור ללקוח.'
-  }
-  
-  if (questionLower.includes('ניוזלטר') || questionLower.includes('דיוור') || questionLower.includes('שיווק')) {
-    return 'שליחת דיוור שיווקי מחייבת הסכמה מפורשת מראש (opt-in). ההסכמה צריכה להיות ברורה, מתועדת, וניתנת לביטול בכל עת.'
-  }
-  
-  return 'תודה על השאלה. על פי הנהלים והמדיניות, מומלץ לפעול בזהירות ולתעד כל פעולה. אם יש צורך בהכוונה נוספת, ניתן לפנות לממונה.'
 }
