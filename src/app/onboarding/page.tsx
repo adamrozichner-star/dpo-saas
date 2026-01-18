@@ -119,7 +119,7 @@ function OnboardingContent() {
         .insert({
           name: businessName,
           business_id: businessId,
-          subscription_tier: selectedTier || 'basic',
+          tier: selectedTier || 'basic',
           status: 'active'
         })
         .select()
@@ -351,7 +351,7 @@ function OnboardingContent() {
                   />
                 )}
 
-                {(question.type === 'single_choice' || question.type === 'multi_choice') && question.options && (
+                {question.type === 'single_choice' && question.options && (
                   <div className="grid grid-cols-2 gap-2">
                     {question.options.map((option) => (
                       <Button
@@ -364,6 +364,32 @@ function OnboardingContent() {
                         {option.label}
                       </Button>
                     ))}
+                  </div>
+                )}
+
+                {question.type === 'multi_choice' && question.options && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {question.options.map((option) => {
+                      const currentValues = (getAnswer(question.id) as string[]) || []
+                      const isSelected = currentValues.includes(option.value)
+                      return (
+                        <Button
+                          key={option.value}
+                          type="button"
+                          variant={isSelected ? 'default' : 'outline'}
+                          className="justify-start"
+                          onClick={() => {
+                            if (isSelected) {
+                              handleAnswer(question.id, currentValues.filter(v => v !== option.value))
+                            } else {
+                              handleAnswer(question.id, [...currentValues, option.value])
+                            }
+                          }}
+                        >
+                          {option.label}
+                        </Button>
+                      )
+                    })}
                   </div>
                 )}
 
