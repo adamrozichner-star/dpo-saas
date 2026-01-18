@@ -20,7 +20,9 @@ import {
   LogOut,
   ChevronLeft,
   Bot,
-  Loader2
+  Loader2,
+  Eye,
+  X
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
@@ -402,6 +404,8 @@ function OverviewTab({ organization, documents }: { organization: any, documents
 }
 
 function DocumentsTab({ documents }: { documents: any[] }) {
+  const [selectedDoc, setSelectedDoc] = useState<any>(null)
+  
   const getDocTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       privacy_policy: 'מדיניות פרטיות',
@@ -410,6 +414,24 @@ function DocumentsTab({ documents }: { documents: any[] }) {
       procedure: 'נוהל'
     }
     return labels[type] || type
+  }
+
+  const downloadDocument = (doc: any) => {
+    const blob = new Blob([doc.content || ''], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${doc.title}.txt`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  const downloadAllDocuments = () => {
+    documents.forEach((doc, index) => {
+      setTimeout(() => downloadDocument(doc), index * 500)
+    })
   }
 
   if (documents.length === 0) {
@@ -427,8 +449,8 @@ function DocumentsTab({ documents }: { documents: any[] }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">מסמכים</h2>
-        <Button variant="outline">
+        <h2 className="text-xl font-bold">מסמכים ({documents.length})</h2>
+        <Button variant="outline" onClick={downloadAllDocuments}>
           <Download className="h-4 w-4 ml-2" />
           הורדת הכל
         </Button>
@@ -436,10 +458,13 @@ function DocumentsTab({ documents }: { documents: any[] }) {
 
       <div className="grid gap-4">
         {documents.map((doc) => (
-          <Card key={doc.id}>
+          <Card key={doc.id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
+                <div 
+                  className="flex items-center gap-4 flex-1 cursor-pointer"
+                  onClick={() => setSelectedDoc(doc)}
+                >
                   <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
                     <FileText className="h-6 w-6 text-primary" />
                   </div>
@@ -454,7 +479,10 @@ function DocumentsTab({ documents }: { documents: any[] }) {
                   <Badge variant={doc.status === 'active' ? 'success' : 'secondary'}>
                     {doc.status === 'active' ? 'פעיל' : 'טיוטה'}
                   </Badge>
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedDoc(doc)}>
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => downloadDocument(doc)}>
                     <Download className="h-4 w-4" />
                   </Button>
                 </div>
@@ -463,6 +491,37 @@ function DocumentsTab({ documents }: { documents: any[] }) {
           </Card>
         ))}
       </div>
+
+      {selectedDoc && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <CardHeader className="flex-shrink-0 border-b">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>{selectedDoc.title}</CardTitle>
+                  <CardDescription>
+                    {getDocTypeLabel(selectedDoc.type)} • גרסה {selectedDoc.version}
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" onClick={() => downloadDocument(selectedDoc)}>
+                    <Download className="h-4 w-4 ml-2" />
+                    הורדה
+                  </Button>
+                  <Button variant="ghost" size="icon" onClick={() => setSelectedDoc(null)}>
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-auto p-6">
+              <div className="whitespace-pre-wrap text-right leading-relaxed" dir="rtl">
+                {selectedDoc.content || 'אין תוכן זמין'}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
