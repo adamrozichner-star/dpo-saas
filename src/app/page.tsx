@@ -253,32 +253,29 @@ export default function HomePage() {
             <div>
               <h4 className="text-white font-semibold mb-4">שירותים</h4>
               <ul className="space-y-2 text-sm">
-                <li>מינוי ממונה</li>
-                <li>מסמכי פרטיות</li>
-                <li>רישום מאגרים</li>
-                <li>הדרכות</li>
+                <li><Link href="/onboarding" className="hover:text-white">מינוי ממונה</Link></li>
+                <li><Link href="/#pricing" className="hover:text-white">חבילות ומחירים</Link></li>
+                <li><Link href="/subscribe" className="hover:text-white">שדרוג חשבון</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="text-white font-semibold mb-4">משאבים</h4>
+              <h4 className="text-white font-semibold mb-4">תמיכה</h4>
               <ul className="space-y-2 text-sm">
-                <li>מדריך תיקון 13</li>
-                <li>שאלות נפוצות</li>
-                <li>בלוג</li>
-                <li>צור קשר</li>
+                <li><Link href="/contact" className="hover:text-white">צור קשר</Link></li>
+                <li><Link href="/dashboard" className="hover:text-white">לוח בקרה</Link></li>
+                <li><Link href="/login" className="hover:text-white">התחברות</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="text-white font-semibold mb-4">משפטי</h4>
               <ul className="space-y-2 text-sm">
-                <li>תנאי שימוש</li>
-                <li>מדיניות פרטיות</li>
-                <li>הגבלת אחריות</li>
+                <li><Link href="/terms" className="hover:text-white">תנאי שימוש</Link></li>
+                <li><Link href="/privacy" className="hover:text-white">מדיניות פרטיות</Link></li>
               </ul>
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-sm text-center">
-            © 2024 DPO-Pro. כל הזכויות שמורות.
+            © 2026 DPO-Pro. כל הזכויות שמורות.
           </div>
         </div>
       </footer>
