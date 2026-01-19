@@ -9,7 +9,7 @@ import {
   Shield, FileText, MessageSquare, Clock, CheckCircle2, ArrowLeft,
   Building2, Users, Lock, Zap, Star, ChevronDown, ChevronUp,
   AlertTriangle, Phone, Mail, Sparkles, ArrowRight, Menu, X,
-  Database, Eye, UserCheck, Scale, ChevronLeft, XCircle
+  Database, Eye, UserCheck, Scale, ChevronLeft, XCircle, ChevronRight
 } from 'lucide-react'
 
 export default function HomePage() {
