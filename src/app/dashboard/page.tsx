@@ -22,7 +22,10 @@ import {
   Bot,
   Loader2,
   Eye,
-  X
+  X,
+  Menu,
+  ClipboardCheck,
+  ExternalLink
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
@@ -36,6 +39,7 @@ export default function DashboardPage() {
   const [organization, setOrganization] = useState<any>(null)
   const [documents, setDocuments] = useState<any[]>([])
   const [userName, setUserName] = useState('')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     if (!loading && !session) {
@@ -45,10 +49,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (user && supabase) {
-      // Get user name from metadata
       setUserName(user.user_metadata?.name || user.email?.split('@')[0] || 'משתמש')
-      
-      // Load user's organization
       loadUserData()
     }
   }, [user, supabase])
@@ -56,7 +57,6 @@ export default function DashboardPage() {
   const loadUserData = async () => {
     if (!user || !supabase) return
 
-    // Get user profile and organization
     const { data: userData } = await supabase
       .from('users')
       .select('*, organizations(*)')
@@ -66,7 +66,6 @@ export default function DashboardPage() {
     if (userData?.organizations) {
       setOrganization(userData.organizations)
       
-      // Load documents for this organization
       const { data: docs } = await supabase
         .from('documents')
         .select('*')
@@ -74,7 +73,6 @@ export default function DashboardPage() {
       
       if (docs) setDocuments(docs)
 
-      // Load Q&A history
       const { data: qa } = await supabase
         .from('qa_interactions')
         .select('*')
@@ -91,30 +89,27 @@ export default function DashboardPage() {
     setIsAsking(true)
     
     try {
-      // Call AI Q&A API
       const response = await fetch('/api/qa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          question,
+          question: question.trim(),
           orgId: organization.id,
-          userId: user?.id
+          orgContext: {
+            name: organization.name,
+            industry: organization.industry,
+            size: organization.employee_count
+          }
         })
       })
 
       if (response.ok) {
         const data = await response.json()
-        setQaHistory([{
-          id: data.id || Date.now(),
-          question,
-          answer: data.answer,
-          confidence_score: data.confidenceScore,
-          created_at: new Date().toISOString()
-        }, ...qaHistory])
+        setQaHistory([data, ...qaHistory])
+        setQuestion('')
       }
-      setQuestion('')
-    } catch (err) {
-      console.error('Error asking question:', err)
+    } catch (error) {
+      console.error('Q&A error:', error)
     } finally {
       setIsAsking(false)
     }
@@ -137,218 +132,190 @@ export default function DashboardPage() {
     return null
   }
 
+  const tabs = [
+    { id: 'overview', label: 'סקירה כללית', icon: CheckCircle2 },
+    { id: 'documents', label: 'מסמכים', icon: FileText },
+    { id: 'qa', label: 'שאלות ותשובות', icon: MessageSquare },
+    { id: 'settings', label: 'הגדרות', icon: User },
+  ]
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="fixed right-0 top-0 h-full w-64 bg-white border-l shadow-sm z-40">
-        <div className="p-4 border-b">
-          <Link href="/" className="flex items-center gap-2">
-            <Shield className="h-8 w-8 text-primary" />
-            <span className="font-bold text-xl">DPO-Pro</span>
-          </Link>
+    <div className="min-h-screen bg-gray-50" dir="rtl">
+      {/* Mobile Header */}
+      <div className="md:hidden bg-white border-b p-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Shield className="h-6 w-6 text-primary" />
+          <span className="font-bold">DPO-Pro</span>
         </div>
+        <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <Menu className="h-5 w-5" />
+        </Button>
+      </div>
 
-        <nav className="p-4 space-y-2">
-          <NavButton 
-            icon={<CheckCircle2 />} 
-            label="סקירה כללית" 
-            active={activeTab === 'overview'}
-            onClick={() => setActiveTab('overview')}
-          />
-          <NavButton 
-            icon={<FileText />} 
-            label="מסמכים" 
-            active={activeTab === 'documents'}
-            onClick={() => setActiveTab('documents')}
-          />
-          <NavButton 
-            icon={<MessageSquare />} 
-            label="שאלות ותשובות" 
-            active={activeTab === 'qa'}
-            onClick={() => setActiveTab('qa')}
-          />
-          <NavButton 
-            icon={<User />} 
-            label="הגדרות" 
-            active={activeTab === 'settings'}
-            onClick={() => setActiveTab('settings')}
-          />
-        </nav>
+      <div className="flex">
+        {/* Sidebar */}
+        <aside className={`
+          ${mobileMenuOpen ? 'block' : 'hidden'} md:block
+          fixed md:sticky top-0 right-0 h-screen w-64 bg-white border-l z-50
+          overflow-y-auto
+        `}>
+          <div className="p-6">
+            <div className="flex items-center gap-2 mb-8">
+              <Shield className="h-8 w-8 text-primary" />
+              <span className="font-bold text-xl">DPO-Pro</span>
+            </div>
 
-        <div className="absolute bottom-0 right-0 left-0 p-4 border-t bg-white">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{userName}</p>
-              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-            </div>
+            <nav className="space-y-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id as any)
+                    setMobileMenuOpen(false)
+                  }}
+                  className={`
+                    w-full flex items-center gap-3 px-4 py-3 rounded-lg text-right
+                    transition-colors
+                    ${activeTab === tab.id 
+                      ? 'bg-primary text-white' 
+                      : 'hover:bg-gray-100 text-gray-700'}
+                  `}
+                >
+                  <tab.icon className="h-5 w-5" />
+                  <span>{tab.label}</span>
+                </button>
+              ))}
+            </nav>
           </div>
-          <Button variant="ghost" size="sm" className="w-full justify-start" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4 ml-2" />
-            התנתקות
-          </Button>
-        </div>
-      </aside>
 
-      {/* Main Content */}
-      <main className="mr-64 p-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold">שלום, {userName}</h1>
+          <div className="absolute bottom-0 right-0 left-0 p-6 border-t bg-white">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate">{userName}</p>
+                <p className="text-sm text-gray-500 truncate">{user?.email}</p>
+              </div>
+            </div>
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={handleSignOut}
+            >
+              <LogOut className="h-4 w-4 ml-2" />
+              התנתקות
+            </Button>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="flex-1 p-4 md:p-8 md:mr-0">
+          {/* Header */}
+          <div className="mb-8">
+            <Badge variant="outline" className="mb-2">
+              {organization?.status === 'active' ? 'פעיל' : 'בתהליך'}
+            </Badge>
+            <h1 className="text-2xl md:text-3xl font-bold">
+              שלום, {userName}
+            </h1>
             <p className="text-gray-600">
-              {organization ? `ברוכים הבאים ללוח הבקרה של ${organization.name}` : 'ברוכים הבאים! השלימו את ההרשמה כדי להתחיל'}
+              ברוכים הבאים ללוח הבקרה של {organization?.name || 'הארגון שלך'}
             </p>
           </div>
-          {organization ? (
-            <Badge variant={organization.status === 'active' ? 'success' : 'warning'}>
-              {organization.status === 'active' ? 'פעיל' : 'בהקמה'}
-            </Badge>
-          ) : (
-            <Link href="/onboarding">
-              <Button>השלמת הגדרת ארגון</Button>
-            </Link>
-          )}
-        </div>
 
-        {!organization ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Shield className="h-16 w-16 text-primary mx-auto mb-4 opacity-50" />
-              <h2 className="text-xl font-bold mb-2">עוד לא הגדרתם ארגון</h2>
-              <p className="text-gray-600 mb-4">השלימו את תהליך ההרשמה כדי להתחיל להשתמש במערכת</p>
-              <Link href="/onboarding">
-                <Button size="lg">התחילו עכשיו</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {activeTab === 'overview' && (
-              <OverviewTab organization={organization} documents={documents} />
-            )}
-            {activeTab === 'documents' && (
-              <DocumentsTab documents={documents} />
-            )}
-            {activeTab === 'qa' && (
-              <QATab 
-                qaHistory={qaHistory}
-                question={question}
-                setQuestion={setQuestion}
-                onAsk={handleAskQuestion}
-                isAsking={isAsking}
-              />
-            )}
-            {activeTab === 'settings' && (
-              <SettingsTab organization={organization} user={user} />
-            )}
-          </>
-        )}
-      </main>
+          {/* Content based on active tab */}
+          {activeTab === 'overview' && (
+            <OverviewTab 
+              organization={organization} 
+              documents={documents}
+              setActiveTab={setActiveTab}
+            />
+          )}
+          {activeTab === 'documents' && (
+            <DocumentsTab documents={documents} />
+          )}
+          {activeTab === 'qa' && (
+            <QATab 
+              question={question}
+              setQuestion={setQuestion}
+              isAsking={isAsking}
+              handleAskQuestion={handleAskQuestion}
+              qaHistory={qaHistory}
+            />
+          )}
+          {activeTab === 'settings' && (
+            <SettingsTab organization={organization} user={user} />
+          )}
+        </main>
+      </div>
+
+      {/* Mobile menu overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
     </div>
   )
 }
 
-function NavButton({ icon, label, active, onClick }: any) {
-  return (
-    <button
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-        active 
-          ? 'bg-primary text-white' 
-          : 'text-gray-700 hover:bg-gray-100'
-      }`}
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
-  )
-}
-
-function OverviewTab({ organization, documents }: { organization: any, documents: any[] }) {
-  const complianceScore = documents.length > 0 ? 92 : 0
-  const hasSubscription = organization?.subscription_status === 'active'
+function OverviewTab({ organization, documents, setActiveTab }: { 
+  organization: any, 
+  documents: any[],
+  setActiveTab: (tab: 'overview' | 'documents' | 'qa' | 'settings') => void 
+}) {
+  const complianceScore = organization?.compliance_score || 92
   
   return (
     <div className="space-y-6">
-      {/* Upgrade Banner - show if no active subscription */}
-      {!hasSubscription && (
-        <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium">שדרגו לחבילה מלאה</p>
-                  <p className="text-sm text-gray-600">קבלו גישה לכל הכלים והתמיכה של ממונה מוסמך</p>
-                </div>
-              </div>
-              <Link href="/subscribe">
-                <Button>צפייה בחבילות</Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Stats Grid */}
       <div className="grid md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-              </div>
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">ציון ציות</p>
+                <p className="text-sm text-gray-500">ציון ציות</p>
                 <p className="text-2xl font-bold">{complianceScore}%</p>
               </div>
+              <CheckCircle2 className="h-8 w-8 text-green-500" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-blue-600" />
-              </div>
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">מסמכים פעילים</p>
+                <p className="text-sm text-gray-500">מסמכים פעילים</p>
                 <p className="text-2xl font-bold">{documents.length}</p>
               </div>
+              <FileText className="h-8 w-8 text-primary" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                <User className="h-5 w-5 text-purple-600" />
-              </div>
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">זמן DPO שנוצל</p>
-                <p className="text-2xl font-bold">0 דק׳</p>
+                <p className="text-sm text-gray-500">זמן DPO שנוצל</p>
+                <p className="text-2xl font-bold">0 דק'</p>
               </div>
+              <User className="h-8 w-8 text-orange-500" />
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
-                <Shield className="h-5 w-5 text-yellow-600" />
-              </div>
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">חבילה</p>
-                <p className="text-2xl font-bold">{organization?.tier === 'extended' ? 'מורחבת' : 'בסיסית'}</p>
+                <p className="text-sm text-gray-500">חבילה</p>
+                <p className="text-2xl font-bold">בסיסית</p>
               </div>
+              <Shield className="h-8 w-8 text-yellow-500" />
             </div>
           </CardContent>
         </Card>
@@ -362,26 +329,18 @@ function OverviewTab({ organization, documents }: { organization: any, documents
         </CardHeader>
         <CardContent>
           <Progress value={complianceScore} className="h-4 mb-4" />
-          <div className="grid md:grid-cols-3 gap-4 text-center">
-            <div className="p-3 rounded-lg bg-green-50">
-              <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
-              <p className="text-sm font-medium">DPO ממונה</p>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <span>DPO ממונה</span>
             </div>
-            <div className={`p-3 rounded-lg ${documents.length > 0 ? 'bg-green-50' : 'bg-gray-50'}`}>
-              {documents.length > 0 ? (
-                <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
-              ) : (
-                <AlertCircle className="h-5 w-5 text-gray-400 mx-auto mb-1" />
-              )}
-              <p className="text-sm font-medium">מדיניות פרטיות</p>
+            <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <span>מדיניות פרטיות</span>
             </div>
-            <div className={`p-3 rounded-lg ${documents.length > 1 ? 'bg-green-50' : 'bg-gray-50'}`}>
-              {documents.length > 1 ? (
-                <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
-              ) : (
-                <AlertCircle className="h-5 w-5 text-gray-400 mx-auto mb-1" />
-              )}
-              <p className="text-sm font-medium">רישום מאגרים</p>
+            <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <span>רישום מאגרים</span>
             </div>
           </div>
         </CardContent>
@@ -390,7 +349,7 @@ function OverviewTab({ organization, documents }: { organization: any, documents
       {/* Status Card */}
       <Card>
         <CardContent className="p-6">
-          <Badge variant={organization?.status === 'active' ? 'success' : 'warning'} className="text-lg px-4 py-2">
+          <Badge variant="success" className="text-lg px-4 py-2">
             {organization?.status === 'active' ? 'פעיל ומוגן' : 'בתהליך הקמה'}
           </Badge>
         </CardContent>
@@ -403,19 +362,35 @@ function OverviewTab({ organization, documents }: { organization: any, documents
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-4 gap-4">
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex-col gap-2"
+              onClick={() => setActiveTab('documents')}
+            >
               <FileText className="h-5 w-5" />
               <span>צפייה במסמכים</span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex-col gap-2"
+              onClick={() => setActiveTab('qa')}
+            >
               <MessageSquare className="h-5 w-5" />
               <span>שאלה לממונה</span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex-col gap-2"
+              onClick={() => setActiveTab('documents')}
+            >
               <Download className="h-5 w-5" />
               <span>הורדת דוחות</span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex-col gap-2"
+              onClick={() => setActiveTab('settings')}
+            >
               <AlertCircle className="h-5 w-5" />
               <span>דיווח אירוע</span>
             </Button>
@@ -428,6 +403,8 @@ function OverviewTab({ organization, documents }: { organization: any, documents
 
 function DocumentsTab({ documents }: { documents: any[] }) {
   const [selectedDoc, setSelectedDoc] = useState<any>(null)
+  const [isExporting, setIsExporting] = useState<string | null>(null)
+  const [exportFormat, setExportFormat] = useState<string | null>(null)
   
   const getDocTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -439,36 +416,52 @@ function DocumentsTab({ documents }: { documents: any[] }) {
     return labels[type] || type
   }
 
-  const downloadDocument = (doc: any) => {
-    // Create nicely formatted content
-    const header = `${'═'.repeat(50)}
-${doc.title}
-${'═'.repeat(50)}
-
-`
-    const footer = `
-
-${'─'.repeat(50)}
-נוצר על ידי DPO-Pro
-תאריך: ${new Date().toLocaleDateString('he-IL')}
-`
-    const content = header + (doc.content || '') + footer
+  const exportDocument = async (doc: any, format: 'pdf' | 'docx' | 'txt') => {
+    setIsExporting(doc.id)
+    setExportFormat(format)
     
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${doc.title}.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+    try {
+      const response = await fetch('/api/documents/export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentId: doc.id, format })
+      })
+
+      if (!response.ok) throw new Error('Export failed')
+      
+      const data = await response.json()
+
+      if (format === 'pdf') {
+        const { generatePDF } = await import('@/lib/document-export')
+        await generatePDF(data.definition, data.filename)
+      } else if (format === 'docx') {
+        const { generateDOCX } = await import('@/lib/document-export')
+        await generateDOCX(data.content, data.title, data.orgName, data.filename)
+      } else {
+        const blob = new Blob([data.content], { type: 'text/plain;charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = data.filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      }
+    } catch (err) {
+      console.error('Export error:', err)
+      alert('שגיאה בייצוא המסמך')
+    } finally {
+      setIsExporting(null)
+      setExportFormat(null)
+    }
   }
 
-  const downloadAllDocuments = () => {
-    documents.forEach((doc, index) => {
-      setTimeout(() => downloadDocument(doc), index * 500)
-    })
+  const downloadAllDocuments = async () => {
+    for (let i = 0; i < documents.length; i++) {
+      await exportDocument(documents[i], 'pdf')
+      await new Promise(resolve => setTimeout(resolve, 1000))
+    }
   }
 
   if (documents.length === 0) {
@@ -516,11 +509,34 @@ ${'─'.repeat(50)}
                   <Badge variant={doc.status === 'active' ? 'success' : 'secondary'}>
                     {doc.status === 'active' ? 'פעיל' : 'טיוטה'}
                   </Badge>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedDoc(doc)}>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedDoc(doc)} title="צפייה">
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => downloadDocument(doc)}>
-                    <Download className="h-4 w-4" />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => exportDocument(doc, 'pdf')}
+                    disabled={isExporting === doc.id}
+                    title="הורדה כ-PDF"
+                  >
+                    {isExporting === doc.id && exportFormat === 'pdf' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <span className="text-xs font-medium">PDF</span>
+                    )}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => exportDocument(doc, 'docx')}
+                    disabled={isExporting === doc.id}
+                    title="הורדה כ-Word"
+                  >
+                    {isExporting === doc.id && exportFormat === 'docx' ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <span className="text-xs font-medium">DOCX</span>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -541,9 +557,11 @@ ${'─'.repeat(50)}
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" onClick={() => downloadDocument(selectedDoc)}>
-                    <Download className="h-4 w-4 ml-2" />
-                    הורדה
+                  <Button variant="outline" size="sm" onClick={() => exportDocument(selectedDoc, 'pdf')}>
+                    PDF
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => exportDocument(selectedDoc, 'docx')}>
+                    Word
                   </Button>
                   <Button variant="ghost" size="icon" onClick={() => setSelectedDoc(null)}>
                     <X className="h-5 w-5" />
@@ -563,129 +581,139 @@ ${'─'.repeat(50)}
   )
 }
 
-function QATab({ qaHistory, question, setQuestion, onAsk, isAsking }: any) {
+function QATab({ 
+  question, 
+  setQuestion, 
+  isAsking, 
+  handleAskQuestion, 
+  qaHistory 
+}: {
+  question: string
+  setQuestion: (q: string) => void
+  isAsking: boolean
+  handleAskQuestion: () => void
+  qaHistory: any[]
+}) {
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold">שאלות ותשובות</h2>
-
-      {/* Ask Question */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bot className="h-5 w-5 text-primary" />
-            שאלו את הבוט
-          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Bot className="h-6 w-6 text-primary" />
+            <CardTitle>שאלו את הבוט</CardTitle>
+          </div>
           <CardDescription>
             שאלו שאלות בנושאי פרטיות וקבלו תשובות מיידיות
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Textarea
+            placeholder="הקלידו את השאלה שלכם..."
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="הקלידו את השאלה שלכם..."
-            className="min-h-[80px]"
+            className="mb-4 min-h-[100px]"
           />
-          <div className="flex justify-end mt-3">
-            <Button onClick={onAsk} disabled={!question.trim() || isAsking}>
-              {isAsking ? (
-                <Loader2 className="h-4 w-4 animate-spin ml-2" />
-              ) : (
-                <Send className="h-4 w-4 ml-2" />
-              )}
-              שליחה
-            </Button>
-          </div>
+          <Button 
+            onClick={handleAskQuestion} 
+            disabled={!question.trim() || isAsking}
+          >
+            {isAsking ? (
+              <Loader2 className="h-4 w-4 animate-spin ml-2" />
+            ) : (
+              <Send className="h-4 w-4 ml-2" />
+            )}
+            שליחה
+          </Button>
         </CardContent>
       </Card>
 
-      {/* Q&A History */}
       <Card>
         <CardHeader>
           <CardTitle>היסטוריית שאלות</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {qaHistory.length === 0 && (
-            <p className="text-center text-gray-500 py-8">עדיין לא נשאלו שאלות</p>
-          )}
-          {qaHistory.map((qa: any) => (
-            <div key={qa.id} className="border rounded-lg p-4">
-              <div className="flex items-start gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                  <User className="h-4 w-4 text-gray-600" />
+        <CardContent>
+          {qaHistory.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">עדיין לא נשאלו שאלות</p>
+          ) : (
+            <div className="space-y-4">
+              {qaHistory.map((qa: any, index: number) => (
+                <div key={qa.id || index} className="border rounded-lg p-4">
+                  <div className="flex items-start gap-2 mb-2">
+                    <User className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <p className="font-medium">{qa.question}</p>
+                  </div>
+                  <div className="flex items-start gap-2 mr-7">
+                    <Bot className="h-5 w-5 text-primary mt-0.5" />
+                    <p className="text-gray-600">{qa.answer}</p>
+                  </div>
+                  {qa.confidence_score && (
+                    <div className="mr-7 mt-2">
+                      <Badge variant={qa.confidence_score > 0.7 ? 'success' : 'warning'}>
+                        רמת ביטחון: {Math.round(qa.confidence_score * 100)}%
+                      </Badge>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <p className="font-medium">{qa.question}</p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(qa.created_at).toLocaleDateString('he-IL')}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 bg-blue-50 rounded-lg p-3 mr-11">
-                <Bot className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <p className="text-sm">{qa.answer}</p>
-              </div>
+              ))}
             </div>
-          ))}
+          )}
         </CardContent>
       </Card>
     </div>
   )
 }
 
-function SettingsTab({ organization, user }: any) {
+function SettingsTab({ organization, user }: { organization: any, user: any }) {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">הגדרות</h2>
-        <Link href="/settings">
-          <Button variant="outline">הגדרות מתקדמות</Button>
-        </Link>
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle>פרטי הארגון</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm text-gray-600">שם העסק</label>
-              <p className="font-medium">{organization?.name || '-'}</p>
-            </div>
-            <div>
-              <label className="text-sm text-gray-600">מספר ח.פ</label>
-              <p className="font-medium">{organization?.business_id || '-'}</p>
-            </div>
-            <div>
-              <label className="text-sm text-gray-600">חבילה</label>
-              <Badge>{organization?.tier === 'extended' ? 'מורחבת' : 'בסיסית'}</Badge>
-            </div>
-            <div>
-              <label className="text-sm text-gray-600">סטטוס</label>
-              <Badge variant={organization?.status === 'active' ? 'success' : 'warning'}>
-                {organization?.status === 'active' ? 'פעיל' : 'בהקמה'}
-              </Badge>
-            </div>
+          <div>
+            <label className="text-sm text-gray-500">שם הארגון</label>
+            <p className="font-medium">{organization?.name || '-'}</p>
+          </div>
+          <div>
+            <label className="text-sm text-gray-500">תעשייה</label>
+            <p className="font-medium">{organization?.industry || '-'}</p>
+          </div>
+          <div>
+            <label className="text-sm text-gray-500">מספר עובדים</label>
+            <p className="font-medium">{organization?.employee_count || '-'}</p>
           </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>פרטי משתמש</CardTitle>
+          <CardTitle>פרטי המשתמש</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="text-sm text-gray-500">אימייל</label>
+            <p className="font-medium">{user?.email || '-'}</p>
+          </div>
+          <div>
+            <label className="text-sm text-gray-500">סטטוס חשבון</label>
+            <Badge variant="success">פעיל</Badge>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>דיווח על אירוע אבטחה</CardTitle>
+          <CardDescription>
+            במקרה של אירוע אבטחת מידע או הפרת פרטיות
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm text-gray-600">אימייל</label>
-              <p className="font-medium">{user?.email}</p>
-            </div>
-            <div>
-              <label className="text-sm text-gray-600">שם</label>
-              <p className="font-medium">{user?.user_metadata?.name || '-'}</p>
-            </div>
-          </div>
+          <Button variant="destructive">
+            <AlertCircle className="h-4 w-4 ml-2" />
+            דווח על אירוע
+          </Button>
         </CardContent>
       </Card>
     </div>
