@@ -214,7 +214,7 @@ export default function HomePage() {
       {/* Problem Section */}
       <section className="py-16 md:py-24 px-4 bg-gray-50">
         <div className="max-w-4xl mx-auto text-center">
-          <Badge variant="outline" className="mb-4 text-red-600 border-red-200">הבעיה</Badge>
+          <Badge variant="outline" className="mb-4 text-red-600 border-red-200 text-sm px-4 py-1">הבעיה</Badge>
           <h2 className="text-3xl md:text-4xl font-bold mb-6">
             תיקון 13 מחייב אתכם למנות DPO
           </h2>
@@ -245,7 +245,7 @@ export default function HomePage() {
       <section id="features" className="py-16 md:py-24 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <Badge className="mb-4 bg-blue-100 text-blue-700">הפתרון</Badge>
+            <Badge className="mb-4 bg-blue-100 text-blue-700 text-sm px-4 py-1">הפתרון</Badge>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">DPO אנושי + AI = הפתרון המושלם</h2>
             <p className="text-gray-600 text-lg max-w-2xl mx-auto">
               ממונה מוסמך שאחראי רשמית + מערכת AI שעושה את כל העבודה השוטפת
@@ -297,15 +297,12 @@ export default function HomePage() {
       <section id="how-it-works" className="py-16 md:py-24 px-4 bg-gradient-to-b from-blue-50 to-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
-            <Badge variant="outline" className="mb-4">איך זה עובד</Badge>
+            <Badge variant="outline" className="mb-4 text-sm px-4 py-1">איך זה עובד</Badge>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">3 צעדים ואתם מכוסים</h2>
             <p className="text-gray-600">תהליך פשוט שלוקח 15 דקות בלבד</p>
           </div>
           
           <div className="relative">
-            {/* Connection Line - Desktop */}
-            <div className="hidden md:block absolute top-24 left-1/2 right-1/2 w-2/3 h-0.5 bg-blue-200 -translate-x-1/2" />
-            
             <div className="grid md:grid-cols-3 gap-8">
               <StepCard
                 number="1"
@@ -343,7 +340,7 @@ export default function HomePage() {
       <section className="py-16 md:py-24 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <Badge variant="outline" className="mb-4">מה הלקוחות אומרים</Badge>
+            <Badge variant="outline" className="mb-4 text-sm px-4 py-1">מה הלקוחות אומרים</Badge>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">עסקים כמוכם כבר מכוסים</h2>
           </div>
           
@@ -374,7 +371,7 @@ export default function HomePage() {
       <section id="pricing" className="py-16 md:py-24 px-4 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <Badge variant="outline" className="mb-4">מחירים</Badge>
+            <Badge variant="outline" className="mb-4 text-sm px-4 py-1">מחירים</Badge>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">חבילות שמתאימות לכל עסק</h2>
             <p className="text-gray-600">בחרו את החבילה המתאימה לכם. ניתן לשדרג בכל עת.</p>
           </div>
@@ -407,12 +404,12 @@ export default function HomePage() {
             </Card>
 
             {/* Extended Plan */}
-            <Card className="relative overflow-hidden border-2 border-blue-500 hover:shadow-xl transition-shadow">
+            <Card className="relative overflow-visible border-2 border-blue-500 hover:shadow-xl transition-shadow">
               <div className="absolute top-0 right-0 left-0 h-1 bg-gradient-to-l from-blue-500 to-indigo-500" />
-              <div className="absolute -top-3 right-4">
-                <Badge className="bg-blue-600">הכי פופולרי</Badge>
+              <div className="absolute -top-4 right-4 z-10">
+                <Badge className="bg-blue-600 shadow-md">הכי פופולרי</Badge>
               </div>
-              <CardHeader className="pb-4 pt-6">
+              <CardHeader className="pb-4 pt-8">
                 <CardTitle className="text-xl">חבילה מורחבת</CardTitle>
                 <CardDescription>לעסקים עם מידע רגיש</CardDescription>
                 <div className="pt-4">
@@ -455,7 +452,7 @@ export default function HomePage() {
       <section id="faq" className="py-16 md:py-24 px-4">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-12">
-            <Badge variant="outline" className="mb-4">שאלות נפוצות</Badge>
+            <Badge variant="outline" className="mb-4 text-sm px-4 py-1">שאלות נפוצות</Badge>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">יש שאלות? יש תשובות</h2>
           </div>
           
@@ -515,7 +512,7 @@ export default function HomePage() {
               </Button>
             </Link>
             <Link href="/contact">
-              <Button size="lg" variant="outline" className="text-white border-white hover:bg-white/10 text-lg px-8 py-6">
+              <Button size="lg" className="bg-white text-blue-600 hover:bg-blue-50 text-lg px-8 py-6">
                 דברו איתנו
               </Button>
             </Link>
