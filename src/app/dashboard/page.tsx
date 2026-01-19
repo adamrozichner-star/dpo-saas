@@ -269,9 +269,32 @@ function NavButton({ icon, label, active, onClick }: any) {
 
 function OverviewTab({ organization, documents }: { organization: any, documents: any[] }) {
   const complianceScore = documents.length > 0 ? 92 : 0
+  const hasSubscription = organization?.subscription_status === 'active'
   
   return (
     <div className="space-y-6">
+      {/* Upgrade Banner - show if no active subscription */}
+      {!hasSubscription && (
+        <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <Shield className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">שדרגו לחבילה מלאה</p>
+                  <p className="text-sm text-gray-600">קבלו גישה לכל הכלים והתמיכה של ממונה מוסמך</p>
+                </div>
+              </div>
+              <Link href="/subscribe">
+                <Button>צפייה בחבילות</Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Stats Grid */}
       <div className="grid md:grid-cols-4 gap-4">
         <Card>
@@ -613,7 +636,12 @@ function QATab({ qaHistory, question, setQuestion, onAsk, isAsking }: any) {
 function SettingsTab({ organization, user }: any) {
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold">הגדרות</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">הגדרות</h2>
+        <Link href="/settings">
+          <Button variant="outline">הגדרות מתקדמות</Button>
+        </Link>
+      </div>
 
       <Card>
         <CardHeader>
