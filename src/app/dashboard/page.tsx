@@ -593,7 +593,12 @@ function OverviewTab({
               <Badge className="mb-2">הממונה שלכם</Badge>
               <h3 className="font-bold">עו"ד דנה כהן</h3>
               <p className="text-sm text-gray-500 mb-3">ממונה הגנת פרטיות</p>
-              <Button variant="outline" size="sm" className="w-full">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full"
+                onClick={() => onNavigate('qa')}
+              >
                 <MessageSquare className="h-4 w-4 ml-2" />
                 שליחת הודעה
               </Button>
