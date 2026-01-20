@@ -146,9 +146,17 @@ export function generateDocument(
 export function generateAllDocuments(
   answers: OnboardingAnswer[],
   orgName: string,
-  businessId: string
+  businessId: string,
+  variablesOverride?: Partial<DocumentVariables>
 ): Array<{ title: string; content: string; type: DocumentType }> {
-  const variables = answersToDocumentVariables(answers, orgName, businessId)
+  // Generate base variables from answers
+  const baseVariables = answersToDocumentVariables(answers, orgName, businessId)
+  
+  // Merge with any overrides (e.g., DPO info from database)
+  const variables: DocumentVariables = {
+    ...baseVariables,
+    ...variablesOverride
+  }
 
   const documentTypes: DocumentType[] = [
     'privacy_policy',
