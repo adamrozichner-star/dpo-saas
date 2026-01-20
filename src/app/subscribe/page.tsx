@@ -181,11 +181,11 @@ function SubscribeContent() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
           {plans.map((plan) => (
             <Card 
               key={plan.id}
-              className={`relative ${plan.popular ? 'border-primary border-2' : ''}`}
+              className={`relative flex flex-col ${plan.popular ? 'border-primary border-2' : ''}`}
             >
               {plan.popular && (
                 <Badge className="absolute -top-3 right-4 bg-primary">
@@ -200,8 +200,8 @@ function SubscribeContent() {
                   <span className="text-gray-500"> / חודש</span>
                 </div>
               </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 mb-6">
+              <CardContent className="flex-1 flex flex-col">
+                <ul className="space-y-3 mb-6 flex-1">
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-center gap-2">
                       <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
@@ -216,7 +216,7 @@ function SubscribeContent() {
                   ))}
                 </ul>
                 <Button 
-                  className="w-full"
+                  className="w-full mt-auto"
                   variant={plan.popular ? 'default' : 'outline'}
                   onClick={() => handleSelectPlan(plan.id)}
                   disabled={isProcessing}
@@ -235,7 +235,7 @@ function SubscribeContent() {
 
         {error && (
           <div className="max-w-md mx-auto mt-6 p-4 bg-red-50 border border-red-200 rounded-lg text-center text-red-700">
-            {error}
+            {error === 'Payment not configured' ? 'מערכת התשלומים עדיין לא הוגדרה' : error}
           </div>
         )}
 
