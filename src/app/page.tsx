@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -86,8 +86,18 @@ function calculateCheckResult(answers: Record<string, string>): { type: CheckRes
   return { type: 'not_required', score }
 }
 
-// Superhero SVG Component
+// Superhero SVG Component with animated warnings
 function SuperheroIllustration() {
+  const [warningIndex, setWarningIndex] = useState(0)
+  const warnings = ['דליפת מידע', 'פריצה', 'קנס', 'תביעה', 'ביקורת']
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWarningIndex(prev => (prev + 1) % warnings.length)
+    }, 2000)
+    return () => clearInterval(interval)
+  }, [])
+  
   return (
     <svg viewBox="0 0 400 500" className="w-full h-auto max-w-md">
       {/* Background glow */}
@@ -199,9 +209,9 @@ function SuperheroIllustration() {
       {/* Attack elements being blocked */}
       <g transform="translate(0, 250)">
         {/* Warning/Attack icon */}
-        <g transform="translate(10, 80)">
-          <rect x="0" y="0" width="60" height="30" rx="15" fill="#FEE2E2" stroke="#EF4444" strokeWidth="2" />
-          <text x="30" y="20" textAnchor="middle" fontSize="10" fill="#EF4444">⚠️ דליפה</text>
+        <g transform="translate(10, 80)" className="animate-pulse">
+          <rect x="0" y="0" width="75" height="30" rx="15" fill="#FEE2E2" stroke="#EF4444" strokeWidth="2" />
+          <text x="37" y="20" textAnchor="middle" fontSize="11" fill="#EF4444">⚠️ {warnings[warningIndex]}</text>
         </g>
       </g>
       
