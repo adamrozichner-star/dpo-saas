@@ -162,11 +162,30 @@ export default function DataSubjectRightsPage() {
               <p className="text-2xl font-mono font-bold text-blue-900">{requestNumber}</p>
             </div>
 
-            <div className="text-sm text-gray-500 space-y-2">
+            <div className="text-sm text-gray-500 space-y-2 mb-6">
               <p>✓ אישור נשלח לכתובת המייל שלך</p>
               <p>✓ נטפל בבקשה תוך 30 יום</p>
               <p>✓ תקבל/י עדכון במייל עם התשובה</p>
             </div>
+
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setSubmitted(false)
+                setRequestNumber(null)
+                setFormData({
+                  requestType: '',
+                  fullName: '',
+                  idNumber: '',
+                  email: '',
+                  phone: '',
+                  details: '',
+                  consent: false
+                })
+              }}
+            >
+              הגשת בקשה נוספת
+            </Button>
           </CardContent>
         </Card>
       </div>
