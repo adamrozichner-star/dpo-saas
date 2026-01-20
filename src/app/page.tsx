@@ -17,9 +17,8 @@ import {
   Zap,
   AlertTriangle,
   Database,
-  Globe,
-  FileCheck,
-  Mail
+  Mail,
+  Check
 } from 'lucide-react'
 
 // Inline Calculator Questions (4 quick questions)
@@ -77,7 +76,6 @@ function calculateCheckResult(answers: Record<string, string>): { type: CheckRes
     if (option) score += option.points
   })
 
-  // Public body = auto required
   if (answers.org_type === 'public' || answers.org_type === 'health') {
     return { type: 'required', score: 100 }
   }
@@ -86,6 +84,136 @@ function calculateCheckResult(answers: Record<string, string>): { type: CheckRes
   if (score >= 30) return { type: 'likely', score }
   if (score >= 15) return { type: 'recommended', score }
   return { type: 'not_required', score }
+}
+
+// Superhero SVG Component
+function SuperheroIllustration() {
+  return (
+    <svg viewBox="0 0 400 500" className="w-full h-auto max-w-md">
+      {/* Background glow */}
+      <defs>
+        <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#60A5FA" />
+          <stop offset="100%" stopColor="#3B82F6" />
+        </linearGradient>
+        <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#3B82F6" />
+          <stop offset="100%" stopColor="#1D4ED8" />
+        </linearGradient>
+      </defs>
+      
+      {/* Glow effect */}
+      <ellipse cx="200" cy="300" rx="180" ry="200" fill="url(#glow)" />
+      
+      {/* Floating icons - Documents */}
+      <g transform="translate(280, 80)">
+        <rect x="0" y="0" width="70" height="80" rx="12" fill="white" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.1))" />
+        <rect x="15" y="20" width="40" height="4" rx="2" fill="#E5E7EB" />
+        <rect x="15" y="30" width="30" height="4" rx="2" fill="#E5E7EB" />
+        <rect x="15" y="40" width="35" height="4" rx="2" fill="#E5E7EB" />
+        <circle cx="35" cy="60" r="10" fill="#3B82F6" opacity="0.2" />
+        <path d="M30 60 L33 63 L40 56" stroke="#3B82F6" strokeWidth="2" fill="none" />
+        <text x="35" y="12" textAnchor="middle" fontSize="8" fill="#6B7280">מסמכים</text>
+      </g>
+      
+      {/* Floating icons - Database */}
+      <g transform="translate(220, 160)">
+        <rect x="0" y="0" width="70" height="70" rx="12" fill="white" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.1))" />
+        <ellipse cx="35" cy="28" rx="20" ry="8" fill="#3B82F6" />
+        <path d="M15 28 L15 45 Q35 55 55 45 L55 28" fill="none" stroke="#3B82F6" strokeWidth="2" />
+        <ellipse cx="35" cy="45" rx="20" ry="8" fill="none" stroke="#3B82F6" strokeWidth="2" />
+        <text x="35" y="62" textAnchor="middle" fontSize="8" fill="#6B7280">מאגרי מידע</text>
+      </g>
+      
+      {/* Floating icons - Users/Customers */}
+      <g transform="translate(260, 280)">
+        <rect x="0" y="0" width="70" height="70" rx="12" fill="white" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.1))" />
+        <circle cx="25" cy="28" r="10" fill="#3B82F6" opacity="0.3" />
+        <circle cx="45" cy="28" r="10" fill="#3B82F6" opacity="0.5" />
+        <circle cx="35" cy="40" r="12" fill="#3B82F6" />
+        <circle cx="35" cy="35" r="5" fill="white" />
+        <text x="35" y="62" textAnchor="middle" fontSize="8" fill="#6B7280">נתוני לקוחות</text>
+      </g>
+      
+      {/* Superhero body */}
+      <g transform="translate(80, 200)">
+        {/* Cape */}
+        <path d="M60 80 Q30 150 50 220 L90 220 Q110 150 80 80" fill="#1D4ED8" />
+        
+        {/* Legs */}
+        <rect x="55" y="180" width="25" height="80" rx="10" fill="url(#bodyGradient)" />
+        <rect x="85" y="180" width="25" height="80" rx="10" fill="url(#bodyGradient)" />
+        
+        {/* Boots */}
+        <rect x="50" y="250" width="35" height="20" rx="8" fill="#1E40AF" />
+        <rect x="80" y="250" width="35" height="20" rx="8" fill="#1E40AF" />
+        
+        {/* Body */}
+        <ellipse cx="82" cy="140" rx="45" ry="55" fill="url(#bodyGradient)" />
+        
+        {/* Belt */}
+        <rect x="40" y="175" width="85" height="12" rx="4" fill="#FCD34D" />
+        <rect x="75" y="172" width="15" height="18" rx="3" fill="#F59E0B" />
+        
+        {/* Arms */}
+        <ellipse cx="30" cy="130" rx="18" ry="40" fill="url(#bodyGradient)" transform="rotate(-20 30 130)" />
+        <ellipse cx="135" cy="130" rx="18" ry="40" fill="url(#bodyGradient)" transform="rotate(20 135 130)" />
+        
+        {/* Hands */}
+        <circle cx="15" cy="165" r="15" fill="#FBBF24" />
+        <circle cx="150" cy="165" r="15" fill="#FBBF24" />
+        
+        {/* Head */}
+        <circle cx="82" cy="60" r="45" fill="#FBBF24" />
+        
+        {/* Mask */}
+        <path d="M40 50 Q82 30 124 50 L124 70 Q82 60 40 70 Z" fill="#1D4ED8" />
+        
+        {/* Eyes (white part) */}
+        <ellipse cx="60" cy="55" rx="12" ry="10" fill="white" />
+        <ellipse cx="104" cy="55" rx="12" ry="10" fill="white" />
+        
+        {/* Eyes (pupils) */}
+        <ellipse cx="63" cy="55" rx="5" ry="6" fill="#1E3A5F" />
+        <ellipse cx="101" cy="55" rx="5" ry="6" fill="#1E3A5F" />
+        
+        {/* Smile */}
+        <path d="M65 80 Q82 95 99 80" fill="none" stroke="#92400E" strokeWidth="3" strokeLinecap="round" />
+        
+        {/* P logo on chest */}
+        <circle cx="82" cy="130" r="20" fill="#60A5FA" />
+        <text x="82" y="138" textAnchor="middle" fontSize="24" fontWeight="bold" fill="white">P</text>
+      </g>
+      
+      {/* Shield */}
+      <g transform="translate(30, 300)">
+        <path d="M50 0 L95 15 L95 60 Q95 100 50 120 Q5 100 5 60 L5 15 Z" fill="url(#shieldGradient)" filter="drop-shadow(0 4px 8px rgba(59,130,246,0.5))" />
+        <path d="M50 10 L85 22 L85 58 Q85 90 50 108 Q15 90 15 58 L15 22 Z" fill="white" opacity="0.2" />
+        <path d="M35 55 L45 65 L70 40" stroke="white" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      </g>
+      
+      {/* Attack elements being blocked */}
+      <g transform="translate(0, 250)">
+        {/* Warning/Attack icon */}
+        <g transform="translate(10, 80)">
+          <rect x="0" y="0" width="60" height="30" rx="15" fill="#FEE2E2" stroke="#EF4444" strokeWidth="2" />
+          <text x="30" y="20" textAnchor="middle" fontSize="10" fill="#EF4444">⚠️ דליפה</text>
+        </g>
+      </g>
+      
+      {/* Protected badge */}
+      <g transform="translate(100, 430)">
+        <rect x="0" y="0" width="140" height="35" rx="17" fill="#D1FAE5" stroke="#10B981" strokeWidth="2" />
+        <circle cx="25" cy="17" r="8" fill="#10B981" />
+        <path d="M21 17 L24 20 L29 14" stroke="white" strokeWidth="2" fill="none" />
+        <text x="80" y="22" textAnchor="middle" fontSize="11" fill="#065F46">הנתונים שלכם מוגנים</text>
+      </g>
+    </svg>
+  )
 }
 
 export default function HomePage() {
@@ -117,22 +245,24 @@ export default function HomePage() {
   const checkResult = checkComplete ? calculateCheckResult(checkAnswers) : null
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <div className="min-h-screen bg-white">
       {/* Navigation */}
-      <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+      <nav className="border-b bg-white sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
-              <Shield className="h-8 w-8 text-primary" />
+              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
+                <Shield className="h-6 w-6 text-white" />
+              </div>
               <span className="font-bold text-xl">DPO-Pro</span>
             </div>
             <div className="hidden md:flex items-center gap-6">
-              <Link href="#check" className="text-gray-600 hover:text-gray-900">בדיקת חובה</Link>
-              <Link href="#features" className="text-gray-600 hover:text-gray-900">יתרונות</Link>
-              <Link href="#pricing" className="text-gray-600 hover:text-gray-900">מחירים</Link>
-              <Link href="#faq" className="text-gray-600 hover:text-gray-900">שאלות נפוצות</Link>
+              <Link href="#check" className="text-gray-600 hover:text-gray-900 px-3 py-1 rounded hover:bg-gray-100">בדיקת חובה</Link>
+              <Link href="#features" className="text-gray-600 hover:text-gray-900 px-3 py-1 rounded hover:bg-gray-100">יתרונות</Link>
+              <Link href="#pricing" className="text-gray-600 hover:text-gray-900 px-3 py-1 rounded hover:bg-gray-100">מחירים</Link>
+              <Link href="#faq" className="text-gray-600 hover:text-gray-900 px-3 py-1 rounded hover:bg-gray-100">שאלות נפוצות</Link>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
               <Link href="/login">
                 <Button variant="ghost">התחברות</Button>
               </Link>
@@ -144,64 +274,95 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="py-20 px-4">
-        <div className="max-w-7xl mx-auto text-center">
-          <Badge variant="secondary" className="mb-4">
-            תיקון 13 לחוק הגנת הפרטיות
-          </Badge>
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            ממונה הגנת פרטיות
-            <br />
-            <span className="text-primary">ב-500 ₪ לחודש</span>
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            פתרון מלא לעמידה ברגולציה: ממונה אנושי מוסמך + מערכת AI שעושה את העבודה.
-            <br />
-            במקום להוציא עשרות אלפי שקלים - קבלו הכל במנוי חודשי פשוט.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="#check">
-              <Button size="lg" className="gap-2">
-                בדקו אם אתם חייבים ב-DPO
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <Link href="#pricing">
-              <Button size="lg" variant="outline">
-                צפייה בחבילות
-              </Button>
-            </Link>
+      {/* Hero Section with Superhero */}
+      <section className="py-12 md:py-20 px-4 bg-gradient-to-b from-blue-50/50 to-white overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Left side - Superhero Illustration */}
+            <div className="order-2 lg:order-1 flex justify-center">
+              <SuperheroIllustration />
+            </div>
+            
+            {/* Right side - Content */}
+            <div className="order-1 lg:order-2 text-center lg:text-right">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-full mb-6">
+                <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                <span className="text-red-600 text-sm font-medium">תיקון 13 נכנס לתוקף - האכיפה כבר כאן</span>
+              </div>
+              
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
+                ממונה הגנת פרטיות
+                <br />
+                <span className="text-primary">ב-₪500 לחודש</span>
+              </h1>
+              
+              <p className="text-lg md:text-xl text-gray-600 mb-4">
+                ממונה אנושי מוסמך + מערכת AI שעושה 98% מהעבודה.
+              </p>
+              <p className="text-lg md:text-xl text-gray-600 mb-8">
+                <span className="font-semibold text-gray-900">במקום לשלם עשרות אלפי ₪</span> - קבלו הכל במנוי חודשי פשוט.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-end mb-8">
+                <Link href="/register">
+                  <Button size="lg" className="gap-2 px-8">
+                    התחילו תוך 15 דקות
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="#check">
+                  <Button size="lg" variant="outline" className="px-8">
+                    בדקו אם אתם חייבים DPO
+                  </Button>
+                </Link>
+              </div>
+              
+              {/* Trust badges */}
+              <div className="flex flex-wrap gap-6 justify-center lg:justify-end text-sm text-gray-500">
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>ללא התחייבות</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>הקמה תוך 15 דקות</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  <span>DPO מוסמך</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Trust Indicators */}
-      <section className="py-12 bg-white border-y">
+      <section className="py-12 bg-gradient-to-b from-white to-gray-50 border-y">
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
-              <div className="text-3xl font-bold text-primary">500+</div>
+              <div className="text-3xl md:text-4xl font-bold text-primary">+500</div>
               <div className="text-gray-600">עסקים משתמשים</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-primary">98%</div>
+              <div className="text-3xl md:text-4xl font-bold text-primary">98%</div>
               <div className="text-gray-600">אוטומציה מלאה</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-primary">15 דק׳</div>
-              <div className="text-gray-600">זמן הצטרפות</div>
+              <div className="text-3xl md:text-4xl font-bold text-primary">15 דק׳</div>
+              <div className="text-gray-600">זמן הקמה</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-primary">24/7</div>
-              <div className="text-gray-600">מענה AI זמין</div>
+              <div className="text-3xl md:text-4xl font-bold text-primary">24/7</div>
+              <div className="text-gray-600">מענה AI</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Inline Calculator Section */}
-      <section id="check" className="py-16 md:py-24 px-4 bg-gradient-to-b from-gray-50 to-white">
+      <section id="check" className="py-16 md:py-24 px-4 bg-gray-50">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
             <Badge variant="secondary" className="mb-4">בדיקה חינמית</Badge>
@@ -209,9 +370,8 @@ export default function HomePage() {
             <p className="text-gray-600">ענו על 4 שאלות קצרות וגלו תוך 30 שניות</p>
           </div>
 
-          <div className="rounded-xl border bg-card text-card-foreground shadow-sm max-w-2xl mx-auto">
+          <div className="rounded-xl border bg-white shadow-sm max-w-2xl mx-auto">
             {!checkComplete ? (
-              /* Quiz Questions */
               <div className="p-6 md:p-8">
                 <div className="text-sm text-gray-500 text-left mb-2">
                   שאלה {checkStep + 1} מתוך {checkQuestions.length}
@@ -253,7 +413,6 @@ export default function HomePage() {
                 )}
               </div>
             ) : (
-              /* Result */
               <div className="p-6 md:p-8">
                 <div className={`rounded-lg p-6 mb-6 ${
                   checkResult?.type === 'required' ? 'bg-red-50 border-t-4 border-red-500' :
@@ -312,7 +471,6 @@ export default function HomePage() {
                   </button>
                 </div>
 
-                {/* Link to full calculator for detailed report */}
                 <div className="mt-6 pt-6 border-t text-center">
                   <p className="text-sm text-gray-500 mb-2">רוצים דוח מפורט יותר?</p>
                   <Link href="/calculator" className="text-primary hover:underline text-sm font-medium inline-flex items-center gap-1">
@@ -378,7 +536,6 @@ export default function HomePage() {
           </div>
           
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-            {/* Basic Plan */}
             <Card className="relative">
               <CardHeader>
                 <CardTitle>חבילה בסיסית</CardTitle>
@@ -404,8 +561,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            {/* Extended Plan */}
-            <Card className="relative border-primary">
+            <Card className="relative border-primary border-2">
               <div className="absolute -top-3 right-4">
                 <Badge>הכי פופולרי</Badge>
               </div>
@@ -434,7 +590,6 @@ export default function HomePage() {
             </Card>
           </div>
           
-          {/* Upsells */}
           <div className="mt-12 text-center">
             <p className="text-gray-600 mb-4">שירותים נוספים לפי דרישה:</p>
             <div className="flex flex-wrap justify-center gap-2">
@@ -507,7 +662,9 @@ export default function HomePage() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center gap-2 text-white mb-4">
-                <Shield className="h-6 w-6" />
+                <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+                  <Shield className="h-5 w-5 text-white" />
+                </div>
                 <span className="font-bold">DPO-Pro</span>
               </div>
               <p className="text-sm">
@@ -580,7 +737,7 @@ function FAQItem({ question, answer }: { question: string, answer: string }) {
         className="w-full p-4 text-right flex justify-between items-center hover:bg-gray-50"
       >
         <span className="font-medium">{question}</span>
-        <span className="text-gray-400">{isOpen ? '−' : '+'}</span>
+        <span className="text-gray-400 text-xl">{isOpen ? '−' : '+'}</span>
       </button>
       {isOpen && (
         <div className="p-4 pt-0 text-gray-600">
