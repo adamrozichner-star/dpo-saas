@@ -24,7 +24,8 @@ import {
   Eye,
   X,
   ClipboardList,
-  Users
+  Users,
+  Menu
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import WelcomeModal from '@/components/WelcomeModal'
@@ -44,6 +45,7 @@ function DashboardContent() {
   const [documents, setDocuments] = useState<any[]>([])
   const [userName, setUserName] = useState('')
   const [showWelcome, setShowWelcome] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [complianceData, setComplianceData] = useState<{
     score: number
     gaps: string[]
@@ -266,8 +268,32 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="fixed right-0 top-0 h-full w-64 bg-white border-l shadow-sm z-40">
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b z-50 flex items-center justify-between px-4">
+        <Link href="/" className="flex items-center gap-2">
+          <Shield className="h-7 w-7 text-primary" />
+          <span className="font-bold text-lg">DPO-Pro</span>
+        </Link>
+        <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+        </Button>
+      </div>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - Desktop fixed, Mobile slide-in */}
+      <aside className={`
+        fixed top-0 h-full w-64 bg-white border-l shadow-sm z-50
+        transition-transform duration-300 ease-in-out
+        md:right-0 md:translate-x-0
+        ${mobileMenuOpen ? 'right-0 translate-x-0' : '-right-64 translate-x-full md:translate-x-0 md:right-0'}
+      `}>
         <div className="p-4 border-b">
           <Link href="/" className="flex items-center gap-2">
             <Shield className="h-8 w-8 text-primary" />
@@ -280,37 +306,37 @@ function DashboardContent() {
             icon={<CheckCircle2 />} 
             label="סקירה כללית" 
             active={activeTab === 'overview'}
-            onClick={() => setActiveTab('overview')}
+            onClick={() => { setActiveTab('overview'); setMobileMenuOpen(false) }}
           />
           <NavButton 
             icon={<FileText />} 
             label="מסמכים" 
             active={activeTab === 'documents'}
-            onClick={() => setActiveTab('documents')}
+            onClick={() => { setActiveTab('documents'); setMobileMenuOpen(false) }}
           />
           <NavButton 
             icon={<ClipboardList />} 
             label="רשימת ציות" 
             active={activeTab === 'checklist'}
-            onClick={() => setActiveTab('checklist')}
+            onClick={() => { setActiveTab('checklist'); setMobileMenuOpen(false) }}
           />
           <NavButton 
             icon={<Users />} 
             label="בקשות פרטיות" 
             active={activeTab === 'requests'}
-            onClick={() => setActiveTab('requests')}
+            onClick={() => { setActiveTab('requests'); setMobileMenuOpen(false) }}
           />
           <NavButton 
             icon={<MessageSquare />} 
             label="שאלות ותשובות" 
             active={activeTab === 'qa'}
-            onClick={() => setActiveTab('qa')}
+            onClick={() => { setActiveTab('qa'); setMobileMenuOpen(false) }}
           />
           <NavButton 
             icon={<User />} 
             label="הגדרות" 
             active={activeTab === 'settings'}
-            onClick={() => setActiveTab('settings')}
+            onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false) }}
           />
         </nav>
 
@@ -332,7 +358,7 @@ function DashboardContent() {
       </aside>
 
       {/* Main Content */}
-      <main className="mr-64 p-8">
+      <main className="md:mr-64 p-4 md:p-8 pt-20 md:pt-8">
         {/* Welcome Modal */}
         {showWelcome && organization && (
           <WelcomeModal
@@ -344,10 +370,10 @@ function DashboardContent() {
         )}
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl font-bold">שלום, {userName}</h1>
-            <p className="text-gray-600">
+            <h1 className="text-xl md:text-2xl font-bold">שלום, {userName}</h1>
+            <p className="text-gray-600 text-sm md:text-base">
               {organization ? `ברוכים הבאים ללוח הבקרה של ${organization.name}` : 'ברוכים הבאים! השלימו את ההרשמה כדי להתחיל'}
             </p>
           </div>
