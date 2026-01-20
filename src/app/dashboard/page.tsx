@@ -259,7 +259,7 @@ function DashboardContent() {
   const [isRegenerating, setIsRegenerating] = useState(false)
 
   const handleRegenerateDocs = async () => {
-    if (!organization?.id || isRegenerating) return
+    if (!organization?.id || isRegenerating || !supabase) return
     
     setIsRegenerating(true)
     try {
