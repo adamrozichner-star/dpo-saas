@@ -9,171 +9,142 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { 
-  Shield, ArrowRight, ArrowLeft, CheckCircle2, Building2, Database,
-  Share2, Lock, FileCheck, Loader2, AlertCircle, User, Mail, Eye,
-  FileText, Users, Sparkles, Phone
+  Shield, 
+  ArrowRight, 
+  ArrowLeft, 
+  CheckCircle2, 
+  Building2,
+  Database,
+  Share2,
+  Lock,
+  FileCheck,
+  Loader2,
+  AlertCircle,
+  User,
+  Sparkles,
+  HelpCircle,
+  Phone,
+  Mail
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { onboardingSteps } from '@/lib/mock-data'
+import { OnboardingQuestion, OnboardingAnswer } from '@/types'
 
-// Onboarding steps definition
-const STEPS = [
-  {
-    id: 'tier',
-    title: 'בחירת חבילה',
-    description: 'בחרו את החבילה המתאימה לעסק',
-    icon: Shield
-  },
-  {
-    id: 'account',
-    title: 'יצירת חשבון',
-    description: 'פרטים בסיסיים להתחברות',
-    icon: User
-  },
-  {
-    id: 'business',
-    title: 'פרטי העסק',
-    description: 'שם העסק וח.פ',
-    icon: Building2
-  },
-  {
-    id: 'data',
-    title: 'סוגי המידע',
-    description: 'איזה מידע אתם אוספים',
-    icon: Database
-  },
-  {
-    id: 'security',
-    title: 'אבטחה ושיתוף',
-    description: 'אמצעי אבטחה ושיתוף מידע',
-    icon: Lock
-  },
-  {
-    id: 'summary',
-    title: 'סיכום ואישור',
-    description: 'סקירה לפני יצירת המסמכים',
-    icon: FileCheck
-  }
+const stepIcons = [Building2, Database, Share2, Lock, FileCheck, User]
+const stepDescriptions = [
+  'נתחיל עם פרטים בסיסיים על העסק',
+  'ספרו לנו איזה מידע אתם אוספים',
+  'איך ואיפה המידע מאוחסן ומשותף',
+  'בואו נבדוק את רמת האבטחה הנוכחית',
+  'עוד קצת על המצב הרגולטורי הקיים',
+  'הכירו את הממונה שלכם'
 ]
+
+// Industry-specific suggestions for data types
+const industrySuggestions: Record<string, string[]> = {
+  healthcare: ['contact', 'id', 'health'],
+  finance: ['contact', 'id', 'financial'],
+  retail: ['contact', 'financial', 'behavioral'],
+  technology: ['contact', 'behavioral', 'employment'],
+  education: ['contact', 'id', 'employment'],
+  services: ['contact', 'financial'],
+  manufacturing: ['contact', 'employment'],
+  other: ['contact']
+}
 
 function OnboardingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { user, supabase, signUp, signIn, loading: authLoading } = useAuth()
+  const { user, supabase, loading } = useAuth()
   
   const [currentStep, setCurrentStep] = useState(0)
+  const [answers, setAnswers] = useState<OnboardingAnswer[]>([])
+  const [selectedTier, setSelectedTier] = useState<'basic' | 'extended' | null>(null)
+  const [showTierSelection, setShowTierSelection] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string>('')
   const [generationProgress, setGenerationProgress] = useState(0)
-  
-  // Form data
-  const [formData, setFormData] = useState({
-    // Tier
-    tier: '' as 'basic' | 'extended' | '',
-    // Account
-    email: '',
-    password: '',
-    fullName: '',
-    phone: '',
-    // Business
-    businessName: '',
-    businessId: '',
-    businessType: '',
-    employeeCount: '',
-    // Data
-    dataTypes: [] as string[],
-    dataSources: [] as string[],
-    processingPurposes: [] as string[],
-    // Security
-    securityMeasures: [] as string[],
-    thirdPartySharing: null as boolean | null,
-    internationalTransfer: null as boolean | null,
-    cloudStorage: '',
-    existingPolicy: null as boolean | null,
-    databaseRegistered: ''
-  })
 
-  // Check if user is already logged in
+  // Add step for DPO intro
+  const allSteps = [...onboardingSteps, { id: 6, title: 'הממונה שלכם', questions: [] }]
+  const totalSteps = allSteps.length
+
   useEffect(() => {
-    if (!authLoading && user) {
-      // User is logged in - skip to business details
-      setCurrentStep(2)
+    if (!loading && !user) {
+      router.push('/login')
     }
-  }, [authLoading, user])
+  }, [loading, user, router])
 
-  // Handle tier from URL param
   useEffect(() => {
     const tier = searchParams.get('tier')
     if (tier === 'basic' || tier === 'extended') {
-      setFormData(prev => ({ ...prev, tier }))
-      if (currentStep === 0) {
-        setCurrentStep(1)
-      }
+      setSelectedTier(tier)
+      setShowTierSelection(false)
     }
   }, [searchParams])
 
-  const updateFormData = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+  // Auto-save answers to localStorage
+  useEffect(() => {
+    if (answers.length > 0) {
+      localStorage.setItem('dpo_onboarding_answers', JSON.stringify(answers))
+      localStorage.setItem('dpo_onboarding_step', String(currentStep))
+    }
+  }, [answers, currentStep])
+
+  // Load saved answers on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('dpo_onboarding_answers')
+    const savedStep = localStorage.getItem('dpo_onboarding_step')
+    if (saved) {
+      try {
+        setAnswers(JSON.parse(saved))
+        if (savedStep) setCurrentStep(parseInt(savedStep))
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+  }, [])
+
+  const currentStepData = allSteps[currentStep]
+  const progress = ((currentStep + 1) / totalSteps) * 100
+
+  const getAnswer = (questionId: string) => {
+    return answers.find(a => a.questionId === questionId)?.value
   }
 
-  const toggleArrayValue = (field: string, value: string) => {
-    setFormData(prev => {
-      const current = prev[field as keyof typeof prev] as string[]
-      if (current.includes(value)) {
-        return { ...prev, [field]: current.filter(v => v !== value) }
-      } else {
-        return { ...prev, [field]: [...current, value] }
-      }
-    })
+  const handleAnswer = (questionId: string, value: string | string[] | boolean | number) => {
+    const existing = answers.findIndex(a => a.questionId === questionId)
+    if (existing >= 0) {
+      const newAnswers = [...answers]
+      newAnswers[existing] = { questionId, value }
+      setAnswers(newAnswers)
+    } else {
+      setAnswers([...answers, { questionId, value }])
+    }
+  }
+
+  // Get suggested data types based on industry
+  const getSuggestedDataTypes = () => {
+    const businessType = getAnswer('business_type') as string
+    return industrySuggestions[businessType] || industrySuggestions.other
   }
 
   const canProceed = () => {
-    switch (STEPS[currentStep].id) {
-      case 'tier':
-        return !!formData.tier
-      case 'account':
-        if (user) return true // Already logged in
-        return formData.email && formData.password && formData.fullName && formData.password.length >= 6
-      case 'business':
-        return formData.businessName && formData.businessId && formData.businessType && formData.employeeCount
-      case 'data':
-        return formData.dataTypes.length > 0 && formData.dataSources.length > 0 && formData.processingPurposes.length > 0
-      case 'security':
-        return formData.securityMeasures.length > 0 && 
-               formData.thirdPartySharing !== null && 
-               formData.internationalTransfer !== null &&
-               formData.cloudStorage &&
-               formData.existingPolicy !== null
-      case 'summary':
-        return true
-      default:
-        return false
-    }
+    if (currentStep === totalSteps - 1) return true // DPO intro step
+    if (!currentStepData || !currentStepData.questions) return false
+    return currentStepData.questions.every((q: OnboardingQuestion) => {
+      if (!q.required) return true
+      const answer = getAnswer(q.id)
+      if (Array.isArray(answer)) return answer.length > 0
+      return answer !== undefined && answer !== ''
+    })
   }
 
-  const handleNext = async () => {
-    setError(null)
-    
-    // If on account step and not logged in, create account
-    if (STEPS[currentStep].id === 'account' && !user) {
-      try {
-        const { error: signUpError } = await signUp(formData.email, formData.password, formData.fullName)
-        if (signUpError) {
-          // Try to sign in if account exists
-          const { error: signInError } = await signIn(formData.email, formData.password)
-          if (signInError) {
-            setError('שגיאה ביצירת חשבון: ' + signUpError.message)
-            return
-          }
-        }
-      } catch (err: any) {
-        setError(err.message)
-        return
-      }
-    }
-    
-    if (currentStep < STEPS.length - 1) {
+  const handleNext = () => {
+    if (currentStep < totalSteps - 1) {
       setCurrentStep(currentStep + 1)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
       handleComplete()
     }
@@ -182,12 +153,13 @@ function OnboardingContent() {
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 
   const handleComplete = async () => {
     if (!supabase || !user) {
-      setError('נא להתחבר מחדש')
+      setError('לא מחובר למערכת')
       return
     }
 
@@ -197,142 +169,73 @@ function OnboardingContent() {
     setStatus('יוצרים את הארגון שלכם...')
 
     try {
-      // 1. Create organization
+      const businessNameAnswer = answers.find(a => a.questionId === 'business_name')
+      const businessIdAnswer = answers.find(a => a.questionId === 'business_id')
+      
+      const businessName = businessNameAnswer?.value as string || 'עסק חדש'
+      const businessId = businessIdAnswer?.value as string || ''
+
       setGenerationProgress(20)
+
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
         .insert({
-          name: formData.businessName,
-          business_id: formData.businessId,
-          tier: formData.tier || 'basic',
-          status: 'onboarding',
-          risk_level: formData.dataTypes.some(d => ['health', 'financial', 'biometric'].includes(d)) ? 'sensitive' : 'standard'
-        })
-        .select()
-        .single()
-
-      if (orgError) throw new Error('שגיאה ביצירת הארגון: ' + orgError.message)
-
-      // 2. Update user with org_id
-      setStatus('מקשרים את החשבון לארגון...')
-      setGenerationProgress(30)
-      
-      await supabase
-        .from('users')
-        .update({ 
-          org_id: orgData.id,
-          name: formData.fullName || user.email?.split('@')[0]
-        })
-        .eq('auth_user_id', user.id)
-
-      // 3. Create organization profile
-      setStatus('שומרים את פרופיל הארגון...')
-      setGenerationProgress(40)
-      
-      await supabase
-        .from('organization_profiles')
-        .insert({
-          org_id: orgData.id,
-          business_type: formData.businessType,
-          employee_count: parseInt(formData.employeeCount.split('-')[0]) || 10,
-          data_types: formData.dataTypes,
-          processing_purposes: formData.processingPurposes,
-          security_measures: formData.securityMeasures
-        })
-
-      // 4. Assign DPO (get first available DPO)
-      setStatus('מקצים ממונה הגנת פרטיות...')
-      setGenerationProgress(50)
-      
-      const { data: dpoData } = await supabase
-        .from('dpos')
-        .select('id')
-        .limit(1)
-        .single()
-
-      if (dpoData) {
-        await supabase
-          .from('organizations')
-          .update({ dpo_id: dpoData.id })
-          .eq('id', orgData.id)
-      }
-
-      // 5. Generate documents
-      setStatus('מייצרים מסמכים מותאמים אישית...')
-      setGenerationProgress(60)
-      
-      const docResponse = await fetch('/api/generate-documents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orgId: orgData.id,
-          orgName: formData.businessName,
-          businessId: formData.businessId,
-          answers: [
-            { questionId: 'business_type', value: formData.businessType },
-            { questionId: 'employee_count', value: formData.employeeCount },
-            { questionId: 'data_types', value: formData.dataTypes },
-            { questionId: 'data_sources', value: formData.dataSources },
-            { questionId: 'processing_purposes', value: formData.processingPurposes },
-            { questionId: 'security_measures', value: formData.securityMeasures },
-            { questionId: 'third_party_sharing', value: formData.thirdPartySharing },
-            { questionId: 'international_transfer', value: formData.internationalTransfer },
-            { questionId: 'cloud_storage', value: formData.cloudStorage },
-            { questionId: 'existing_policy', value: formData.existingPolicy }
-          ]
-        })
-      })
-
-      if (!docResponse.ok) {
-        console.error('Document generation failed, but continuing...')
-      }
-
-      setGenerationProgress(80)
-
-      // 6. Create welcome message thread
-      setStatus('יוצרים ערוץ תקשורת עם הממונה...')
-      
-      const { data: threadData } = await supabase
-        .from('message_threads')
-        .insert({
-          org_id: orgData.id,
-          subject: 'ברוכים הבאים ל-DPO-Pro! 🎉',
+          name: businessName,
+          business_id: businessId,
+          tier: selectedTier || 'basic',
           status: 'active'
         })
         .select()
         .single()
 
-      if (threadData) {
-        await supabase
-          .from('messages')
-          .insert({
-            thread_id: threadData.id,
-            sender_type: 'dpo',
-            sender_name: 'הממונה',
-            content: `שלום ${formData.fullName || 'ולקוח יקר'},
-
-ברוכים הבאים ל-DPO-Pro! 🎉
-
-אני הממונה על הגנת הפרטיות שלכם. המסמכים שלכם נוצרו ומוכנים לשימוש.
-
-מה עכשיו?
-1. עברו על המסמכים בלשונית "מסמכים"
-2. הורידו והטמיעו את מדיניות הפרטיות באתר שלכם
-3. שאלו אותי כל שאלה - אני כאן בשבילכם!
-
-בהצלחה,
-הממונה שלכם`
-          })
+      if (orgError) {
+        throw new Error('שגיאה ביצירת הארגון: ' + orgError.message)
       }
 
-      // 7. Update org status to active
-      setStatus('מסיימים...')
-      setGenerationProgress(95)
+      setGenerationProgress(40)
+      setStatus('מעדכנים את פרטי המשתמש...')
+
+      await supabase
+        .from('users')
+        .update({ org_id: orgData.id })
+        .eq('auth_user_id', user.id)
+
+      setGenerationProgress(50)
+      setStatus('שומרים את פרופיל הארגון...')
       
       await supabase
-        .from('organizations')
-        .update({ status: 'active' })
-        .eq('id', orgData.id)
+        .from('organization_profiles')
+        .insert({
+          org_id: orgData.id,
+          profile_data: { answers, completedAt: new Date().toISOString() }
+        })
+
+      setGenerationProgress(60)
+      setStatus('מייצרים מסמכים...')
+      
+      try {
+        const response = await fetch('/api/generate-documents', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orgId: orgData.id,
+            orgName: businessName,
+            businessId: businessId,
+            answers: answers
+          })
+        })
+        
+        if (response.ok) {
+          setGenerationProgress(90)
+          setStatus('מסמכים נוצרו בהצלחה!')
+        }
+      } catch (docError) {
+        console.log('Document generation skipped')
+      }
+
+      // Clear saved data
+      localStorage.removeItem('dpo_onboarding_answers')
+      localStorage.removeItem('dpo_onboarding_step')
 
       setGenerationProgress(100)
       setStatus('הושלם! מעבירים ללוח הבקרה...')
@@ -342,14 +245,12 @@ function OnboardingContent() {
       }, 1500)
 
     } catch (err: any) {
-      console.error('Onboarding error:', err)
       setError(err.message || 'אירעה שגיאה בתהליך ההרשמה')
       setIsGenerating(false)
     }
   }
 
-  // Loading state
-  if (authLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -357,33 +258,253 @@ function OnboardingContent() {
     )
   }
 
-  // Generation in progress
   if (isGenerating) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4" dir="rtl">
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
         <Card className="w-full max-w-md text-center">
           <CardContent className="pt-8 pb-8">
-            <div className="relative w-20 h-20 mx-auto mb-6">
-              <div className="absolute inset-0 bg-blue-100 rounded-full animate-ping opacity-50" />
-              <div className="relative w-full h-full bg-blue-600 rounded-full flex items-center justify-center">
-                <Sparkles className="h-10 w-10 text-white animate-pulse" />
+            <div className="relative mb-6">
+              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <Sparkles className="h-10 w-10 text-primary animate-pulse" />
               </div>
             </div>
-            <h2 className="text-2xl font-bold mb-2">מכינים את הכל בשבילכם</h2>
+            <h2 className="text-2xl font-bold mb-2">מייצרים את המסמכים שלכם</h2>
             <p className="text-gray-600 mb-6">{status}</p>
-            <Progress value={generationProgress} className="h-3 mb-2" />
-            <p className="text-sm text-gray-500">{generationProgress}%</p>
+            <Progress value={generationProgress} className="h-3 mb-4" />
+            <div className="grid grid-cols-4 gap-2 text-xs text-gray-500">
+              <div className={generationProgress >= 25 ? 'text-primary font-medium' : ''}>
+                <FileCheck className="h-4 w-4 mx-auto mb-1" />
+                מדיניות פרטיות
+              </div>
+              <div className={generationProgress >= 50 ? 'text-primary font-medium' : ''}>
+                <Database className="h-4 w-4 mx-auto mb-1" />
+                הגדרות מאגר
+              </div>
+              <div className={generationProgress >= 75 ? 'text-primary font-medium' : ''}>
+                <Lock className="h-4 w-4 mx-auto mb-1" />
+                נהלי אבטחה
+              </div>
+              <div className={generationProgress >= 90 ? 'text-primary font-medium' : ''}>
+                <User className="h-4 w-4 mx-auto mb-1" />
+                כתב מינוי
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
     )
   }
 
-  const progress = ((currentStep + 1) / STEPS.length) * 100
-  const StepIcon = STEPS[currentStep].icon
+  if (showTierSelection) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4">
+        <div className="max-w-4xl mx-auto">
+          <Link href="/" className="inline-flex items-center gap-2 mb-8 text-gray-600 hover:text-gray-900">
+            <ArrowRight className="h-4 w-4" />
+            חזרה לדף הבית
+          </Link>
+
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 mb-4">
+              <Shield className="h-8 w-8 text-primary" />
+              <span className="font-bold text-2xl">DPO-Pro</span>
+            </div>
+            <h1 className="text-3xl font-bold mb-2">בחרו את החבילה שלכם</h1>
+            <p className="text-gray-600">התחילו עם 14 ימי ניסיון חינם</p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-lg ${selectedTier === 'basic' ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setSelectedTier('basic')}
+            >
+              <CardHeader>
+                <CardTitle>חבילה בסיסית</CardTitle>
+                <CardDescription>לעסקים קטנים ובינוניים</CardDescription>
+                <div className="pt-2">
+                  <span className="text-3xl font-bold">₪500</span>
+                  <span className="text-gray-600"> / חודש</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    DPO ממונה מוסמך
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    מערכת AI מלאה
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    הפקת מסמכים אוטומטית
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    Q&A חכם לעובדים
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-lg ${selectedTier === 'extended' ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setSelectedTier('extended')}
+            >
+              <CardHeader>
+                <Badge className="w-fit mb-2">מומלץ</Badge>
+                <CardTitle>חבילה מורחבת</CardTitle>
+                <CardDescription>לעסקים עם פעילות מורכבת</CardDescription>
+                <div className="pt-2">
+                  <span className="text-3xl font-bold">₪1,200</span>
+                  <span className="text-gray-600"> / חודש</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    כל מה שבחבילה הבסיסית
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    סקירה תקופתית
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    זמינות DPO מוגברת
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    ליווי DPIA
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="text-center mt-8">
+            <Button 
+              size="lg" 
+              onClick={() => setShowTierSelection(false)}
+              disabled={!selectedTier}
+            >
+              המשך להגדרת הארגון
+              <ArrowLeft className="mr-2 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // DPO Introduction Step
+  if (currentStep === totalSteps - 1) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4">
+        <div className="max-w-2xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <Button variant="ghost" onClick={handleBack} className="gap-2">
+              <ArrowRight className="h-4 w-4" />
+              הקודם
+            </Button>
+            <div className="flex items-center gap-2">
+              <Shield className="h-6 w-6 text-primary" />
+              <span className="font-bold">DPO-Pro</span>
+            </div>
+          </div>
+
+          {/* Progress */}
+          <div className="mb-8">
+            <div className="flex justify-between text-sm text-gray-600 mb-2">
+              <span>שלב אחרון!</span>
+              <span>100%</span>
+            </div>
+            <Progress value={100} className="h-2" />
+          </div>
+
+          {/* DPO Card */}
+          <Card className="mb-6">
+            <CardHeader className="text-center pb-2">
+              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                <User className="h-12 w-12 text-primary" />
+              </div>
+              <Badge className="mx-auto mb-2">הממונה שלכם</Badge>
+              <CardTitle className="text-2xl">עו"ד דנה כהן</CardTitle>
+              <CardDescription>ממונה הגנת פרטיות מוסמכת</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <Mail className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm text-gray-600">אימייל</p>
+                    <p className="font-medium">dpo@dpo-pro.co.il</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <Phone className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm text-gray-600">טלפון</p>
+                    <p className="font-medium">03-555-1234</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                  <FileCheck className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm text-gray-600">מספר רישיון</p>
+                    <p className="font-medium">DPO-2025-001</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                <h4 className="font-semibold mb-2 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  מה הממונה יעשה עבורכם?
+                </h4>
+                <ul className="space-y-1 text-sm text-gray-700">
+                  <li>• פיקוח על עמידה בחוק הגנת הפרטיות</li>
+                  <li>• טיפול בפניות נושאי מידע</li>
+                  <li>• ייעוץ בנושאי פרטיות ואבטחה</li>
+                  <li>• קשר עם הרשות להגנת הפרטיות</li>
+                  <li>• מענה לשאלות שלכם ושל העובדים</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+
+          {error && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+              <AlertCircle className="h-5 w-5" />
+              {error}
+            </div>
+          )}
+
+          {/* Complete Button */}
+          <Button 
+            size="lg" 
+            className="w-full h-14 text-lg"
+            onClick={handleComplete}
+          >
+            <Sparkles className="ml-2 h-5 w-5" />
+            סיום והפקת מסמכים
+          </Button>
+
+          <p className="text-center text-sm text-gray-500 mt-4">
+            המסמכים יופקו אוטומטית ויהיו זמינים בלוח הבקרה
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  const StepIcon = stepIcons[currentStep] || FileCheck
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4" dir="rtl">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -397,67 +518,198 @@ function OnboardingContent() {
           </div>
         </div>
 
-        {/* Progress */}
+        {/* Progress with Step Icons */}
         <div className="mb-8">
-          <div className="flex justify-between text-sm text-gray-600 mb-2">
-            <span>{STEPS[currentStep].title}</span>
-            <span>שלב {currentStep + 1} מתוך {STEPS.length}</span>
-          </div>
-          <Progress value={progress} className="h-2" />
-          
-          {/* Step indicators */}
-          <div className="flex justify-between mt-4">
-            {STEPS.map((step, index) => {
-              const Icon = step.icon
-              const isCompleted = index < currentStep
-              const isCurrent = index === currentStep
+          <div className="flex justify-between items-center mb-4">
+            {allSteps.map((step, index) => {
+              const Icon = stepIcons[index] || FileCheck
+              const isActive = index === currentStep
+              const isComplete = index < currentStep
               return (
-                <div key={step.id} className="flex flex-col items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs transition-colors ${
-                    isCompleted ? 'bg-green-500 text-white' :
-                    isCurrent ? 'bg-blue-600 text-white' :
-                    'bg-gray-200 text-gray-500'
-                  }`}>
-                    {isCompleted ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                <div 
+                  key={step.id} 
+                  className={`flex flex-col items-center ${index < totalSteps - 1 ? 'flex-1' : ''}`}
+                >
+                  <div 
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                      isActive 
+                        ? 'bg-primary text-white scale-110' 
+                        : isComplete 
+                          ? 'bg-green-500 text-white' 
+                          : 'bg-gray-200 text-gray-500'
+                    }`}
+                  >
+                    {isComplete ? (
+                      <CheckCircle2 className="h-5 w-5" />
+                    ) : (
+                      <Icon className="h-5 w-5" />
+                    )}
                   </div>
+                  <span className={`text-xs mt-1 hidden sm:block ${isActive ? 'text-primary font-medium' : 'text-gray-500'}`}>
+                    {step.title}
+                  </span>
                 </div>
               )
             })}
           </div>
+          <Progress value={progress} className="h-2" />
         </div>
 
-        {/* Error message */}
         {error && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
-            <AlertCircle className="h-5 w-5 flex-shrink-0" />
-            <span>{error}</span>
+            <AlertCircle className="h-5 w-5" />
+            {error}
           </div>
         )}
 
-        {/* Step content */}
+        {/* Step Header */}
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <StepIcon className="h-8 w-8 text-primary" />
+          </div>
+          <h2 className="text-2xl font-bold mb-1">{currentStepData?.title}</h2>
+          <p className="text-gray-600">{stepDescriptions[currentStep]}</p>
+        </div>
+
+        {/* Questions */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                <StepIcon className="h-5 w-5 text-blue-600" />
+          <CardContent className="pt-6 space-y-6">
+            {currentStepData?.questions.map((question: OnboardingQuestion) => (
+              <div key={question.id} className="space-y-3">
+                <label className="block font-medium text-lg">
+                  {question.text}
+                  {question.required && <span className="text-red-500 mr-1">*</span>}
+                </label>
+                
+                {question.helpText && (
+                  <p className="text-sm text-gray-500 flex items-center gap-1">
+                    <HelpCircle className="h-4 w-4" />
+                    {question.helpText}
+                  </p>
+                )}
+
+                {/* Show suggestions for data_types based on industry */}
+                {question.id === 'data_types' && getAnswer('business_type') && (
+                  <div className="p-3 bg-blue-50 rounded-lg text-sm">
+                    <p className="font-medium text-blue-800 mb-1">
+                      <Sparkles className="h-4 w-4 inline ml-1" />
+                      מומלץ לתחום שלכם:
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {getSuggestedDataTypes().map(type => {
+                        const option = question.options?.find(o => o.value === type)
+                        return option ? (
+                          <Badge key={type} variant="secondary" className="text-xs">
+                            {option.label}
+                          </Badge>
+                        ) : null
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                {question.type === 'text' && (
+                  <Input
+                    value={(getAnswer(question.id) as string) || ''}
+                    onChange={(e) => handleAnswer(question.id, e.target.value)}
+                    placeholder="הקלידו כאן..."
+                    className="h-12 text-lg"
+                  />
+                )}
+
+                {question.type === 'single_choice' && question.options && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {question.options.map((option) => (
+                      <Button
+                        key={option.value}
+                        type="button"
+                        variant={getAnswer(question.id) === option.value ? 'default' : 'outline'}
+                        className="justify-start h-auto py-3 px-4"
+                        onClick={() => handleAnswer(question.id, option.value)}
+                      >
+                        {getAnswer(question.id) === option.value && (
+                          <CheckCircle2 className="h-4 w-4 ml-2 flex-shrink-0" />
+                        )}
+                        {option.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+
+                {question.type === 'multi_choice' && question.options && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {question.options.map((option) => {
+                      const currentValues = (getAnswer(question.id) as string[]) || []
+                      const isSelected = currentValues.includes(option.value)
+                      const isSuggested = question.id === 'data_types' && getSuggestedDataTypes().includes(option.value)
+                      return (
+                        <Button
+                          key={option.value}
+                          type="button"
+                          variant={isSelected ? 'default' : 'outline'}
+                          className={`justify-start h-auto py-3 px-4 ${isSuggested && !isSelected ? 'border-blue-300 bg-blue-50' : ''}`}
+                          onClick={() => {
+                            if (isSelected) {
+                              handleAnswer(question.id, currentValues.filter(v => v !== option.value))
+                            } else {
+                              handleAnswer(question.id, [...currentValues, option.value])
+                            }
+                          }}
+                        >
+                          {isSelected && (
+                            <CheckCircle2 className="h-4 w-4 ml-2 flex-shrink-0" />
+                          )}
+                          {option.label}
+                        </Button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {question.type === 'number' && (
+                  <Input
+                    type="number"
+                    value={(getAnswer(question.id) as number) || ''}
+                    onChange={(e) => handleAnswer(question.id, parseInt(e.target.value) || 0)}
+                    placeholder="0"
+                    className="h-12 text-lg"
+                  />
+                )}
+
+                {question.type === 'boolean' && (
+                  <div className="flex gap-4">
+                    <Button
+                      type="button"
+                      variant={getAnswer(question.id) === true ? 'default' : 'outline'}
+                      className="flex-1 h-14 text-lg"
+                      onClick={() => handleAnswer(question.id, true)}
+                    >
+                      {getAnswer(question.id) === true && <CheckCircle2 className="h-5 w-5 ml-2" />}
+                      כן
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={getAnswer(question.id) === false ? 'default' : 'outline'}
+                      className="flex-1 h-14 text-lg"
+                      onClick={() => handleAnswer(question.id, false)}
+                    >
+                      {getAnswer(question.id) === false && <CheckCircle2 className="h-5 w-5 ml-2" />}
+                      לא
+                    </Button>
+                  </div>
+                )}
               </div>
-              <div>
-                <CardTitle>{STEPS[currentStep].title}</CardTitle>
-                <CardDescription>{STEPS[currentStep].description}</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {renderStepContent()}
+            ))}
           </CardContent>
         </Card>
 
-        {/* Navigation buttons */}
+        {/* Navigation */}
         <div className="flex justify-between mt-6">
           <Button
             variant="outline"
             onClick={handleBack}
             disabled={currentStep === 0}
+            className="h-12"
           >
             <ArrowRight className="ml-2 h-4 w-4" />
             הקודם
@@ -465,510 +717,22 @@ function OnboardingContent() {
           <Button
             onClick={handleNext}
             disabled={!canProceed()}
+            className="h-12 px-8"
           >
-            {currentStep === STEPS.length - 1 ? 'סיום והפקת מסמכים' : 'הבא'}
+            {currentStep === totalSteps - 2 ? 'הכירו את הממונה' : 'הבא'}
             <ArrowLeft className="mr-2 h-4 w-4" />
           </Button>
         </div>
-      </div>
-    </div>
-  )
 
-  function renderStepContent() {
-    switch (STEPS[currentStep].id) {
-      case 'tier':
-        return <TierStep formData={formData} updateFormData={updateFormData} />
-      case 'account':
-        return <AccountStep formData={formData} updateFormData={updateFormData} user={user} />
-      case 'business':
-        return <BusinessStep formData={formData} updateFormData={updateFormData} />
-      case 'data':
-        return <DataStep formData={formData} toggleArrayValue={toggleArrayValue} />
-      case 'security':
-        return <SecurityStep formData={formData} updateFormData={updateFormData} toggleArrayValue={toggleArrayValue} />
-      case 'summary':
-        return <SummaryStep formData={formData} />
-      default:
-        return null
-    }
-  }
-}
-
-// ============== STEP COMPONENTS ==============
-
-function TierStep({ formData, updateFormData }: { formData: any, updateFormData: (field: string, value: any) => void }) {
-  return (
-    <div className="space-y-4">
-      <p className="text-gray-600 text-sm mb-4">בחרו את החבילה המתאימה לעסק שלכם. ניתן לשדרג בכל עת.</p>
-      
-      <div className="grid gap-4">
-        <div 
-          className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-            formData.tier === 'basic' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
-          }`}
-          onClick={() => updateFormData('tier', 'basic')}
-        >
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <h3 className="font-bold text-lg">חבילה בסיסית</h3>
-              <p className="text-sm text-gray-500">לעסקים קטנים ובינוניים</p>
-            </div>
-            <div className="text-left">
-              <span className="text-2xl font-bold">₪500</span>
-              <span className="text-gray-500 text-sm"> / חודש</span>
-            </div>
-          </div>
-          <ul className="space-y-1 text-sm text-gray-600">
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" />DPO ממונה מוסמך</li>
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" />מערכת AI מלאה</li>
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" />הפקת מסמכים אוטומטית</li>
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" />עד 2 פניות לממונה ברבעון</li>
-          </ul>
-        </div>
-
-        <div 
-          className={`p-4 rounded-xl border-2 cursor-pointer transition-all relative ${
-            formData.tier === 'extended' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-blue-300'
-          }`}
-          onClick={() => updateFormData('tier', 'extended')}
-        >
-          <Badge className="absolute -top-2 right-4 bg-blue-600">מומלץ</Badge>
-          <div className="flex justify-between items-start mb-2 mt-2">
-            <div>
-              <h3 className="font-bold text-lg">חבילה מורחבת</h3>
-              <p className="text-sm text-gray-500">לעסקים עם מידע רגיש</p>
-            </div>
-            <div className="text-left">
-              <span className="text-2xl font-bold">₪1,200</span>
-              <span className="text-gray-500 text-sm"> / חודש</span>
-            </div>
-          </div>
-          <ul className="space-y-1 text-sm text-gray-600">
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" />כל מה שבבסיסית</li>
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" />סקירה תקופתית של הממונה</li>
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" />זמינות מורחבת</li>
-            <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" />עד 8 פניות לממונה ברבעון</li>
-          </ul>
-        </div>
+        {/* Step indicator text */}
+        <p className="text-center text-sm text-gray-500 mt-4">
+          שלב {currentStep + 1} מתוך {totalSteps} • התשובות נשמרות אוטומטית
+        </p>
       </div>
     </div>
   )
 }
 
-function AccountStep({ formData, updateFormData, user }: { formData: any, updateFormData: (field: string, value: any) => void, user: any }) {
-  if (user) {
-    return (
-      <div className="text-center py-4">
-        <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-4" />
-        <h3 className="font-bold text-lg mb-2">כבר מחוברים!</h3>
-        <p className="text-gray-600">מחובר כ: {user.email}</p>
-        <p className="text-sm text-gray-500 mt-2">לחצו "הבא" להמשך</p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      <p className="text-gray-600 text-sm mb-4">צרו חשבון כדי לשמור את ההתקדמות ולגשת למערכת</p>
-      
-      <div>
-        <label className="block font-medium mb-1">שם מלא <span className="text-red-500">*</span></label>
-        <Input
-          value={formData.fullName}
-          onChange={(e) => updateFormData('fullName', e.target.value)}
-          placeholder="ישראל ישראלי"
-        />
-      </div>
-
-      <div>
-        <label className="block font-medium mb-1">אימייל <span className="text-red-500">*</span></label>
-        <Input
-          type="email"
-          value={formData.email}
-          onChange={(e) => updateFormData('email', e.target.value)}
-          placeholder="you@company.com"
-        />
-      </div>
-
-      <div>
-        <label className="block font-medium mb-1">סיסמה <span className="text-red-500">*</span></label>
-        <Input
-          type="password"
-          value={formData.password}
-          onChange={(e) => updateFormData('password', e.target.value)}
-          placeholder="לפחות 6 תווים"
-        />
-        {formData.password && formData.password.length < 6 && (
-          <p className="text-sm text-red-500 mt-1">הסיסמה חייבת להכיל לפחות 6 תווים</p>
-        )}
-      </div>
-
-      <div>
-        <label className="block font-medium mb-1">טלפון (אופציונלי)</label>
-        <Input
-          type="tel"
-          value={formData.phone}
-          onChange={(e) => updateFormData('phone', e.target.value)}
-          placeholder="050-1234567"
-        />
-      </div>
-
-      <p className="text-xs text-gray-500">
-        יש לכם כבר חשבון? <Link href="/login" className="text-blue-600 hover:underline">התחברו כאן</Link>
-      </p>
-    </div>
-  )
-}
-
-function BusinessStep({ formData, updateFormData }: { formData: any, updateFormData: (field: string, value: any) => void }) {
-  const businessTypes = [
-    { value: 'retail', label: 'קמעונאות / מסחר' },
-    { value: 'technology', label: 'טכנולוגיה / הייטק' },
-    { value: 'healthcare', label: 'בריאות / רפואה' },
-    { value: 'finance', label: 'פיננסים / ביטוח' },
-    { value: 'education', label: 'חינוך / הדרכה' },
-    { value: 'services', label: 'שירותים מקצועיים' },
-    { value: 'manufacturing', label: 'ייצור / תעשייה' },
-    { value: 'other', label: 'אחר' }
-  ]
-
-  const employeeCounts = [
-    { value: '1-10', label: '1-10 עובדים' },
-    { value: '11-50', label: '11-50 עובדים' },
-    { value: '51-200', label: '51-200 עובדים' },
-    { value: '200+', label: 'מעל 200 עובדים' }
-  ]
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <label className="block font-medium mb-1">שם העסק <span className="text-red-500">*</span></label>
-        <Input
-          value={formData.businessName}
-          onChange={(e) => updateFormData('businessName', e.target.value)}
-          placeholder="שם החברה בע״מ"
-        />
-      </div>
-
-      <div>
-        <label className="block font-medium mb-1">מספר ח.פ / עוסק מורשה <span className="text-red-500">*</span></label>
-        <Input
-          value={formData.businessId}
-          onChange={(e) => updateFormData('businessId', e.target.value)}
-          placeholder="9 ספרות"
-          maxLength={9}
-        />
-      </div>
-
-      <div>
-        <label className="block font-medium mb-2">תחום פעילות <span className="text-red-500">*</span></label>
-        <div className="grid grid-cols-2 gap-2">
-          {businessTypes.map(type => (
-            <Button
-              key={type.value}
-              type="button"
-              variant={formData.businessType === type.value ? 'default' : 'outline'}
-              className="justify-start text-sm h-auto py-2"
-              onClick={() => updateFormData('businessType', type.value)}
-            >
-              {type.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block font-medium mb-2">מספר עובדים <span className="text-red-500">*</span></label>
-        <div className="grid grid-cols-2 gap-2">
-          {employeeCounts.map(count => (
-            <Button
-              key={count.value}
-              type="button"
-              variant={formData.employeeCount === count.value ? 'default' : 'outline'}
-              className="justify-start text-sm"
-              onClick={() => updateFormData('employeeCount', count.value)}
-            >
-              {count.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function DataStep({ formData, toggleArrayValue }: { formData: any, toggleArrayValue: (field: string, value: string) => void }) {
-  const dataTypes = [
-    { value: 'contact', label: 'פרטי קשר (שם, טלפון, אימייל)' },
-    { value: 'id', label: 'מספר זהות / דרכון' },
-    { value: 'financial', label: 'פרטי תשלום / פיננסיים' },
-    { value: 'health', label: 'מידע רפואי / בריאותי' },
-    { value: 'biometric', label: 'מידע ביומטרי' },
-    { value: 'location', label: 'נתוני מיקום' },
-    { value: 'behavioral', label: 'נתוני התנהגות / גלישה' },
-    { value: 'employment', label: 'מידע תעסוקתי' }
-  ]
-
-  const dataSources = [
-    { value: 'direct', label: 'ישירות מלקוחות' },
-    { value: 'website', label: 'אתר / אפליקציה' },
-    { value: 'third_party', label: 'צדדים שלישיים' },
-    { value: 'public', label: 'מקורות ציבוריים' },
-    { value: 'employees', label: 'עובדים' }
-  ]
-
-  const purposes = [
-    { value: 'service', label: 'מתן שירות' },
-    { value: 'marketing', label: 'שיווק ופרסום' },
-    { value: 'analytics', label: 'אנליטיקס' },
-    { value: 'legal', label: 'דרישות חוק' },
-    { value: 'hr', label: 'משאבי אנוש' },
-    { value: 'security', label: 'אבטחה' }
-  ]
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <label className="block font-medium mb-2">אילו סוגי מידע אתם אוספים? <span className="text-red-500">*</span></label>
-        <p className="text-sm text-gray-500 mb-2">ניתן לבחור מספר אפשרויות</p>
-        <div className="grid grid-cols-2 gap-2">
-          {dataTypes.map(type => (
-            <Button
-              key={type.value}
-              type="button"
-              variant={formData.dataTypes.includes(type.value) ? 'default' : 'outline'}
-              className="justify-start text-sm h-auto py-2"
-              onClick={() => toggleArrayValue('dataTypes', type.value)}
-            >
-              {type.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block font-medium mb-2">מאיפה מגיע המידע? <span className="text-red-500">*</span></label>
-        <div className="grid grid-cols-2 gap-2">
-          {dataSources.map(source => (
-            <Button
-              key={source.value}
-              type="button"
-              variant={formData.dataSources.includes(source.value) ? 'default' : 'outline'}
-              className="justify-start text-sm"
-              onClick={() => toggleArrayValue('dataSources', source.value)}
-            >
-              {source.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block font-medium mb-2">למה משמש המידע? <span className="text-red-500">*</span></label>
-        <div className="grid grid-cols-2 gap-2">
-          {purposes.map(purpose => (
-            <Button
-              key={purpose.value}
-              type="button"
-              variant={formData.processingPurposes.includes(purpose.value) ? 'default' : 'outline'}
-              className="justify-start text-sm"
-              onClick={() => toggleArrayValue('processingPurposes', purpose.value)}
-            >
-              {purpose.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function SecurityStep({ formData, updateFormData, toggleArrayValue }: { formData: any, updateFormData: (field: string, value: any) => void, toggleArrayValue: (field: string, value: string) => void }) {
-  const securityMeasures = [
-    { value: 'encryption', label: 'הצפנת מידע' },
-    { value: 'access_control', label: 'בקרת גישה' },
-    { value: 'backup', label: 'גיבויים' },
-    { value: 'firewall', label: 'חומת אש' },
-    { value: 'antivirus', label: 'אנטי-וירוס' },
-    { value: 'training', label: 'הדרכות עובדים' }
-  ]
-
-  const cloudOptions = [
-    { value: 'none', label: 'לא משתמשים' },
-    { value: 'israeli', label: 'ספק ישראלי' },
-    { value: 'international', label: 'ספק בינלאומי' },
-    { value: 'both', label: 'שניהם' }
-  ]
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <label className="block font-medium mb-2">אמצעי אבטחה קיימים <span className="text-red-500">*</span></label>
-        <div className="grid grid-cols-2 gap-2">
-          {securityMeasures.map(measure => (
-            <Button
-              key={measure.value}
-              type="button"
-              variant={formData.securityMeasures.includes(measure.value) ? 'default' : 'outline'}
-              className="justify-start text-sm"
-              onClick={() => toggleArrayValue('securityMeasures', measure.value)}
-            >
-              {measure.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block font-medium mb-2">משתפים מידע עם גורמים חיצוניים? <span className="text-red-500">*</span></label>
-        <div className="flex gap-4">
-          <Button
-            type="button"
-            variant={formData.thirdPartySharing === true ? 'default' : 'outline'}
-            onClick={() => updateFormData('thirdPartySharing', true)}
-          >
-            כן
-          </Button>
-          <Button
-            type="button"
-            variant={formData.thirdPartySharing === false ? 'default' : 'outline'}
-            onClick={() => updateFormData('thirdPartySharing', false)}
-          >
-            לא
-          </Button>
-        </div>
-      </div>
-
-      <div>
-        <label className="block font-medium mb-2">מידע מועבר/מאוחסן מחוץ לישראל? <span className="text-red-500">*</span></label>
-        <div className="flex gap-4">
-          <Button
-            type="button"
-            variant={formData.internationalTransfer === true ? 'default' : 'outline'}
-            onClick={() => updateFormData('internationalTransfer', true)}
-          >
-            כן
-          </Button>
-          <Button
-            type="button"
-            variant={formData.internationalTransfer === false ? 'default' : 'outline'}
-            onClick={() => updateFormData('internationalTransfer', false)}
-          >
-            לא
-          </Button>
-        </div>
-      </div>
-
-      <div>
-        <label className="block font-medium mb-2">שירותי ענן <span className="text-red-500">*</span></label>
-        <div className="grid grid-cols-2 gap-2">
-          {cloudOptions.map(option => (
-            <Button
-              key={option.value}
-              type="button"
-              variant={formData.cloudStorage === option.value ? 'default' : 'outline'}
-              className="justify-start text-sm"
-              onClick={() => updateFormData('cloudStorage', option.value)}
-            >
-              {option.label}
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <label className="block font-medium mb-2">קיימת מדיניות פרטיות כתובה? <span className="text-red-500">*</span></label>
-        <div className="flex gap-4">
-          <Button
-            type="button"
-            variant={formData.existingPolicy === true ? 'default' : 'outline'}
-            onClick={() => updateFormData('existingPolicy', true)}
-          >
-            כן
-          </Button>
-          <Button
-            type="button"
-            variant={formData.existingPolicy === false ? 'default' : 'outline'}
-            onClick={() => updateFormData('existingPolicy', false)}
-          >
-            לא
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function SummaryStep({ formData }: { formData: any }) {
-  const tierLabels = { basic: 'חבילה בסיסית - ₪500/חודש', extended: 'חבילה מורחבת - ₪1,200/חודש' }
-  const businessTypeLabels: Record<string, string> = {
-    retail: 'קמעונאות / מסחר', technology: 'טכנולוגיה / הייטק', healthcare: 'בריאות / רפואה',
-    finance: 'פיננסים / ביטוח', education: 'חינוך / הדרכה', services: 'שירותים מקצועיים',
-    manufacturing: 'ייצור / תעשייה', other: 'אחר'
-  }
-
-  const hasSensitiveData = formData.dataTypes.some((d: string) => ['health', 'financial', 'biometric', 'id'].includes(d))
-
-  return (
-    <div className="space-y-6">
-      <div className="bg-blue-50 p-4 rounded-lg">
-        <h3 className="font-bold mb-2 flex items-center gap-2">
-          <Shield className="h-5 w-5 text-blue-600" />
-          {tierLabels[formData.tier as keyof typeof tierLabels]}
-        </h3>
-        <p className="text-sm text-gray-600">14 ימי ניסיון חינם, ללא התחייבות</p>
-      </div>
-
-      <div className="space-y-4">
-        <div className="border-b pb-3">
-          <h4 className="font-medium text-gray-500 text-sm mb-1">פרטי העסק</h4>
-          <p className="font-bold">{formData.businessName}</p>
-          <p className="text-sm text-gray-600">ח.פ: {formData.businessId}</p>
-          <p className="text-sm text-gray-600">{businessTypeLabels[formData.businessType]} • {formData.employeeCount} עובדים</p>
-        </div>
-
-        <div className="border-b pb-3">
-          <h4 className="font-medium text-gray-500 text-sm mb-1">סוגי מידע</h4>
-          <div className="flex flex-wrap gap-1">
-            {formData.dataTypes.map((type: string) => (
-              <Badge key={type} variant="secondary" className="text-xs">{type}</Badge>
-            ))}
-          </div>
-          {hasSensitiveData && (
-            <p className="text-sm text-orange-600 mt-2 flex items-center gap-1">
-              <AlertCircle className="h-4 w-4" />
-              מידע רגיש - נדרשת הקפדה מיוחדת
-            </p>
-          )}
-        </div>
-
-        <div>
-          <h4 className="font-medium text-gray-500 text-sm mb-1">אבטחה</h4>
-          <div className="flex flex-wrap gap-1">
-            {formData.securityMeasures.map((measure: string) => (
-              <Badge key={measure} variant="outline" className="text-xs">{measure}</Badge>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-        <h4 className="font-bold text-green-800 flex items-center gap-2 mb-2">
-          <CheckCircle2 className="h-5 w-5" />
-          מה יקרה עכשיו?
-        </h4>
-        <ul className="text-sm text-green-700 space-y-1">
-          <li>✓ ניצור 3 מסמכים מותאמים אישית</li>
-          <li>✓ נקצה לכם ממונה הגנת פרטיות מוסמך</li>
-          <li>✓ תקבלו גישה מלאה למערכת</li>
-          <li>✓ הבוט החכם יהיה זמין 24/7</li>
-        </ul>
-      </div>
-    </div>
-  )
-}
-
-// ============== MAIN EXPORT ==============
 export default function OnboardingPage() {
   return (
     <Suspense fallback={
