@@ -356,129 +356,104 @@ function HeroMascot() {
                   fill="url(#suitGrad)" />
             <ellipse cx="168" cy="163" rx="15" ry="13" fill="url(#skinGrad)" />
 
-            {/* HEAD - WARRIOR FACE - Intense Leonidas style */}
+            {/* HEAD - ATTRACTIVE DETERMINED HERO FACE */}
             <g transform="translate(65, -55)">
-              {/* Neck - thicker, muscular */}
-              <path d="M18 100 L52 100 L55 115 L15 115 Z" fill="url(#skinGrad)" />
+              {/* Neck - strong */}
+              <path d="M20 100 L50 100 L53 115 L17 115 Z" fill="url(#skinGrad)" />
               
-              {/* Head shape - more angular, masculine */}
-              <path d="M5 50 
-                       Q 5 20, 35 15
-                       Q 65 20, 65 50
-                       Q 68 75, 55 95
-                       L 15 95
-                       Q 2 75, 5 50
-                       Z" 
-                    fill="url(#skinGrad)" />
+              {/* Head shape - handsome proportions */}
+              <ellipse cx="35" cy="50" rx="36" ry="42" fill="url(#skinGrad)" />
               
-              {/* HAIR - Short, dark, warrior style */}
-              <path d="M5 45 
-                       Q 3 25, 15 15
-                       Q 35 5, 55 15
-                       Q 67 25, 65 45
-                       L 62 42
-                       Q 63 28, 52 20
-                       Q 35 12, 18 20
-                       Q 8 28, 8 42
+              {/* Ears */}
+              <ellipse cx="0" cy="52" rx="5" ry="9" fill="#E8C4A0" />
+              <ellipse cx="70" cy="52" rx="5" ry="9" fill="#E8C4A0" />
+              
+              {/* HAIR - Clean, styled hero hair */}
+              <path d="M3 42 
+                       Q 0 25, 12 12
+                       Q 28 0, 50 2
+                       Q 70 5, 72 25
+                       Q 74 38, 70 48
+                       L 66 45
+                       Q 68 32, 65 22
+                       Q 58 10, 42 8
+                       Q 22 8, 12 22
+                       Q 6 32, 7 45
                        Z" 
                     fill="url(#hairGrad)" />
               
-              {/* Hair texture lines */}
-              <path d="M15 18 Q 25 12, 35 12 Q 45 12, 55 18" stroke="#1A1410" strokeWidth="2" fill="none" opacity="0.5" />
-              <path d="M12 25 L 18 35" stroke="#1A1410" strokeWidth="1.5" fill="none" opacity="0.3" />
-              <path d="M58 25 L 52 35" stroke="#1A1410" strokeWidth="1.5" fill="none" opacity="0.3" />
+              {/* Hair shine/highlight */}
+              <path d="M18 15 Q 35 5, 55 12" stroke="#4A3728" strokeWidth="3" fill="none" opacity="0.3" />
               
-              {/* BEARD - Short stubble/beard like Leonidas */}
-              <path d="M10 70 
-                       Q 10 85, 25 92
-                       Q 35 95, 45 92
-                       Q 60 85, 60 70
-                       L 58 72
-                       Q 57 82, 45 88
-                       Q 35 90, 25 88
-                       Q 13 82, 12 72
-                       Z" 
-                    fill="url(#hairGrad)" opacity="0.7" />
-              
-              {/* Beard texture */}
-              <path d="M20 78 L22 85" stroke="#1A1410" strokeWidth="1" opacity="0.4" />
-              <path d="M30 80 L31 88" stroke="#1A1410" strokeWidth="1" opacity="0.4" />
-              <path d="M40 80 L39 88" stroke="#1A1410" strokeWidth="1" opacity="0.4" />
-              <path d="M50 78 L48 85" stroke="#1A1410" strokeWidth="1" opacity="0.4" />
-              
-              {/* MASK */}
-              <path d="M5 42 
-                       Q 35 28, 65 42
-                       L 68 58
-                       Q 35 48, 2 58
+              {/* MASK - Sleek superhero mask */}
+              <path d="M3 40 
+                       Q 35 25, 67 40
+                       L 70 58
+                       Q 35 48, 0 58
                        Z" 
                     fill="url(#maskGrad)" />
               
-              {/* EYES - INTENSE, ANGRY, warrior stare */}
+              {/* EYES - Determined but attractive */}
               {/* Left eye */}
-              <g>
-                <ellipse cx="22" cy="52" rx="11" ry="9" fill="white" />
-                <ellipse cx="24" cy="53" rx="6" ry="6" fill="#1A1410" />
-                <circle cx="25" cy="51" r="2" fill="white" />
-                {/* Angry eyebrow - furrowed DOWN */}
-                <path d="M8 40 Q 18 44, 32 42" stroke="#1A1410" strokeWidth="4" strokeLinecap="round" fill="none" />
-              </g>
+              <ellipse cx="22" cy="50" rx="12" ry="11" fill="white" />
+              <ellipse cx="24" cy="51" rx="6" ry="6" fill="#3D5A80" />
+              <circle cx="26" cy="49" r="2.5" fill="white" />
               
               {/* Right eye */}
-              <g>
-                <ellipse cx="48" cy="52" rx="11" ry="9" fill="white" />
-                <ellipse cx="46" cy="53" rx="6" ry="6" fill="#1A1410" />
-                <circle cx="47" cy="51" r="2" fill="white" />
-                {/* Angry eyebrow - furrowed DOWN */}
-                <path d="M38 42 Q 52 44, 62 40" stroke="#1A1410" strokeWidth="4" strokeLinecap="round" fill="none" />
-              </g>
+              <ellipse cx="48" cy="50" rx="12" ry="11" fill="white" />
+              <ellipse cx="46" cy="51" rx="6" ry="6" fill="#3D5A80" />
+              <circle cx="48" cy="49" r="2.5" fill="white" />
               
-              {/* Forehead crease - showing intensity */}
-              <path d="M25 38 L30 40 L35 38" stroke="#D4A574" strokeWidth="1" fill="none" opacity="0.5" />
-              <path d="M35 38 L40 40 L45 38" stroke="#D4A574" strokeWidth="1" fill="none" opacity="0.5" />
+              {/* Eyebrows - Determined, focused (not angry) */}
+              <path d="M10 38 Q 18 35, 30 37" stroke="#3E2723" strokeWidth="3" strokeLinecap="round" fill="none" />
+              <path d="M40 37 Q 52 35, 60 38" stroke="#3E2723" strokeWidth="3" strokeLinecap="round" fill="none" />
               
-              {/* Nose - strong, defined */}
-              <path d="M35 55 L 32 68 Q 35 72, 40 68 L 37 55" fill="#D4A574" opacity="0.3" />
-              <path d="M32 68 Q 35 72, 40 68" stroke="#C49A7A" strokeWidth="1.5" fill="none" />
+              {/* Nose - refined */}
+              <path d="M35 55 L 33 68" stroke="#D4A574" strokeWidth="2" fill="none" strokeLinecap="round" />
+              <path d="M31 68 Q 35 72, 39 68" stroke="#C49A7A" strokeWidth="1.5" fill="none" />
               
-              {/* MOUTH - BATTLE CRY / INTENSE GRIMACE */}
-              <path d="M20 78 
-                       Q 25 72, 35 72
-                       Q 45 72, 50 78
-                       Q 45 83, 35 83
-                       Q 25 83, 20 78
-                       Z" 
-                    fill="#8B4513" />
-              {/* Teeth showing - battle cry */}
-              <path d="M24 76 L46 76 L46 79 L24 79 Z" fill="white" />
-              {/* Teeth line */}
-              <line x1="28" y1="76" x2="28" y2="79" stroke="#D4A574" strokeWidth="0.5" />
-              <line x1="32" y1="76" x2="32" y2="79" stroke="#D4A574" strokeWidth="0.5" />
-              <line x1="35" y1="76" x2="35" y2="79" stroke="#D4A574" strokeWidth="0.5" />
-              <line x1="38" y1="76" x2="38" y2="79" stroke="#D4A574" strokeWidth="0.5" />
-              <line x1="42" y1="76" x2="42" y2="79" stroke="#D4A574" strokeWidth="0.5" />
+              {/* Slight stubble for rugged look */}
+              <ellipse cx="35" cy="85" rx="18" ry="8" fill="#3E2723" opacity="0.08" />
               
-              {/* Jaw muscles - tense */}
-              <path d="M8 65 Q 5 75, 12 88" stroke="#D4A574" strokeWidth="1" fill="none" opacity="0.4" />
-              <path d="M62 65 Q 65 75, 58 88" stroke="#D4A574" strokeWidth="1" fill="none" opacity="0.4" />
+              {/* MOUTH - Confident, determined closed mouth */}
+              <path d="M25 78 Q 35 82, 45 78" fill="none" stroke="#A67C5B" strokeWidth="2.5" strokeLinecap="round" />
+              
+              {/* Slight chin dimple */}
+              <ellipse cx="35" cy="90" rx="3" ry="2" fill="#D4A574" opacity="0.3" />
+              
+              {/* Jaw definition */}
+              <path d="M5 60 Q 3 75, 15 92" stroke="#E5C4A0" strokeWidth="1" fill="none" opacity="0.4" />
+              <path d="M65 60 Q 67 75, 55 92" stroke="#E5C4A0" strokeWidth="1" fill="none" opacity="0.4" />
             </g>
           </g>
         </g>
 
-        {/* === SHIELD - RAISED UP to block from above === */}
-        <g transform="translate(95, 115) rotate(-25)" filter="url(#softShadow)">
-          {/* Shield body */}
-          <path d="M55 0 L108 18 L108 72 Q108 120 55 145 Q2 120 2 72 L2 18 Z" fill="url(#shieldGrad)" />
-          
-          {/* Shield rings */}
-          <path d="M55 8 L100 24 L100 70 Q100 112 55 135 Q10 112 10 70 L10 24 Z" fill="none" stroke="white" strokeWidth="2" opacity="0.25" />
-          <path d="M55 20 L90 33 L90 68 Q90 100 55 118 Q20 100 20 68 L20 33 Z" fill="white" opacity="0.1" />
-          
-          {/* Checkmark */}
-          <path d="M35 68 L50 85 L80 48" stroke="white" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-          
-          {/* Shield shine */}
-          <ellipse cx="40" cy="45" rx="15" ry="20" fill="white" opacity="0.15" />
+        {/* === SHIELD - RAISED with back-and-forth movement === */}
+        <g transform="translate(95, 115)" filter="url(#softShadow)">
+          <g>
+            {/* Shield movement animation - back and forth blocking */}
+            <animateTransform 
+              attributeName="transform" 
+              type="rotate" 
+              values="-25 55 75;-18 55 75;-25 55 75;-30 55 75;-25 55 75" 
+              dur="2s" 
+              repeatCount="indefinite"
+              calcMode="spline"
+              keySplines="0.45 0 0.55 1;0.45 0 0.55 1;0.45 0 0.55 1;0.45 0 0.55 1"/>
+            
+            {/* Shield body */}
+            <path d="M55 0 L108 18 L108 72 Q108 120 55 145 Q2 120 2 72 L2 18 Z" fill="url(#shieldGrad)" />
+            
+            {/* Shield rings */}
+            <path d="M55 8 L100 24 L100 70 Q100 112 55 135 Q10 112 10 70 L10 24 Z" fill="none" stroke="white" strokeWidth="2" opacity="0.25" />
+            <path d="M55 20 L90 33 L90 68 Q90 100 55 118 Q20 100 20 68 L20 33 Z" fill="white" opacity="0.1" />
+            
+            {/* Checkmark */}
+            <path d="M35 68 L50 85 L80 48" stroke="white" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            
+            {/* Shield shine */}
+            <ellipse cx="40" cy="45" rx="15" ry="20" fill="white" opacity="0.15" />
+          </g>
         </g>
 
         {/* === PROTECTED BADGE === */}
