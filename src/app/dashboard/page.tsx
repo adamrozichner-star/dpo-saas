@@ -355,7 +355,17 @@ function DocumentsTab({ documents }: { documents: any[] }) {
   const [isExporting, setIsExporting] = useState<string | null>(null)
   const [exportFormat, setExportFormat] = useState<string | null>(null)
   
-  const getDocTypeLabel = (type: string) => { const labels: Record<string, string> = { privacy_policy: 'מדיניות פרטיות', database_registration: 'רישום מאגר', security_policy: 'מדיניות אבטחה', procedure: 'נוהל' }; return labels[type] || type }
+  const getDocTypeLabel = (type: string) => { const labels: Record<string, string> = { privacy_policy: 'מדיניות פרטיות', database_registration: 'רישום מאגר', security_policy: 'מדיניות אבטחה', dpo_appointment: 'כתב מינוי DPO', procedure: 'נוהל' }; return labels[type] || type }
+  
+  const getDocIcon = (type: string) => {
+    if (type === 'dpo_appointment') return '📜'
+    if (type === 'privacy_policy') return '🔒'
+    if (type === 'security_policy') return '🛡️'
+    if (type === 'database_registration') return '🗄️'
+    return '📄'
+  }
+  
+  const isAppointmentLetter = (doc: any) => doc.type === 'dpo_appointment'
 
   const exportDocument = async (doc: any, format: 'pdf' | 'docx' | 'txt') => {
     setIsExporting(doc.id); setExportFormat(format)
@@ -376,14 +386,47 @@ function DocumentsTab({ documents }: { documents: any[] }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between"><h2 className="text-xl font-bold">מסמכים ({documents.length})</h2><Button variant="outline" onClick={downloadAllDocuments}><Download className="h-4 w-4 ml-2" />הורדת הכל</Button></div>
+      
+      {/* Appointment Letter Alert - Show if exists and pending signature */}
+      {documents.find(d => d.type === 'dpo_appointment' && d.status === 'pending_signature') && (
+        <Card className="border-2 border-orange-300 bg-orange-50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-xl">📜</div>
+              <div className="flex-1">
+                <h3 className="font-bold text-orange-800">נדרשת חתימה על כתב מינוי</h3>
+                <p className="text-sm text-orange-700 mb-2">כתב המינוי מחכה לחתימה שלכם ושל הממונה. זהו מסמך משפטי הנדרש לפי תיקון 13.</p>
+                <Button size="sm" variant="outline" className="border-orange-400 text-orange-700 hover:bg-orange-100" onClick={() => setSelectedDoc(documents.find(d => d.type === 'dpo_appointment'))}>
+                  <Eye className="h-4 w-4 ml-2" />
+                  צפייה וחתימה
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       <div className="grid gap-4">
         {documents.map((doc) => (
-          <Card key={doc.id} className="hover:shadow-md transition-shadow">
+          <Card key={doc.id} className={`hover:shadow-md transition-shadow ${isAppointmentLetter(doc) ? 'border-blue-200' : ''}`}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => setSelectedDoc(doc)}><div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center"><FileText className="h-6 w-6 text-primary" /></div><div><h3 className="font-medium">{doc.title}</h3><p className="text-sm text-gray-500">{getDocTypeLabel(doc.type)} • גרסה {doc.version}</p></div></div>
+                <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => setSelectedDoc(doc)}>
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-xl ${isAppointmentLetter(doc) ? 'bg-blue-100' : 'bg-primary/10'}`}>
+                    {getDocIcon(doc.type)}
+                  </div>
+                  <div>
+                    <h3 className="font-medium flex items-center gap-2">
+                      {doc.title}
+                      {isAppointmentLetter(doc) && <Badge variant="outline" className="text-xs border-blue-300 text-blue-600">משפטי</Badge>}
+                    </h3>
+                    <p className="text-sm text-gray-500">{getDocTypeLabel(doc.type)} • גרסה {doc.version}</p>
+                  </div>
+                </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={doc.status === 'active' ? 'success' : 'secondary'}>{doc.status === 'active' ? 'פעיל' : 'טיוטה'}</Badge>
+                  <Badge variant={doc.status === 'active' ? 'success' : doc.status === 'pending_signature' ? 'warning' : 'secondary'}>
+                    {doc.status === 'active' ? 'פעיל' : doc.status === 'pending_signature' ? 'ממתין לחתימה' : 'טיוטה'}
+                  </Badge>
                   <Button variant="ghost" size="sm" onClick={() => setSelectedDoc(doc)} title="צפייה"><Eye className="h-4 w-4" /></Button>
                   <Button variant="outline" size="sm" onClick={() => exportDocument(doc, 'pdf')} disabled={isExporting === doc.id} title="הורדה כ-PDF">{isExporting === doc.id && exportFormat === 'pdf' ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="text-xs font-medium">PDF</span>}</Button>
                   <Button variant="outline" size="sm" onClick={() => exportDocument(doc, 'docx')} disabled={isExporting === doc.id} title="הורדה כ-Word">{isExporting === doc.id && exportFormat === 'docx' ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="text-xs font-medium">DOCX</span>}</Button>
