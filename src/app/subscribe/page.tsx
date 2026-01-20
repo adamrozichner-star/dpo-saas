@@ -108,7 +108,7 @@ function SubscribeContent() {
     setIsProcessing(true)
 
     try {
-      const response = await fetch('/api/payment', {
+      const response = await fetch('/api/tranzila', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -240,7 +240,7 @@ function SubscribeContent() {
         )}
 
         <div className="mt-12 text-center text-gray-500 text-sm">
-          <p>🔒 תשלום מאובטח באמצעות LemonSqueezy</p>
+          <p>🔒 תשלום מאובטח באמצעות Tranzila</p>
           <p>ניתן לבטל בכל עת • ללא התחייבות</p>
         </div>
       </main>
