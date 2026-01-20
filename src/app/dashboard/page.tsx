@@ -25,7 +25,8 @@ import {
   X,
   ClipboardList,
   Users,
-  Menu
+  Menu,
+  Lock
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import WelcomeModal from '@/components/WelcomeModal'
@@ -410,7 +411,10 @@ function DashboardContent() {
               />
             )}
             {activeTab === 'documents' && (
-              <DocumentsTab documents={documents} />
+              <DocumentsTab 
+                documents={documents} 
+                isPaid={organization?.subscription_status === 'active'}
+              />
             )}
             {activeTab === 'checklist' && (
               <div className="space-y-6">
@@ -624,7 +628,7 @@ function OverviewTab({ organization, documents, complianceScore, complianceGaps 
   )
 }
 
-function DocumentsTab({ documents }: { documents: any[] }) {
+function DocumentsTab({ documents, isPaid = false }: { documents: any[], isPaid?: boolean }) {
   const [selectedDoc, setSelectedDoc] = useState<any>(null)
   
   const getDocTypeLabel = (type: string) => {
@@ -638,6 +642,8 @@ function DocumentsTab({ documents }: { documents: any[] }) {
   }
 
   const downloadDocument = (doc: any) => {
+    if (!isPaid) return // Block download for unpaid users
+    
     // Create nicely formatted content
     const header = `${'═'.repeat(50)}
 ${doc.title}
@@ -664,6 +670,7 @@ ${'─'.repeat(50)}
   }
 
   const downloadAllDocuments = () => {
+    if (!isPaid) return
     documents.forEach((doc, index) => {
       setTimeout(() => downloadDocument(doc), index * 500)
     })
@@ -683,17 +690,48 @@ ${'─'.repeat(50)}
 
   return (
     <div className="space-y-6">
+      {/* Paywall Banner */}
+      {!isPaid && (
+        <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center">
+                  <Lock className="h-7 w-7 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">המסמכים מוכנים! 🎉</h3>
+                  <p className="text-gray-600">שלמו כדי להוריד את המסמכים ולקבל גישה מלאה למערכת</p>
+                </div>
+              </div>
+              <Link href="/subscribe">
+                <Button size="lg" className="bg-amber-600 hover:bg-amber-700">
+                  <Lock className="h-4 w-4 ml-2" />
+                  שלם לגישה מלאה - ₪500/חודש
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">מסמכים ({documents.length})</h2>
-        <Button variant="outline" onClick={downloadAllDocuments}>
+        <Button 
+          variant="outline" 
+          onClick={downloadAllDocuments}
+          disabled={!isPaid}
+          className={!isPaid ? 'opacity-50' : ''}
+        >
           <Download className="h-4 w-4 ml-2" />
           הורדת הכל
+          {!isPaid && <Lock className="h-3 w-3 mr-2" />}
         </Button>
       </div>
 
       <div className="grid gap-4">
         {documents.map((doc) => (
-          <Card key={doc.id} className="hover:shadow-md transition-shadow">
+          <Card key={doc.id} className={`hover:shadow-md transition-shadow ${!isPaid ? 'relative' : ''}`}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div 
@@ -717,8 +755,14 @@ ${'─'.repeat(50)}
                   <Button variant="ghost" size="sm" onClick={() => setSelectedDoc(doc)}>
                     <Eye className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => downloadDocument(doc)}>
-                    <Download className="h-4 w-4" />
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => downloadDocument(doc)}
+                    disabled={!isPaid}
+                    className={!isPaid ? 'opacity-50' : ''}
+                  >
+                    {isPaid ? <Download className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                   </Button>
                 </div>
               </div>
@@ -727,6 +771,7 @@ ${'─'.repeat(50)}
         ))}
       </div>
 
+      {/* Document Preview Modal */}
       {selectedDoc && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -739,20 +784,51 @@ ${'─'.repeat(50)}
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" onClick={() => downloadDocument(selectedDoc)}>
-                    <Download className="h-4 w-4 ml-2" />
-                    הורדה
-                  </Button>
+                  {isPaid ? (
+                    <Button variant="outline" onClick={() => downloadDocument(selectedDoc)}>
+                      <Download className="h-4 w-4 ml-2" />
+                      הורדה
+                    </Button>
+                  ) : (
+                    <Link href="/subscribe">
+                      <Button className="bg-amber-600 hover:bg-amber-700">
+                        <Lock className="h-4 w-4 ml-2" />
+                        שלם להורדה
+                      </Button>
+                    </Link>
+                  )}
                   <Button variant="ghost" size="icon" onClick={() => setSelectedDoc(null)}>
                     <X className="h-5 w-5" />
                   </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="flex-1 overflow-auto p-6">
-              <div className="whitespace-pre-wrap text-right leading-relaxed" dir="rtl">
+            <CardContent className="flex-1 overflow-auto p-6 relative">
+              {/* Document content with blur for unpaid */}
+              <div 
+                className={`whitespace-pre-wrap text-right leading-relaxed ${!isPaid ? 'blur-sm select-none' : ''}`} 
+                dir="rtl"
+              >
                 {selectedDoc.content || 'אין תוכן זמין'}
               </div>
+              
+              {/* Overlay for unpaid users */}
+              {!isPaid && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/60">
+                  <div className="text-center p-6">
+                    <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+                      <Lock className="h-8 w-8 text-amber-600" />
+                    </div>
+                    <h3 className="font-bold text-xl mb-2">תוכן נעול</h3>
+                    <p className="text-gray-600 mb-4">שלמו כדי לצפות ולהוריד את המסמך המלא</p>
+                    <Link href="/subscribe">
+                      <Button className="bg-amber-600 hover:bg-amber-700">
+                        שלם לגישה - ₪500/חודש
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
