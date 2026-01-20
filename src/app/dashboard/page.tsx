@@ -26,7 +26,8 @@ import {
   ClipboardList,
   Users,
   Menu,
-  Lock
+  Lock,
+  RefreshCw
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import WelcomeModal from '@/components/WelcomeModal'
@@ -255,6 +256,39 @@ function DashboardContent() {
     router.push('/')
   }
 
+  const [isRegenerating, setIsRegenerating] = useState(false)
+
+  const handleRegenerateDocs = async () => {
+    if (!organization?.id || isRegenerating) return
+    
+    setIsRegenerating(true)
+    try {
+      const response = await fetch('/api/generate-documents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orgId: organization.id })
+      })
+      
+      if (response.ok) {
+        // Reload documents
+        const { data: docs } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('org_id', organization.id)
+          .order('created_at', { ascending: false })
+        
+        if (docs) setDocuments(docs)
+        
+        // Switch to documents tab to show results
+        setActiveTab('documents')
+      }
+    } catch (error) {
+      console.error('Error regenerating documents:', error)
+    } finally {
+      setIsRegenerating(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -408,6 +442,9 @@ function DashboardContent() {
                 documents={documents} 
                 complianceScore={complianceData.score}
                 complianceGaps={complianceData.gaps}
+                onNavigate={(tab) => setActiveTab(tab as any)}
+                onRegenerateDocs={handleRegenerateDocs}
+                isRegenerating={isRegenerating}
               />
             )}
             {activeTab === 'documents' && (
@@ -470,11 +507,22 @@ function NavButton({ icon, label, active, onClick }: any) {
   )
 }
 
-function OverviewTab({ organization, documents, complianceScore, complianceGaps }: { 
+function OverviewTab({ 
+  organization, 
+  documents, 
+  complianceScore, 
+  complianceGaps,
+  onNavigate,
+  onRegenerateDocs,
+  isRegenerating = false
+}: { 
   organization: any, 
   documents: any[],
   complianceScore: number,
-  complianceGaps: string[]
+  complianceGaps: string[],
+  onNavigate: (tab: string) => void,
+  onRegenerateDocs: () => void,
+  isRegenerating?: boolean
 }) {
   const hasSubscription = organization?.subscription_status === 'active'
   
@@ -604,22 +652,51 @@ function OverviewTab({ organization, documents, complianceScore, complianceGaps 
           <CardTitle>פעולות מהירות</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-4 gap-4">
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex-col gap-2"
+              onClick={() => onNavigate('documents')}
+            >
               <FileText className="h-5 w-5" />
               <span>צפייה במסמכים</span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex-col gap-2"
+              onClick={() => onNavigate('qa')}
+            >
               <MessageSquare className="h-5 w-5" />
               <span>שאלה לממונה</span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
-              <Download className="h-5 w-5" />
-              <span>הורדת דוחות</span>
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex-col gap-2"
+              onClick={onRegenerateDocs}
+              disabled={isRegenerating}
+            >
+              {isRegenerating ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-5 w-5" />
+              )}
+              <span>{isRegenerating ? 'מייצר...' : 'יצירת מסמכים'}</span>
             </Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2">
-              <AlertCircle className="h-5 w-5" />
-              <span>דיווח אירוע</span>
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex-col gap-2"
+              onClick={() => onNavigate('requests')}
+            >
+              <Users className="h-5 w-5" />
+              <span>בקשות פרטיות</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="h-auto py-4 flex-col gap-2"
+              onClick={() => onNavigate('checklist')}
+            >
+              <ClipboardList className="h-5 w-5" />
+              <span>רשימת ציות</span>
             </Button>
           </div>
         </CardContent>
