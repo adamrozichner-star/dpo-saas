@@ -270,6 +270,19 @@ function NavButton({ icon, label, active, onClick }: any) {
 function OverviewTab({ organization, documents }: { organization: any, documents: any[] }) {
   const complianceScore = documents.length > 0 ? 92 : 0
   const hasSubscription = organization?.subscription_status === 'active'
+  const isFullySetup = documents.length >= 3 && organization?.status === 'active'
+  
+  // Determine actual status
+  const getStatusInfo = () => {
+    if (documents.length === 0) {
+      return { label: 'ממתין להשלמת הגדרות', variant: 'destructive' as const, color: 'red' }
+    }
+    if (documents.length < 3) {
+      return { label: 'בתהליך הקמה', variant: 'warning' as const, color: 'yellow' }
+    }
+    return { label: 'פעיל ומוגן', variant: 'success' as const, color: 'green' }
+  }
+  const statusInfo = getStatusInfo()
   
   return (
     <div className="space-y-6">
@@ -386,9 +399,14 @@ function OverviewTab({ organization, documents }: { organization: any, documents
 
       <Card>
         <CardContent className="p-6">
-          <Badge variant={organization?.status === 'active' ? 'success' : 'warning'} className="text-lg px-4 py-2">
-            {organization?.status === 'active' ? 'פעיל ומוגן' : 'בתהליך הקמה'}
+          <Badge variant={statusInfo.variant} className="text-lg px-4 py-2">
+            {statusInfo.label}
           </Badge>
+          {documents.length === 0 && (
+            <p className="text-sm text-gray-500 mt-2">
+              יש להשלים את תהליך ההרשמה כדי להפעיל את ההגנה
+            </p>
+          )}
         </CardContent>
       </Card>
 
