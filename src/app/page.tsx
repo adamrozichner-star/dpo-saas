@@ -64,7 +64,7 @@ function calculateCheckResult(answers: Record<string, string>): { type: CheckRes
 }
 
 // ===========================================
-// POLISHED HERO - Premium aesthetic design
+// WARRIOR DEFENDER - Spartan-inspired intense fighter
 // ===========================================
 function HeroMascot() {
   const [threatIndex, setThreatIndex] = useState(0)
@@ -84,59 +84,57 @@ function HeroMascot() {
         <div className="w-96 h-96 bg-gradient-to-br from-blue-100 to-cyan-50 rounded-full blur-3xl opacity-60" />
       </div>
       
-      <svg viewBox="0 0 540 540" className="w-full h-auto relative z-10">
+      <svg viewBox="0 0 560 560" className="w-full h-auto relative z-10">
         <defs>
-          {/* Premium skin gradient - smooth and natural */}
+          {/* Skin gradient */}
           <linearGradient id="skinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FFE4C9" />
-            <stop offset="50%" stopColor="#FFDAB9" />
-            <stop offset="100%" stopColor="#F5C9A6" />
+            <stop offset="0%" stopColor="#F5D0B5" />
+            <stop offset="50%" stopColor="#E8C4A0" />
+            <stop offset="100%" stopColor="#D4A574" />
           </linearGradient>
           
-          {/* Rich suit gradient */}
+          {/* Suit gradient */}
           <linearGradient id="suitGrad" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="#4A90E2" />
             <stop offset="50%" stopColor="#357ABD" />
             <stop offset="100%" stopColor="#2968A8" />
           </linearGradient>
           
-          {/* Premium cape gradient with depth */}
+          {/* Cape gradient */}
           <linearGradient id="capeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#1E3A8A" />
             <stop offset="40%" stopColor="#1E40AF" />
             <stop offset="100%" stopColor="#172554" />
           </linearGradient>
           
-          {/* Cape inner shadow */}
-          <linearGradient id="capeInnerGrad" x1="100%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#2563EB" />
+          <linearGradient id="capeHighlight" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#3B82F6" />
             <stop offset="100%" stopColor="#1E40AF" />
           </linearGradient>
           
-          {/* Shield gradient - vibrant */}
+          {/* Shield gradient */}
           <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#60A5FA" />
             <stop offset="50%" stopColor="#3B82F6" />
             <stop offset="100%" stopColor="#2563EB" />
           </linearGradient>
           
-          {/* Hair gradient - rich brown with highlights */}
-          <linearGradient id="hairGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#5D4037" />
-            <stop offset="30%" stopColor="#4E342E" />
-            <stop offset="100%" stopColor="#3E2723" />
-          </linearGradient>
-          
-          {/* Hair highlight */}
-          <linearGradient id="hairHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#8D6E63" />
-            <stop offset="100%" stopColor="#6D4C41" />
+          {/* Hair/beard gradient - dark warrior hair */}
+          <linearGradient id="hairGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#2D2319" />
+            <stop offset="100%" stopColor="#1A1410" />
           </linearGradient>
           
           {/* Mask gradient */}
           <linearGradient id="maskGrad" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="#2563EB" />
             <stop offset="100%" stopColor="#1D4ED8" />
+          </linearGradient>
+
+          {/* Threat gradient */}
+          <linearGradient id="threatGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FEE2E2" />
+            <stop offset="100%" stopColor="#FECACA" />
           </linearGradient>
           
           <filter id="softShadow">
@@ -145,10 +143,72 @@ function HeroMascot() {
           <filter id="cardShadow">
             <feDropShadow dx="0" dy="8" stdDeviation="12" floodOpacity="0.08"/>
           </filter>
-          <filter id="heroShadow">
-            <feDropShadow dx="0" dy="12" stdDeviation="20" floodOpacity="0.15"/>
+          <filter id="heroGlow">
+            <feDropShadow dx="0" dy="0" stdDeviation="15" floodOpacity="0.1" floodColor="#3B82F6"/>
           </filter>
         </defs>
+
+        {/* === INCOMING THREATS FROM ABOVE-LEFT === */}
+        
+        {/* Threat 1 - Main threat coming from top-left */}
+        <g>
+          <animateTransform attributeName="transform" type="translate" values="0,0;25,20;0,0" dur="1.8s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+          <g transform="translate(30, 80)" filter="url(#softShadow)">
+            <rect x="0" y="0" width="105" height="38" rx="19" fill="url(#threatGrad)" stroke="#F87171" strokeWidth="2" />
+            <text x="52" y="25" textAnchor="middle" fontSize="12" fill="#DC2626" fontWeight="600">
+              ⚠️ {threats[threatIndex]}
+            </text>
+          </g>
+        </g>
+
+        {/* Threat 2 - Secondary threat */}
+        <g>
+          <animateTransform attributeName="transform" type="translate" values="0,0;20,25;0,0" dur="2.2s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+          <g transform="translate(80, 25)" filter="url(#softShadow)">
+            <rect x="0" y="0" width="85" height="32" rx="16" fill="url(#threatGrad)" stroke="#F87171" strokeWidth="2" opacity="0.8" />
+            <text x="42" y="21" textAnchor="middle" fontSize="11" fill="#DC2626" fontWeight="600">
+              ⚠️ קנס
+            </text>
+          </g>
+        </g>
+
+        {/* Threat 3 - Third threat */}
+        <g>
+          <animateTransform attributeName="transform" type="translate" values="0,0;18,22;0,0" dur="2s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
+          <g transform="translate(5, 150)" filter="url(#softShadow)">
+            <rect x="0" y="0" width="80" height="32" rx="16" fill="url(#threatGrad)" stroke="#F87171" strokeWidth="2" opacity="0.7" />
+            <text x="40" y="21" textAnchor="middle" fontSize="11" fill="#DC2626" fontWeight="600">
+              ⚠️ תביעה
+            </text>
+          </g>
+        </g>
+
+        {/* Impact lines from threats to shield */}
+        <g transform="translate(160, 180)" opacity="0.6">
+          <line x1="-40" y1="-60" x2="0" y2="0" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeDasharray="8 4">
+            <animate attributeName="opacity" values="0.3;0.8;0.3" dur="1s" repeatCount="indefinite"/>
+          </line>
+          <line x1="-80" y1="-40" x2="-10" y2="20" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeDasharray="8 4">
+            <animate attributeName="opacity" values="0.3;0.8;0.3" dur="1.2s" repeatCount="indefinite" begin="0.3s"/>
+          </line>
+          <line x1="-90" y1="0" x2="-20" y2="40" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="6 4">
+            <animate attributeName="opacity" values="0.2;0.6;0.2" dur="1.4s" repeatCount="indefinite" begin="0.6s"/>
+          </line>
+        </g>
+
+        {/* Block spark effects */}
+        <g transform="translate(155, 175)">
+          <circle r="5" fill="#FCD34D">
+            <animate attributeName="opacity" values="0;1;0" dur="0.6s" repeatCount="indefinite"/>
+            <animate attributeName="r" values="3;8;3" dur="0.6s" repeatCount="indefinite"/>
+          </circle>
+        </g>
+        <g transform="translate(140, 200)">
+          <circle r="4" fill="#FCD34D">
+            <animate attributeName="opacity" values="0;1;0" dur="0.7s" repeatCount="indefinite" begin="0.2s"/>
+            <animate attributeName="r" values="2;6;2" dur="0.7s" repeatCount="indefinite" begin="0.2s"/>
+          </circle>
+        </g>
 
         {/* === FLOATING INFO CARDS === */}
         
@@ -156,13 +216,13 @@ function HeroMascot() {
         <g filter="url(#cardShadow)">
           <g>
             <animateTransform attributeName="transform" type="translate" values="0,0;0,-8;0,0" dur="4s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
-            <rect x="355" y="60" width="105" height="90" rx="16" fill="white" />
-            <rect x="375" y="85" width="60" height="5" rx="2.5" fill="#E2E8F0" />
-            <rect x="375" y="96" width="45" height="5" rx="2.5" fill="#E2E8F0" />
-            <rect x="375" y="107" width="52" height="5" rx="2.5" fill="#E2E8F0" />
-            <circle cx="407" cy="130" r="11" fill="#DBEAFE" />
-            <path d="M401 130 L405 134 L414 125" stroke="#3B82F6" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-            <text x="407" y="77" textAnchor="middle" fontSize="12" fill="#64748B" fontWeight="600">מסמכים</text>
+            <rect x="380" y="100" width="105" height="90" rx="16" fill="white" />
+            <rect x="400" y="125" width="60" height="5" rx="2.5" fill="#E2E8F0" />
+            <rect x="400" y="136" width="45" height="5" rx="2.5" fill="#E2E8F0" />
+            <rect x="400" y="147" width="52" height="5" rx="2.5" fill="#E2E8F0" />
+            <circle cx="432" cy="170" r="11" fill="#DBEAFE" />
+            <path d="M426 170 L430 174 L439 165" stroke="#3B82F6" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            <text x="432" y="117" textAnchor="middle" fontSize="12" fill="#64748B" fontWeight="600">מסמכים</text>
           </g>
         </g>
         
@@ -170,13 +230,13 @@ function HeroMascot() {
         <g filter="url(#cardShadow)">
           <g>
             <animateTransform attributeName="transform" type="translate" values="0,0;0,-6;0,0" dur="5s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
-            <rect x="370" y="175" width="105" height="90" rx="16" fill="white" />
-            <g transform="translate(422, 212)">
+            <rect x="395" y="215" width="105" height="90" rx="16" fill="white" />
+            <g transform="translate(447, 252)">
               <ellipse cx="0" cy="0" rx="22" ry="8" fill="#3B82F6" />
               <rect x="-22" y="0" width="44" height="18" fill="#3B82F6" opacity="0.7" />
               <ellipse cx="0" cy="18" rx="22" ry="8" fill="#3B82F6" opacity="0.5" />
             </g>
-            <text x="422" y="250" textAnchor="middle" fontSize="12" fill="#64748B" fontWeight="600">מאגרי מידע</text>
+            <text x="447" y="290" textAnchor="middle" fontSize="12" fill="#64748B" fontWeight="600">מאגרי מידע</text>
           </g>
         </g>
 
@@ -184,57 +244,55 @@ function HeroMascot() {
         <g filter="url(#cardShadow)">
           <g>
             <animateTransform attributeName="transform" type="translate" values="0,0;0,-7;0,0" dur="4.5s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
-            <rect x="355" y="290" width="105" height="90" rx="16" fill="white" />
-            <circle cx="390" cy="328" r="14" fill="#BFDBFE" />
-            <circle cx="420" cy="328" r="14" fill="#93C5FD" />
-            <circle cx="405" cy="345" r="16" fill="#3B82F6" />
-            <circle cx="405" cy="338" r="7" fill="white" />
-            <text x="405" y="373" textAnchor="middle" fontSize="12" fill="#64748B" fontWeight="600">נתוני לקוחות</text>
+            <rect x="380" y="330" width="105" height="90" rx="16" fill="white" />
+            <circle cx="415" cy="368" r="14" fill="#BFDBFE" />
+            <circle cx="445" cy="368" r="14" fill="#93C5FD" />
+            <circle cx="430" cy="385" r="16" fill="#3B82F6" />
+            <circle cx="430" cy="378" r="7" fill="white" />
+            <text x="430" y="413" textAnchor="middle" fontSize="12" fill="#64748B" fontWeight="600">נתוני לקוחות</text>
           </g>
         </g>
 
-        {/* === HERO CHARACTER === */}
-        <g filter="url(#heroShadow)">
+        {/* === WARRIOR HERO === */}
+        <g filter="url(#heroGlow)">
           
-          {/* CAPE - Beautiful flowing design */}
+          {/* CAPE - Starting from SHOULDERS, flowing dramatically */}
           <g>
-            {/* Main cape body - sweeping flow */}
-            <path d="M200 120 
-                     C 220 125, 240 140, 255 170
-                     C 280 220, 300 290, 310 370
-                     Q 320 420, 300 460
-                     L 265 455
-                     Q 275 415, 270 370
-                     C 262 300, 248 240, 235 190
-                     C 225 160, 215 140, 200 130
+            {/* Cape attachment point is at shoulders */}
+            <path d="M255 195
+                     C 280 200, 310 230, 330 290
+                     C 355 370, 365 430, 350 490
+                     L 310 485
+                     C 318 430, 312 375, 295 305
+                     C 280 250, 265 220, 255 205
                      Z" 
                   fill="url(#capeGrad)">
               <animate 
                 attributeName="d" 
-                values="M200 120 C 220 125, 240 140, 255 170 C 280 220, 300 290, 310 370 Q 320 420, 300 460 L 265 455 Q 275 415, 270 370 C 262 300, 248 240, 235 190 C 225 160, 215 140, 200 130 Z;
-                        M200 120 C 225 128, 250 148, 270 180 C 300 235, 328 310, 340 390 Q 355 445, 330 480 L 290 472 Q 305 432, 298 385 C 288 310, 268 250, 248 195 C 235 162, 218 138, 200 128 Z;
-                        M200 120 C 220 125, 240 140, 255 170 C 280 220, 300 290, 310 370 Q 320 420, 300 460 L 265 455 Q 275 415, 270 370 C 262 300, 248 240, 235 190 C 225 160, 215 140, 200 130 Z" 
-                dur="3.5s" 
+                values="M255 195 C 280 200, 310 230, 330 290 C 355 370, 365 430, 350 490 L 310 485 C 318 430, 312 375, 295 305 C 280 250, 265 220, 255 205 Z;
+                        M255 195 C 290 205, 330 245, 360 315 C 395 400, 410 465, 390 525 L 345 518 C 358 460, 348 400, 325 325 C 300 260, 275 218, 255 203 Z;
+                        M255 195 C 280 200, 310 230, 330 290 C 355 370, 365 430, 350 490 L 310 485 C 318 430, 312 375, 295 305 C 280 250, 265 220, 255 205 Z" 
+                dur="3s" 
                 repeatCount="indefinite"
                 calcMode="spline"
                 keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
             </path>
             
-            {/* Cape highlight/fold */}
-            <path d="M200 125 
-                     C 215 130, 230 145, 242 170
-                     C 255 200, 265 240, 272 290
-                     L 258 292
-                     C 252 245, 244 205, 232 175
-                     C 222 152, 212 138, 200 132
+            {/* Cape fold/highlight */}
+            <path d="M255 200
+                     C 275 205, 295 230, 310 275
+                     C 325 320, 332 360, 330 400
+                     L 315 398
+                     C 316 362, 310 325, 298 285
+                     C 285 245, 268 218, 255 208
                      Z" 
-                  fill="url(#capeInnerGrad)" opacity="0.4">
+                  fill="url(#capeHighlight)" opacity="0.3">
               <animate 
                 attributeName="d" 
-                values="M200 125 C 215 130, 230 145, 242 170 C 255 200, 265 240, 272 290 L 258 292 C 252 245, 244 205, 232 175 C 222 152, 212 138, 200 132 Z;
-                        M200 125 C 218 132, 238 150, 255 182 C 272 218, 288 265, 298 320 L 282 322 C 274 270, 260 222, 245 185 C 232 155, 215 135, 200 130 Z;
-                        M200 125 C 215 130, 230 145, 242 170 C 255 200, 265 240, 272 290 L 258 292 C 252 245, 244 205, 232 175 C 222 152, 212 138, 200 132 Z" 
-                dur="3.5s" 
+                values="M255 200 C 275 205, 295 230, 310 275 C 325 320, 332 360, 330 400 L 315 398 C 316 362, 310 325, 298 285 C 285 245, 268 218, 255 208 Z;
+                        M255 200 C 285 208, 315 245, 340 300 C 365 360, 378 410, 372 455 L 355 452 C 358 408, 348 360, 328 305 C 305 255, 278 218, 255 206 Z;
+                        M255 200 C 275 205, 295 230, 310 275 C 325 320, 332 360, 330 400 L 315 398 C 316 362, 310 325, 298 285 C 285 245, 268 218, 255 208 Z" 
+                dur="3s" 
                 repeatCount="indefinite"
                 calcMode="spline"
                 keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
@@ -242,193 +300,189 @@ function HeroMascot() {
           </g>
 
           {/* BODY */}
-          <g transform="translate(75, 100)">
+          <g transform="translate(135, 160)">
             
-            {/* Torso - athletic build */}
-            <path d="M75 70 
-                     Q 110 60, 145 75
-                     L 155 130
-                     Q 150 180, 140 210
-                     L 80 210
-                     Q 70 180, 65 130
+            {/* Torso */}
+            <path d="M60 50 
+                     Q 95 40, 130 55
+                     L 140 115
+                     Q 135 170, 125 200
+                     L 65 200
+                     Q 55 170, 50 115
                      Z" 
                   fill="url(#suitGrad)" />
             
-            {/* Torso highlight */}
-            <ellipse cx="115" cy="130" rx="30" ry="22" fill="#60A5FA" opacity="0.15" />
+            {/* Shoulder pads - cape attachment */}
+            <ellipse cx="60" cy="55" rx="18" ry="12" fill="#2563EB" />
+            <ellipse cx="130" cy="55" rx="18" ry="12" fill="#2563EB" />
             
-            {/* Chest emblem - polished */}
-            <g transform="translate(90, 115)">
-              <ellipse cx="25" cy="0" rx="30" ry="24" fill="#1E40AF" />
-              <ellipse cx="25" cy="0" rx="24" ry="19" fill="#3B82F6" />
-              <ellipse cx="25" cy="-2" rx="20" ry="15" fill="#60A5FA" opacity="0.3" />
-              <text x="25" y="8" textAnchor="middle" fontSize="24" fontWeight="bold" fill="white">P</text>
+            {/* Chest emblem */}
+            <g transform="translate(70, 95)">
+              <ellipse cx="25" cy="0" rx="28" ry="22" fill="#1E40AF" />
+              <ellipse cx="25" cy="0" rx="22" ry="17" fill="#3B82F6" />
+              <text x="25" y="8" textAnchor="middle" fontSize="22" fontWeight="bold" fill="white">P</text>
             </g>
 
             {/* Belt */}
-            <rect x="68" y="195" width="84" height="18" rx="4" fill="#FCD34D" />
-            <rect x="100" y="191" width="20" height="26" rx="5" fill="#F59E0B" />
-            <ellipse cx="110" cy="204" rx="6" ry="6" fill="#D97706" opacity="0.3" />
+            <rect x="53" y="185" width="84" height="18" rx="4" fill="#FCD34D" />
+            <rect x="85" y="181" width="20" height="26" rx="5" fill="#F59E0B" />
 
-            {/* LEGS - Strong stance */}
-            {/* Left leg */}
-            <path d="M85 210 L75 310 Q 72 325, 80 330 L 100 330 Q 105 325, 102 310 L 105 210 Z" fill="url(#suitGrad)" />
-            <ellipse cx="88" cy="332" rx="18" ry="8" fill="#1E3A8A" />
+            {/* LEGS */}
+            <path d="M70 200 L60 305 Q 57 320, 65 325 L 85 325 Q 90 320, 87 305 L 90 200 Z" fill="url(#suitGrad)" />
+            <ellipse cx="73" cy="327" rx="18" ry="8" fill="#1E3A8A" />
             
-            {/* Right leg */}
-            <path d="M115 210 L 118 310 Q 120 325, 130 330 L 150 330 Q 155 325, 150 310 L 140 210 Z" fill="url(#suitGrad)" />
-            <ellipse cx="140" cy="332" rx="18" ry="8" fill="#1E3A8A" />
+            <path d="M100 200 L103 305 Q 105 320, 115 325 L 135 325 Q 140 320, 135 305 L 125 200 Z" fill="url(#suitGrad)" />
+            <ellipse cx="125" cy="327" rx="18" ry="8" fill="#1E3A8A" />
 
-            {/* LEFT ARM - Extended holding shield */}
-            <path d="M75 80 
-                     Q 50 90, 30 120
-                     L 15 160
-                     Q 8 175, 18 182
-                     L 35 178
-                     Q 48 145, 68 100
+            {/* LEFT ARM - RAISED UP holding shield to block from above */}
+            <path d="M55 60 
+                     Q 25 50, 5 25
+                     L -15 -10
+                     Q -25 -20, -20 -30
+                     L -5 -25
+                     Q 15 0, 45 35
                      Z" 
                   fill="url(#suitGrad)" />
-            <ellipse cx="22" cy="178" rx="18" ry="15" fill="url(#skinGrad)" />
-            
-            {/* Fingers on shield */}
-            <ellipse cx="15" cy="172" rx="5" ry="8" fill="url(#skinGrad)" />
-            <ellipse cx="28" cy="170" rx="5" ry="8" fill="url(#skinGrad)" />
+            <ellipse cx="-12" cy="-22" rx="18" ry="15" fill="url(#skinGrad)" transform="rotate(-20)" />
 
-            {/* RIGHT ARM - Confident pose */}
-            <path d="M145 85 
-                     Q 165 95, 178 120
-                     L 185 155
-                     Q 190 172, 180 180
-                     L 168 175
-                     Q 162 145, 152 110
+            {/* RIGHT ARM - Tense, ready position */}
+            <path d="M130 65 
+                     Q 155 75, 168 100
+                     L 175 140
+                     Q 180 158, 170 165
+                     L 158 160
+                     Q 152 130, 140 90
                      Z" 
                   fill="url(#suitGrad)" />
-            <ellipse cx="178" cy="178" rx="15" ry="13" fill="url(#skinGrad)" />
+            <ellipse cx="168" cy="163" rx="15" ry="13" fill="url(#skinGrad)" />
 
-            {/* HEAD - Refined proportions */}
-            <g transform="translate(80, -15)">
-              {/* Neck */}
-              <path d="M25 80 L45 80 L48 95 L22 95 Z" fill="url(#skinGrad)" />
+            {/* HEAD - WARRIOR FACE - Intense Leonidas style */}
+            <g transform="translate(65, -55)">
+              {/* Neck - thicker, muscular */}
+              <path d="M18 100 L52 100 L55 115 L15 115 Z" fill="url(#skinGrad)" />
               
-              {/* Head shape - refined oval */}
-              <ellipse cx="35" cy="42" rx="38" ry="44" fill="url(#skinGrad)" />
+              {/* Head shape - more angular, masculine */}
+              <path d="M5 50 
+                       Q 5 20, 35 15
+                       Q 65 20, 65 50
+                       Q 68 75, 55 95
+                       L 15 95
+                       Q 2 75, 5 50
+                       Z" 
+                    fill="url(#skinGrad)" />
               
-              {/* Ear hints */}
-              <ellipse cx="-2" cy="45" rx="5" ry="8" fill="#F5C9A6" />
-              <ellipse cx="72" cy="45" rx="5" ry="8" fill="#F5C9A6" />
-              
-              {/* HAIR - Styled, full, with volume */}
-              {/* Main hair mass */}
-              <path d="M0 35 
-                       Q -2 18, 10 8
-                       Q 25 -5, 45 -2
-                       Q 65 0, 75 15
-                       Q 80 28, 75 42
-                       L 70 38
-                       Q 72 28, 68 20
-                       Q 60 8, 45 6
-                       Q 28 4, 15 15
-                       Q 5 25, 5 38
+              {/* HAIR - Short, dark, warrior style */}
+              <path d="M5 45 
+                       Q 3 25, 15 15
+                       Q 35 5, 55 15
+                       Q 67 25, 65 45
+                       L 62 42
+                       Q 63 28, 52 20
+                       Q 35 12, 18 20
+                       Q 8 28, 8 42
                        Z" 
                     fill="url(#hairGrad)" />
               
-              {/* Hair top volume */}
-              <path d="M10 12 
-                       Q 20 -2, 40 -4
-                       Q 58 -2, 68 10
-                       Q 62 5, 45 3
-                       Q 25 3, 15 12
+              {/* Hair texture lines */}
+              <path d="M15 18 Q 25 12, 35 12 Q 45 12, 55 18" stroke="#1A1410" strokeWidth="2" fill="none" opacity="0.5" />
+              <path d="M12 25 L 18 35" stroke="#1A1410" strokeWidth="1.5" fill="none" opacity="0.3" />
+              <path d="M58 25 L 52 35" stroke="#1A1410" strokeWidth="1.5" fill="none" opacity="0.3" />
+              
+              {/* BEARD - Short stubble/beard like Leonidas */}
+              <path d="M10 70 
+                       Q 10 85, 25 92
+                       Q 35 95, 45 92
+                       Q 60 85, 60 70
+                       L 58 72
+                       Q 57 82, 45 88
+                       Q 35 90, 25 88
+                       Q 13 82, 12 72
                        Z" 
-                    fill="url(#hairHighlight)" opacity="0.6" />
+                    fill="url(#hairGrad)" opacity="0.7" />
               
-              {/* Hair wave detail */}
-              <path d="M15 8 Q 30 0, 50 5 Q 45 2, 35 2 Q 22 3, 15 10" fill="#6D4C41" opacity="0.5" />
+              {/* Beard texture */}
+              <path d="M20 78 L22 85" stroke="#1A1410" strokeWidth="1" opacity="0.4" />
+              <path d="M30 80 L31 88" stroke="#1A1410" strokeWidth="1" opacity="0.4" />
+              <path d="M40 80 L39 88" stroke="#1A1410" strokeWidth="1" opacity="0.4" />
+              <path d="M50 78 L48 85" stroke="#1A1410" strokeWidth="1" opacity="0.4" />
               
-              {/* Side hair */}
-              <path d="M2 38 Q 0 48, 3 55 L 6 52 Q 4 45, 5 38 Z" fill="url(#hairGrad)" />
-              <path d="M68 38 Q 72 48, 70 55 L 66 52 Q 68 45, 67 38 Z" fill="url(#hairGrad)" />
-              
-              {/* MASK - Sleek superhero mask */}
-              <path d="M2 35 
-                       Q 35 18, 68 35
-                       L 72 52
-                       Q 35 42, -2 52
+              {/* MASK */}
+              <path d="M5 42 
+                       Q 35 28, 65 42
+                       L 68 58
+                       Q 35 48, 2 58
                        Z" 
                     fill="url(#maskGrad)" />
               
-              {/* Mask edge highlight */}
-              <path d="M5 36 Q 35 22, 65 36" stroke="#3B82F6" strokeWidth="1" fill="none" opacity="0.5" />
-              
-              {/* EYES - Expressive and confident */}
+              {/* EYES - INTENSE, ANGRY, warrior stare */}
               {/* Left eye */}
-              <ellipse cx="20" cy="44" rx="12" ry="13" fill="white" />
-              <ellipse cx="22" cy="45" rx="6" ry="7" fill="#1E3A5F" />
-              <circle cx="24" cy="43" r="2.5" fill="white" />
-              <ellipse cx="20" cy="44" rx="12" ry="13" fill="none" stroke="#E2E8F0" strokeWidth="0.5" />
+              <g>
+                <ellipse cx="22" cy="52" rx="11" ry="9" fill="white" />
+                <ellipse cx="24" cy="53" rx="6" ry="6" fill="#1A1410" />
+                <circle cx="25" cy="51" r="2" fill="white" />
+                {/* Angry eyebrow - furrowed DOWN */}
+                <path d="M8 40 Q 18 44, 32 42" stroke="#1A1410" strokeWidth="4" strokeLinecap="round" fill="none" />
+              </g>
               
               {/* Right eye */}
-              <ellipse cx="50" cy="44" rx="12" ry="13" fill="white" />
-              <ellipse cx="48" cy="45" rx="6" ry="7" fill="#1E3A5F" />
-              <circle cx="50" cy="43" r="2.5" fill="white" />
-              <ellipse cx="50" cy="44" rx="12" ry="13" fill="none" stroke="#E2E8F0" strokeWidth="0.5" />
+              <g>
+                <ellipse cx="48" cy="52" rx="11" ry="9" fill="white" />
+                <ellipse cx="46" cy="53" rx="6" ry="6" fill="#1A1410" />
+                <circle cx="47" cy="51" r="2" fill="white" />
+                {/* Angry eyebrow - furrowed DOWN */}
+                <path d="M38 42 Q 52 44, 62 40" stroke="#1A1410" strokeWidth="4" strokeLinecap="round" fill="none" />
+              </g>
               
-              {/* Eyebrows - confident expression */}
-              <path d="M8 32 Q 15 29, 28 31" stroke="#4E342E" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-              <path d="M42 31 Q 55 29, 62 32" stroke="#4E342E" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              {/* Forehead crease - showing intensity */}
+              <path d="M25 38 L30 40 L35 38" stroke="#D4A574" strokeWidth="1" fill="none" opacity="0.5" />
+              <path d="M35 38 L40 40 L45 38" stroke="#D4A574" strokeWidth="1" fill="none" opacity="0.5" />
               
-              {/* Nose - subtle */}
-              <path d="M35 50 L 33 60 Q 35 63, 38 60" stroke="#E5C4A8" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+              {/* Nose - strong, defined */}
+              <path d="M35 55 L 32 68 Q 35 72, 40 68 L 37 55" fill="#D4A574" opacity="0.3" />
+              <path d="M32 68 Q 35 72, 40 68" stroke="#C49A7A" strokeWidth="1.5" fill="none" />
               
-              {/* Confident smile */}
-              <path d="M24 70 Q 35 78, 48 70" fill="none" stroke="#C49A7A" strokeWidth="2.5" strokeLinecap="round" />
+              {/* MOUTH - BATTLE CRY / INTENSE GRIMACE */}
+              <path d="M20 78 
+                       Q 25 72, 35 72
+                       Q 45 72, 50 78
+                       Q 45 83, 35 83
+                       Q 25 83, 20 78
+                       Z" 
+                    fill="#8B4513" />
+              {/* Teeth showing - battle cry */}
+              <path d="M24 76 L46 76 L46 79 L24 79 Z" fill="white" />
+              {/* Teeth line */}
+              <line x1="28" y1="76" x2="28" y2="79" stroke="#D4A574" strokeWidth="0.5" />
+              <line x1="32" y1="76" x2="32" y2="79" stroke="#D4A574" strokeWidth="0.5" />
+              <line x1="35" y1="76" x2="35" y2="79" stroke="#D4A574" strokeWidth="0.5" />
+              <line x1="38" y1="76" x2="38" y2="79" stroke="#D4A574" strokeWidth="0.5" />
+              <line x1="42" y1="76" x2="42" y2="79" stroke="#D4A574" strokeWidth="0.5" />
               
-              {/* Chin definition */}
-              <path d="M15 75 Q 35 88, 55 75" fill="none" stroke="#F0D0B8" strokeWidth="1" opacity="0.5" />
+              {/* Jaw muscles - tense */}
+              <path d="M8 65 Q 5 75, 12 88" stroke="#D4A574" strokeWidth="1" fill="none" opacity="0.4" />
+              <path d="M62 65 Q 65 75, 58 88" stroke="#D4A574" strokeWidth="1" fill="none" opacity="0.4" />
             </g>
           </g>
         </g>
 
-        {/* === SHIELD - Premium design === */}
-        <g transform="translate(35, 270)" filter="url(#softShadow)">
+        {/* === SHIELD - RAISED UP to block from above === */}
+        <g transform="translate(95, 115) rotate(-25)" filter="url(#softShadow)">
           {/* Shield body */}
           <path d="M55 0 L108 18 L108 72 Q108 120 55 145 Q2 120 2 72 L2 18 Z" fill="url(#shieldGrad)" />
           
-          {/* Shield outer ring */}
+          {/* Shield rings */}
           <path d="M55 8 L100 24 L100 70 Q100 112 55 135 Q10 112 10 70 L10 24 Z" fill="none" stroke="white" strokeWidth="2" opacity="0.25" />
-          
-          {/* Shield inner highlight */}
           <path d="M55 20 L90 33 L90 68 Q90 100 55 118 Q20 100 20 68 L20 33 Z" fill="white" opacity="0.1" />
           
           {/* Checkmark */}
           <path d="M35 68 L50 85 L80 48" stroke="white" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" fill="none" />
           
           {/* Shield shine */}
-          <ellipse cx="40" cy="45" rx="15" ry="20" fill="white" opacity="0.1" />
-        </g>
-
-        {/* === THREAT BADGE === */}
-        <g>
-          <animateTransform attributeName="transform" type="translate" values="0,0;12,6;0,0" dur="2s" repeatCount="indefinite" calcMode="spline" keySplines="0.45 0 0.55 1;0.45 0 0.55 1"/>
-          <g transform="translate(25, 430)" filter="url(#softShadow)">
-            <rect x="0" y="0" width="108" height="40" rx="20" fill="#FEE2E2" stroke="#FECACA" strokeWidth="2" />
-            <text x="54" y="26" textAnchor="middle" fontSize="13" fill="#DC2626" fontWeight="600">
-              ⚠️ {threats[threatIndex]}
-            </text>
-          </g>
-        </g>
-
-        {/* Impact lines - subtle */}
-        <g transform="translate(130, 360)" opacity="0.5">
-          <line x1="0" y1="0" x2="-35" y2="25" stroke="#3B82F6" strokeWidth="2" strokeLinecap="round">
-            <animate attributeName="opacity" values="0;0.7;0" dur="1.2s" repeatCount="indefinite"/>
-          </line>
-          <line x1="5" y1="12" x2="-28" y2="42" stroke="#60A5FA" strokeWidth="1.5" strokeLinecap="round">
-            <animate attributeName="opacity" values="0;0.6;0" dur="1.2s" repeatCount="indefinite" begin="0.4s"/>
-          </line>
+          <ellipse cx="40" cy="45" rx="15" ry="20" fill="white" opacity="0.15" />
         </g>
 
         {/* === PROTECTED BADGE === */}
-        <g transform="translate(165, 485)" filter="url(#softShadow)">
+        <g transform="translate(175, 505)" filter="url(#softShadow)">
           <rect x="0" y="0" width="185" height="44" rx="22" fill="#D1FAE5" stroke="#A7F3D0" strokeWidth="2" />
           <circle cx="30" cy="22" r="13" fill="#10B981" />
           <path d="M24 22 L28 26 L37 16" stroke="white" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
