@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
-import { Shield, FileText, MessageSquare, CheckCircle2, AlertCircle, Download, Send, User, LogOut, Bot, Loader2, Eye, X, Menu, Mail, Plus, Clock, Sparkles, PartyPopper, ArrowLeft } from 'lucide-react'
+import { Shield, FileText, MessageSquare, CheckCircle2, AlertCircle, Download, Send, User, LogOut, Bot, Loader2, Eye, X, Menu, Mail, Plus, Clock, Sparkles, PartyPopper, ArrowLeft, ExternalLink, Database } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { Suspense } from 'react'
 
@@ -228,6 +229,8 @@ function DashboardContent() {
 
 function OverviewTab({ organization, documents, setActiveTab, unreadMessages }: { organization: any, documents: any[], setActiveTab: (tab: any) => void, unreadMessages: number }) {
   const complianceScore = organization?.compliance_score || 92
+  const hasDbRegistration = organization?.database_registration_number
+  
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-4 gap-4">
@@ -236,9 +239,42 @@ function OverviewTab({ organization, documents, setActiveTab, unreadMessages }: 
         <Card><CardContent className="p-4"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-500">זמן DPO שנוצל</p><p className="text-2xl font-bold">0 דק'</p></div><User className="h-8 w-8 text-orange-500" /></div></CardContent></Card>
         <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('messages')}><CardContent className="p-4"><div className="flex items-center justify-between"><div><p className="text-sm text-gray-500">הודעות חדשות</p><p className="text-2xl font-bold">{unreadMessages}</p></div><Mail className={`h-8 w-8 ${unreadMessages > 0 ? 'text-red-500' : 'text-gray-400'}`} /></div></CardContent></Card>
       </div>
-      <Card><CardHeader><CardTitle>התקדמות בציות</CardTitle><CardDescription>סטטוס העמידה בדרישות תיקון 13</CardDescription></CardHeader><CardContent><Progress value={complianceScore} className="h-4 mb-4" /><div className="grid md:grid-cols-3 gap-4"><div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg"><CheckCircle2 className="h-5 w-5 text-green-500" /><span>DPO ממונה</span></div><div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg"><CheckCircle2 className="h-5 w-5 text-green-500" /><span>מדיניות פרטיות</span></div><div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg"><CheckCircle2 className="h-5 w-5 text-green-500" /><span>רישום מאגרים</span></div></div></CardContent></Card>
+      
+      <Card>
+        <CardHeader><CardTitle>התקדמות בציות</CardTitle><CardDescription>סטטוס העמידה בדרישות תיקון 13</CardDescription></CardHeader>
+        <CardContent>
+          <Progress value={complianceScore} className="h-4 mb-4" />
+          <div className="grid md:grid-cols-4 gap-4">
+            <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg"><CheckCircle2 className="h-5 w-5 text-green-500" /><span>DPO ממונה</span></div>
+            <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg"><CheckCircle2 className="h-5 w-5 text-green-500" /><span>מדיניות פרטיות</span></div>
+            <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg"><CheckCircle2 className="h-5 w-5 text-green-500" /><span>מדיניות אבטחה</span></div>
+            <Link href="/database-registration">
+              <div className={`flex items-center gap-2 p-3 rounded-lg cursor-pointer transition-colors ${hasDbRegistration ? 'bg-green-50' : 'bg-yellow-50 hover:bg-yellow-100'}`}>
+                {hasDbRegistration ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <AlertCircle className="h-5 w-5 text-yellow-500" />}
+                <span>{hasDbRegistration ? 'מאגר רשום' : 'רישום מאגר'}</span>
+                {!hasDbRegistration && <ArrowLeft className="h-4 w-4 mr-auto" />}
+              </div>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+      
       <Card><CardContent className="p-6"><Badge variant="success" className="text-lg px-4 py-2">{organization?.status === 'active' ? 'פעיל ומוגן' : 'בתהליך הקמה'}</Badge></CardContent></Card>
-      <Card><CardHeader><CardTitle>פעולות מהירות</CardTitle></CardHeader><CardContent><div className="grid md:grid-cols-4 gap-4"><Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => setActiveTab('documents')}><FileText className="h-5 w-5" /><span>צפייה במסמכים</span></Button><Button variant="outline" className="h-auto py-4 flex-col gap-2 relative" onClick={() => setActiveTab('messages')}><Mail className="h-5 w-5" /><span>פנייה לממונה</span>{unreadMessages > 0 && <span className="absolute top-2 left-2 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{unreadMessages}</span>}</Button><Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => setActiveTab('documents')}><Download className="h-5 w-5" /><span>הורדת דוחות</span></Button><Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => setActiveTab('settings')}><AlertCircle className="h-5 w-5" /><span>דיווח אירוע</span></Button></div></CardContent></Card>
+      
+      <Card>
+        <CardHeader><CardTitle>פעולות מהירות</CardTitle></CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-5 gap-4">
+            <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => setActiveTab('documents')}><FileText className="h-5 w-5" /><span>צפייה במסמכים</span></Button>
+            <Button variant="outline" className="h-auto py-4 flex-col gap-2 relative" onClick={() => setActiveTab('messages')}><Mail className="h-5 w-5" /><span>פנייה לממונה</span>{unreadMessages > 0 && <span className="absolute top-2 left-2 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{unreadMessages}</span>}</Button>
+            <Link href="/database-registration">
+              <Button variant="outline" className="h-auto py-4 flex-col gap-2 w-full"><Database className="h-5 w-5" /><span>רישום מאגר</span></Button>
+            </Link>
+            <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => setActiveTab('documents')}><Download className="h-5 w-5" /><span>הורדת דוחות</span></Button>
+            <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => setActiveTab('settings')}><AlertCircle className="h-5 w-5" /><span>דיווח אירוע</span></Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
@@ -400,6 +436,35 @@ function DocumentsTab({ documents }: { documents: any[] }) {
                   <Eye className="h-4 w-4 ml-2" />
                   צפייה וחתימה
                 </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Database Registration Guide Card */}
+      {documents.find(d => d.type === 'database_registration') && (
+        <Card className="border-2 border-blue-300 bg-blue-50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-xl">🗄️</div>
+              <div className="flex-1">
+                <h3 className="font-bold text-blue-800">רישום מאגר מידע ברשם</h3>
+                <p className="text-sm text-blue-700 mb-2">הכנו לכם מדריך צעד-אחר-צעד לרישום המאגר באתר רשם מאגרי המידע. התהליך לוקח כ-40 דקות.</p>
+                <div className="flex gap-2">
+                  <Link href="/database-registration">
+                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
+                      <ArrowLeft className="h-4 w-4 ml-2" />
+                      למדריך הרישום
+                    </Button>
+                  </Link>
+                  <a href="https://www.gov.il/he/service/registration-of-database" target="_blank" rel="noopener noreferrer">
+                    <Button size="sm" variant="outline" className="border-blue-400 text-blue-700 hover:bg-blue-100">
+                      <ExternalLink className="h-4 w-4 ml-2" />
+                      לאתר הרשם
+                    </Button>
+                  </a>
+                </div>
               </div>
             </div>
           </CardContent>
