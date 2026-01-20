@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -289,12 +290,12 @@ export default function DpoCalculator({
 
           {/* CTA Buttons */}
           <div className="flex flex-col gap-3">
-            <Button size="lg" className="w-full" asChild>
-              <a href="/onboarding">
+            <Link href="/onboarding">
+              <Button size="lg" className="w-full">
                 התחילו עכשיו - רק ₪500/חודש
                 <ArrowLeft className="mr-2 h-4 w-4" />
-              </a>
-            </Button>
+              </Button>
+            </Link>
             <Button variant="outline" size="lg" className="w-full" onClick={handleReset}>
               בדיקה מחדש
             </Button>
