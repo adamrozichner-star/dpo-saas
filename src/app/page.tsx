@@ -68,24 +68,18 @@ export default function HomePage() {
         )}
       </nav>
 
-      {/* Hero Section with Animated Shield */}
+      {/* Hero Section - Light Background with Superhero */}
       <section className="relative overflow-hidden">
         {/* Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900" />
-        
-        {/* Animated grid pattern */}
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `linear-gradient(rgba(59, 130, 246, 0.3) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.3) 1px, transparent 1px)`,
-            backgroundSize: '50px 50px'
-          }} />
-        </div>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-indigo-50" />
+        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 right-0 w-96 h-96 bg-indigo-200/30 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
         
         <div className="relative max-w-7xl mx-auto px-4 py-16 md:py-24">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               {/* Urgency Badge */}
-              <div className="inline-flex items-center gap-2 bg-red-500/20 border border-red-400/30 text-red-300 px-4 py-2 rounded-full text-sm mb-6 backdrop-blur-sm">
+              <div className="inline-flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-full text-sm mb-6">
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
@@ -93,78 +87,78 @@ export default function HomePage() {
                 <span className="font-medium">תיקון 13 נכנס לתוקף - האכיפה כבר כאן</span>
               </div>
 
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6">
                 ממונה הגנת פרטיות
                 <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-l from-blue-400 to-cyan-300">
+                <span className="text-transparent bg-clip-text bg-gradient-to-l from-blue-600 to-indigo-600">
                   ב-500₪ לחודש
                 </span>
               </h1>
 
-              <p className="text-lg md:text-xl text-blue-100/80 mb-8 leading-relaxed">
+              <p className="text-lg md:text-xl text-gray-600 mb-8 leading-relaxed">
                 ממונה אנושי מוסמך + מערכת AI שעושה 98% מהעבודה.
                 <br />
-                <strong className="text-white">במקום לשלם עשרות אלפי ₪</strong> - קבלו הכל במנוי חודשי פשוט.
+                <strong className="text-gray-900">במקום לשלם עשרות אלפי ₪</strong> - קבלו הכל במנוי חודשי פשוט.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <Link href="/onboarding">
-                  <Button size="lg" className="w-full sm:w-auto bg-blue-500 hover:bg-blue-400 text-white text-lg px-8 py-6 gap-2">
+                  <Button size="lg" className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-lg px-8 py-6 gap-2">
                     התחילו תוך 15 דקות
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
                 </Link>
                 <a href="#check">
-                  <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-8 py-6 border-white/30 text-white hover:bg-white/10">
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-8 py-6">
                     בדקו אם אתם חייבים DPO
                   </Button>
                 </a>
               </div>
 
               {/* Trust Badges */}
-              <div className="flex flex-wrap items-center gap-4 text-sm text-blue-200/70">
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
                 <div className="flex items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4 text-green-400" />
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span>ללא התחייבות</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4 text-green-400" />
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span>הקמה תוך 15 דקות</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <CheckCircle2 className="h-4 w-4 text-green-400" />
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
                   <span>DPO מוסמך</span>
                 </div>
               </div>
             </div>
 
-            {/* Animated Shield Visual */}
+            {/* Superhero Animation */}
             <div className="relative hidden lg:flex items-center justify-center">
-              <AnimatedShieldHero />
+              <SuperheroShieldAnimation />
             </div>
           </div>
         </div>
       </section>
 
       {/* Stats Bar */}
-      <section className="bg-white py-8 border-b">
+      <section className="bg-gray-900 text-white py-8">
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 text-center">
             <div>
-              <div className="text-3xl md:text-4xl font-bold text-blue-600">500+</div>
-              <div className="text-gray-500 text-sm">עסקים משתמשים</div>
+              <div className="text-3xl md:text-4xl font-bold text-blue-400">500+</div>
+              <div className="text-gray-400 text-sm">עסקים משתמשים</div>
             </div>
             <div>
-              <div className="text-3xl md:text-4xl font-bold text-blue-600">98%</div>
-              <div className="text-gray-500 text-sm">אוטומציה מלאה</div>
+              <div className="text-3xl md:text-4xl font-bold text-blue-400">98%</div>
+              <div className="text-gray-400 text-sm">אוטומציה מלאה</div>
             </div>
             <div>
-              <div className="text-3xl md:text-4xl font-bold text-blue-600">15 דק׳</div>
-              <div className="text-gray-500 text-sm">זמן הקמה</div>
+              <div className="text-3xl md:text-4xl font-bold text-blue-400">15 דק׳</div>
+              <div className="text-gray-400 text-sm">זמן הקמה</div>
             </div>
             <div>
-              <div className="text-3xl md:text-4xl font-bold text-blue-600">24/7</div>
-              <div className="text-gray-500 text-sm">מענה AI</div>
+              <div className="text-3xl md:text-4xl font-bold text-blue-400">24/7</div>
+              <div className="text-gray-400 text-sm">מענה AI</div>
             </div>
           </div>
         </div>
@@ -545,82 +539,215 @@ export default function HomePage() {
   )
 }
 
-// ============== ANIMATED SHIELD HERO ==============
-function AnimatedShieldHero() {
+// ============== SUPERHERO SHIELD ANIMATION ==============
+function SuperheroShieldAnimation() {
   const [mounted, setMounted] = useState(false)
+  const [deflectedThreats, setDeflectedThreats] = useState<number[]>([])
   
   useEffect(() => {
     setMounted(true)
+    
+    // Periodically add new deflected threats
+    const interval = setInterval(() => {
+      setDeflectedThreats(prev => {
+        const newId = Date.now()
+        // Keep only last 3 threats
+        const updated = [...prev, newId].slice(-3)
+        return updated
+      })
+    }, 2000)
+    
+    return () => clearInterval(interval)
   }, [])
 
   return (
     <div className="relative w-full h-[500px]">
-      {/* Central Shield */}
-      <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-1000 ${mounted ? 'scale-100 opacity-100' : 'scale-50 opacity-0'}`}>
-        {/* Glow effect */}
-        <div className="absolute inset-0 bg-blue-500/30 rounded-full blur-3xl scale-150" />
-        
-        {/* Shield container */}
-        <div className="relative w-32 h-32 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-blue-500/50">
-          <Shield className="h-16 w-16 text-white" />
+      {/* Data elements to protect - Background */}
+      <div className={`absolute top-4 right-4 transition-all duration-700 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+        <div className="bg-white rounded-xl p-4 shadow-lg border">
+          <FileText className="h-8 w-8 text-blue-500 mb-2" />
+          <p className="text-xs text-gray-600 font-medium">מסמכים</p>
+        </div>
+      </div>
+      
+      <div className={`absolute top-24 right-24 transition-all duration-700 delay-100 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+        <div className="bg-white rounded-xl p-4 shadow-lg border">
+          <Database className="h-8 w-8 text-indigo-500 mb-2" />
+          <p className="text-xs text-gray-600 font-medium">מאגרי מידע</p>
+        </div>
+      </div>
+      
+      <div className={`absolute bottom-24 right-8 transition-all duration-700 delay-200 ${mounted ? 'opacity-100' : 'opacity-0'}`}>
+        <div className="bg-white rounded-xl p-4 shadow-lg border">
+          <Users className="h-8 w-8 text-purple-500 mb-2" />
+          <p className="text-xs text-gray-600 font-medium">נתוני לקוחות</p>
+        </div>
+      </div>
+
+      {/* Superhero Character with Shield */}
+      <div className={`absolute bottom-8 left-8 transition-all duration-1000 ${mounted ? 'translate-x-0 opacity-100' : '-translate-x-20 opacity-0'}`}>
+        <div className="relative">
+          {/* Hero Body */}
+          <svg width="180" height="280" viewBox="0 0 180 280" className="drop-shadow-2xl">
+            {/* Cape */}
+            <path 
+              d="M90 70 L40 250 Q90 230 140 250 L90 70" 
+              fill="url(#capeGradient)" 
+              className="animate-cape"
+            />
+            
+            {/* Body */}
+            <ellipse cx="90" cy="160" rx="45" ry="60" fill="url(#bodyGradient)" />
+            
+            {/* Head */}
+            <circle cx="90" cy="50" r="35" fill="#FFD5B8" />
+            
+            {/* Mask */}
+            <path 
+              d="M55 40 Q90 25 125 40 L125 55 Q90 65 55 55 Z" 
+              fill="url(#maskGradient)"
+            />
+            
+            {/* Eyes */}
+            <ellipse cx="75" cy="48" rx="8" ry="5" fill="white" />
+            <ellipse cx="105" cy="48" rx="8" ry="5" fill="white" />
+            <circle cx="77" cy="48" r="3" fill="#333" />
+            <circle cx="107" cy="48" r="3" fill="#333" />
+            
+            {/* Confident Smile */}
+            <path d="M80 62 Q90 70 100 62" stroke="#333" strokeWidth="2" fill="none" />
+            
+            {/* Shield Arm */}
+            <ellipse cx="35" cy="140" rx="20" ry="15" fill="#FFD5B8" transform="rotate(-30 35 140)" />
+            
+            {/* Legs */}
+            <rect x="65" y="210" width="20" height="60" rx="10" fill="url(#bodyGradient)" />
+            <rect x="95" y="210" width="20" height="60" rx="10" fill="url(#bodyGradient)" />
+            
+            {/* Boots */}
+            <rect x="63" y="255" width="24" height="20" rx="5" fill="#1E40AF" />
+            <rect x="93" y="255" width="24" height="20" rx="5" fill="#1E40AF" />
+            
+            {/* Belt */}
+            <rect x="50" y="190" width="80" height="12" rx="3" fill="#FCD34D" />
+            <circle cx="90" cy="196" r="8" fill="#FCD34D" stroke="#F59E0B" strokeWidth="2" />
+            <text x="90" y="200" textAnchor="middle" fontSize="10" fill="#92400E" fontWeight="bold">D</text>
+            
+            <defs>
+              <linearGradient id="capeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#3B82F6" />
+                <stop offset="100%" stopColor="#1E40AF" />
+              </linearGradient>
+              <linearGradient id="bodyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#3B82F6" />
+                <stop offset="100%" stopColor="#2563EB" />
+              </linearGradient>
+              <linearGradient id="maskGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#1E40AF" />
+                <stop offset="100%" stopColor="#3B82F6" />
+              </linearGradient>
+            </defs>
+          </svg>
           
-          {/* Pulse ring */}
-          <div className="absolute inset-0 rounded-2xl border-2 border-blue-400 animate-ping opacity-20" />
+          {/* The Shield - Positioned in front */}
+          <div className="absolute -left-4 top-20 animate-shield-pulse">
+            <svg width="120" height="140" viewBox="0 0 120 140">
+              {/* Shield glow */}
+              <ellipse cx="60" cy="70" rx="55" ry="65" fill="url(#shieldGlow)" opacity="0.5" />
+              
+              {/* Main shield shape */}
+              <path 
+                d="M60 5 L110 25 L110 75 Q110 120 60 135 Q10 120 10 75 L10 25 Z" 
+                fill="url(#shieldGradient)"
+                stroke="url(#shieldBorder)"
+                strokeWidth="3"
+              />
+              
+              {/* Shield emblem */}
+              <circle cx="60" cy="65" r="25" fill="white" opacity="0.9" />
+              <path 
+                d="M60 45 L65 55 L60 50 L55 55 Z M60 85 L55 75 L60 80 L65 75 Z M40 65 L50 60 L45 65 L50 70 Z M80 65 L70 70 L75 65 L70 60 Z" 
+                fill="#2563EB"
+              />
+              <circle cx="60" cy="65" r="8" fill="#2563EB" />
+              <text x="60" y="69" textAnchor="middle" fontSize="12" fill="white" fontWeight="bold">P</text>
+              
+              <defs>
+                <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#60A5FA" />
+                  <stop offset="50%" stopColor="#3B82F6" />
+                  <stop offset="100%" stopColor="#1D4ED8" />
+                </linearGradient>
+                <linearGradient id="shieldBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#93C5FD" />
+                  <stop offset="100%" stopColor="#1E40AF" />
+                </linearGradient>
+                <radialGradient id="shieldGlow">
+                  <stop offset="0%" stopColor="#3B82F6" stopOpacity="0.6" />
+                  <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+            </svg>
+          </div>
         </div>
       </div>
 
-      {/* Floating Data Elements */}
-      {/* Document 1 */}
-      <div className={`absolute top-8 right-8 transition-all duration-1000 delay-300 ${mounted ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'}`}>
-        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 animate-float">
-          <FileText className="h-8 w-8 text-blue-300 mb-2" />
-          <p className="text-white/80 text-xs">מדיניות פרטיות</p>
+      {/* Incoming Threats being deflected */}
+      {deflectedThreats.map((id, index) => (
+        <div 
+          key={id}
+          className="absolute animate-threat-deflect"
+          style={{
+            left: '0%',
+            top: `${30 + (index * 20)}%`,
+          }}
+        >
+          <div className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+            <AlertTriangle className="h-3 w-3" />
+            {['איום', 'פריצה', 'דליפה'][index % 3]}
+          </div>
         </div>
-      </div>
+      ))}
 
-      {/* Document 2 */}
-      <div className={`absolute top-20 left-4 transition-all duration-1000 delay-500 ${mounted ? 'translate-y-0 opacity-100' : '-translate-y-10 opacity-0'}`}>
-        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 animate-float-delayed">
-          <Database className="h-8 w-8 text-cyan-300 mb-2" />
-          <p className="text-white/80 text-xs">מאגרי מידע</p>
-        </div>
-      </div>
-
-      {/* User data */}
-      <div className={`absolute bottom-20 right-12 transition-all duration-1000 delay-700 ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 animate-float">
-          <Users className="h-8 w-8 text-purple-300 mb-2" />
-          <p className="text-white/80 text-xs">נתוני לקוחות</p>
-        </div>
-      </div>
-
-      {/* Lock/Security */}
-      <div className={`absolute bottom-32 left-8 transition-all duration-1000 delay-900 ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-        <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20 animate-float-delayed">
-          <Lock className="h-8 w-8 text-green-300 mb-2" />
-          <p className="text-white/80 text-xs">אבטחת מידע</p>
-        </div>
-      </div>
-
-      {/* Connection lines (SVG) */}
-      <svg className="absolute inset-0 w-full h-full" style={{ zIndex: -1 }}>
+      {/* Protection effect lines */}
+      <svg className="absolute inset-0 w-full h-full pointer-events-none">
         <defs>
-          <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="rgba(59, 130, 246, 0)" />
-            <stop offset="50%" stopColor="rgba(59, 130, 246, 0.5)" />
-            <stop offset="100%" stopColor="rgba(59, 130, 246, 0)" />
+          <linearGradient id="protectLine" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#3B82F6" stopOpacity="0" />
+            <stop offset="50%" stopColor="#3B82F6" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#3B82F6" stopOpacity="0" />
           </linearGradient>
         </defs>
-        {/* Animated dashed lines pointing to shield */}
-        <line x1="85%" y1="15%" x2="55%" y2="45%" stroke="url(#lineGradient)" strokeWidth="1" strokeDasharray="5,5" className="animate-dash" />
-        <line x1="15%" y1="25%" x2="45%" y2="45%" stroke="url(#lineGradient)" strokeWidth="1" strokeDasharray="5,5" className="animate-dash" />
-        <line x1="80%" y1="75%" x2="55%" y2="55%" stroke="url(#lineGradient)" strokeWidth="1" strokeDasharray="5,5" className="animate-dash" />
-        <line x1="20%" y1="65%" x2="45%" y2="55%" stroke="url(#lineGradient)" strokeWidth="1" strokeDasharray="5,5" className="animate-dash" />
+        {/* Curved protection lines from shield to data */}
+        <path 
+          d="M100 180 Q200 100 280 60" 
+          stroke="url(#protectLine)" 
+          strokeWidth="2" 
+          fill="none"
+          strokeDasharray="10,5"
+          className="animate-dash"
+        />
+        <path 
+          d="M100 180 Q180 150 260 140" 
+          stroke="url(#protectLine)" 
+          strokeWidth="2" 
+          fill="none"
+          strokeDasharray="10,5"
+          className="animate-dash-delayed"
+        />
+        <path 
+          d="M100 200 Q180 230 270 220" 
+          stroke="url(#protectLine)" 
+          strokeWidth="2" 
+          fill="none"
+          strokeDasharray="10,5"
+          className="animate-dash"
+        />
       </svg>
 
-      {/* Status indicator */}
-      <div className={`absolute bottom-4 left-1/2 -translate-x-1/2 transition-all duration-1000 delay-1000 ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-        <div className="flex items-center gap-2 bg-green-500/20 border border-green-400/30 text-green-300 px-4 py-2 rounded-full text-sm backdrop-blur-sm">
+      {/* Status badge */}
+      <div className={`absolute bottom-0 left-1/2 -translate-x-1/2 transition-all duration-1000 delay-500 ${mounted ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+        <div className="flex items-center gap-2 bg-green-100 border border-green-300 text-green-700 px-4 py-2 rounded-full text-sm font-medium shadow-lg">
           <span className="relative flex h-2 w-2">
             <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
           </span>
@@ -628,27 +755,41 @@ function AnimatedShieldHero() {
         </div>
       </div>
 
-      {/* CSS for animations */}
+      {/* CSS Animations */}
       <style jsx>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
+        @keyframes cape {
+          0%, 100% { transform: skewX(-2deg); }
+          50% { transform: skewX(2deg); }
         }
-        @keyframes float-delayed {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
+        @keyframes shield-pulse {
+          0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(59, 130, 246, 0.5)); }
+          50% { transform: scale(1.05); filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.8)); }
+        }
+        @keyframes threat-deflect {
+          0% { transform: translateX(0) rotate(0deg); opacity: 1; }
+          30% { transform: translateX(80px) rotate(0deg); opacity: 1; }
+          50% { transform: translateX(90px) rotate(-45deg); opacity: 1; }
+          100% { transform: translateX(60px) translateY(-100px) rotate(-90deg); opacity: 0; }
         }
         @keyframes dash {
-          to { stroke-dashoffset: -20; }
+          to { stroke-dashoffset: -30; }
         }
-        .animate-float {
-          animation: float 4s ease-in-out infinite;
+        .animate-cape {
+          animation: cape 3s ease-in-out infinite;
+          transform-origin: top center;
         }
-        .animate-float-delayed {
-          animation: float-delayed 5s ease-in-out infinite;
+        .animate-shield-pulse {
+          animation: shield-pulse 2s ease-in-out infinite;
+        }
+        .animate-threat-deflect {
+          animation: threat-deflect 2s ease-out forwards;
         }
         .animate-dash {
           animation: dash 2s linear infinite;
+        }
+        .animate-dash-delayed {
+          animation: dash 2s linear infinite;
+          animation-delay: 0.5s;
         }
       `}</style>
     </div>
