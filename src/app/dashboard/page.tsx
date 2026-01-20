@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,21 +22,31 @@ import {
   Bot,
   Loader2,
   Eye,
-  X
+  X,
+  ClipboardList
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
-import RightsManagement from '@/components/RightsManagement'
+import WelcomeModal from '@/components/WelcomeModal'
+import ComplianceChecklist from '@/components/ComplianceChecklist'
+import ComplianceScoreCard from '@/components/ComplianceScoreCard'
 
-export default function DashboardPage() {
+function DashboardContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, session, signOut, loading, supabase } = useAuth()
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'rights' | 'qa' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'qa' | 'checklist' | 'settings'>('overview')
   const [question, setQuestion] = useState('')
   const [isAsking, setIsAsking] = useState(false)
   const [qaHistory, setQaHistory] = useState<any[]>([])
   const [organization, setOrganization] = useState<any>(null)
   const [documents, setDocuments] = useState<any[]>([])
   const [userName, setUserName] = useState('')
+  const [showWelcome, setShowWelcome] = useState(false)
+  const [complianceData, setComplianceData] = useState<{
+    score: number
+    gaps: string[]
+    checklist: any[]
+  }>({ score: 0, gaps: [], checklist: [] })
 
   useEffect(() => {
     if (!loading && !session) {
@@ -44,9 +54,21 @@ export default function DashboardPage() {
     }
   }, [loading, session, router])
 
+  // Check for welcome parameter
+  useEffect(() => {
+    if (searchParams.get('welcome') === 'true') {
+      setShowWelcome(true)
+      // Clean URL
+      window.history.replaceState({}, '', '/dashboard')
+    }
+  }, [searchParams])
+
   useEffect(() => {
     if (user && supabase) {
+      // Get user name from metadata
       setUserName(user.user_metadata?.name || user.email?.split('@')[0] || 'משתמש')
+      
+      // Load user's organization
       loadUserData()
     }
   }, [user, supabase])
@@ -54,6 +76,7 @@ export default function DashboardPage() {
   const loadUserData = async () => {
     if (!user || !supabase) return
 
+    // Get user profile and organization
     const { data: userData } = await supabase
       .from('users')
       .select('*, organizations(*)')
@@ -63,6 +86,7 @@ export default function DashboardPage() {
     if (userData?.organizations) {
       setOrganization(userData.organizations)
       
+      // Load documents for this organization
       const { data: docs } = await supabase
         .from('documents')
         .select('*')
@@ -70,6 +94,7 @@ export default function DashboardPage() {
       
       if (docs) setDocuments(docs)
 
+      // Load Q&A history
       const { data: qa } = await supabase
         .from('qa_interactions')
         .select('*')
@@ -78,7 +103,112 @@ export default function DashboardPage() {
         .limit(10)
       
       if (qa) setQaHistory(qa)
+
+      // Load compliance data from organization profile
+      const { data: profile } = await supabase
+        .from('organization_profiles')
+        .select('compliance_score, compliance_gaps, compliance_checklist')
+        .eq('org_id', userData.organizations.id)
+        .single()
+
+      if (profile) {
+        setComplianceData({
+          score: profile.compliance_score || calculateDefaultScore(docs || []),
+          gaps: profile.compliance_gaps || [],
+          checklist: profile.compliance_checklist || generateDefaultChecklist(docs || [])
+        })
+      } else {
+        // Generate default compliance data
+        setComplianceData({
+          score: calculateDefaultScore(docs || []),
+          gaps: [],
+          checklist: generateDefaultChecklist(docs || [])
+        })
+      }
     }
+  }
+
+  // Calculate default compliance score based on documents
+  const calculateDefaultScore = (docs: any[]) => {
+    let score = 25 // Base score for having DPO
+    if (docs.length > 0) score += 25 // Has documents
+    if (docs.find(d => d.type === 'privacy_policy')) score += 15
+    if (docs.find(d => d.type === 'security_procedures' || d.type === 'security_policy')) score += 15
+    if (docs.find(d => d.type === 'database_definition' || d.type === 'database_registration')) score += 10
+    if (docs.find(d => d.type === 'dpo_appointment')) score += 10
+    return Math.min(score, 100)
+  }
+
+  // Generate default checklist
+  const generateDefaultChecklist = (docs: any[]) => {
+    return [
+      {
+        id: 'privacy_policy',
+        title: 'מדיניות פרטיות',
+        description: 'פרסום מדיניות פרטיות באתר',
+        category: 'documentation',
+        completed: docs.some(d => d.type === 'privacy_policy'),
+        priority: 'high'
+      },
+      {
+        id: 'security_procedures',
+        title: 'נהלי אבטחת מידע',
+        description: 'נהלים כתובים לאבטחת מידע',
+        category: 'documentation',
+        completed: docs.some(d => d.type === 'security_procedures' || d.type === 'security_policy'),
+        priority: 'high'
+      },
+      {
+        id: 'database_definition',
+        title: 'הגדרות מאגר מידע',
+        description: 'תיעוד מאגרי המידע בארגון',
+        category: 'documentation',
+        completed: docs.some(d => d.type === 'database_definition' || d.type === 'database_registration'),
+        priority: 'high'
+      },
+      {
+        id: 'dpo_appointment',
+        title: 'כתב מינוי DPO',
+        description: 'כתב מינוי רשמי לממונה',
+        category: 'documentation',
+        completed: docs.some(d => d.type === 'dpo_appointment'),
+        priority: 'high'
+      },
+      {
+        id: 'database_registration',
+        title: 'רישום מאגרי מידע',
+        description: 'רישום ברשות להגנת הפרטיות',
+        category: 'registration',
+        completed: false,
+        priority: 'high',
+        action: 'הגשת בקשה',
+        actionUrl: 'https://www.gov.il/he/service/database_registration'
+      },
+      {
+        id: 'employee_training',
+        title: 'הדרכת עובדים',
+        description: 'הדרכת עובדים בנושאי פרטיות',
+        category: 'training',
+        completed: false,
+        priority: 'medium'
+      },
+      {
+        id: 'access_control',
+        title: 'בקרת גישה',
+        description: 'הגדרת הרשאות גישה למערכות',
+        category: 'security',
+        completed: false,
+        priority: 'high'
+      },
+      {
+        id: 'data_subject_process',
+        title: 'תהליך טיפול בפניות',
+        description: 'נוהל לטיפול בבקשות נושאי מידע',
+        category: 'processes',
+        completed: false,
+        priority: 'medium'
+      }
+    ]
   }
 
   const handleAskQuestion = async () => {
@@ -86,6 +216,7 @@ export default function DashboardPage() {
     setIsAsking(true)
     
     try {
+      // Call AI Q&A API
       const response = await fetch('/api/qa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -156,10 +287,10 @@ export default function DashboardPage() {
             onClick={() => setActiveTab('documents')}
           />
           <NavButton 
-            icon={<Shield />} 
-            label="זכויות נושא מידע" 
-            active={activeTab === 'rights'}
-            onClick={() => setActiveTab('rights')}
+            icon={<ClipboardList />} 
+            label="רשימת ציות" 
+            active={activeTab === 'checklist'}
+            onClick={() => setActiveTab('checklist')}
           />
           <NavButton 
             icon={<MessageSquare />} 
@@ -194,6 +325,17 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <main className="mr-64 p-8">
+        {/* Welcome Modal */}
+        {showWelcome && organization && (
+          <WelcomeModal
+            orgName={organization.name}
+            documentsCount={documents.length}
+            complianceScore={complianceData.score}
+            onClose={() => setShowWelcome(false)}
+          />
+        )}
+
+        {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold">שלום, {userName}</h1>
@@ -226,13 +368,31 @@ export default function DashboardPage() {
         ) : (
           <>
             {activeTab === 'overview' && (
-              <OverviewTab organization={organization} documents={documents} />
+              <OverviewTab 
+                organization={organization} 
+                documents={documents} 
+                complianceScore={complianceData.score}
+                complianceGaps={complianceData.gaps}
+              />
             )}
             {activeTab === 'documents' && (
               <DocumentsTab documents={documents} />
             )}
-            {activeTab === 'rights' && (
-              <RightsManagement organization={organization} supabase={supabase} />
+            {activeTab === 'checklist' && (
+              <div className="space-y-6">
+                <h2 className="text-xl font-bold">רשימת ציות</h2>
+                <ComplianceChecklist 
+                  items={complianceData.checklist}
+                  onToggle={(id) => {
+                    setComplianceData(prev => ({
+                      ...prev,
+                      checklist: prev.checklist.map(item => 
+                        item.id === id ? { ...item, completed: !item.completed } : item
+                      )
+                    }))
+                  }}
+                />
+              </div>
             )}
             {activeTab === 'qa' && (
               <QATab 
@@ -258,7 +418,9 @@ function NavButton({ icon, label, active, onClick }: any) {
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-        active ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100'
+        active 
+          ? 'bg-primary text-white' 
+          : 'text-gray-700 hover:bg-gray-100'
       }`}
     >
       {icon}
@@ -267,25 +429,17 @@ function NavButton({ icon, label, active, onClick }: any) {
   )
 }
 
-function OverviewTab({ organization, documents }: { organization: any, documents: any[] }) {
-  const complianceScore = documents.length > 0 ? 92 : 0
+function OverviewTab({ organization, documents, complianceScore, complianceGaps }: { 
+  organization: any, 
+  documents: any[],
+  complianceScore: number,
+  complianceGaps: string[]
+}) {
   const hasSubscription = organization?.subscription_status === 'active'
-  const isFullySetup = documents.length >= 3 && organization?.status === 'active'
-  
-  // Determine actual status
-  const getStatusInfo = () => {
-    if (documents.length === 0) {
-      return { label: 'ממתין להשלמת הגדרות', variant: 'destructive' as const, color: 'red' }
-    }
-    if (documents.length < 3) {
-      return { label: 'בתהליך הקמה', variant: 'warning' as const, color: 'yellow' }
-    }
-    return { label: 'פעיל ומוגן', variant: 'success' as const, color: 'green' }
-  }
-  const statusInfo = getStatusInfo()
   
   return (
     <div className="space-y-6">
+      {/* Upgrade Banner - show if no active subscription */}
       {!hasSubscription && (
         <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
           <CardContent className="p-4">
@@ -307,109 +461,103 @@ function OverviewTab({ organization, documents }: { organization: any, documents
         </Card>
       )}
 
-      <div className="grid md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">ציון ציות</p>
-                <p className="text-2xl font-bold">{complianceScore}%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Main Stats Row */}
+      <div className="grid md:grid-cols-3 gap-6">
+        {/* Compliance Score Card */}
+        <ComplianceScoreCard 
+          score={complianceScore}
+          gaps={complianceGaps}
+          lastUpdated={new Date().toLocaleDateString('he-IL')}
+        />
 
+        {/* Stats Cards */}
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-6 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-blue-600" />
+              <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                <FileText className="h-6 w-6 text-blue-600" />
               </div>
               <div>
                 <p className="text-sm text-gray-600">מסמכים פעילים</p>
-                <p className="text-2xl font-bold">{documents.length}</p>
+                <p className="text-3xl font-bold">{documents.length}</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                <User className="h-5 w-5 text-purple-600" />
+              <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
+                <User className="h-6 w-6 text-purple-600" />
               </div>
               <div>
                 <p className="text-sm text-gray-600">זמן DPO שנוצל</p>
-                <p className="text-2xl font-bold">0 דק׳</p>
+                <p className="text-3xl font-bold">0 דק׳</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
+        {/* DPO Card */}
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
-                <Shield className="h-5 w-5 text-yellow-600" />
+          <CardContent className="p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                <User className="h-8 w-8 text-primary" />
               </div>
-              <div>
-                <p className="text-sm text-gray-600">חבילה</p>
-                <p className="text-2xl font-bold">{organization?.tier === 'extended' ? 'מורחבת' : 'בסיסית'}</p>
-              </div>
+              <Badge className="mb-2">הממונה שלכם</Badge>
+              <h3 className="font-bold">עו"ד דנה כהן</h3>
+              <p className="text-sm text-gray-500 mb-3">ממונה הגנת פרטיות</p>
+              <Button variant="outline" size="sm" className="w-full">
+                <MessageSquare className="h-4 w-4 ml-2" />
+                שליחת הודעה
+              </Button>
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Compliance Progress */}
       <Card>
         <CardHeader>
-          <CardTitle>התקדמות בציות</CardTitle>
-          <CardDescription>סטטוס העמידה בדרישות תיקון 13</CardDescription>
+          <CardTitle>סטטוס עמידה בדרישות</CardTitle>
+          <CardDescription>התקדמות בעמידה בדרישות תיקון 13</CardDescription>
         </CardHeader>
         <CardContent>
-          <Progress value={complianceScore} className="h-4 mb-4" />
-          <div className="grid md:grid-cols-3 gap-4 text-center">
-            <div className="p-3 rounded-lg bg-green-50">
-              <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
+          <div className="grid md:grid-cols-4 gap-4">
+            <div className={`p-4 rounded-lg text-center ${documents.some(d => d.type === 'dpo_appointment') ? 'bg-green-50' : 'bg-gray-50'}`}>
+              {documents.some(d => d.type === 'dpo_appointment') ? (
+                <CheckCircle2 className="h-6 w-6 text-green-600 mx-auto mb-2" />
+              ) : (
+                <AlertCircle className="h-6 w-6 text-gray-400 mx-auto mb-2" />
+              )}
               <p className="text-sm font-medium">DPO ממונה</p>
             </div>
-            <div className={`p-3 rounded-lg ${documents.length > 0 ? 'bg-green-50' : 'bg-gray-50'}`}>
-              {documents.length > 0 ? (
-                <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
+            <div className={`p-4 rounded-lg text-center ${documents.some(d => d.type === 'privacy_policy') ? 'bg-green-50' : 'bg-gray-50'}`}>
+              {documents.some(d => d.type === 'privacy_policy') ? (
+                <CheckCircle2 className="h-6 w-6 text-green-600 mx-auto mb-2" />
               ) : (
-                <AlertCircle className="h-5 w-5 text-gray-400 mx-auto mb-1" />
+                <AlertCircle className="h-6 w-6 text-gray-400 mx-auto mb-2" />
               )}
               <p className="text-sm font-medium">מדיניות פרטיות</p>
             </div>
-            <div className={`p-3 rounded-lg ${documents.length > 1 ? 'bg-green-50' : 'bg-gray-50'}`}>
-              {documents.length > 1 ? (
-                <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto mb-1" />
+            <div className={`p-4 rounded-lg text-center ${documents.some(d => d.type === 'security_procedures' || d.type === 'security_policy') ? 'bg-green-50' : 'bg-gray-50'}`}>
+              {documents.some(d => d.type === 'security_procedures' || d.type === 'security_policy') ? (
+                <CheckCircle2 className="h-6 w-6 text-green-600 mx-auto mb-2" />
               ) : (
-                <AlertCircle className="h-5 w-5 text-gray-400 mx-auto mb-1" />
+                <AlertCircle className="h-6 w-6 text-gray-400 mx-auto mb-2" />
               )}
-              <p className="text-sm font-medium">רישום מאגרים</p>
+              <p className="text-sm font-medium">נהלי אבטחה</p>
+            </div>
+            <div className={`p-4 rounded-lg text-center ${documents.some(d => d.type === 'database_definition' || d.type === 'database_registration') ? 'bg-green-50' : 'bg-gray-50'}`}>
+              {documents.some(d => d.type === 'database_definition' || d.type === 'database_registration') ? (
+                <CheckCircle2 className="h-6 w-6 text-green-600 mx-auto mb-2" />
+              ) : (
+                <AlertCircle className="h-6 w-6 text-gray-400 mx-auto mb-2" />
+              )}
+              <p className="text-sm font-medium">הגדרות מאגר</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent className="p-6">
-          <Badge variant={statusInfo.variant} className="text-lg px-4 py-2">
-            {statusInfo.label}
-          </Badge>
-          {documents.length === 0 && (
-            <p className="text-sm text-gray-500 mt-2">
-              יש להשלים את תהליך ההרשמה כדי להפעיל את ההגנה
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
+      {/* Quick Actions */}
       <Card>
         <CardHeader>
           <CardTitle>פעולות מהירות</CardTitle>
@@ -447,15 +595,24 @@ function DocumentsTab({ documents }: { documents: any[] }) {
       privacy_policy: 'מדיניות פרטיות',
       database_registration: 'רישום מאגר',
       security_policy: 'מדיניות אבטחה',
-      dpo_appointment: 'כתב מינוי DPO',
       procedure: 'נוהל'
     }
     return labels[type] || type
   }
 
   const downloadDocument = (doc: any) => {
-    const header = `${'═'.repeat(50)}\n${doc.title}\n${'═'.repeat(50)}\n\n`
-    const footer = `\n\n${'─'.repeat(50)}\nנוצר על ידי DPO-Pro\nתאריך: ${new Date().toLocaleDateString('he-IL')}\n`
+    // Create nicely formatted content
+    const header = `${'═'.repeat(50)}
+${doc.title}
+${'═'.repeat(50)}
+
+`
+    const footer = `
+
+${'─'.repeat(50)}
+נוצר על ידי DPO-Pro
+תאריך: ${new Date().toLocaleDateString('he-IL')}
+`
     const content = header + (doc.content || '') + footer
     
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
@@ -502,13 +659,18 @@ function DocumentsTab({ documents }: { documents: any[] }) {
           <Card key={doc.id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => setSelectedDoc(doc)}>
+                <div 
+                  className="flex items-center gap-4 flex-1 cursor-pointer"
+                  onClick={() => setSelectedDoc(doc)}
+                >
                   <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
                     <FileText className="h-6 w-6 text-primary" />
                   </div>
                   <div>
                     <h3 className="font-medium">{doc.title}</h3>
-                    <p className="text-sm text-gray-500">{getDocTypeLabel(doc.type)} • גרסה {doc.version}</p>
+                    <p className="text-sm text-gray-500">
+                      {getDocTypeLabel(doc.type)} • גרסה {doc.version}
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -535,7 +697,9 @@ function DocumentsTab({ documents }: { documents: any[] }) {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>{selectedDoc.title}</CardTitle>
-                  <CardDescription>{getDocTypeLabel(selectedDoc.type)} • גרסה {selectedDoc.version}</CardDescription>
+                  <CardDescription>
+                    {getDocTypeLabel(selectedDoc.type)} • גרסה {selectedDoc.version}
+                  </CardDescription>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" onClick={() => downloadDocument(selectedDoc)}>
@@ -565,13 +729,16 @@ function QATab({ qaHistory, question, setQuestion, onAsk, isAsking }: any) {
     <div className="space-y-6">
       <h2 className="text-xl font-bold">שאלות ותשובות</h2>
 
+      {/* Ask Question */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5 text-primary" />
             שאלו את הבוט
           </CardTitle>
-          <CardDescription>שאלו שאלות בנושאי פרטיות וקבלו תשובות מיידיות</CardDescription>
+          <CardDescription>
+            שאלו שאלות בנושאי פרטיות וקבלו תשובות מיידיות
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Textarea
@@ -582,13 +749,18 @@ function QATab({ qaHistory, question, setQuestion, onAsk, isAsking }: any) {
           />
           <div className="flex justify-end mt-3">
             <Button onClick={onAsk} disabled={!question.trim() || isAsking}>
-              {isAsking ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Send className="h-4 w-4 ml-2" />}
+              {isAsking ? (
+                <Loader2 className="h-4 w-4 animate-spin ml-2" />
+              ) : (
+                <Send className="h-4 w-4 ml-2" />
+              )}
               שליחה
             </Button>
           </div>
         </CardContent>
       </Card>
 
+      {/* Q&A History */}
       <Card>
         <CardHeader>
           <CardTitle>היסטוריית שאלות</CardTitle>
@@ -605,7 +777,9 @@ function QATab({ qaHistory, question, setQuestion, onAsk, isAsking }: any) {
                 </div>
                 <div>
                   <p className="font-medium">{qa.question}</p>
-                  <p className="text-xs text-gray-500">{new Date(qa.created_at).toLocaleDateString('he-IL')}</p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(qa.created_at).toLocaleDateString('he-IL')}
+                  </p>
                 </div>
               </div>
               <div className="flex items-start gap-3 bg-blue-50 rounded-lg p-3 mr-11">
@@ -676,5 +850,17 @@ function SettingsTab({ organization, user }: any) {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }
