@@ -23,18 +23,20 @@ import {
   Loader2,
   Eye,
   X,
-  ClipboardList
+  ClipboardList,
+  Users
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import WelcomeModal from '@/components/WelcomeModal'
 import ComplianceChecklist from '@/components/ComplianceChecklist'
 import ComplianceScoreCard from '@/components/ComplianceScoreCard'
+import DataSubjectRequests from '@/components/DataSubjectRequests'
 
 function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, session, signOut, loading, supabase } = useAuth()
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'qa' | 'checklist' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'qa' | 'checklist' | 'requests' | 'settings'>('overview')
   const [question, setQuestion] = useState('')
   const [isAsking, setIsAsking] = useState(false)
   const [qaHistory, setQaHistory] = useState<any[]>([])
@@ -293,6 +295,12 @@ function DashboardContent() {
             onClick={() => setActiveTab('checklist')}
           />
           <NavButton 
+            icon={<Users />} 
+            label="בקשות פרטיות" 
+            active={activeTab === 'requests'}
+            onClick={() => setActiveTab('requests')}
+          />
+          <NavButton 
             icon={<MessageSquare />} 
             label="שאלות ותשובות" 
             active={activeTab === 'qa'}
@@ -393,6 +401,9 @@ function DashboardContent() {
                   }}
                 />
               </div>
+            )}
+            {activeTab === 'requests' && organization && (
+              <DataSubjectRequests orgId={organization.id} />
             )}
             {activeTab === 'qa' && (
               <QATab 
