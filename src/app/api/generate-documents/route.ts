@@ -43,6 +43,26 @@ export async function POST(request: NextRequest) {
     let privacyPolicy = ''
     let securityPolicy = ''
     let databaseReg = ''
+    let appointmentLetter = ''
+
+    // Get DPO details for appointment letter
+    let dpoName = 'עו"ד דנה כהן'
+    let dpoLicense = 'DPO-2024-001'
+    let dpoEmail = 'dpo@dpo-pro.co.il'
+    let dpoPhone = '03-1234567'
+    
+    const { data: dpoData } = await supabase
+      .from('dpos')
+      .select('*')
+      .limit(1)
+      .single()
+    
+    if (dpoData) {
+      dpoName = dpoData.name || dpoName
+      dpoLicense = dpoData.license_number || dpoLicense
+      dpoEmail = dpoData.email || dpoEmail
+      dpoPhone = dpoData.phone || dpoPhone
+    }
 
     if (anthropicKey) {
       console.log('Using Claude AI for document generation')
@@ -161,6 +181,74 @@ export async function POST(request: NextRequest) {
         databaseReg = dbResponse.content[0].type === 'text' ? dbResponse.content[0].text : ''
         console.log('Database registration generated, length:', databaseReg.length)
 
+        // Generate DPO Appointment Letter
+        console.log('Generating DPO appointment letter...')
+        const appointmentResponse = await anthropic.messages.create({
+          model: 'claude-3-5-sonnet-20241022',
+          max_tokens: 2500,
+          messages: [{
+            role: 'user',
+            content: `צור כתב מינוי ממונה על הגנת הפרטיות (DPO) בעברית, מסמך משפטי רשמי.
+
+פרטי הארגון (הממנה):
+- שם: ${orgName}
+- ח.פ: ${businessId || '___________'}
+- סוג עסק: ${businessType}
+
+פרטי הממונה (המתמנה):
+- שם: ${dpoName}
+- מספר רישיון/הסמכה: ${dpoLicense}
+- אימייל: ${dpoEmail}
+- טלפון: ${dpoPhone}
+
+תאריך המינוי: ${new Date().toLocaleDateString('he-IL')}
+
+צור כתב מינוי רשמי הכולל:
+
+1. כותרת: "כתב מינוי ממונה על הגנת הפרטיות"
+
+2. מבוא:
+   - פרטי הממנה (הארגון)
+   - הצהרה על מינוי בהתאם לחוק הגנת הפרטיות, התשמ"א-1981 ותיקון 13
+
+3. פרטי הממונה:
+   - שם מלא
+   - פרטי התקשרות
+   - מספר רישיון/הסמכה
+
+4. תחומי האחריות והסמכות:
+   - פיקוח על עמידה בדרישות החוק
+   - ייעוץ לארגון בנושאי פרטיות
+   - טיפול בבקשות נושאי מידע
+   - דיווח לרשות להגנת הפרטיות
+   - הדרכת עובדים
+   - ניהול אירועי אבטחת מידע
+
+5. תנאי המינוי:
+   - עצמאות מקצועית
+   - גישה למידע ולמשאבים הנדרשים
+   - דיווח ישיר להנהלה
+   - סודיות
+
+6. תקופת המינוי:
+   - מיום החתימה
+   - עד להודעה אחרת
+
+7. הצהרות:
+   - הצהרת הארגון על מתן סמכויות
+   - הצהרת הממונה על קבלת המינוי
+
+8. חתימות:
+   - מקום לחתימת מורשה חתימה בארגון
+   - מקום לחתימת הממונה
+   - תאריך
+
+כתוב בשפה משפטית רשמית. זהו מסמך משפטי מחייב.`
+          }]
+        })
+        appointmentLetter = appointmentResponse.content[0].type === 'text' ? appointmentResponse.content[0].text : ''
+        console.log('Appointment letter generated, length:', appointmentLetter.length)
+
       } catch (aiError: any) {
         console.error('AI generation error:', aiError.message)
       }
@@ -177,6 +265,9 @@ export async function POST(request: NextRequest) {
     }
     if (!databaseReg) {
       databaseReg = generateFallbackDatabaseReg(orgName, businessId, dataTypesStr)
+    }
+    if (!appointmentLetter) {
+      appointmentLetter = generateFallbackAppointmentLetter(orgName, businessId, dpoName, dpoLicense, dpoEmail, dpoPhone)
     }
 
     // Save documents to database
@@ -207,6 +298,15 @@ export async function POST(request: NextRequest) {
         content: databaseReg,
         version: 1,
         status: 'active',
+        generated_by: anthropicKey ? 'ai' : 'system'
+      },
+      {
+        org_id: orgId,
+        type: 'dpo_appointment',
+        title: 'כתב מינוי ממונה הגנת פרטיות',
+        content: appointmentLetter,
+        version: 1,
+        status: 'pending_signature',
         generated_by: anthropicKey ? 'ai' : 'system'
       }
     ]).select()
@@ -343,4 +443,119 @@ ${dataTypes || '• פרטי זיהוי ויצירת קשר\n• היסטורי�
 
 חתימת בעל המאגר: _______________
 תאריך: ${new Date().toLocaleDateString('he-IL')}`
+}
+
+function generateFallbackAppointmentLetter(
+  orgName: string, 
+  businessId: string, 
+  dpoName: string, 
+  dpoLicense: string, 
+  dpoEmail: string, 
+  dpoPhone: string
+): string {
+  const today = new Date().toLocaleDateString('he-IL')
+  
+  return `כתב מינוי ממונה על הגנת הפרטיות
+══════════════════════════════════════════
+
+תאריך: ${today}
+
+הואיל: ${orgName} (ח.פ: ${businessId || '___________'}) (להלן: "הארגון" או "הממנה")
+
+והואיל: בהתאם לחוק הגנת הפרטיות, התשמ"א-1981, ותיקון מס' 13 לחוק, הארגון מחויב במינוי ממונה על הגנת הפרטיות;
+
+והואיל: הארגון מבקש למנות את ${dpoName} כממונה על הגנת הפרטיות מטעמו;
+
+לפיכך הוסכם והוצהר כדלקמן:
+
+═══════════════════════════════════════════
+1. פרטי הממונה
+═══════════════════════════════════════════
+
+שם הממונה: ${dpoName}
+מספר רישיון/הסמכה: ${dpoLicense}
+כתובת דוא"ל: ${dpoEmail}
+טלפון: ${dpoPhone}
+
+═══════════════════════════════════════════
+2. תחומי האחריות והסמכות
+═══════════════════════════════════════════
+
+הממונה יהיה אחראי על:
+
+2.1 פיקוח על עמידת הארגון בדרישות חוק הגנת הפרטיות ותקנותיו.
+
+2.2 מתן ייעוץ לארגון, לעובדיו ולהנהלתו בכל הנוגע להגנה על פרטיות ומידע אישי.
+
+2.3 טיפול בבקשות נושאי מידע, לרבות בקשות עיון, תיקון ומחיקה.
+
+2.4 שמירת קשר עם הרשות להגנת הפרטיות ודיווח כנדרש על פי חוק.
+
+2.5 הדרכת עובדי הארגון בנושאי הגנת פרטיות ואבטחת מידע.
+
+2.6 ניהול אירועי אבטחת מידע והפרות פרטיות, לרבות דיווח לרשויות כנדרש.
+
+2.7 בחינה ואישור של תהליכים ומערכות הכרוכים בעיבוד מידע אישי.
+
+2.8 עריכת הערכות השפעה על פרטיות (DPIA) במקרים הנדרשים.
+
+═══════════════════════════════════════════
+3. תנאי המינוי
+═══════════════════════════════════════════
+
+3.1 עצמאות מקצועית: הממונה יפעל באופן עצמאי ולא יקבל הנחיות בנוגע לביצוע תפקידו.
+
+3.2 גישה למידע: הממונה יקבל גישה לכל המידע והמשאבים הנדרשים למילוי תפקידו.
+
+3.3 דיווח: הממונה ידווח ישירות להנהלה הבכירה של הארגון.
+
+3.4 סודיות: הממונה ישמור על סודיות מוחלטת לגבי כל מידע שיגיע אליו במסגרת תפקידו.
+
+3.5 אי-ניגוד עניינים: הממונה מצהיר כי אין לו ניגוד עניינים עם תפקידו.
+
+═══════════════════════════════════════════
+4. תקופת המינוי
+═══════════════════════════════════════════
+
+המינוי יהיה בתוקף מיום חתימת כתב זה ועד להודעה אחרת בכתב מאחד הצדדים.
+
+═══════════════════════════════════════════
+5. הצהרות
+═══════════════════════════════════════════
+
+הארגון מצהיר בזאת כי:
+• הוא מעניק לממונה את כל הסמכויות הנדרשות למילוי תפקידו
+• הוא יספק לממונה את המשאבים הנדרשים
+• הוא לא יפגע בעצמאותו המקצועית של הממונה
+
+הממונה מצהיר בזאת כי:
+• הוא בעל הכשרה וניסיון מתאימים לתפקיד
+• הוא מקבל על עצמו את המינוי ואת האחריות הנלווית
+• הוא יפעל בהתאם לחוק ולאתיקה המקצועית
+
+═══════════════════════════════════════════
+6. חתימות
+═══════════════════════════════════════════
+
+עבור הארגון - ${orgName}:
+
+שם המורשה: _______________________
+תפקיד: _______________________
+חתימה: _______________________
+תאריך: ${today}
+
+חותמת הארגון: _______________________
+
+
+הממונה על הגנת הפרטיות:
+
+שם: ${dpoName}
+חתימה: _______________________
+תאריך: ${today}
+
+═══════════════════════════════════════════
+
+מסמך זה נערך בשני עותקים, עותק אחד לכל צד.
+
+כתב מינוי זה מהווה מסמך משפטי מחייב בהתאם לחוק הגנת הפרטיות, התשמ"א-1981.`
 }
