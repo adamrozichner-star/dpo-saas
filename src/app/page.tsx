@@ -493,7 +493,7 @@ export default function HomePage() {
               </Button>
             </Link>
             <Link href="/calculator">
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 gap-2">
+              <Button size="lg" className="bg-transparent border-2 border-white text-white hover:bg-white hover:text-primary gap-2">
                 בדיקה מפורטת + דוח למייל
               </Button>
             </Link>
