@@ -271,3 +271,78 @@ BEGIN
     VALUES (p_org_id, 'documents_generated', 'organization', p_org_id, 'system', '{"documents_count": 3}');
 END;
 $$ LANGUAGE plpgsql;
+
+-- =============================================
+-- Data Subject Rights Requests Table
+-- =============================================
+CREATE TYPE request_type AS ENUM ('access', 'rectification', 'erasure', 'objection');
+CREATE TYPE request_status AS ENUM ('pending', 'in_progress', 'completed', 'rejected');
+
+CREATE TABLE data_subject_requests (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    request_number VARCHAR(50) UNIQUE NOT NULL,
+    request_type request_type NOT NULL,
+    status request_status DEFAULT 'pending',
+    requester_name VARCHAR(255) NOT NULL,
+    requester_id VARCHAR(20) NOT NULL,
+    requester_email VARCHAR(255) NOT NULL,
+    requester_phone VARCHAR(20),
+    details TEXT,
+    response TEXT,
+    responded_at TIMESTAMP WITH TIME ZONE,
+    responded_by VARCHAR(255),
+    deadline TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX idx_dsr_org ON data_subject_requests(org_id);
+CREATE INDEX idx_dsr_status ON data_subject_requests(status);
+CREATE INDEX idx_dsr_deadline ON data_subject_requests(deadline);
+CREATE INDEX idx_dsr_request_number ON data_subject_requests(request_number);
+
+-- RLS for data_subject_requests
+ALTER TABLE data_subject_requests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own org requests" ON data_subject_requests
+    FOR SELECT USING (
+        org_id IN (SELECT org_id FROM users WHERE auth_user_id = auth.uid())
+    );
+
+CREATE POLICY "Public can insert requests" ON data_subject_requests
+    FOR INSERT WITH CHECK (true);
+
+-- Trigger for updated_at
+CREATE TRIGGER update_dsr_updated_at
+    BEFORE UPDATE ON data_subject_requests
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- =============================================
+-- Message Threads Table (if not exists)
+-- =============================================
+CREATE TABLE IF NOT EXISTS message_threads (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+    subject VARCHAR(255) NOT NULL,
+    status VARCHAR(20) DEFAULT 'open',
+    priority VARCHAR(20) DEFAULT 'normal',
+    last_message_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    thread_id UUID REFERENCES message_threads(id) ON DELETE CASCADE,
+    sender_type VARCHAR(20) NOT NULL,
+    sender_id UUID,
+    sender_name VARCHAR(255),
+    content TEXT NOT NULL,
+    read_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_threads_org ON message_threads(org_id);
+CREATE INDEX IF NOT EXISTS idx_messages_thread ON messages(thread_id);
