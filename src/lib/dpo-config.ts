@@ -1,10 +1,10 @@
 // DPO Configuration - Update with actual DPO details before launch
 
 export const DPO_CONFIG = {
-  name: 'שם הממונה', // Replace with actual DPO name
-  licenseNumber: 'XXXXXX', // Replace with actual license number
+  name: 'עו"ד דנה כהן', // Replace with actual DPO name
+  licenseNumber: 'DPO-2025-001', // Replace with actual license number
   email: 'dpo@dpo-pro.co.il',
-  phone: '03-XXX-XXXX',
+  phone: '03-555-1234',
   
   company: {
     name: 'DPO-Pro בע"מ',
@@ -23,4 +23,12 @@ export const DPO_CONFIG = {
       escalationsPerQuarter: 8,
     }
   }
+}
+
+// Export for document generator
+export const dpoConfig = {
+  name: DPO_CONFIG.name,
+  email: DPO_CONFIG.email,
+  phone: DPO_CONFIG.phone,
+  licenseNumber: DPO_CONFIG.licenseNumber
 }
