@@ -960,10 +960,17 @@ ${'─'.repeat(50)}
   )
 }
 
-function QATab({ qaHistory, question, setQuestion, onAsk, isAsking, orgId }: any) {
+// This is the updated QATab function to replace the existing one in dashboard/page.tsx
+// Find the existing QATab function (around line 963) and replace it with this
+
+function QATab({ qaHistory, question, setQuestion, onAsk, isAsking, orgId, onEscalateToDPO }: any) {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState<any>(null)
+  const [escalatingId, setEscalatingId] = useState<string | null>(null)
+  const [escalateMessage, setEscalateMessage] = useState('')
+  const [showEscalateModal, setShowEscalateModal] = useState<any>(null)
+  const [isEscalating, setIsEscalating] = useState(false)
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -984,6 +991,341 @@ function QATab({ qaHistory, question, setQuestion, onAsk, isAsking, orgId }: any
         method: 'POST',
         body: formData
       })
+
+      const data = await response.json()
+      if (data.success) {
+        setUploadResult(data.aiReview)
+      }
+    } catch (err) {
+      console.error('Upload error:', err)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleEscalateToDPO = async (qa: any, additionalMessage: string = '') => {
+    setIsEscalating(true)
+    try {
+      const response = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create_escalation',
+          orgId,
+          originalQuestion: qa.question,
+          aiAnswer: qa.answer,
+          additionalMessage,
+          qaId: qa.id
+        })
+      })
+
+      if (response.ok) {
+        alert('הפנייה נשלחה בהצלחה לממונה. תקבלו תשובה בהקדם.')
+        setShowEscalateModal(null)
+        setEscalateMessage('')
+      } else {
+        alert('שגיאה בשליחת הפנייה. נסו שוב.')
+      }
+    } catch (err) {
+      console.error('Escalation error:', err)
+      alert('שגיאה בשליחת הפנייה')
+    } finally {
+      setIsEscalating(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold">שאלות ותשובות</h2>
+
+      {/* Ask Question */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="h-5 w-5 text-primary" />
+            שאלו את הבוט
+          </CardTitle>
+          <CardDescription>
+            שאלו שאלות בנושאי פרטיות או העלו מסמך לבדיקה מהירה
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Textarea
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            placeholder="הקלידו את השאלה שלכם..."
+            className="min-h-[80px]"
+          />
+          <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                id="qa-file-upload"
+                className="hidden"
+                accept=".pdf,.docx,.doc,.txt"
+                onChange={handleFileUpload}
+              />
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => document.getElementById('qa-file-upload')?.click()}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                ) : (
+                  <Upload className="h-4 w-4 ml-2" />
+                )}
+                {isUploading ? 'מעלה...' : 'העלאת מסמך לבדיקה'}
+              </Button>
+              {uploadedFile && !isUploading && (
+                <span className="text-sm text-gray-500">{uploadedFile.name}</span>
+              )}
+            </div>
+            <Button onClick={onAsk} disabled={!question.trim() || isAsking}>
+              {isAsking ? (
+                <Loader2 className="h-4 w-4 animate-spin ml-2" />
+              ) : (
+                <Send className="h-4 w-4 ml-2" />
+              )}
+              שליחה
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Upload Result */}
+      {uploadResult && (
+        <Card className="border-primary">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileSearch className="h-5 w-5 text-primary" />
+              תוצאות בדיקת AI
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Risk Score */}
+            <div className={`p-4 rounded-lg ${
+              uploadResult.risk_score >= 70 ? 'bg-red-50 border border-red-200' :
+              uploadResult.risk_score >= 40 ? 'bg-amber-50 border border-amber-200' :
+              'bg-green-50 border border-green-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className="font-medium">ציון סיכון:</span>
+                <span className={`text-2xl font-bold ${
+                  uploadResult.risk_score >= 70 ? 'text-red-600' :
+                  uploadResult.risk_score >= 40 ? 'text-amber-600' :
+                  'text-green-600'
+                }`}>
+                  {uploadResult.risk_score}%
+                </span>
+              </div>
+            </div>
+
+            {/* Summary */}
+            {uploadResult.summary && (
+              <div>
+                <h4 className="font-medium mb-2">סיכום:</h4>
+                <p className="text-gray-700">{uploadResult.summary}</p>
+              </div>
+            )}
+
+            {/* Issues */}
+            {uploadResult.issues?.length > 0 && (
+              <div>
+                <h4 className="font-medium mb-2">בעיות שזוהו:</h4>
+                <div className="space-y-2">
+                  {uploadResult.issues.map((issue: any, i: number) => (
+                    <div 
+                      key={i}
+                      className={`p-3 rounded-lg border-r-4 ${
+                        issue.severity === 'high' ? 'bg-red-50 border-red-500' :
+                        issue.severity === 'medium' ? 'bg-amber-50 border-amber-500' :
+                        'bg-gray-50 border-gray-300'
+                      }`}
+                    >
+                      <p className="font-medium">{issue.issue}</p>
+                      {issue.suggestion && (
+                        <p className="text-sm text-gray-600 mt-1">💡 {issue.suggestion}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recommendation */}
+            {uploadResult.recommendation && (
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <h4 className="font-medium mb-1">המלצה:</h4>
+                <p>{uploadResult.recommendation}</p>
+              </div>
+            )}
+
+            {/* DPO Review CTA */}
+            {uploadResult.requires_dpo_review && (
+              <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-6 w-6 text-primary" />
+                  <div className="flex-1">
+                    <h4 className="font-bold">מומלץ בדיקת DPO אנושי</h4>
+                    <p className="text-sm text-gray-600">{uploadResult.dpo_review_reason || 'המסמך דורש בדיקה מעמיקה'}</p>
+                  </div>
+                  <Link href="/dashboard?tab=doc-review">
+                    <Button size="sm">
+                      הזמנת בדיקה - ₪350
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            <Button variant="outline" className="w-full" onClick={() => setUploadResult(null)}>
+              סגור תוצאות
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Q&A History */}
+      <Card>
+        <CardHeader>
+          <CardTitle>היסטוריית שאלות</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {qaHistory.length === 0 && (
+            <p className="text-center text-gray-500 py-8">עדיין לא נשאלו שאלות</p>
+          )}
+          {qaHistory.map((qa: any) => (
+            <div key={qa.id} className="border rounded-lg p-4">
+              <div className="flex items-start gap-3 mb-3">
+                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                  <User className="h-4 w-4 text-gray-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium">{qa.question}</p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(qa.created_at).toLocaleDateString('he-IL')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 bg-blue-50 rounded-lg p-3 mr-11">
+                <Bot className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm">{qa.answer}</p>
+                  
+                  {/* Low confidence indicator and escalation button */}
+                  {(qa.confidence_score < 0.7 || qa.escalated) && (
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 text-amber-600">
+                          <AlertTriangle className="h-4 w-4" />
+                          <span className="text-sm">התשובה עשויה להיות לא מלאה</span>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => setShowEscalateModal(qa)}
+                          className="text-primary border-primary hover:bg-primary/10"
+                        >
+                          <MessageSquare className="h-4 w-4 ml-1" />
+                          פנה לממונה אנושי
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Always show escalation option */}
+              {qa.confidence_score >= 0.7 && !qa.escalated && (
+                <div className="mr-11 mt-2">
+                  <button 
+                    onClick={() => setShowEscalateModal(qa)}
+                    className="text-sm text-gray-500 hover:text-primary transition-colors"
+                  >
+                    לא מרוצה מהתשובה? פנה לממונה אנושי →
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Escalation Modal */}
+      {showEscalateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-lg">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5 text-primary" />
+                  פנייה לממונה אנושי
+                </CardTitle>
+                <Button variant="ghost" size="icon" onClick={() => setShowEscalateModal(null)}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <CardDescription>
+                הממונה יקבל את השאלה המקורית ותשובת הבוט, ויחזיר תשובה מקצועית
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Original Q&A */}
+              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">השאלה המקורית:</p>
+                  <p className="text-sm font-medium">{showEscalateModal.question}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">תשובת הבוט:</p>
+                  <p className="text-sm">{showEscalateModal.answer}</p>
+                </div>
+              </div>
+
+              {/* Additional message */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  הערות נוספות (אופציונלי)
+                </label>
+                <Textarea
+                  value={escalateMessage}
+                  onChange={(e) => setEscalateMessage(e.target.value)}
+                  placeholder="הוסיפו פרטים או הקשר שיעזרו לממונה לתת תשובה מדויקת יותר..."
+                  className="min-h-[80px]"
+                />
+              </div>
+
+              {/* Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm text-blue-800">
+                  ⏱️ זמן תגובה משוער: עד 24 שעות בימי עסקים
+                </p>
+              </div>
+            </CardContent>
+            <div className="border-t p-4 flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowEscalateModal(null)}>
+                ביטול
+              </Button>
+              <Button 
+                onClick={() => handleEscalateToDPO(showEscalateModal, escalateMessage)}
+                disabled={isEscalating}
+              >
+                {isEscalating ? (
+                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                ) : (
+                  <Send className="h-4 w-4 ml-2" />
+                )}
+                שלח לממונה
+              </Button>
+            </div>
+          </Card>
+        </div>
+      )}
+    </div>
+  )
+}
 
       const data = await response.json()
       if (data.success) {
