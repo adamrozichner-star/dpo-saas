@@ -663,22 +663,44 @@ export async function POST(request: NextRequest) {
         if (sendEmail) {
           const { data: thread } = await supabase
             .from('message_threads')
-            .select('user_email, subject')
+            .select('user_email, subject, metadata')
             .eq('id', item.related_thread_id)
             .single()
 
-          if (thread?.user_email) {
-            // Get original question from first message
-            const { data: firstMessage } = await supabase
-              .from('messages')
-              .select('content')
-              .eq('thread_id', item.related_thread_id)
-              .eq('sender_type', 'user')
-              .order('created_at', { ascending: true })
-              .limit(1)
+          // Try to get email from: 1) thread.user_email, 2) org contact email
+          let recipientEmail = thread?.user_email
+          
+          if (!recipientEmail) {
+            // Fallback: get org's primary contact email
+            const { data: org } = await supabase
+              .from('organizations')
+              .select('contact_email, owner_email')
+              .eq('id', item.org_id)
               .single()
+            
+            recipientEmail = org?.contact_email || org?.owner_email
+          }
 
-            const originalQuestion = firstMessage?.content || thread.subject || item.title
+          if (recipientEmail) {
+            // Get original question from first message or metadata
+            let originalQuestion = item.title
+            
+            if (thread?.metadata?.original_question) {
+              originalQuestion = thread.metadata.original_question
+            } else {
+              const { data: firstMessage } = await supabase
+                .from('messages')
+                .select('content')
+                .eq('thread_id', item.related_thread_id)
+                .eq('sender_type', 'user')
+                .order('created_at', { ascending: true })
+                .limit(1)
+                .single()
+              
+              if (firstMessage?.content) {
+                originalQuestion = firstMessage.content
+              }
+            }
 
             const emailHtml = generateEscalationResponseEmail(
               orgName,
@@ -687,10 +709,12 @@ export async function POST(request: NextRequest) {
             )
 
             emailSent = await sendResponseEmail(
-              thread.user_email,
+              recipientEmail,
               `תשובה לפנייתך - ${orgName}`,
               emailHtml
             )
+          } else {
+            console.log('No email found for escalation response - org:', item.org_id)
           }
         }
       }
