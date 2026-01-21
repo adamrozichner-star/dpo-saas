@@ -12,21 +12,5 @@
       "path": "/api/cron/trial-reminders",
       "schedule": "0 6 * * *"
     }
-  ],
-  {
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "framework": "nextjs",
-  "regions": ["fra1"],
-  "crons": [
-    {
-      "path": "/api/billing/recurring",
-      "schedule": "0 6 1 * *"
-    },
-    {
-      "path": "/api/cron/trial-reminders",
-      "schedule": "0 6 * * *"
-    }
   ]
-}
 }
