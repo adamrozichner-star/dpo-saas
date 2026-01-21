@@ -128,8 +128,9 @@ export async function POST(request: NextRequest) {
     // Try to send with Resend if configured
     if (resend) {
       try {
+        const fromEmail = process.env.FROM_EMAIL || 'DPO-Pro <onboarding@resend.dev>'
         await resend.emails.send({
-          from: 'DPO-Pro <noreply@dpo-pro.co.il>',
+          from: fromEmail,
           to: [to],
           subject: email.subject,
           html: email.html
