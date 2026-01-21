@@ -118,11 +118,11 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
 
-      // Transform priority for sorting display
-      const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 }
-      const sorted = data?.sort((a, b) => {
-        const pA = priorityOrder[a.priority as keyof typeof priorityOrder] || 4
-        const pB = priorityOrder[b.priority as keyof typeof priorityOrder] || 4
+     // Transform priority for sorting display
+      const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
+      const sorted = data?.sort((a: any, b: any) => {
+        const pA = priorityOrder[a.priority] || 4
+        const pB = priorityOrder[b.priority] || 4
         if (pA !== pB) return pA - pB
         if (a.deadline_at && b.deadline_at) {
           return new Date(a.deadline_at).getTime() - new Date(b.deadline_at).getTime()
