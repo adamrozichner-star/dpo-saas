@@ -137,8 +137,9 @@ async function sendResponseEmail(
   html: string
 ): Promise<boolean> {
   try {
+    // Use resend.dev for testing until dpo-pro.co.il is verified
     const { data, error } = await resend.emails.send({
-      from: 'DPO-Pro <dpo@dpo-pro.co.il>',
+      from: 'DPO-Pro <onboarding@resend.dev>',
       to: [to],
       subject: subject,
       html: html
