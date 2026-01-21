@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ threads: threadsWithUnread || [] })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Messages GET error:', error)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
@@ -96,6 +96,120 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { action, orgId, threadId, subject, content, senderType, senderName, senderId, priority } = body
 
+    // =========================================
+    // Create Escalation from Q&A
+    // =========================================
+    if (action === 'create_escalation') {
+      const { originalQuestion, aiAnswer, additionalMessage, qaId } = body
+      
+      if (!orgId || !originalQuestion) {
+        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      }
+
+      // Create escalation thread
+      const escalationSubject = `פנייה לממונה: ${originalQuestion.substring(0, 50)}${originalQuestion.length > 50 ? '...' : ''}`
+      
+      const { data: thread, error: threadError } = await supabase
+        .from('message_threads')
+        .insert({
+          org_id: orgId,
+          subject: escalationSubject,
+          priority: 'high',
+          status: 'open',
+          thread_type: 'escalation',
+          metadata: {
+            source: 'qa_escalation',
+            qa_id: qaId,
+            original_question: originalQuestion,
+            ai_answer: aiAnswer
+          }
+        })
+        .select()
+        .single()
+
+      if (threadError) {
+        console.error('Escalation thread creation error:', threadError)
+        return NextResponse.json({ error: 'Failed to create escalation' }, { status: 500 })
+      }
+
+      // Create formatted message content
+      const messageContent = `📋 **פנייה מהמערכת האוטומטית**
+
+**השאלה המקורית:**
+${originalQuestion}
+
+**תשובת הבוט:**
+${aiAnswer}
+
+${additionalMessage ? `**הערות נוספות מהלקוח:**
+${additionalMessage}` : ''}
+
+---
+*הלקוח ביקש תשובה אנושית לשאלה זו*`
+
+      // Create first message
+      const { data: message, error: msgError } = await supabase
+        .from('messages')
+        .insert({
+          thread_id: thread.id,
+          sender_type: 'system',
+          sender_name: 'מערכת DPO-Pro',
+          content: messageContent
+        })
+        .select()
+        .single()
+
+      if (msgError) {
+        console.error('Escalation message creation error:', msgError)
+      }
+
+      // Mark original Q&A as escalated
+      if (qaId) {
+        await supabase
+          .from('qa_interactions')
+          .update({ 
+            escalated: true,
+            escalation_thread_id: thread.id 
+          })
+          .eq('id', qaId)
+      }
+
+      // Create notification for DPO
+      await supabase.from('notifications').insert({
+        org_id: orgId,
+        type: 'escalation',
+        title: '⚠️ פנייה דחופה מלקוח',
+        body: `לקוח ביקש תשובה אנושית: ${originalQuestion.substring(0, 100)}`,
+        link: `/dpo/messages/${thread.id}`,
+        priority: 'high'
+      })
+
+      // Also create escalation record
+      await supabase.from('escalations').insert({
+        org_id: orgId,
+        thread_id: thread.id,
+        qa_id: qaId,
+        reason: 'customer_request',
+        original_question: originalQuestion,
+        ai_answer: aiAnswer,
+        customer_notes: additionalMessage,
+        status: 'pending'
+      }).catch(err => {
+        // Escalations table might not exist, that's ok
+        console.log('Note: Could not create escalation record:', err.message)
+      })
+
+      return NextResponse.json({ 
+        success: true, 
+        thread, 
+        message,
+        escalationId: thread.id 
+      })
+    }
+
+    // =========================================
+    // Create Thread
+    // =========================================
     if (action === 'create_thread') {
       // Create new thread
       if (!orgId || !subject || !content) {
@@ -169,6 +283,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to send message' }, { status: 500 })
       }
 
+      // Update thread last_message_at
+      await supabase
+        .from('message_threads')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', threadId)
+
       // Get thread to find org
       const { data: thread } = await supabase
         .from('message_threads')
@@ -178,12 +298,11 @@ export async function POST(request: NextRequest) {
 
       // Create notification
       if (thread) {
-        const notifType = senderType === 'dpo' ? 'message' : 'message'
         const notifTitle = senderType === 'dpo' ? 'תגובה מהממונה' : 'הודעה חדשה'
         
         await supabase.from('notifications').insert({
           org_id: thread.org_id,
-          type: notifType,
+          type: 'message',
           title: notifTitle,
           body: thread.subject,
           link: `/messages/${threadId}`
@@ -226,7 +345,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Messages POST error:', error)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
