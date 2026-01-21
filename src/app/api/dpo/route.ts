@@ -96,7 +96,6 @@ export async function GET(request: NextRequest) {
           organizations (
             id,
             name,
-            subscription_tier
           )
         `)
         .eq('status', status)
