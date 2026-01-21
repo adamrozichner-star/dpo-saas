@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -35,6 +34,83 @@ const REVIEW_SYSTEM_PROMPT = `אתה מומחה משפטי ישראלי בתחו
   "requires_dpo_review": true/false,
   "dpo_review_reason": "סיבה להמלצה על בדיקת DPO אנושי (אם רלוונטי)"
 }`
+
+async function callAnthropicAPI(content: string, reviewType: string) {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  
+  console.log('Checking API key...')
+  console.log('API key exists:', !!apiKey)
+  console.log('API key length:', apiKey?.length || 0)
+  
+  if (!apiKey) {
+    console.error('ANTHROPIC_API_KEY not found in environment')
+    return null
+  }
+
+  const reviewPrompt = `סקור את המסמך הבא וזהה בעיות פרטיות:
+
+סוג המסמך: ${reviewType}
+
+תוכן המסמך:
+${content.substring(0, 30000)}
+
+${content.length > 30000 ? '... [המסמך קוצר]' : ''}`
+
+  try {
+    console.log('Calling Anthropic API...')
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 2000,
+        system: REVIEW_SYSTEM_PROMPT,
+        messages: [
+          { role: 'user', content: reviewPrompt }
+        ]
+      })
+    })
+
+    console.log('Anthropic response status:', response.status)
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('Anthropic API error:', response.status, errorText)
+      return null
+    }
+
+    const data = await response.json()
+    const responseText = data.content?.[0]?.text || ''
+    
+    console.log('Got AI response, length:', responseText.length)
+    
+    // Parse JSON response
+    try {
+      const cleanedResponse = responseText
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim()
+      
+      return JSON.parse(cleanedResponse)
+    } catch (parseError) {
+      console.error('Error parsing AI response:', parseError)
+      return {
+        summary: responseText.substring(0, 500),
+        risk_score: 50,
+        issues: [],
+        recommendation: 'לא ניתן לנתח את התגובה',
+        requires_dpo_review: true
+      }
+    }
+  } catch (error: any) {
+    console.error('Anthropic API call failed:', error.message)
+    return null
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -71,23 +147,18 @@ export async function POST(request: NextRequest) {
       if (fileType === 'txt' || fileType === 'md') {
         fileContent = await file.text()
       } else if (fileType === 'pdf') {
-        // For PDF, we'll store and note that content extraction is limited
-        // In production, use pdf-parse or similar
-        const buffer = await file.arrayBuffer()
         fileContent = '[PDF Document - תוכן מצורף כקובץ]'
-        // TODO: Add PDF parsing with pdf-parse library
       } else if (fileType === 'docx') {
-        // For DOCX, similar limitation
         fileContent = '[Word Document - תוכן מצורף כקובץ]'
-        // TODO: Add DOCX parsing with mammoth library
       } else {
-        // Try to read as text
         try {
           fileContent = await file.text()
         } catch {
           fileContent = '[לא ניתן לחלץ טקסט מהקובץ]'
         }
       }
+
+      console.log('File uploaded:', file.name, 'Content length:', fileContent.length)
 
       // Upload file to Supabase Storage
       const fileName = `${orgId}/${Date.now()}_${file.name}`
@@ -116,7 +187,7 @@ export async function POST(request: NextRequest) {
           original_filename: file.name,
           original_file_url: fileUrl,
           original_file_type: fileType,
-          original_content: fileContent.substring(0, 50000), // Limit content size
+          original_content: fileContent.substring(0, 50000),
           review_type: reviewType,
           ai_review_status: 'pending',
           status: 'uploaded'
@@ -129,81 +200,16 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to create review' }, { status: 500 })
       }
 
-      // Perform AI review if we have content and API key
+      // Perform AI review
       let aiReview = null
-      const apiKey = process.env.ANTHROPIC_API_KEY
       
-      // Debug logging
-      console.log('=== AI REVIEW DEBUG ===')
-      console.log('API Key exists:', !!apiKey)
-      console.log('API Key first 10 chars:', apiKey ? apiKey.substring(0, 10) + '...' : 'NONE')
-      console.log('File content exists:', !!fileContent)
-      console.log('File content length:', fileContent?.length || 0)
-      console.log('Starts with [:', fileContent?.startsWith('['))
-      console.log('Should run AI:', !!(fileContent && fileContent.length > 10 && !fileContent.startsWith('[') && apiKey))
-      console.log('=== END DEBUG ===')
-      
-      if (!apiKey) {
-        console.error('ANTHROPIC_API_KEY is not set!')
-        // Update status to show API key missing
-        await supabase
-          .from('document_reviews')
-          .update({
-            ai_review_status: 'failed',
-            ai_review_summary: 'שגיאת הגדרה: מפתח API חסר',
-            status: 'ai_reviewed',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', reviewRecord.id)
-      } else if (fileContent && fileContent.length > 10 && !fileContent.startsWith('[')) {
-        try {
-          console.log('Starting AI review for:', file.name)
-          const anthropic = new Anthropic({ apiKey })
-          
-          const reviewPrompt = `סקור את המסמך הבא וזהה בעיות פרטיות:
-
-סוג המסמך: ${reviewType}
-${context ? `הקשר נוסף: ${context}` : ''}
-
-תוכן המסמך:
-${fileContent.substring(0, 30000)}
-
-${fileContent.length > 30000 ? '... [המסמך קוצר]' : ''}`
-
-          const response = await anthropic.messages.create({
-            model: 'claude-3-5-sonnet-20241022',
-            max_tokens: 2000,
-            messages: [
-              { role: 'user', content: reviewPrompt }
-            ],
-            system: REVIEW_SYSTEM_PROMPT
-          })
-
-          const responseText = response.content[0].type === 'text' 
-            ? response.content[0].text 
-            : ''
-          
-          // Parse JSON response
-          try {
-            // Clean the response - remove markdown code blocks if present
-            const cleanedResponse = responseText
-              .replace(/```json\n?/g, '')
-              .replace(/```\n?/g, '')
-              .trim()
-            
-            aiReview = JSON.parse(cleanedResponse)
-          } catch (parseError) {
-            console.error('Error parsing AI response:', parseError)
-            aiReview = {
-              summary: responseText.substring(0, 500),
-              risk_score: 50,
-              issues: [],
-              recommendation: 'לא ניתן לנתח את התגובה',
-              requires_dpo_review: true
-            }
-          }
-
-          // Update review record with AI results
+      if (fileContent && fileContent.length > 10 && !fileContent.startsWith('[')) {
+        console.log('Starting AI review for:', file.name)
+        
+        aiReview = await callAnthropicAPI(fileContent, reviewType)
+        
+        if (aiReview) {
+          console.log('AI review completed successfully')
           await supabase
             .from('document_reviews')
             .update({
@@ -216,18 +222,29 @@ ${fileContent.length > 30000 ? '... [המסמך קוצר]' : ''}`
               updated_at: new Date().toISOString()
             })
             .eq('id', reviewRecord.id)
-
-        } catch (aiError: any) {
-          console.error('AI review error:', aiError.message)
+        } else {
+          console.log('AI review failed')
           await supabase
             .from('document_reviews')
             .update({
               ai_review_status: 'failed',
+              ai_review_summary: 'שגיאה בבדיקת AI - נסו שוב מאוחר יותר',
               status: 'ai_reviewed',
               updated_at: new Date().toISOString()
             })
             .eq('id', reviewRecord.id)
         }
+      } else {
+        console.log('Cannot read file content')
+        await supabase
+          .from('document_reviews')
+          .update({
+            ai_review_status: 'failed',
+            ai_review_summary: 'לא ניתן לקרוא את תוכן הקובץ - נסו להעלות קובץ טקסט',
+            status: 'ai_reviewed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', reviewRecord.id)
       }
 
       return NextResponse.json({
@@ -244,10 +261,9 @@ ${fileContent.length > 30000 ? '... [המסמך קוצר]' : ''}`
       const reviewId = formData.get('reviewId') as string
       const urgency = formData.get('urgency') as string || 'normal'
 
-      // Get pricing
       const { data: review } = await supabase
         .from('document_reviews')
-        .select('*, review_pricing!inner(*)')
+        .select('*')
         .eq('id', reviewId)
         .single()
 
@@ -255,7 +271,6 @@ ${fileContent.length > 30000 ? '... [המסמך קוצר]' : ''}`
         return NextResponse.json({ error: 'Review not found' }, { status: 404 })
       }
 
-      // Get pricing for this review type
       const { data: pricing } = await supabase
         .from('review_pricing')
         .select('*')
@@ -267,7 +282,6 @@ ${fileContent.length > 30000 ? '... [המסמך קוצר]' : ''}`
         ? basePrice * (pricing?.urgent_multiplier || 1.5)
         : basePrice
 
-      // Update review with DPO request
       await supabase
         .from('document_reviews')
         .update({
@@ -344,7 +358,6 @@ ${fileContent.length > 30000 ? '... [המסמך קוצר]' : ''}`
   }
 }
 
-// GET handler for fetching reviews
 export async function GET(request: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
