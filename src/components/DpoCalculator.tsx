@@ -122,16 +122,21 @@ function calculateResult(answers: Record<string, boolean>): CalculatorResult {
     riskLevel = 'low'
   }
 
-  // Calculate penalty exposure
+  // Calculate penalty exposure - show maximum for impact
+  // תיקון 13 allows fines up to ₪3.2M for corporations
   let penaltyExposure: string
-  if (answers.large_database) {
-    const minPenalty = 10000 * 2 // 2 NIS per record minimum
-    const maxPenalty = 10000 * 4 // 4 NIS per record maximum
-    penaltyExposure = `₪${minPenalty.toLocaleString()} - ₪${maxPenalty.toLocaleString()}`
+  if (answers.large_database || answers.sensitive_data) {
+    // Large database or sensitive data - highest exposure
+    penaltyExposure = 'עד ₪3,200,000'
   } else if (required) {
-    penaltyExposure = '₪20,000 - ₪100,000'
+    // Required but standard - medium exposure
+    penaltyExposure = 'עד ₪1,000,000'
+  } else if (reasons.length > 0) {
+    // Some risk factors present
+    penaltyExposure = 'עד ₪500,000'
   } else {
-    penaltyExposure = 'עד ₪50,000'
+    // Low risk
+    penaltyExposure = 'עד ₪100,000'
   }
 
   // Add default reason if none
