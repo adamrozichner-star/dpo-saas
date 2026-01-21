@@ -205,9 +205,12 @@ export async function POST(request: NextRequest) {
         
         aiReview = await callAnthropicAPI(fileContent, reviewType)
         
-        if (aiReview) {
-          console.log('AI review completed successfully')
-          await supabase
+       if (aiReview) {
+  console.log('AI review completed successfully')
+  console.log('Summary:', aiReview.summary)
+  console.log('Issues:', JSON.stringify(aiReview.issues))
+  console.log('Risk score:', aiReview.risk_score)
+  await supabase
             .from('document_reviews')
             .update({
               ai_review_status: 'completed',
