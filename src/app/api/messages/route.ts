@@ -184,20 +184,22 @@ ${additionalMessage}` : ''}
         priority: 'high'
       })
 
-      // Also create escalation record
-      await supabase.from('escalations').insert({
-        org_id: orgId,
-        thread_id: thread.id,
-        qa_id: qaId,
-        reason: 'customer_request',
-        original_question: originalQuestion,
-        ai_answer: aiAnswer,
-        customer_notes: additionalMessage,
-        status: 'pending'
-      }).catch(err => {
+      // Also create escalation record (optional - table might not exist)
+      try {
+        await supabase.from('escalations').insert({
+          org_id: orgId,
+          thread_id: thread.id,
+          qa_id: qaId,
+          reason: 'customer_request',
+          original_question: originalQuestion,
+          ai_answer: aiAnswer,
+          customer_notes: additionalMessage,
+          status: 'pending'
+        })
+      } catch (err) {
         // Escalations table might not exist, that's ok
-        console.log('Note: Could not create escalation record:', err.message)
-      })
+        console.log('Note: Could not create escalation record')
+      }
 
       return NextResponse.json({ 
         success: true, 
