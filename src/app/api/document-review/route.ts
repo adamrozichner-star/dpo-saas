@@ -102,7 +102,7 @@ ${content.length > 30000 ? '... [המסמך קוצר]' : ''}`
       // Fallback: Extract fields manually using regex
       let summary = ''
       let riskScore = 50
-      let issues: any[] = []
+      const issues: Array<{severity: string; issue: string; suggestion: string}> = []
       
       // Extract summary
       const summaryMatch = responseText.match(/"summary"\s*:\s*"([^"]+)"/)
@@ -112,14 +112,25 @@ ${content.length > 30000 ? '... [המסמך קוצר]' : ''}`
       const scoreMatch = responseText.match(/"risk_score"\s*:\s*(\d+)/)
       if (scoreMatch) riskScore = parseInt(scoreMatch[1], 10)
       
-      // Try to extract individual issues
-      const issueMatches = responseText.matchAll(/"issue"\s*:\s*"([^"]+)"/g)
-      const severityMatches = responseText.matchAll(/"severity"\s*:\s*"([^"]+)"/g)
-      const suggestionMatches = responseText.matchAll(/"suggestion"\s*:\s*"([^"]+)"/g)
+      // Try to extract individual issues using exec loop
+      const issueRegex = /"issue"\s*:\s*"([^"]+)"/g
+      const severityRegex = /"severity"\s*:\s*"([^"]+)"/g
+      const suggestionRegex = /"suggestion"\s*:\s*"([^"]+)"/g
       
-     const issueTexts = Array.from(issueMatches).map((m: RegExpMatchArray) => m[1])
-const severities = Array.from(severityMatches).map((m: RegExpMatchArray) => m[1])
-const suggestions = Array.from(suggestionMatches).map((m: RegExpMatchArray) => m[1])
+      const issueTexts: string[] = []
+      const severities: string[] = []
+      const suggestions: string[] = []
+      
+      let match
+      while ((match = issueRegex.exec(responseText)) !== null) {
+        issueTexts.push(match[1])
+      }
+      while ((match = severityRegex.exec(responseText)) !== null) {
+        severities.push(match[1])
+      }
+      while ((match = suggestionRegex.exec(responseText)) !== null) {
+        suggestions.push(match[1])
+      }
       
       for (let i = 0; i < issueTexts.length; i++) {
         issues.push({
@@ -142,8 +153,9 @@ const suggestions = Array.from(suggestionMatches).map((m: RegExpMatchArray) => m
         dpo_review_reason: 'שגיאה בניתוח אוטומטי'
       }
     }
-  } catch (error: any) {
-    console.error('Anthropic API call failed:', error.message)
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Anthropic API call failed:', errorMessage)
     return null
   }
 }
@@ -170,7 +182,6 @@ export async function POST(request: NextRequest) {
     if (action === 'upload_and_review') {
       const file = formData.get('file') as File
       const reviewType = formData.get('reviewType') as string || 'other'
-      const context = formData.get('context') as string || ''
 
       if (!file || !orgId) {
         return NextResponse.json({ error: 'Missing file or orgId' }, { status: 400 })
@@ -392,8 +403,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 
-  } catch (error: any) {
-    console.error('Document review error:', error.message)
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error('Document review error:', errorMessage)
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
   }
 }
