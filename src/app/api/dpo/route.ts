@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
           *,
           organizations (
             id,
-            name,
+            name
           )
         `)
         .eq('status', status)
