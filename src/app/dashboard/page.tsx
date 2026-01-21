@@ -27,7 +27,10 @@ import {
   Users,
   Menu,
   Lock,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  FileSearch,
+  AlertTriangle
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import WelcomeModal from '@/components/WelcomeModal'
@@ -39,7 +42,7 @@ function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, session, signOut, loading, supabase } = useAuth()
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'qa' | 'checklist' | 'requests' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'qa' | 'checklist' | 'requests' | 'doc-review' | 'settings'>('overview')
   const [question, setQuestion] = useState('')
   const [isAsking, setIsAsking] = useState(false)
   const [qaHistory, setQaHistory] = useState<any[]>([])
@@ -48,6 +51,7 @@ function DashboardContent() {
   const [userName, setUserName] = useState('')
   const [showWelcome, setShowWelcome] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [documentReviews, setDocumentReviews] = useState<any[]>([])
   const [complianceData, setComplianceData] = useState<{
     score: number
     gaps: string[]
@@ -368,6 +372,12 @@ function DashboardContent() {
             onClick={() => { setActiveTab('qa'); setMobileMenuOpen(false) }}
           />
           <NavButton 
+            icon={<FileSearch />} 
+            label="בדיקת מסמכים" 
+            active={activeTab === 'doc-review'}
+            onClick={() => { setActiveTab('doc-review'); setMobileMenuOpen(false) }}
+          />
+          <NavButton 
             icon={<User />} 
             label="הגדרות" 
             active={activeTab === 'settings'}
@@ -481,6 +491,14 @@ function DashboardContent() {
                 setQuestion={setQuestion}
                 onAsk={handleAskQuestion}
                 isAsking={isAsking}
+                orgId={organization?.id}
+              />
+            )}
+            {activeTab === 'doc-review' && (
+              <DocumentReviewTab 
+                orgId={organization?.id}
+                reviews={documentReviews}
+                setReviews={setDocumentReviews}
               />
             )}
             {activeTab === 'settings' && (
@@ -942,7 +960,42 @@ ${'─'.repeat(50)}
   )
 }
 
-function QATab({ qaHistory, question, setQuestion, onAsk, isAsking }: any) {
+function QATab({ qaHistory, question, setQuestion, onAsk, isAsking, orgId }: any) {
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadResult, setUploadResult] = useState<any>(null)
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !orgId) return
+
+    setUploadedFile(file)
+    setIsUploading(true)
+    setUploadResult(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('action', 'upload_and_review')
+      formData.append('file', file)
+      formData.append('orgId', orgId)
+      formData.append('reviewType', 'other')
+
+      const response = await fetch('/api/document-review', {
+        method: 'POST',
+        body: formData
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        setUploadResult(data.aiReview)
+      }
+    } catch (err) {
+      console.error('Upload error:', err)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold">שאלות ותשובות</h2>
@@ -955,7 +1008,7 @@ function QATab({ qaHistory, question, setQuestion, onAsk, isAsking }: any) {
             שאלו את הבוט
           </CardTitle>
           <CardDescription>
-            שאלו שאלות בנושאי פרטיות וקבלו תשובות מיידיות
+            שאלו שאלות בנושאי פרטיות או העלו מסמך לבדיקה מהירה
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -965,7 +1018,32 @@ function QATab({ qaHistory, question, setQuestion, onAsk, isAsking }: any) {
             placeholder="הקלידו את השאלה שלכם..."
             className="min-h-[80px]"
           />
-          <div className="flex justify-end mt-3">
+          <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center gap-2">
+              <input
+                type="file"
+                id="qa-file-upload"
+                className="hidden"
+                accept=".pdf,.docx,.doc,.txt"
+                onChange={handleFileUpload}
+              />
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => document.getElementById('qa-file-upload')?.click()}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                ) : (
+                  <Upload className="h-4 w-4 ml-2" />
+                )}
+                {isUploading ? 'מעלה...' : 'העלאת מסמך לבדיקה'}
+              </Button>
+              {uploadedFile && !isUploading && (
+                <span className="text-sm text-gray-500">{uploadedFile.name}</span>
+              )}
+            </div>
             <Button onClick={onAsk} disabled={!question.trim() || isAsking}>
               {isAsking ? (
                 <Loader2 className="h-4 w-4 animate-spin ml-2" />
@@ -977,6 +1055,99 @@ function QATab({ qaHistory, question, setQuestion, onAsk, isAsking }: any) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Upload Result */}
+      {uploadResult && (
+        <Card className="border-primary">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileSearch className="h-5 w-5 text-primary" />
+              תוצאות בדיקת AI
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Risk Score */}
+            <div className={`p-4 rounded-lg ${
+              uploadResult.risk_score >= 70 ? 'bg-red-50 border border-red-200' :
+              uploadResult.risk_score >= 40 ? 'bg-amber-50 border border-amber-200' :
+              'bg-green-50 border border-green-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className="font-medium">ציון סיכון:</span>
+                <span className={`text-2xl font-bold ${
+                  uploadResult.risk_score >= 70 ? 'text-red-600' :
+                  uploadResult.risk_score >= 40 ? 'text-amber-600' :
+                  'text-green-600'
+                }`}>
+                  {uploadResult.risk_score}%
+                </span>
+              </div>
+            </div>
+
+            {/* Summary */}
+            {uploadResult.summary && (
+              <div>
+                <h4 className="font-medium mb-2">סיכום:</h4>
+                <p className="text-gray-700">{uploadResult.summary}</p>
+              </div>
+            )}
+
+            {/* Issues */}
+            {uploadResult.issues?.length > 0 && (
+              <div>
+                <h4 className="font-medium mb-2">בעיות שזוהו:</h4>
+                <div className="space-y-2">
+                  {uploadResult.issues.map((issue: any, i: number) => (
+                    <div 
+                      key={i}
+                      className={`p-3 rounded-lg border-r-4 ${
+                        issue.severity === 'high' ? 'bg-red-50 border-red-500' :
+                        issue.severity === 'medium' ? 'bg-amber-50 border-amber-500' :
+                        'bg-gray-50 border-gray-300'
+                      }`}
+                    >
+                      <p className="font-medium">{issue.issue}</p>
+                      {issue.suggestion && (
+                        <p className="text-sm text-gray-600 mt-1">💡 {issue.suggestion}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recommendation */}
+            {uploadResult.recommendation && (
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <h4 className="font-medium mb-1">המלצה:</h4>
+                <p>{uploadResult.recommendation}</p>
+              </div>
+            )}
+
+            {/* DPO Review CTA */}
+            {uploadResult.requires_dpo_review && (
+              <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-6 w-6 text-primary" />
+                  <div className="flex-1">
+                    <h4 className="font-bold">מומלץ בדיקת DPO אנושי</h4>
+                    <p className="text-sm text-gray-600">{uploadResult.dpo_review_reason || 'המסמך דורש בדיקה מעמיקה'}</p>
+                  </div>
+                  <Link href="/dashboard?tab=doc-review">
+                    <Button size="sm">
+                      הזמנת בדיקה - ₪350
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            <Button variant="outline" className="w-full" onClick={() => setUploadResult(null)}>
+              סגור תוצאות
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Q&A History */}
       <Card>
@@ -1008,6 +1179,336 @@ function QATab({ qaHistory, question, setQuestion, onAsk, isAsking }: any) {
           ))}
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+// Document Review Tab
+function DocumentReviewTab({ orgId, reviews, setReviews }: { orgId: string, reviews: any[], setReviews: (r: any[]) => void }) {
+  const [isLoading, setIsLoading] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+  const [reviewType, setReviewType] = useState('contract')
+  const [selectedReview, setSelectedReview] = useState<any>(null)
+
+  useEffect(() => {
+    if (orgId) loadReviews()
+  }, [orgId])
+
+  const loadReviews = async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch(`/api/document-review?orgId=${orgId}`)
+      const data = await response.json()
+      setReviews(data.reviews || [])
+    } catch (err) {
+      console.error('Error loading reviews:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !orgId) return
+
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('action', 'upload_and_review')
+      formData.append('file', file)
+      formData.append('orgId', orgId)
+      formData.append('reviewType', reviewType)
+
+      const response = await fetch('/api/document-review', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (response.ok) {
+        loadReviews()
+      }
+    } catch (err) {
+      console.error('Upload error:', err)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const requestDPOReview = async (reviewId: string, urgency: string = 'normal') => {
+    try {
+      const formData = new FormData()
+      formData.append('action', 'request_dpo_review')
+      formData.append('reviewId', reviewId)
+      formData.append('urgency', urgency)
+
+      await fetch('/api/document-review', {
+        method: 'POST',
+        body: formData
+      })
+      
+      loadReviews()
+    } catch (err) {
+      console.error('Error requesting DPO review:', err)
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    const badges: Record<string, { label: string; className: string }> = {
+      uploaded: { label: 'הועלה', className: 'bg-gray-100 text-gray-800' },
+      ai_reviewed: { label: 'נבדק ע"י AI', className: 'bg-blue-100 text-blue-800' },
+      dpo_pending: { label: 'ממתין ל-DPO', className: 'bg-amber-100 text-amber-800' },
+      completed: { label: 'הושלם', className: 'bg-green-100 text-green-800' }
+    }
+    const badge = badges[status] || { label: status, className: 'bg-gray-100' }
+    return <Badge className={badge.className}>{badge.label}</Badge>
+  }
+
+  const getRiskColor = (score: number) => {
+    if (score >= 70) return 'text-red-600'
+    if (score >= 40) return 'text-amber-600'
+    return 'text-green-600'
+  }
+
+  const reviewTypes = [
+    { id: 'contract', label: 'חוזה' },
+    { id: 'policy', label: 'מדיניות' },
+    { id: 'consent_form', label: 'טופס הסכמה' },
+    { id: 'other', label: 'אחר' }
+  ]
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold">בדיקת מסמכים</h2>
+      </div>
+
+      {/* Upload Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="h-5 w-5 text-primary" />
+            העלאת מסמך לבדיקה
+          </CardTitle>
+          <CardDescription>
+            העלו חוזה, מדיניות או טופס לבדיקת עמידה בדרישות פרטיות
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <select 
+              value={reviewType}
+              onChange={(e) => setReviewType(e.target.value)}
+              className="px-3 py-2 border rounded-lg"
+            >
+              {reviewTypes.map(type => (
+                <option key={type.id} value={type.id}>{type.label}</option>
+              ))}
+            </select>
+            <input
+              type="file"
+              id="doc-review-upload"
+              className="hidden"
+              accept=".pdf,.docx,.doc,.txt"
+              onChange={handleUpload}
+            />
+            <Button 
+              onClick={() => document.getElementById('doc-review-upload')?.click()}
+              disabled={isUploading}
+              className="flex-1 sm:flex-none"
+            >
+              {isUploading ? (
+                <Loader2 className="h-4 w-4 animate-spin ml-2" />
+              ) : (
+                <Upload className="h-4 w-4 ml-2" />
+              )}
+              {isUploading ? 'מעלה ובודק...' : 'בחירת קובץ'}
+            </Button>
+          </div>
+          <p className="text-sm text-gray-500 mt-2">
+            נתמכים: PDF, Word, טקסט • הבדיקה כוללת סריקת AI אוטומטית
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Pricing Card */}
+      <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <h3 className="font-bold text-lg">🔍 בדיקת DPO מקצועית</h3>
+              <p className="text-gray-600">קבלו בדיקה מעמיקה ע"י ממונה מוסמך עם תיקונים והמלצות</p>
+            </div>
+            <div className="text-left">
+              <p className="text-sm text-gray-500">החל מ-</p>
+              <p className="text-2xl font-bold text-primary">₪250</p>
+              <p className="text-xs text-gray-500">לפי סוג המסמך</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Reviews List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>המסמכים שלי</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : reviews.length === 0 ? (
+            <div className="text-center py-8">
+              <FileSearch className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">עדיין לא הועלו מסמכים</p>
+              <p className="text-sm text-gray-400">העלו מסמך לקבלת בדיקת AI מיידית</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {reviews.map((review) => (
+                <div 
+                  key={review.id} 
+                  className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        review.ai_risk_score >= 70 ? 'bg-red-100' :
+                        review.ai_risk_score >= 40 ? 'bg-amber-100' :
+                        'bg-green-100'
+                      }`}>
+                        <FileText className={`h-5 w-5 ${getRiskColor(review.ai_risk_score || 50)}`} />
+                      </div>
+                      <div>
+                        <p className="font-medium">{review.original_filename}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {getStatusBadge(review.status)}
+                          {review.ai_risk_score && (
+                            <span className={`text-sm ${getRiskColor(review.ai_risk_score)}`}>
+                              סיכון: {review.ai_risk_score}%
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(review.created_at).toLocaleDateString('he-IL')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {review.status === 'ai_reviewed' && !review.dpo_review_requested && (
+                        <Button 
+                          size="sm" 
+                          onClick={() => requestDPOReview(review.id)}
+                        >
+                          הזמנת בדיקת DPO
+                        </Button>
+                      )}
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setSelectedReview(review)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* AI Summary Preview */}
+                  {review.ai_review_summary && (
+                    <p className="text-sm text-gray-600 mt-2 mr-13">
+                      {review.ai_review_summary.substring(0, 150)}...
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Review Detail Modal */}
+      {selectedReview && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <CardHeader className="border-b">
+              <div className="flex items-center justify-between">
+                <CardTitle>{selectedReview.original_filename}</CardTitle>
+                <Button variant="ghost" size="icon" onClick={() => setSelectedReview(null)}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-auto p-6 space-y-4">
+              {/* Status */}
+              <div className="flex items-center gap-4">
+                {getStatusBadge(selectedReview.status)}
+                {selectedReview.ai_risk_score && (
+                  <span className={`font-bold ${getRiskColor(selectedReview.ai_risk_score)}`}>
+                    ציון סיכון: {selectedReview.ai_risk_score}%
+                  </span>
+                )}
+              </div>
+
+              {/* AI Summary */}
+              {selectedReview.ai_review_summary && (
+                <div>
+                  <h4 className="font-medium mb-2">סיכום AI:</h4>
+                  <p className="text-gray-700 bg-blue-50 p-3 rounded-lg">{selectedReview.ai_review_summary}</p>
+                </div>
+              )}
+
+              {/* Issues */}
+              {selectedReview.ai_issues_found?.length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">בעיות שזוהו ({selectedReview.ai_issues_found.length}):</h4>
+                  <div className="space-y-2">
+                    {selectedReview.ai_issues_found.map((issue: any, i: number) => (
+                      <div 
+                        key={i}
+                        className={`p-3 rounded-lg border-r-4 ${
+                          issue.severity === 'high' ? 'bg-red-50 border-red-500' :
+                          issue.severity === 'medium' ? 'bg-amber-50 border-amber-500' :
+                          'bg-gray-50 border-gray-300'
+                        }`}
+                      >
+                        <p className="font-medium">{issue.issue}</p>
+                        {issue.suggestion && (
+                          <p className="text-sm text-gray-600 mt-1">💡 {issue.suggestion}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* DPO Notes */}
+              {selectedReview.dpo_notes && (
+                <div>
+                  <h4 className="font-medium mb-2">הערות הממונה:</h4>
+                  <p className="text-gray-700 bg-green-50 p-3 rounded-lg">{selectedReview.dpo_notes}</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              {selectedReview.status === 'ai_reviewed' && !selectedReview.dpo_review_requested && (
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-gray-600 mb-3">
+                    רוצים בדיקה מקצועית? הממונה יעבור על המסמך ויחזיר גרסה מתוקנת
+                  </p>
+                  <div className="flex gap-3">
+                    <Button onClick={() => { requestDPOReview(selectedReview.id, 'normal'); setSelectedReview(null) }}>
+                      בדיקה רגילה - ₪350
+                    </Button>
+                    <Button variant="outline" onClick={() => { requestDPOReview(selectedReview.id, 'urgent'); setSelectedReview(null) }}>
+                      דחוף (24 שעות) - ₪525
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
