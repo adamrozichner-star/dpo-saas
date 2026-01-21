@@ -100,40 +100,58 @@ export async function POST(request: NextRequest) {
     // Create Escalation from Q&A
     // =========================================
     if (action === 'create_escalation') {
-      const { originalQuestion, aiAnswer, additionalMessage, qaId } = body
+      const { originalQuestion, aiAnswer, additionalMessage, qaId, userEmail } = body
       
       if (!orgId || !originalQuestion) {
-        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+        return NextResponse.json({ error: 'Missing required fields: orgId and originalQuestion' }, { status: 400 })
       }
 
       // Create escalation thread
       const escalationSubject = `פנייה לממונה: ${originalQuestion.substring(0, 50)}${originalQuestion.length > 50 ? '...' : ''}`
       
-      const { data: thread, error: threadError } = await supabase
-        .from('message_threads')
-        .insert({
-          org_id: orgId,
-          subject: escalationSubject,
-          priority: 'high',
-          status: 'open',
-          thread_type: 'escalation',
-          metadata: {
-            source: 'qa_escalation',
-            qa_id: qaId,
-            original_question: originalQuestion,
-            ai_answer: aiAnswer
-          }
-        })
-        .select()
-        .single()
-
-      if (threadError) {
-        console.error('Escalation thread creation error:', threadError)
-        return NextResponse.json({ error: 'Failed to create escalation' }, { status: 500 })
+      // Build insert object - only include fields that exist
+      const threadData: any = {
+        org_id: orgId,
+        subject: escalationSubject,
+        priority: 'high',
+        status: 'open'
       }
 
-      // Create formatted message content
-      const messageContent = `📋 **פנייה מהמערכת האוטומטית**
+      // Add optional fields if supported
+      try {
+        const { data: thread, error: threadError } = await supabase
+          .from('message_threads')
+          .insert(threadData)
+          .select()
+          .single()
+
+        if (threadError) {
+          console.error('Escalation thread creation error:', threadError)
+          return NextResponse.json({ 
+            error: 'Failed to create escalation', 
+            details: threadError.message,
+            code: threadError.code 
+          }, { status: 500 })
+        }
+
+        // Update with metadata separately if supported
+        if (thread) {
+          await supabase
+            .from('message_threads')
+            .update({
+              metadata: {
+                source: 'qa_escalation',
+                qa_id: qaId,
+                original_question: originalQuestion,
+                ai_answer: aiAnswer
+              }
+            })
+            .eq('id', thread.id)
+            .catch(() => {}) // Ignore if metadata column doesn't exist
+        }
+
+        // Create formatted message content
+        const messageContent = `📋 **פנייה מהמערכת האוטומטית**
 
 **השאלה המקורית:**
 ${originalQuestion}
@@ -147,44 +165,45 @@ ${additionalMessage}` : ''}
 ---
 *הלקוח ביקש תשובה אנושית לשאלה זו*`
 
-      // Create first message
-      const { data: message, error: msgError } = await supabase
-        .from('messages')
-        .insert({
-          thread_id: thread.id,
-          sender_type: 'system',
-          sender_name: 'מערכת DPO-Pro',
-          content: messageContent
-        })
-        .select()
-        .single()
-
-      if (msgError) {
-        console.error('Escalation message creation error:', msgError)
-      }
-
-      // Mark original Q&A as escalated
-      if (qaId) {
-        await supabase
-          .from('qa_interactions')
-          .update({ 
-            escalated: true,
-            escalation_thread_id: thread.id 
+        // Create first message
+        const { data: message, error: msgError } = await supabase
+          .from('messages')
+          .insert({
+            thread_id: thread.id,
+            sender_type: 'system',
+            sender_name: 'מערכת DPO-Pro',
+            content: messageContent
           })
-          .eq('id', qaId)
-      }
+          .select()
+          .single()
 
-      // Create notification for DPO
-      await supabase.from('notifications').insert({
-        org_id: orgId,
-        type: 'escalation',
-        title: '⚠️ פנייה דחופה מלקוח',
-        body: `לקוח ביקש תשובה אנושית: ${originalQuestion.substring(0, 100)}`,
-        link: `/dpo/messages/${thread.id}`,
-        priority: 'high'
-      })
+        if (msgError) {
+          console.error('Escalation message creation error:', msgError)
+        }
 
-      try {
+        // Mark original Q&A as escalated
+        if (qaId) {
+          await supabase
+            .from('qa_interactions')
+            .update({ 
+              escalated: true,
+              escalation_thread_id: thread.id 
+            })
+            .eq('id', qaId)
+            .catch(() => {}) // Ignore if column doesn't exist
+        }
+
+        // Create notification for DPO (ignore errors)
+        await supabase.from('notifications').insert({
+          org_id: orgId,
+          type: 'escalation',
+          title: '⚠️ פנייה דחופה מלקוח',
+          body: `לקוח ביקש תשובה אנושית: ${originalQuestion.substring(0, 100)}`,
+          link: `/dpo/messages/${thread.id}`,
+          priority: 'high'
+        }).catch(() => {})
+
+        // Also create escalation record
         await supabase.from('escalations').insert({
           org_id: orgId,
           thread_id: thread.id,
@@ -194,41 +213,48 @@ ${additionalMessage}` : ''}
           ai_answer: aiAnswer,
           customer_notes: additionalMessage,
           status: 'pending'
+        }).catch(err => {
+          // Escalations table might not exist, that's ok
+          console.log('Note: Could not create escalation record:', err.message)
         })
-      } catch (err: any) {
-        // Escalations table might not exist, that's ok
-        console.log('Note: Could not create escalation record:', err?.message)
-      }
 
-      // Trigger auto-analysis for the newly created queue item
-      // The database trigger creates the dpo_queue item, so we find it and analyze
-      setTimeout(async () => {
-        try {
-          const { data: queueItem } = await supabase
-            .from('dpo_queue')
-            .select('id')
-            .eq('related_thread_id', thread.id)
-            .single()
-          
-          if (queueItem) {
-            // Fire and forget - call the DPO API to analyze
-            fetch(`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/dpo`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'ai_analyze', itemId: queueItem.id })
-            }).catch(err => console.log('Auto-analyze trigger failed:', err))
+        // Trigger auto-analysis for the newly created queue item
+        // The database trigger creates the dpo_queue item, so we find it and analyze
+        setTimeout(async () => {
+          try {
+            const { data: queueItem } = await supabase
+              .from('dpo_queue')
+              .select('id')
+              .eq('related_thread_id', thread.id)
+              .single()
+            
+            if (queueItem) {
+              // Fire and forget - call the DPO API to analyze
+              fetch(`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/dpo`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'ai_analyze', itemId: queueItem.id })
+              }).catch(err => console.log('Auto-analyze trigger failed:', err))
+            }
+          } catch (e) {
+            console.log('Could not trigger auto-analysis:', e)
           }
-        } catch (e) {
-          console.log('Could not trigger auto-analysis:', e)
-        }
-      }, 1000) // Give the trigger time to create the queue item
+        }, 1000) // Give the trigger time to create the queue item
 
-      return NextResponse.json({ 
-        success: true, 
-        thread, 
-        message,
-        escalationId: thread.id 
-      })
+        return NextResponse.json({ 
+          success: true, 
+          thread, 
+          message,
+          escalationId: thread.id 
+        })
+
+      } catch (err: any) {
+        console.error('Escalation error:', err)
+        return NextResponse.json({ 
+          error: 'Failed to create escalation', 
+          details: err.message 
+        }, { status: 500 })
+      }
     }
 
     // =========================================
