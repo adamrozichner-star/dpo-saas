@@ -201,7 +201,7 @@ export default function DPODashboard() {
     const timeSpent = startTime ? Math.round((Date.now() - startTime) / 1000) : 0
 
     try {
-      await fetch('/api/dpo', {
+      const res = await fetch('/api/dpo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -210,15 +210,27 @@ export default function DPODashboard() {
           resolutionType,
           response: editedResponse,
           notes: resolutionNotes,
-          timeSpentSeconds: timeSpent
+          timeSpentSeconds: timeSpent,
+          sendEmail: true
         })
       })
+
+      const data = await res.json()
+      
+      // Show success message with email status
+      if (data.success) {
+        const emailMsg = data.email_sent 
+          ? '✅ הפנייה טופלה והתשובה נשלחה במייל'
+          : '✅ הפנייה טופלה (לא נשלח מייל)'
+        alert(emailMsg)
+      }
 
       // Refresh
       setSelectedItem(null)
       loadDashboard()
     } catch (error) {
       console.error('Failed to resolve:', error)
+      alert('שגיאה בטיפול בפנייה')
     }
     setResolving(false)
   }
@@ -230,7 +242,7 @@ export default function DPODashboard() {
       return
     }
 
-    if (!confirm(`לאשר ${highConfidenceItems.length} פריטים עם ביטחון AI > 85%?`)) return
+    if (!confirm(`לאשר ${highConfidenceItems.length} פריטים עם ביטחון AI > 85%?\nתשובות יישלחו במייל ללקוחות.`)) return
 
     try {
       const res = await fetch('/api/dpo', {
@@ -239,11 +251,12 @@ export default function DPODashboard() {
         body: JSON.stringify({
           action: 'bulk_approve',
           itemIds: highConfidenceItems.map(i => i.id),
-          minConfidence: 0.85
+          minConfidence: 0.85,
+          sendEmails: true
         })
       })
       const data = await res.json()
-      alert(`אושרו ${data.approved} פריטים`)
+      alert(`✅ אושרו ${data.approved} פריטים\n📧 נשלחו ${data.emails_sent || 0} מיילים`)
       loadDashboard()
     } catch (error) {
       console.error('Bulk approve failed:', error)
