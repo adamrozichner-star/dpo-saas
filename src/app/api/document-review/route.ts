@@ -5,9 +5,10 @@ import Anthropic from '@anthropic-ai/sdk'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || ''
-})
+// Only initialize if API key exists
+const anthropic = process.env.ANTHROPIC_API_KEY 
+  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  : null
 
 // Privacy compliance review prompt
 const REVIEW_SYSTEM_PROMPT = `אתה מומחה משפטי ישראלי בתחום הגנת הפרטיות ותיקון 13 לחוק הגנת הפרטיות.
@@ -133,10 +134,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to create review' }, { status: 500 })
       }
 
-      // Perform AI review if we have content
+      // Perform AI review if we have content and API key
       let aiReview = null
-      if (fileContent && fileContent.length > 10 && !fileContent.startsWith('[')) {
+      if (fileContent && fileContent.length > 10 && !fileContent.startsWith('[') && anthropic) {
         try {
+          console.log('Starting AI review for:', file.name)
           const reviewPrompt = `סקור את המסמך הבא וזהה בעיות פרטיות:
 
 סוג המסמך: ${reviewType}
