@@ -184,20 +184,21 @@ ${additionalMessage}` : ''}
         priority: 'high'
       })
 
-      // Also create escalation record
-      await supabase.from('escalations').insert({
-        org_id: orgId,
-        thread_id: thread.id,
-        qa_id: qaId,
-        reason: 'customer_request',
-        original_question: originalQuestion,
-        ai_answer: aiAnswer,
-        customer_notes: additionalMessage,
-        status: 'pending'
-      }).catch(err => {
+      try {
+        await supabase.from('escalations').insert({
+          org_id: orgId,
+          thread_id: thread.id,
+          qa_id: qaId,
+          reason: 'customer_request',
+          original_question: originalQuestion,
+          ai_answer: aiAnswer,
+          customer_notes: additionalMessage,
+          status: 'pending'
+        })
+      } catch (err: any) {
         // Escalations table might not exist, that's ok
-        console.log('Note: Could not create escalation record:', err.message)
-      })
+        console.log('Note: Could not create escalation record:', err?.message)
+      }
 
       // Trigger auto-analysis for the newly created queue item
       // The database trigger creates the dpo_queue item, so we find it and analyze
