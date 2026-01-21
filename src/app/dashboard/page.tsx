@@ -451,6 +451,8 @@ function DashboardContent() {
               <DocumentsTab 
                 documents={documents} 
                 isPaid={organization?.subscription_status === 'active'}
+                onRegenerate={handleRegenerateDocs}
+                isRegenerating={isRegenerating}
               />
             )}
             {activeTab === 'checklist' && (
@@ -710,7 +712,12 @@ function OverviewTab({
   )
 }
 
-function DocumentsTab({ documents, isPaid = false }: { documents: any[], isPaid?: boolean }) {
+function DocumentsTab({ documents, isPaid = false, onRegenerate, isRegenerating = false }: { 
+  documents: any[], 
+  isPaid?: boolean,
+  onRegenerate?: () => void,
+  isRegenerating?: boolean
+}) {
   const [selectedDoc, setSelectedDoc] = useState<any>(null)
   
   const getDocTypeLabel = (type: string) => {
@@ -718,7 +725,8 @@ function DocumentsTab({ documents, isPaid = false }: { documents: any[], isPaid?
       privacy_policy: 'מדיניות פרטיות',
       database_registration: 'רישום מאגר',
       security_policy: 'מדיניות אבטחה',
-      procedure: 'נוהל'
+      procedure: 'נוהל',
+      dpo_appointment: 'כתב מינוי DPO'
     }
     return labels[type] || type
   }
@@ -764,7 +772,22 @@ ${'─'.repeat(50)}
         <CardContent className="p-8 text-center">
           <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
           <h2 className="text-xl font-bold mb-2">אין מסמכים עדיין</h2>
-          <p className="text-gray-600">המסמכים יופקו אוטומטית לאחר השלמת תהליך ההרשמה</p>
+          <p className="text-gray-600 mb-6">לחצו על הכפתור כדי ליצור את המסמכים שלכם</p>
+          {onRegenerate && (
+            <Button onClick={onRegenerate} disabled={isRegenerating}>
+              {isRegenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                  מייצר מסמכים...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 ml-2" />
+                  יצירת מסמכים
+                </>
+              )}
+            </Button>
+          )}
         </CardContent>
       </Card>
     )
