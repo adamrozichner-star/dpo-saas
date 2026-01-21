@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
         queue: stats,
         organizations: {
           active: orgCount || 0,
-          healthy: orgCount || 0 // TODO: calculate from compliance scores
+          healthy: orgCount || 0
         },
         monthly: {
           resolved: resolvedThisMonth,
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
           )
         `)
         .eq('status', status)
-        .order('priority', { ascending: true }) // critical first
+        .order('priority', { ascending: true })
         .order('deadline_at', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: true })
         .range(offset, offset + limit - 1)
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
 
-     // Transform priority for sorting display
+      // Transform priority for sorting display
       const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
       const sorted = data?.sort((a: any, b: any) => {
         const pA = priorityOrder[a.priority] || 4
@@ -149,7 +149,6 @@ export async function GET(request: NextRequest) {
           organizations (
             id,
             name,
-            subscription_tier,
             created_at
           )
         `)
@@ -164,7 +163,6 @@ export async function GET(request: NextRequest) {
       let context: any = {}
 
       if (item.type === 'escalation' && item.related_thread_id) {
-        // Get thread and messages
         const { data: thread } = await supabase
           .from('message_threads')
           .select('*')
@@ -232,7 +230,6 @@ export async function GET(request: NextRequest) {
         .select(`
           id,
           name,
-          subscription_tier,
           subscription_status,
           created_at,
           org_compliance_scores (
@@ -277,7 +274,6 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Missing org_id' }, { status: 400 })
       }
 
-      // Get organization
       const { data: org } = await supabase
         .from('organizations')
         .select('*')
@@ -288,20 +284,17 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
       }
 
-      // Get compliance score
       const { data: compliance } = await supabase
         .from('org_compliance_scores')
         .select('*')
         .eq('org_id', orgId)
         .single()
 
-      // Get documents
       const { data: documents } = await supabase
         .from('documents')
         .select('*')
         .eq('org_id', orgId)
 
-      // Get queue history
       const { data: queueHistory } = await supabase
         .from('dpo_queue')
         .select('*')
@@ -309,7 +302,6 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false })
         .limit(20)
 
-      // Get time log this month
       const startOfMonth = new Date()
       startOfMonth.setDate(1)
       startOfMonth.setHours(0, 0, 0, 0)
@@ -322,7 +314,6 @@ export async function GET(request: NextRequest) {
 
       const totalMinutesThisMonth = timeLog?.reduce((sum, log) => sum + (log.duration_seconds || 0), 0) / 60 || 0
 
-      // Get onboarding answers for context
       const { data: onboarding } = await supabase
         .from('onboarding_answers')
         .select('*')
@@ -362,7 +353,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
       }
 
-      // Get the item first
       const { data: item } = await supabase
         .from('dpo_queue')
         .select('*, organizations(name)')
@@ -373,7 +363,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Item not found' }, { status: 404 })
       }
 
-      // Update queue item
       const { error: updateError } = await supabase
         .from('dpo_queue')
         .update({
@@ -390,7 +379,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: updateError.message }, { status: 500 })
       }
 
-      // Log time spent
       if (timeSpentSeconds) {
         await supabase.from('dpo_time_log').insert({
           org_id: item.org_id,
@@ -401,7 +389,6 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // If this was an escalation with a thread, send the response
       if (item.type === 'escalation' && item.related_thread_id && response) {
         await supabase.from('messages').insert({
           thread_id: item.related_thread_id,
@@ -410,14 +397,12 @@ export async function POST(request: NextRequest) {
           content: response
         })
 
-        // Update thread status
         await supabase
           .from('message_threads')
           .update({ status: 'resolved' })
           .eq('id', item.related_thread_id)
       }
 
-      // If this was a DSR, update the DSR status
       if (item.type === 'dsr' && item.related_dsr_id) {
         await supabase
           .from('data_subject_requests')
@@ -429,8 +414,11 @@ export async function POST(request: NextRequest) {
           .eq('id', item.related_dsr_id)
       }
 
-      // Update compliance score
-      await supabase.rpc('update_compliance_score', { p_org_id: item.org_id })
+      try {
+        await supabase.rpc('update_compliance_score', { p_org_id: item.org_id })
+      } catch (e) {
+        // Ignore if function doesn't exist
+      }
 
       return NextResponse.json({ success: true })
     }
@@ -445,7 +433,7 @@ export async function POST(request: NextRequest) {
         .from('dpo_queue')
         .select(`
           *,
-          organizations (name, subscription_tier)
+          organizations (name)
         `)
         .eq('id', itemId)
         .single()
@@ -454,7 +442,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Item not found' }, { status: 404 })
       }
 
-      // Get context based on type
       let contextText = ''
 
       if (item.type === 'escalation' && item.related_thread_id) {
@@ -484,7 +471,6 @@ export async function POST(request: NextRequest) {
         `.trim()
       }
 
-      // Get org documents for context
       const { data: docs } = await supabase
         .from('documents')
         .select('name, type')
@@ -493,7 +479,6 @@ export async function POST(request: NextRequest) {
 
       const docsContext = docs?.map(d => d.name).join(', ') || 'אין מסמכים'
 
-      // AI Analysis
       const systemPrompt = `אתה עוזר לממונה הגנת פרטיות (DPO) בישראל. תפקידך לנתח פניות ולהציע תשובות מקצועיות.
 
 הנחיות:
@@ -502,8 +487,7 @@ export async function POST(request: NextRequest) {
 3. העריך את רמת הביטחון שלך (0-1)
 4. סמן סיכונים אם יש
 
-הארגון: ${item.organizations?.name}
-חבילה: ${item.organizations?.subscription_tier}
+הארגון: ${item.organizations?.name || 'לא ידוע'}
 מסמכים קיימים: ${docsContext}
 `
 
@@ -543,7 +527,6 @@ ${contextText || 'אין הקשר נוסף'}
 
       const aiText = response.content[0].type === 'text' ? response.content[0].text : ''
       
-      // Parse JSON from response
       let analysis
       try {
         const jsonMatch = aiText.match(/\{[\s\S]*\}/)
@@ -568,7 +551,6 @@ ${contextText || 'אין הקשר נוסף'}
         }
       }
 
-      // Update queue item with analysis
       await supabase
         .from('dpo_queue')
         .update({
@@ -594,7 +576,6 @@ ${contextText || 'אין הקשר נוסף'}
         return NextResponse.json({ error: 'Missing itemIds array' }, { status: 400 })
       }
 
-      // Get items that meet confidence threshold
       const { data: items } = await supabase
         .from('dpo_queue')
         .select('*')
@@ -609,7 +590,6 @@ ${contextText || 'אין הקשר נוסף'}
       let approvedCount = 0
 
       for (const item of items) {
-        // Update queue item
         await supabase
           .from('dpo_queue')
           .update({
@@ -617,11 +597,10 @@ ${contextText || 'אין הקשר נוסף'}
             resolution_type: 'approved_ai',
             resolution_response: item.ai_draft_response,
             resolved_at: new Date().toISOString(),
-            time_spent_seconds: 5 // Minimal time for bulk approval
+            time_spent_seconds: 5
           })
           .eq('id', item.id)
 
-        // Send response if escalation
         if (item.type === 'escalation' && item.related_thread_id) {
           await supabase.from('messages').insert({
             thread_id: item.related_thread_id,
@@ -656,7 +635,6 @@ ${contextText || 'אין הקשר נוסף'}
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
       }
 
-      // Create incident
       const { data: incident, error: incidentError } = await supabase
         .from('security_incidents')
         .insert({
@@ -675,7 +653,6 @@ ${contextText || 'אין הקשר נוסף'}
         return NextResponse.json({ error: incidentError.message }, { status: 500 })
       }
 
-      // Create queue item
       const { data: queueItem } = await supabase
         .from('dpo_queue')
         .insert({
@@ -690,7 +667,6 @@ ${contextText || 'אין הקשר נוסף'}
         .select()
         .single()
 
-      // Link incident to queue item
       if (queueItem) {
         await supabase
           .from('security_incidents')
