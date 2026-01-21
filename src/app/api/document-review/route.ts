@@ -36,10 +36,9 @@ const REVIEW_SYSTEM_PROMPT = `אתה מומחה משפטי ישראלי בתחו
 }`
 
 async function callAnthropicAPI(content: string, reviewType: string) {
-  // Hardcoded temporarily - move to env var later
-  const apiKey = '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'
+  const apiKey = process.env.ANTHROPIC_API_KEY
   
-  console.log('Using hardcoded API key')
+  console.log('Using API key from environment:', apiKey ? 'Found' : 'NOT FOUND')
   
   if (!apiKey) {
     console.error('API key is empty')
