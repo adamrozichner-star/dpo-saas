@@ -12,7 +12,9 @@ import {
   Loader2,
   CreditCard,
   CheckCircle2,
-  X
+  X,
+  Building2,
+  Phone
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
@@ -25,16 +27,18 @@ const plans = [
     features: [
       'DPO ממונה מוסמך',
       'מערכת ניהול פרטיות מלאה',
-      '3 מסמכים מותאמים',
-      'בוט שאלות ותשובות',
+      'מסמכים מותאמים אוטומטית',
+      'בוט שאלות ותשובות AI',
       'תמיכה בדוא"ל',
+      'זמן תגובה: 72 שעות',
     ],
     notIncluded: [
       'סקירה תקופתית',
       'זמינות DPO מורחבת',
       'ליווי אירועי אבטחה',
     ],
-    popular: false
+    popular: false,
+    cta: 'בחירת חבילה'
   },
   {
     id: 'extended',
@@ -44,13 +48,35 @@ const plans = [
     features: [
       'כל מה שבחבילה הבסיסית',
       'סקירה תקופתית רבעונית',
-      'זמינות DPO עד 2 שעות/חודש',
+      'זמינות DPO עד 30 דק׳/חודש',
       'ליווי אירועי אבטחה',
       'תמיכה טלפונית',
-      'DPIA בסיסי כלול',
+      'זמן תגובה: 24 שעות',
+      'עד 3 משתמשים',
     ],
     notIncluded: [],
-    popular: true
+    popular: true,
+    cta: 'בחירת חבילה'
+  },
+  {
+    id: 'enterprise',
+    name: 'ארגונית',
+    price: 3500,
+    description: 'לארגונים גדולים עם דרישות מורכבות',
+    features: [
+      'כל מה שבחבילה המורחבת',
+      'זמינות DPO עד 2 שעות/חודש',
+      'זמן תגובה: 4 שעות',
+      'סקירה תקופתית חודשית',
+      'הדרכת עובדים (רבעונית)',
+      'DPIA מלא כלול',
+      'משתמשים ללא הגבלה',
+      'SLA מובטח',
+      'מנהל לקוח ייעודי',
+    ],
+    notIncluded: [],
+    popular: false,
+    cta: 'צרו קשר'
   }
 ]
 
@@ -64,6 +90,7 @@ function SubscribeContent() {
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [organization, setOrganization] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false)
 
   useEffect(() => {
     if (!loading && !user) {
@@ -75,7 +102,6 @@ function SubscribeContent() {
       loadOrganization()
     }
 
-    // Check for success callback
     const payment = searchParams.get('payment')
     if (payment === 'success') {
       setPaymentSuccess(true)
@@ -103,6 +129,11 @@ function SubscribeContent() {
   }
 
   const handleSelectPlan = async (planId: string) => {
+    if (planId === 'enterprise') {
+      setShowEnterpriseModal(true)
+      return
+    }
+
     setSelectedPlan(planId)
     setError(null)
     setIsProcessing(true)
@@ -181,22 +212,28 @@ function SubscribeContent() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto items-stretch">
+        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto items-stretch">
           {plans.map((plan) => (
             <Card 
               key={plan.id}
-              className={`relative flex flex-col ${plan.popular ? 'border-primary border-2' : ''}`}
+              className={`relative flex flex-col ${plan.popular ? 'border-primary border-2 shadow-lg' : ''} ${plan.id === 'enterprise' ? 'bg-gradient-to-b from-slate-50 to-slate-100' : ''}`}
             >
               {plan.popular && (
                 <Badge className="absolute -top-3 right-4 bg-primary">
                   הכי פופולרי
                 </Badge>
               )}
+              {plan.id === 'enterprise' && (
+                <Badge className="absolute -top-3 right-4 bg-slate-800">
+                  <Building2 className="h-3 w-3 ml-1" />
+                  לארגונים
+                </Badge>
+              )}
               <CardHeader>
                 <CardTitle className="text-2xl">{plan.name}</CardTitle>
                 <CardDescription>{plan.description}</CardDescription>
                 <div className="mt-4">
-                  <span className="text-4xl font-bold">₪{plan.price}</span>
+                  <span className="text-4xl font-bold">₪{plan.price.toLocaleString()}</span>
                   <span className="text-gray-500"> / חודש</span>
                 </div>
               </CardHeader>
@@ -205,28 +242,30 @@ function SubscribeContent() {
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-center gap-2">
                       <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                      <span>{feature}</span>
+                      <span className="text-sm">{feature}</span>
                     </li>
                   ))}
                   {plan.notIncluded.map((feature, i) => (
                     <li key={i} className="flex items-center gap-2 text-gray-400">
                       <X className="h-5 w-5 flex-shrink-0" />
-                      <span>{feature}</span>
+                      <span className="text-sm">{feature}</span>
                     </li>
                   ))}
                 </ul>
                 <Button 
-                  className="w-full mt-auto"
-                  variant={plan.popular ? 'default' : 'outline'}
+                  className={`w-full mt-auto ${plan.id === 'enterprise' ? 'bg-slate-800 hover:bg-slate-900' : ''}`}
+                  variant={plan.popular ? 'default' : plan.id === 'enterprise' ? 'default' : 'outline'}
                   onClick={() => handleSelectPlan(plan.id)}
-                  disabled={isProcessing}
+                  disabled={isProcessing && selectedPlan !== 'enterprise'}
                 >
                   {isProcessing && selectedPlan === plan.id ? (
                     <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                  ) : plan.id === 'enterprise' ? (
+                    <Phone className="h-4 w-4 ml-2" />
                   ) : (
                     <CreditCard className="h-4 w-4 ml-2" />
                   )}
-                  {isProcessing && selectedPlan === plan.id ? 'מעבד...' : 'בחירת חבילה'}
+                  {isProcessing && selectedPlan === plan.id ? 'מעבד...' : plan.cta}
                 </Button>
               </CardContent>
             </Card>
@@ -243,7 +282,133 @@ function SubscribeContent() {
           <p>🔒 תשלום מאובטח באמצעות Tranzila</p>
           <p>ניתן לבטל בכל עת • ללא התחייבות</p>
         </div>
+
+        {/* Comparison Table */}
+        <div className="mt-16 max-w-4xl mx-auto">
+          <h2 className="text-2xl font-bold text-center mb-8">השוואת חבילות</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="border-b-2">
+                  <th className="text-right p-4">תכונה</th>
+                  <th className="text-center p-4">בסיסית</th>
+                  <th className="text-center p-4 bg-primary/5">מורחבת</th>
+                  <th className="text-center p-4 bg-slate-100">ארגונית</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="p-4">מחיר חודשי</td>
+                  <td className="text-center p-4">₪500</td>
+                  <td className="text-center p-4 bg-primary/5 font-bold">₪1,200</td>
+                  <td className="text-center p-4 bg-slate-100">₪3,500</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-4">DPO ממונה</td>
+                  <td className="text-center p-4"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                  <td className="text-center p-4 bg-primary/5"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                  <td className="text-center p-4 bg-slate-100"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-4">מסמכים אוטומטיים</td>
+                  <td className="text-center p-4"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                  <td className="text-center p-4 bg-primary/5"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                  <td className="text-center p-4 bg-slate-100"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-4">זמן DPO</td>
+                  <td className="text-center p-4">חריגים בלבד</td>
+                  <td className="text-center p-4 bg-primary/5">30 דק׳/חודש</td>
+                  <td className="text-center p-4 bg-slate-100">2 שעות/חודש</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-4">זמן תגובה</td>
+                  <td className="text-center p-4">72 שעות</td>
+                  <td className="text-center p-4 bg-primary/5">24 שעות</td>
+                  <td className="text-center p-4 bg-slate-100">4 שעות</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-4">סקירה תקופתית</td>
+                  <td className="text-center p-4"><X className="h-5 w-5 text-gray-300 mx-auto" /></td>
+                  <td className="text-center p-4 bg-primary/5">רבעונית</td>
+                  <td className="text-center p-4 bg-slate-100">חודשית</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-4">משתמשים</td>
+                  <td className="text-center p-4">1</td>
+                  <td className="text-center p-4 bg-primary/5">3</td>
+                  <td className="text-center p-4 bg-slate-100">ללא הגבלה</td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-4">הדרכת עובדים</td>
+                  <td className="text-center p-4"><X className="h-5 w-5 text-gray-300 mx-auto" /></td>
+                  <td className="text-center p-4 bg-primary/5"><X className="h-5 w-5 text-gray-300 mx-auto" /></td>
+                  <td className="text-center p-4 bg-slate-100"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                </tr>
+                <tr className="border-b">
+                  <td className="p-4">SLA מובטח</td>
+                  <td className="text-center p-4"><X className="h-5 w-5 text-gray-300 mx-auto" /></td>
+                  <td className="text-center p-4 bg-primary/5"><X className="h-5 w-5 text-gray-300 mx-auto" /></td>
+                  <td className="text-center p-4 bg-slate-100"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </main>
+
+      {/* Enterprise Contact Modal */}
+      {showEnterpriseModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5" />
+                  חבילה ארגונית
+                </CardTitle>
+                <Button variant="ghost" size="icon" onClick={() => setShowEnterpriseModal(false)}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <CardDescription>
+                צרו קשר לקבלת הצעה מותאמת לארגון שלכם
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-slate-50 rounded-lg p-4 space-y-2">
+                <p className="font-medium">החבילה הארגונית כוללת:</p>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>• 2 שעות זמן DPO בחודש</li>
+                  <li>• זמן תגובה של 4 שעות</li>
+                  <li>• סקירה חודשית</li>
+                  <li>• הדרכות לעובדים</li>
+                  <li>• SLA מובטח</li>
+                  <li>• מנהל לקוח ייעודי</li>
+                </ul>
+              </div>
+              
+              <div className="space-y-3">
+                <a href="mailto:enterprise@dpo-pro.co.il?subject=בקשה לחבילה ארגונית" className="block">
+                  <Button className="w-full">
+                    📧 שלחו מייל
+                  </Button>
+                </a>
+                <a href="tel:+972-XXX-XXXXXX" className="block">
+                  <Button variant="outline" className="w-full">
+                    <Phone className="h-4 w-4 ml-2" />
+                    התקשרו אלינו
+                  </Button>
+                </a>
+              </div>
+
+              <p className="text-xs text-gray-500 text-center">
+                נחזור אליכם תוך יום עסקים אחד
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }
