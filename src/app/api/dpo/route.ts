@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
     // =========================================
     // Get Queue Items
     // =========================================
-    if (action === 'queue') {
+   if (action === 'queue') {
       const status = searchParams.get('status') || 'pending'
       const priority = searchParams.get('priority')
       const type = searchParams.get('type')
@@ -95,8 +95,7 @@ export async function GET(request: NextRequest) {
           *,
           organizations (
             id,
-            name,
-            subscription_tier
+            name
           )
         `)
         .eq('status', status)
