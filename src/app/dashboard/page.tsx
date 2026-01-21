@@ -1416,8 +1416,14 @@ function DocumentReviewTab({ orgId, reviews, setReviews }: { orgId: string, revi
                   {/* AI Summary Preview */}
                   {review.ai_review_summary && (
                     <p className="text-sm text-gray-600 mt-2 mr-13">
-                      {review.ai_review_summary.substring(0, 150)}...
-                    </p>
+{(() => {
+  let summary = review.ai_review_summary || '';
+  if (summary.includes('"summary"') || summary.startsWith('{')) {
+    const match = summary.match(/"summary"\s*:\s*"([^"]+)"/);
+    summary = match ? match[1] : summary.replace(/[{}":\[\]]/g, ' ').trim();
+  }
+  return summary.substring(0, 150);
+})()}...                    </p>
                   )}
                 </div>
               ))}
@@ -1453,8 +1459,23 @@ function DocumentReviewTab({ orgId, reviews, setReviews }: { orgId: string, revi
               {selectedReview.ai_review_summary && (
                 <div>
                   <h4 className="font-medium mb-2">סיכום AI:</h4>
-                  <p className="text-gray-700 bg-blue-50 p-3 rounded-lg">{selectedReview.ai_review_summary}</p>
-                </div>
+<p className="text-gray-700 bg-blue-50 p-3 rounded-lg">
+  {(() => {
+    let summary = selectedReview.ai_review_summary || '';
+    // Clean up any JSON artifacts that might be in old records
+    if (summary.includes('"summary"') || summary.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(summary);
+        return parsed.summary || summary;
+      } catch {
+        // Extract summary from partial JSON
+        const match = summary.match(/"summary"\s*:\s*"([^"]+)"/);
+        return match ? match[1] : summary.replace(/[{}":\[\]]/g, ' ').trim();
+      }
+    }
+    return summary;
+  })()}
+</p>                </div>
               )}
 
               {/* Issues */}
