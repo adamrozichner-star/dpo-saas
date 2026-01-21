@@ -132,10 +132,30 @@ export async function POST(request: NextRequest) {
       // Perform AI review if we have content and API key
       let aiReview = null
       const apiKey = process.env.ANTHROPIC_API_KEY
-      console.log('API Key exists:', !!apiKey)
-      console.log('File content length:', fileContent?.length || 0)
       
-      if (fileContent && fileContent.length > 10 && !fileContent.startsWith('[') && apiKey) {
+      // Debug logging
+      console.log('=== AI REVIEW DEBUG ===')
+      console.log('API Key exists:', !!apiKey)
+      console.log('API Key first 10 chars:', apiKey ? apiKey.substring(0, 10) + '...' : 'NONE')
+      console.log('File content exists:', !!fileContent)
+      console.log('File content length:', fileContent?.length || 0)
+      console.log('Starts with [:', fileContent?.startsWith('['))
+      console.log('Should run AI:', !!(fileContent && fileContent.length > 10 && !fileContent.startsWith('[') && apiKey))
+      console.log('=== END DEBUG ===')
+      
+      if (!apiKey) {
+        console.error('ANTHROPIC_API_KEY is not set!')
+        // Update status to show API key missing
+        await supabase
+          .from('document_reviews')
+          .update({
+            ai_review_status: 'failed',
+            ai_review_summary: 'שגיאת הגדרה: מפתח API חסר',
+            status: 'ai_reviewed',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', reviewRecord.id)
+      } else if (fileContent && fileContent.length > 10 && !fileContent.startsWith('[')) {
         try {
           console.log('Starting AI review for:', file.name)
           const anthropic = new Anthropic({ apiKey })
