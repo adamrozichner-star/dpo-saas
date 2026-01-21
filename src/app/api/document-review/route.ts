@@ -17,22 +17,10 @@ const REVIEW_SYSTEM_PROMPT = `אתה מומחה משפטי ישראלי בתחו
 5. תקופות שמירת מידע
 6. מינוי ממונה הגנת פרטיות (אם רלוונטי)
 
-החזר תשובה בפורמט JSON בלבד (ללא markdown):
-{
-"summary": "סיכום המסמך ומטרתו - כולל פירוט סוג המסמך, מטרתו העיקרית, והנושאים המרכזיים שהוא מכסה",  "risk_score": 0-100 (0=תקין, 100=בעייתי מאוד),
-  "issues": [
-    {
-      "severity": "high/medium/low",
-      "issue": "תיאור הבעיה",
-      "location": "איפה במסמך (אם ידוע)",
-      "suggestion": "הצעה לתיקון"
-    }
-  ],
-  "positive_points": ["נקודות חיוביות במסמך"],
-  "recommendation": "המלצה כללית - האם לאשר, לתקן, או לדחות",
-  "requires_dpo_review": true/false,
-  "dpo_review_reason": "סיבה להמלצה על בדיקת DPO אנושי (אם רלוונטי)"
-}`
+החזר תשובה בפורמט JSON תקין בלבד. אל תוסיף טקסט לפני או אחרי ה-JSON. אל תשתמש ב-markdown.
+
+הפורמט הנדרש:
+{"summary": "סיכום המסמך", "risk_score": 50, "issues": [{"severity": "high", "issue": "תיאור", "location": "מיקום", "suggestion": "הצעה"}], "positive_points": ["נקודה חיובית"], "recommendation": "המלצה", "requires_dpo_review": false, "dpo_review_reason": ""}`
 
 async function callAnthropicAPI(content: string, reviewType: string) {
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -44,7 +32,7 @@ async function callAnthropicAPI(content: string, reviewType: string) {
     return null
   }
 
-  const reviewPrompt = `סקור את המסמך הבא וזהה בעיות פרטיות:
+  const reviewPrompt = `סקור את המסמך הבא וזהה בעיות פרטיות. החזר JSON תקין בלבד.
 
 סוג המסמך: ${reviewType}
 
@@ -84,23 +72,74 @@ ${content.length > 30000 ? '... [המסמך קוצר]' : ''}`
     const responseText = data.content?.[0]?.text || ''
     
     console.log('Got AI response, length:', responseText.length)
+    console.log('Raw response preview:', responseText.substring(0, 500))
     
-    // Parse JSON response
+    // Parse JSON response with robust error handling
     try {
-      const cleanedResponse = responseText
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '')
+      let cleanedResponse = responseText
+        .replace(/```json\s*/gi, '')
+        .replace(/```\s*/g, '')
+        .replace(/\/\/.*$/gm, '')  // Remove single-line comments
+        .replace(/\/\*[\s\S]*?\*\//g, '')  // Remove multi-line comments
+        .replace(/,\s*}/g, '}')  // Remove trailing commas before }
+        .replace(/,\s*]/g, ']')  // Remove trailing commas before ]
         .trim()
       
-      return JSON.parse(cleanedResponse)
+      // Try to find JSON object in the response
+      const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        cleanedResponse = jsonMatch[0]
+      }
+      
+      const parsed = JSON.parse(cleanedResponse)
+      console.log('Parsed successfully, keys:', Object.keys(parsed))
+      console.log('Issues count:', parsed.issues?.length || 0)
+      return parsed
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError)
+      console.log('Raw response that failed to parse:', responseText.substring(0, 1000))
+      
+      // Fallback: Extract fields manually using regex
+      let summary = ''
+      let riskScore = 50
+      let issues: any[] = []
+      
+      // Extract summary
+      const summaryMatch = responseText.match(/"summary"\s*:\s*"([^"]+)"/)
+      if (summaryMatch) summary = summaryMatch[1]
+      
+      // Extract risk score
+      const scoreMatch = responseText.match(/"risk_score"\s*:\s*(\d+)/)
+      if (scoreMatch) riskScore = parseInt(scoreMatch[1], 10)
+      
+      // Try to extract individual issues
+      const issueMatches = responseText.matchAll(/"issue"\s*:\s*"([^"]+)"/g)
+      const severityMatches = responseText.matchAll(/"severity"\s*:\s*"([^"]+)"/g)
+      const suggestionMatches = responseText.matchAll(/"suggestion"\s*:\s*"([^"]+)"/g)
+      
+      const issueTexts = Array.from(issueMatches).map(m => m[1])
+      const severities = Array.from(severityMatches).map(m => m[1])
+      const suggestions = Array.from(suggestionMatches).map(m => m[1])
+      
+      for (let i = 0; i < issueTexts.length; i++) {
+        issues.push({
+          severity: severities[i] || 'medium',
+          issue: issueTexts[i],
+          suggestion: suggestions[i] || ''
+        })
+      }
+      
+      console.log('Fallback extraction - Summary:', summary.substring(0, 100))
+      console.log('Fallback extraction - Issues found:', issues.length)
+      
       return {
-        summary: responseText.substring(0, 500),
-        risk_score: 50,
-        issues: [],
-        recommendation: 'לא ניתן לנתח את התגובה',
-        requires_dpo_review: true
+        summary: summary || 'לא ניתן לנתח את המסמך',
+        risk_score: riskScore,
+        issues: issues,
+        positive_points: [],
+        recommendation: 'מומלץ לבקש בדיקת DPO',
+        requires_dpo_review: true,
+        dpo_review_reason: 'שגיאה בניתוח אוטומטי'
       }
     }
   } catch (error: any) {
@@ -205,12 +244,13 @@ export async function POST(request: NextRequest) {
         
         aiReview = await callAnthropicAPI(fileContent, reviewType)
         
-       if (aiReview) {
-  console.log('AI review completed successfully')
-  console.log('Summary:', aiReview.summary)
-  console.log('Issues:', JSON.stringify(aiReview.issues))
-  console.log('Risk score:', aiReview.risk_score)
-  await supabase
+        if (aiReview) {
+          console.log('AI review completed successfully')
+          console.log('Summary:', aiReview.summary)
+          console.log('Issues:', JSON.stringify(aiReview.issues))
+          console.log('Risk score:', aiReview.risk_score)
+          
+          await supabase
             .from('document_reviews')
             .update({
               ai_review_status: 'completed',
