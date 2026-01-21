@@ -1327,16 +1327,7 @@ function QATab({ qaHistory, question, setQuestion, onAsk, isAsking, orgId, onEsc
   )
 }
 
-      const data = await response.json()
-      if (data.success) {
-        setUploadResult(data.aiReview)
-      }
-    } catch (err) {
-      console.error('Upload error:', err)
-    } finally {
-      setIsUploading(false)
-    }
-  }
+    
 
   return (
     <div className="space-y-6">
