@@ -1435,8 +1435,8 @@ function DocumentReviewTab({ orgId, reviews, setReviews }: { orgId: string, revi
       {/* Review Detail Modal */}
       {selectedReview && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <CardHeader className="border-b">
+<Card className="w-full max-w-2xl max-h-[90vh] flex flex-col">
+  <CardHeader className="border-b">
               <div className="flex items-center justify-between">
                 <CardTitle>{selectedReview.original_filename}</CardTitle>
                 <Button variant="ghost" size="icon" onClick={() => setSelectedReview(null)}>
