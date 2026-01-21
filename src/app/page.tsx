@@ -253,7 +253,7 @@ export default function HomePage() {
                   <PricingFeature>משתמשים ללא הגבלה</PricingFeature>
                   <PricingFeature>SLA מובטח</PricingFeature>
                 </ul>
-                <Link href="/subscribe" className="block mt-6">
+                <Link href="/onboarding?tier=enterprise" className="block mt-6">
                   <Button className="w-full bg-slate-800 hover:bg-slate-900" size="lg">צרו קשר</Button>
                 </Link>
               </CardContent>
