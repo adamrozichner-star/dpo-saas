@@ -136,18 +136,21 @@ export async function POST(request: NextRequest) {
 
         // Update with metadata separately if supported
         if (thread) {
-          await supabase
-            .from('message_threads')
-            .update({
-              metadata: {
-                source: 'qa_escalation',
-                qa_id: qaId,
-                original_question: originalQuestion,
-                ai_answer: aiAnswer
-              }
-            })
-            .eq('id', thread.id)
-            .catch(() => {}) // Ignore if metadata column doesn't exist
+          try {
+            await supabase
+              .from('message_threads')
+              .update({
+                metadata: {
+                  source: 'qa_escalation',
+                  qa_id: qaId,
+                  original_question: originalQuestion,
+                  ai_answer: aiAnswer
+                }
+              })
+              .eq('id', thread.id)
+          } catch (e) {
+            // Ignore if metadata column doesn't exist
+          }
         }
 
         // Create formatted message content
@@ -183,40 +186,49 @@ ${additionalMessage}` : ''}
 
         // Mark original Q&A as escalated
         if (qaId) {
-          await supabase
-            .from('qa_interactions')
-            .update({ 
-              escalated: true,
-              escalation_thread_id: thread.id 
-            })
-            .eq('id', qaId)
-            .catch(() => {}) // Ignore if column doesn't exist
+          try {
+            await supabase
+              .from('qa_interactions')
+              .update({ 
+                escalated: true,
+                escalation_thread_id: thread.id 
+              })
+              .eq('id', qaId)
+          } catch (e) {
+            // Ignore if column doesn't exist
+          }
         }
 
         // Create notification for DPO (ignore errors)
-        await supabase.from('notifications').insert({
-          org_id: orgId,
-          type: 'escalation',
-          title: '⚠️ פנייה דחופה מלקוח',
-          body: `לקוח ביקש תשובה אנושית: ${originalQuestion.substring(0, 100)}`,
-          link: `/dpo/messages/${thread.id}`,
-          priority: 'high'
-        }).catch(() => {})
+        try {
+          await supabase.from('notifications').insert({
+            org_id: orgId,
+            type: 'escalation',
+            title: '⚠️ פנייה דחופה מלקוח',
+            body: `לקוח ביקש תשובה אנושית: ${originalQuestion.substring(0, 100)}`,
+            link: `/dpo/messages/${thread.id}`,
+            priority: 'high'
+          })
+        } catch (e) {
+          // Ignore - notifications table might not exist
+        }
 
         // Also create escalation record
-        await supabase.from('escalations').insert({
-          org_id: orgId,
-          thread_id: thread.id,
-          qa_id: qaId,
-          reason: 'customer_request',
-          original_question: originalQuestion,
-          ai_answer: aiAnswer,
-          customer_notes: additionalMessage,
-          status: 'pending'
-        }).catch(err => {
+        try {
+          await supabase.from('escalations').insert({
+            org_id: orgId,
+            thread_id: thread.id,
+            qa_id: qaId,
+            reason: 'customer_request',
+            original_question: originalQuestion,
+            ai_answer: aiAnswer,
+            customer_notes: additionalMessage,
+            status: 'pending'
+          })
+        } catch (err: any) {
           // Escalations table might not exist, that's ok
           console.log('Note: Could not create escalation record:', err.message)
-        })
+        }
 
         // Trigger auto-analysis for the newly created queue item
         // The database trigger creates the dpo_queue item, so we find it and analyze
