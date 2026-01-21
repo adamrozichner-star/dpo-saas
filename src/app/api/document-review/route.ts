@@ -37,7 +37,7 @@ const REVIEW_SYSTEM_PROMPT = `אתה מומחה משפטי ישראלי בתחו
 
 async function callAnthropicAPI(content: string, reviewType: string) {
   // Hardcoded temporarily - move to env var later
-  const apiKey = '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'
+  const apiKey = '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'
   
   console.log('Using hardcoded API key')
   
