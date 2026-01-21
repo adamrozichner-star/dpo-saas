@@ -24,7 +24,9 @@ import {
   Sparkles,
   HelpCircle,
   Phone,
-  Mail
+  Mail,
+  Crown,
+  X
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { onboardingSteps } from '@/lib/mock-data'
@@ -59,8 +61,9 @@ function OnboardingContent() {
   
   const [currentStep, setCurrentStep] = useState(0)
   const [answers, setAnswers] = useState<OnboardingAnswer[]>([])
-  const [selectedTier, setSelectedTier] = useState<'basic' | 'extended' | null>(null)
+  const [selectedTier, setSelectedTier] = useState<'basic' | 'extended' | 'enterprise' | null>(null)
   const [showTierSelection, setShowTierSelection] = useState(true)
+  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string>('')
@@ -78,9 +81,13 @@ function OnboardingContent() {
 
   useEffect(() => {
     const tier = searchParams.get('tier')
-    if (tier === 'basic' || tier === 'extended') {
+    if (tier === 'basic' || tier === 'extended' || tier === 'enterprise') {
       setSelectedTier(tier)
-      setShowTierSelection(false)
+      if (tier === 'enterprise') {
+        setShowEnterpriseModal(true)
+      } else {
+        setShowTierSelection(false)
+      }
     }
   }, [searchParams])
 
@@ -250,6 +257,11 @@ function OnboardingContent() {
     }
   }
 
+  const handleEnterpriseSelect = () => {
+    setSelectedTier('enterprise')
+    setShowEnterpriseModal(true)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -295,10 +307,107 @@ function OnboardingContent() {
     )
   }
 
+  // Enterprise Contact Modal
+  if (showEnterpriseModal) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
+        <Card className="w-full max-w-lg">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 bg-slate-100 rounded-full p-4 w-fit">
+              <Crown className="h-10 w-10 text-slate-700" />
+            </div>
+            <Badge className="mx-auto mb-2 bg-slate-600">לארגונים</Badge>
+            <CardTitle className="text-2xl">חבילה ארגונית</CardTitle>
+            <CardDescription>
+              פתרון מותאם אישית לארגונים גדולים
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-slate-50 rounded-lg p-4">
+              <h4 className="font-semibold mb-3">החבילה כוללת:</h4>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  2 שעות זמן DPO בחודש
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  זמן תגובה עד 4 שעות
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  סקירת תאימות חודשית
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  הדרכות לעובדים (רבעוני)
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  DPIA מלא כלול
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  משתמשים ללא הגבלה
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  SLA מובטח
+                </li>
+              </ul>
+            </div>
+
+            <div className="text-center">
+              <p className="text-3xl font-bold mb-1">₪3,500</p>
+              <p className="text-gray-600">לחודש</p>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-center text-gray-600">צרו קשר לתיאום פגישת היכרות:</p>
+              
+              <Button 
+                className="w-full h-12 bg-slate-700 hover:bg-slate-800"
+                onClick={() => window.location.href = 'mailto:enterprise@dpo-pro.co.il?subject=בקשת מידע - חבילה ארגונית'}
+              >
+                <Mail className="h-5 w-5 ml-2" />
+                enterprise@dpo-pro.co.il
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="w-full h-12"
+                onClick={() => window.location.href = 'tel:+972-3-555-1234'}
+              >
+                <Phone className="h-5 w-5 ml-2" />
+                03-555-1234
+              </Button>
+            </div>
+
+            <p className="text-center text-sm text-gray-500">
+              נחזור אליכם תוך יום עסקים אחד
+            </p>
+
+            <Button 
+              variant="ghost" 
+              className="w-full"
+              onClick={() => {
+                setShowEnterpriseModal(false)
+                setSelectedTier(null)
+              }}
+            >
+              <ArrowRight className="h-4 w-4 ml-2" />
+              חזרה לבחירת חבילות
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   if (showTierSelection) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <Link href="/" className="inline-flex items-center gap-2 mb-8 text-gray-600 hover:text-gray-900">
             <ArrowRight className="h-4 w-4" />
             חזרה לדף הבית
@@ -313,7 +422,8 @@ function OnboardingContent() {
             <p className="text-gray-600">התחילו עם 14 ימי ניסיון חינם</p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Basic Package */}
             <Card 
               className={`cursor-pointer transition-all hover:shadow-lg ${selectedTier === 'basic' ? 'ring-2 ring-primary' : ''}`}
               onClick={() => setSelectedTier('basic')}
@@ -329,31 +439,40 @@ function OnboardingContent() {
               <CardContent>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                     DPO ממונה מוסמך
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                     מערכת AI מלאה
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                     הפקת מסמכים אוטומטית
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                     Q&A חכם לעובדים
+                  </li>
+                  <li className="flex items-center gap-2 text-gray-400">
+                    <X className="h-4 w-4 flex-shrink-0" />
+                    סקירה תקופתית
+                  </li>
+                  <li className="flex items-center gap-2 text-gray-400">
+                    <X className="h-4 w-4 flex-shrink-0" />
+                    ליווי DPIA
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
+            {/* Extended Package */}
             <Card 
-              className={`cursor-pointer transition-all hover:shadow-lg ${selectedTier === 'extended' ? 'ring-2 ring-primary' : ''}`}
+              className={`cursor-pointer transition-all hover:shadow-lg border-2 ${selectedTier === 'extended' ? 'ring-2 ring-primary border-primary' : 'border-primary/50'}`}
               onClick={() => setSelectedTier('extended')}
             >
               <CardHeader>
-                <Badge className="w-fit mb-2">מומלץ</Badge>
+                <Badge className="w-fit mb-2 bg-primary">הכי פופולרי</Badge>
                 <CardTitle>חבילה מורחבת</CardTitle>
                 <CardDescription>לעסקים עם פעילות מורכבת</CardDescription>
                 <div className="pt-2">
@@ -364,20 +483,75 @@ function OnboardingContent() {
               <CardContent>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                     כל מה שבחבילה הבסיסית
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    סקירה תקופתית
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    30 דקות זמן DPO בחודש
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    זמינות DPO מוגברת
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    סקירה רבעונית
                   </li>
                   <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    זמן תגובה 24 שעות
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
                     ליווי DPIA
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    עד 3 משתמשים
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            {/* Enterprise Package */}
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-lg bg-gradient-to-br from-slate-50 to-slate-100 ${selectedTier === 'enterprise' ? 'ring-2 ring-slate-500' : ''}`}
+              onClick={handleEnterpriseSelect}
+            >
+              <CardHeader>
+                <Badge className="w-fit mb-2 bg-slate-600">לארגונים</Badge>
+                <CardTitle className="flex items-center gap-2">
+                  <Crown className="h-5 w-5 text-slate-600" />
+                  חבילה ארגונית
+                </CardTitle>
+                <CardDescription>לארגונים עם דרישות מורכבות</CardDescription>
+                <div className="pt-2">
+                  <span className="text-3xl font-bold">₪3,500</span>
+                  <span className="text-gray-600"> / חודש</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    כל מה שבחבילה המורחבת
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    2 שעות זמן DPO בחודש
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    סקירה חודשית
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    זמן תגובה 4 שעות
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    הדרכות לעובדים
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    משתמשים ללא הגבלה + SLA
                   </li>
                 </ul>
               </CardContent>
@@ -387,13 +561,25 @@ function OnboardingContent() {
           <div className="text-center mt-8">
             <Button 
               size="lg" 
-              onClick={() => setShowTierSelection(false)}
+              onClick={() => {
+                if (selectedTier === 'enterprise') {
+                  setShowEnterpriseModal(true)
+                } else {
+                  setShowTierSelection(false)
+                }
+              }}
               disabled={!selectedTier}
+              className="h-14 px-8 text-lg"
             >
-              המשך להגדרת הארגון
-              <ArrowLeft className="mr-2 h-4 w-4" />
+              {selectedTier === 'enterprise' ? 'צרו קשר' : 'המשך להגדרת הארגון'}
+              <ArrowLeft className="mr-2 h-5 w-5" />
             </Button>
           </div>
+
+          {/* Comparison hint */}
+          <p className="text-center text-sm text-gray-500 mt-4">
+            לא בטוחים מה מתאים לכם? <Link href="/contact" className="text-primary hover:underline">דברו איתנו</Link>
+          </p>
         </div>
       </div>
     )
