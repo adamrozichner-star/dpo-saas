@@ -115,7 +115,14 @@ export async function POST(request: NextRequest) {
           org_id: orgId,
           subject: escalationSubject,
           priority: 'high',
-          status: 'open'
+          status: 'open',
+          thread_type: 'escalation',
+          metadata: {
+            source: 'qa_escalation',
+            qa_id: qaId,
+            original_question: originalQuestion,
+            ai_answer: aiAnswer
+          }
         })
         .select()
         .single()
@@ -177,22 +184,43 @@ ${additionalMessage}` : ''}
         priority: 'high'
       })
 
-      // Also create escalation record (optional - table might not exist)
-      try {
-        await supabase.from('escalations').insert({
-          org_id: orgId,
-          thread_id: thread.id,
-          qa_id: qaId,
-          reason: 'customer_request',
-          original_question: originalQuestion,
-          ai_answer: aiAnswer,
-          customer_notes: additionalMessage,
-          status: 'pending'
-        })
-      } catch (err) {
+      // Also create escalation record
+      await supabase.from('escalations').insert({
+        org_id: orgId,
+        thread_id: thread.id,
+        qa_id: qaId,
+        reason: 'customer_request',
+        original_question: originalQuestion,
+        ai_answer: aiAnswer,
+        customer_notes: additionalMessage,
+        status: 'pending'
+      }).catch(err => {
         // Escalations table might not exist, that's ok
-        console.log('Note: Could not create escalation record')
-      }
+        console.log('Note: Could not create escalation record:', err.message)
+      })
+
+      // Trigger auto-analysis for the newly created queue item
+      // The database trigger creates the dpo_queue item, so we find it and analyze
+      setTimeout(async () => {
+        try {
+          const { data: queueItem } = await supabase
+            .from('dpo_queue')
+            .select('id')
+            .eq('related_thread_id', thread.id)
+            .single()
+          
+          if (queueItem) {
+            // Fire and forget - call the DPO API to analyze
+            fetch(`${process.env.NEXT_PUBLIC_APP_URL || ''}/api/dpo`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'ai_analyze', itemId: queueItem.id })
+            }).catch(err => console.log('Auto-analyze trigger failed:', err))
+          }
+        } catch (e) {
+          console.log('Could not trigger auto-analysis:', e)
+        }
+      }, 1000) // Give the trigger time to create the queue item
 
       return NextResponse.json({ 
         success: true, 
