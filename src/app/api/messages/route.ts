@@ -115,14 +115,7 @@ export async function POST(request: NextRequest) {
           org_id: orgId,
           subject: escalationSubject,
           priority: 'high',
-          status: 'open',
-          thread_type: 'escalation',
-          metadata: {
-            source: 'qa_escalation',
-            qa_id: qaId,
-            original_question: originalQuestion,
-            ai_answer: aiAnswer
-          }
+          status: 'open'
         })
         .select()
         .single()
