@@ -117,9 +117,9 @@ ${content.length > 30000 ? '... [המסמך קוצר]' : ''}`
       const severityMatches = responseText.matchAll(/"severity"\s*:\s*"([^"]+)"/g)
       const suggestionMatches = responseText.matchAll(/"suggestion"\s*:\s*"([^"]+)"/g)
       
-      const issueTexts = Array.from(issueMatches).map(m => m[1])
-      const severities = Array.from(severityMatches).map(m => m[1])
-      const suggestions = Array.from(suggestionMatches).map(m => m[1])
+     const issueTexts = Array.from(issueMatches).map((m: RegExpMatchArray) => m[1])
+const severities = Array.from(severityMatches).map((m: RegExpMatchArray) => m[1])
+const suggestions = Array.from(suggestionMatches).map((m: RegExpMatchArray) => m[1])
       
       for (let i = 0; i < issueTexts.length; i++) {
         issues.push({
