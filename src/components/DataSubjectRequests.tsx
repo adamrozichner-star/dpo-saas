@@ -10,7 +10,8 @@ import {
   Eye, Edit, Trash2, Ban, 
   Clock, CheckCircle2, AlertTriangle, XCircle,
   ChevronDown, ChevronUp, Send, Loader2,
-  Calendar, User, Mail, FileText, X, Copy, ExternalLink
+  Calendar, User, Mail, FileText, X, Copy, ExternalLink,
+  LayoutGrid, List
 } from 'lucide-react'
 
 interface DataSubjectRequest {
@@ -110,6 +111,7 @@ export default function DataSubjectRequests({ orgId }: DataSubjectRequestsProps)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [filter, setFilter] = useState<string>('all')
   const [publicUrl, setPublicUrl] = useState('')
+  const [copySuccess, setCopySuccess] = useState(false)
 
   useEffect(() => {
     loadRequests()
@@ -179,6 +181,8 @@ export default function DataSubjectRequests({ orgId }: DataSubjectRequestsProps)
 
   const copyPublicUrl = () => {
     navigator.clipboard.writeText(publicUrl)
+    setCopySuccess(true)
+    setTimeout(() => setCopySuccess(false), 2000)
   }
 
   // Filter requests
@@ -216,13 +220,15 @@ export default function DataSubjectRequests({ orgId }: DataSubjectRequestsProps)
             size="sm"
             onClick={() => setViewMode('kanban')}
           >
-            Kanban
+            <LayoutGrid className="h-4 w-4 ml-1" />
+            לוח משימות
           </Button>
           <Button
             variant={viewMode === 'list' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setViewMode('list')}
           >
+            <List className="h-4 w-4 ml-1" />
             רשימה
           </Button>
         </div>
@@ -231,22 +237,27 @@ export default function DataSubjectRequests({ orgId }: DataSubjectRequestsProps)
       {/* Public Form Link */}
       <Card className="bg-blue-50 border-blue-200">
         <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <ExternalLink className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="font-medium text-blue-900">קישור לטופס ציבורי</p>
-                <p className="text-sm text-blue-700">שתפו קישור זה עם לקוחות להגשת בקשות</p>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-1">
+                <ExternalLink className="h-4 w-4 text-blue-600" />
+                <span className="font-medium text-blue-900">קישור לטופס ציבורי</span>
               </div>
+              <p className="text-sm text-blue-700">שתפו קישור זה עם לקוחות להגשת בקשות</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <Input 
                 value={publicUrl} 
                 readOnly 
-                className="w-64 text-sm bg-white"
+                className="bg-white text-sm font-mono"
               />
-              <Button variant="outline" size="icon" onClick={copyPublicUrl}>
-                <Copy className="h-4 w-4" />
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={copyPublicUrl}
+                className="shrink-0"
+              >
+                <Copy className={`h-4 w-4 ${copySuccess ? 'text-green-600' : ''}`} />
               </Button>
             </div>
           </div>
@@ -254,26 +265,22 @@ export default function DataSubjectRequests({ orgId }: DataSubjectRequestsProps)
       </Card>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {Object.entries(STATUS_CONFIG).map(([status, config]) => {
-          const Icon = config.icon
           const count = requests.filter(r => r.status === status).length
+          const Icon = config.icon
           return (
             <Card 
               key={status} 
-              className={`cursor-pointer transition-all ${filter === status ? 'ring-2 ring-primary' : ''}`}
+              className={`${config.bg} cursor-pointer hover:shadow-md transition-shadow`}
               onClick={() => setFilter(filter === status ? 'all' : status)}
             >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-lg ${config.bg} flex items-center justify-center`}>
-                    <Icon className={`h-5 w-5 text-${config.color}-600`} />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{count}</p>
-                    <p className="text-xs text-gray-500">{config.label}</p>
-                  </div>
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-2xl font-bold">{count}</p>
+                  <p className="text-sm text-gray-600">{config.label}</p>
                 </div>
+                <Icon className={`h-8 w-8 text-${config.color}-500 opacity-50`} />
               </CardContent>
             </Card>
           )
@@ -282,28 +289,32 @@ export default function DataSubjectRequests({ orgId }: DataSubjectRequestsProps)
 
       {/* Kanban View */}
       {viewMode === 'kanban' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Object.entries(groupedRequests).map(([status, items]) => {
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {Object.entries(groupedRequests).map(([status, statusRequests]) => {
             const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]
             const Icon = config.icon
             return (
-              <div key={status} className={`rounded-lg border ${config.bg} p-4`}>
+              <div key={status} className={`${config.bg} rounded-lg p-4`}>
                 <div className="flex items-center gap-2 mb-4">
                   <Icon className={`h-5 w-5 text-${config.color}-600`} />
                   <h3 className="font-semibold">{config.label}</h3>
-                  <Badge variant="secondary" className="mr-auto">{items.length}</Badge>
+                  <Badge variant="secondary" className="mr-auto">{statusRequests.length}</Badge>
                 </div>
                 <div className="space-y-3">
-                  {items.length === 0 && (
+                  {statusRequests.length === 0 ? (
                     <p className="text-sm text-gray-500 text-center py-4">אין בקשות</p>
+                  ) : (
+                    statusRequests.map(request => (
+                      <RequestCard 
+                        key={request.id} 
+                        request={request}
+                        onClick={() => {
+                          setSelectedRequest(request)
+                          setResponseText(request.response || '')
+                        }}
+                      />
+                    ))
                   )}
-                  {items.map((request) => (
-                    <RequestCard 
-                      key={request.id} 
-                      request={request} 
-                      onClick={() => setSelectedRequest(request)}
-                    />
-                  ))}
                 </div>
               </div>
             )
@@ -319,7 +330,7 @@ export default function DataSubjectRequests({ orgId }: DataSubjectRequestsProps)
               <table className="w-full">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="text-right p-4 font-medium">מספר בקשה</th>
+                    <th className="text-right p-4 font-medium">מספר</th>
                     <th className="text-right p-4 font-medium">סוג</th>
                     <th className="text-right p-4 font-medium">מגיש</th>
                     <th className="text-right p-4 font-medium">סטטוס</th>
@@ -327,38 +338,34 @@ export default function DataSubjectRequests({ orgId }: DataSubjectRequestsProps)
                     <th className="text-right p-4 font-medium">פעולות</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
-                  {filteredRequests.map((request) => {
+                <tbody>
+                  {filteredRequests.map(request => {
                     const typeConfig = REQUEST_TYPE_CONFIG[request.request_type]
                     const statusConfig = STATUS_CONFIG[request.status]
-                    const TypeIcon = typeConfig.icon
                     const daysLeft = getDaysUntilDeadline(request.deadline)
                     return (
-                      <tr key={request.id} className="hover:bg-gray-50">
+                      <tr key={request.id} className="border-b hover:bg-gray-50">
                         <td className="p-4 font-mono text-sm">{request.request_number}</td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <TypeIcon className="h-4 w-4" />
-                            {typeConfig.label}
-                          </div>
-                        </td>
+                        <td className="p-4">{typeConfig.label}</td>
                         <td className="p-4">{request.requester_name}</td>
                         <td className="p-4">
-                          <Badge variant={statusConfig.color as any}>
-                            {statusConfig.label}
-                          </Badge>
+                          <Badge className={statusConfig.bg}>{statusConfig.label}</Badge>
                         </td>
                         <td className="p-4">
                           <span className={`px-2 py-1 rounded text-sm ${getDeadlineColor(request.deadline)}`}>
-                            {daysLeft > 0 ? `${daysLeft} ימים` : 'עבר המועד!'}
+                            {daysLeft > 0 ? `${daysLeft} ימים` : 'עבר!'}
                           </span>
                         </td>
                         <td className="p-4">
                           <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => setSelectedRequest(request)}
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedRequest(request)
+                              setResponseText(request.response || '')
+                            }}
                           >
+                            <Eye className="h-4 w-4 ml-1" />
                             צפייה
                           </Button>
                         </td>
@@ -380,7 +387,7 @@ export default function DataSubjectRequests({ orgId }: DataSubjectRequestsProps)
       {/* Request Detail Modal */}
       {selectedRequest && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-auto flex flex-col">
             <CardHeader className="flex-shrink-0 border-b">
               <div className="flex items-center justify-between">
                 <div>
@@ -496,6 +503,7 @@ export default function DataSubjectRequests({ orgId }: DataSubjectRequestsProps)
                       onClick={() => updateRequestStatus(selectedRequest.id, 'in_progress')}
                       disabled={isSubmitting}
                     >
+                      {isSubmitting && <Loader2 className="h-4 w-4 animate-spin ml-2" />}
                       התחל טיפול
                     </Button>
                     <div className="flex gap-2">
