@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60 // Allow up to 60 seconds for AI analysis
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,6 +14,144 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!
 })
 
+// Helper function to analyze a queue item
+async function analyzeQueueItem(itemId: string) {
+  const { data: item } = await supabase
+    .from('dpo_queue')
+    .select(`
+      *,
+      organizations (name)
+    `)
+    .eq('id', itemId)
+    .single()
+
+  if (!item) return null
+
+  let contextText = ''
+
+  if (item.type === 'escalation' && item.related_thread_id) {
+    const { data: messages } = await supabase
+      .from('messages')
+      .select('sender_type, sender_name, content, created_at')
+      .eq('thread_id', item.related_thread_id)
+      .order('created_at', { ascending: true })
+
+    contextText = messages?.map(m => 
+      `[${m.sender_type === 'user' ? 'עובד' : 'בוט'}]: ${m.content}`
+    ).join('\n\n') || ''
+  }
+
+  if (item.type === 'dsr' && item.related_dsr_id) {
+    const { data: dsr } = await supabase
+      .from('data_subject_requests')
+      .select('*')
+      .eq('id', item.related_dsr_id)
+      .single()
+
+    contextText = `
+סוג בקשה: ${dsr?.request_type}
+שם הפונה: ${dsr?.full_name}
+אימייל: ${dsr?.email}
+פרטי הבקשה: ${dsr?.details || 'לא צוינו'}
+    `.trim()
+  }
+
+  const { data: docs } = await supabase
+    .from('documents')
+    .select('name, type')
+    .eq('org_id', item.org_id)
+    .eq('status', 'active')
+
+  const docsContext = docs?.map(d => d.name).join(', ') || 'אין מסמכים'
+
+  const systemPrompt = `אתה עוזר לממונה הגנת פרטיות (DPO) בישראל. תפקידך לנתח פניות ולהציע תשובות מקצועיות.
+
+הנחיות:
+1. נתח את הפנייה והקשר
+2. הצע תשובה מקצועית בעברית
+3. העריך את רמת הביטחון שלך (0-1)
+4. סמן סיכונים אם יש
+
+הארגון: ${item.organizations?.name || 'לא ידוע'}
+מסמכים קיימים: ${docsContext}
+`
+
+  const userPrompt = `
+סוג פנייה: ${item.type}
+כותרת: ${item.title}
+תיאור: ${item.description || 'אין'}
+
+הקשר/שיחה:
+${contextText || 'אין הקשר נוסף'}
+
+אנא ספק:
+1. סיכום קצר (2-3 משפטים)
+2. המלצה לפעולה
+3. טיוטת תשובה מוצעת (תשובה מלאה ומקצועית שהממונה יוכל לשלוח)
+4. רמת ביטחון (מספר בין 0 ל-1)
+5. סיכונים או הערות חשובות
+
+פורמט JSON:
+{
+  "summary": "...",
+  "recommendation": "...",
+  "draft_response": "...",
+  "confidence": 0.85,
+  "risks": ["..."]
+}
+`
+
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 2000,
+    messages: [
+      { role: 'user', content: userPrompt }
+    ],
+    system: systemPrompt
+  })
+
+  const aiText = response.content[0].type === 'text' ? response.content[0].text : ''
+  
+  let analysis
+  try {
+    const jsonMatch = aiText.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      analysis = JSON.parse(jsonMatch[0])
+    } else {
+      analysis = {
+        summary: aiText.substring(0, 200),
+        recommendation: 'לא ניתן לנתח אוטומטית',
+        draft_response: '',
+        confidence: 0.5,
+        risks: []
+      }
+    }
+  } catch {
+    analysis = {
+      summary: aiText.substring(0, 200),
+      recommendation: 'לא ניתן לנתח אוטומטית',
+      draft_response: '',
+      confidence: 0.5,
+      risks: []
+    }
+  }
+
+  // Update queue item with analysis
+  await supabase
+    .from('dpo_queue')
+    .update({
+      ai_summary: analysis.summary,
+      ai_recommendation: analysis.recommendation,
+      ai_draft_response: analysis.draft_response,
+      ai_confidence: analysis.confidence,
+      ai_risk_score: analysis.risks?.length > 0 ? 0.3 + (analysis.risks.length * 0.1) : 0.1,
+      ai_analyzed_at: new Date().toISOString()
+    })
+    .eq('id', itemId)
+
+  return analysis
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -22,7 +161,6 @@ export async function GET(request: NextRequest) {
     // Get Dashboard Stats
     // =========================================
     if (action === 'stats') {
-      // Get queue counts by priority
       const { data: queueStats } = await supabase
         .from('dpo_queue')
         .select('priority, status')
@@ -41,13 +179,11 @@ export async function GET(request: NextRequest) {
         stats.total_pending++
       })
 
-      // Get total active organizations
       const { count: orgCount } = await supabase
         .from('organizations')
         .select('*', { count: 'exact', head: true })
         .eq('subscription_status', 'active')
 
-      // Get resolved this month
       const startOfMonth = new Date()
       startOfMonth.setDate(1)
       startOfMonth.setHours(0, 0, 0, 0)
@@ -118,7 +254,6 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
 
-      // Transform priority for sorting display
       const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
       const sorted = data?.sort((a: any, b: any) => {
         const pA = priorityOrder[a.priority] || 4
@@ -159,7 +294,6 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: 'Item not found' }, { status: 404 })
       }
 
-      // Get related context based on type
       let context: any = {}
 
       if (item.type === 'escalation' && item.related_thread_id) {
@@ -189,7 +323,6 @@ export async function GET(request: NextRequest) {
         context.dsr = dsr
       }
 
-      // Get org documents
       const { data: documents } = await supabase
         .from('documents')
         .select('id, name, type, status')
@@ -198,7 +331,6 @@ export async function GET(request: NextRequest) {
 
       context.documents = documents
 
-      // Get compliance score
       const { data: compliance } = await supabase
         .from('org_compliance_scores')
         .select('*')
@@ -207,7 +339,6 @@ export async function GET(request: NextRequest) {
 
       context.compliance = compliance
 
-      // Get recent history for this org
       const { data: history } = await supabase
         .from('dpo_queue')
         .select('id, type, title, status, resolved_at, resolution_type')
@@ -245,7 +376,6 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
 
-      // Get pending counts per org
       const { data: pendingCounts } = await supabase
         .from('dpo_queue')
         .select('org_id')
@@ -424,146 +554,54 @@ export async function POST(request: NextRequest) {
     }
 
     // =========================================
-    // AI Analyze Queue Item
+    // AI Analyze Queue Item (manual trigger)
     // =========================================
     if (action === 'ai_analyze') {
       const { itemId } = body
+      
+      if (!itemId) {
+        return NextResponse.json({ error: 'Missing itemId' }, { status: 400 })
+      }
 
-      const { data: item } = await supabase
-        .from('dpo_queue')
-        .select(`
-          *,
-          organizations (name)
-        `)
-        .eq('id', itemId)
-        .single()
-
-      if (!item) {
+      const analysis = await analyzeQueueItem(itemId)
+      
+      if (!analysis) {
         return NextResponse.json({ error: 'Item not found' }, { status: 404 })
       }
 
-      let contextText = ''
-
-      if (item.type === 'escalation' && item.related_thread_id) {
-        const { data: messages } = await supabase
-          .from('messages')
-          .select('sender_type, sender_name, content, created_at')
-          .eq('thread_id', item.related_thread_id)
-          .order('created_at', { ascending: true })
-
-        contextText = messages?.map(m => 
-          `[${m.sender_type === 'user' ? 'עובד' : 'בוט'}]: ${m.content}`
-        ).join('\n\n') || ''
-      }
-
-      if (item.type === 'dsr' && item.related_dsr_id) {
-        const { data: dsr } = await supabase
-          .from('data_subject_requests')
-          .select('*')
-          .eq('id', item.related_dsr_id)
-          .single()
-
-        contextText = `
-סוג בקשה: ${dsr?.request_type}
-שם הפונה: ${dsr?.full_name}
-אימייל: ${dsr?.email}
-פרטי הבקשה: ${dsr?.details || 'לא צוינו'}
-        `.trim()
-      }
-
-      const { data: docs } = await supabase
-        .from('documents')
-        .select('name, type')
-        .eq('org_id', item.org_id)
-        .eq('status', 'active')
-
-      const docsContext = docs?.map(d => d.name).join(', ') || 'אין מסמכים'
-
-      const systemPrompt = `אתה עוזר לממונה הגנת פרטיות (DPO) בישראל. תפקידך לנתח פניות ולהציע תשובות מקצועיות.
-
-הנחיות:
-1. נתח את הפנייה והקשר
-2. הצע תשובה מקצועית בעברית
-3. העריך את רמת הביטחון שלך (0-1)
-4. סמן סיכונים אם יש
-
-הארגון: ${item.organizations?.name || 'לא ידוע'}
-מסמכים קיימים: ${docsContext}
-`
-
-      const userPrompt = `
-סוג פנייה: ${item.type}
-כותרת: ${item.title}
-תיאור: ${item.description || 'אין'}
-
-הקשר/שיחה:
-${contextText || 'אין הקשר נוסף'}
-
-אנא ספק:
-1. סיכום קצר (2-3 משפטים)
-2. המלצה לפעולה
-3. טיוטת תשובה מוצעת
-4. רמת ביטחון (מספר בין 0 ל-1)
-5. סיכונים או הערות חשובות
-
-פורמט JSON:
-{
-  "summary": "...",
-  "recommendation": "...",
-  "draft_response": "...",
-  "confidence": 0.85,
-  "risks": ["..."]
-}
-`
-
-      const response = await anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1000,
-        messages: [
-          { role: 'user', content: userPrompt }
-        ],
-        system: systemPrompt
-      })
-
-      const aiText = response.content[0].type === 'text' ? response.content[0].text : ''
-      
-      let analysis
-      try {
-        const jsonMatch = aiText.match(/\{[\s\S]*\}/)
-        if (jsonMatch) {
-          analysis = JSON.parse(jsonMatch[0])
-        } else {
-          analysis = {
-            summary: aiText.substring(0, 200),
-            recommendation: 'לא ניתן לנתח אוטומטית',
-            draft_response: '',
-            confidence: 0.5,
-            risks: []
-          }
-        }
-      } catch {
-        analysis = {
-          summary: aiText.substring(0, 200),
-          recommendation: 'לא ניתן לנתח אוטומטית',
-          draft_response: '',
-          confidence: 0.5,
-          risks: []
-        }
-      }
-
-      await supabase
-        .from('dpo_queue')
-        .update({
-          ai_summary: analysis.summary,
-          ai_recommendation: analysis.recommendation,
-          ai_draft_response: analysis.draft_response,
-          ai_confidence: analysis.confidence,
-          ai_risk_score: analysis.risks?.length > 0 ? 0.3 + (analysis.risks.length * 0.1) : 0.1,
-          ai_analyzed_at: new Date().toISOString()
-        })
-        .eq('id', itemId)
-
       return NextResponse.json({ analysis })
+    }
+
+    // =========================================
+    // Auto-analyze all pending items without analysis
+    // =========================================
+    if (action === 'auto_analyze_pending') {
+      // Get items without AI analysis
+      const { data: items } = await supabase
+        .from('dpo_queue')
+        .select('id')
+        .eq('status', 'pending')
+        .is('ai_analyzed_at', null)
+        .limit(5) // Process max 5 at a time
+
+      if (!items || items.length === 0) {
+        return NextResponse.json({ analyzed: 0, message: 'No items to analyze' })
+      }
+
+      let analyzedCount = 0
+      for (const item of items) {
+        try {
+          await analyzeQueueItem(item.id)
+          analyzedCount++
+        } catch (e) {
+          console.error(`Failed to analyze item ${item.id}:`, e)
+        }
+      }
+
+      return NextResponse.json({ 
+        analyzed: analyzedCount, 
+        total: items.length 
+      })
     }
 
     // =========================================
@@ -672,6 +710,9 @@ ${contextText || 'אין הקשר נוסף'}
           .from('security_incidents')
           .update({ queue_item_id: queueItem.id })
           .eq('id', incident.id)
+
+        // Auto-analyze the new incident
+        analyzeQueueItem(queueItem.id).catch(console.error)
       }
 
       return NextResponse.json({ incident, queueItem })
