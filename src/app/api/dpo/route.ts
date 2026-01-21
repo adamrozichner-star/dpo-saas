@@ -669,19 +669,24 @@ export async function POST(request: NextRequest) {
 
           // Try to get email from: 1) thread.user_email, 2) org contact email
           let recipientEmail = thread?.user_email
+          console.log('📧 thread.user_email:', thread?.user_email)
           
           if (!recipientEmail) {
             // Fallback: get org's primary contact email
-            const { data: org } = await supabase
+            const { data: org, error: orgError } = await supabase
               .from('organizations')
               .select('contact_email, owner_email')
               .eq('id', item.org_id)
               .single()
             
+            console.log('📧 Org lookup result:', { org, orgError })
             recipientEmail = org?.contact_email || org?.owner_email
+            console.log('📧 Using org email:', recipientEmail)
           }
 
           if (recipientEmail) {
+            console.log('📧 Sending email to:', recipientEmail)
+            
             // Get original question from first message or metadata
             let originalQuestion = item.title
             
@@ -708,13 +713,17 @@ export async function POST(request: NextRequest) {
               response
             )
 
+            console.log('📧 Attempting to send email...')
             emailSent = await sendResponseEmail(
               recipientEmail,
               `תשובה לפנייתך - ${orgName}`,
               emailHtml
             )
+            console.log('📧 Email sent result:', emailSent)
           } else {
-            console.log('No email found for escalation response - org:', item.org_id)
+            console.log('❌ No email found for escalation response')
+            console.log('  - thread.user_email:', thread?.user_email)
+            console.log('  - org_id:', item.org_id)
           }
         }
       }
