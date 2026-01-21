@@ -171,7 +171,7 @@ export default function HomePage() {
             <p className="text-gray-600">בחרו את החבילה המתאימה לעסק שלכם</p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {/* Basic Plan */}
             <Card className="relative">
               <CardHeader>
@@ -183,23 +183,22 @@ export default function HomePage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-3">
+                <ul className="space-y-2 text-sm">
                   <PricingFeature>ממונה הגנת פרטיות מוסמך</PricingFeature>
-                  <PricingFeature>מדיניות פרטיות מותאמת</PricingFeature>
-                  <PricingFeature>רישום מאגרי מידע</PricingFeature>
-                  <PricingFeature>נהלי אבטחת מידע</PricingFeature>
+                  <PricingFeature>מסמכים אוטומטיים</PricingFeature>
                   <PricingFeature>בוט Q&A לעובדים</PricingFeature>
                   <PricingFeature>יומן ביקורת</PricingFeature>
-                  <PricingFeature>עד 2 פניות לממונה ברבעון</PricingFeature>
+                  <PricingFeature>תמיכה בדוא"ל</PricingFeature>
+                  <PricingFeature>זמן תגובה: 72 שעות</PricingFeature>
                 </ul>
                 <Link href="/onboarding?tier=basic" className="block mt-6">
-                  <Button className="w-full" size="lg">בחירת חבילה</Button>
+                  <Button className="w-full" size="lg" variant="outline">בחירת חבילה</Button>
                 </Link>
               </CardContent>
             </Card>
 
             {/* Extended Plan */}
-            <Card className="relative border-primary">
+            <Card className="relative border-primary border-2 shadow-lg">
               <div className="absolute -top-3 right-4">
                 <Badge>הכי פופולרי</Badge>
               </div>
@@ -212,17 +211,50 @@ export default function HomePage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-3">
+                <ul className="space-y-2 text-sm">
                   <PricingFeature>כל מה שבחבילה הבסיסית</PricingFeature>
-                  <PricingFeature>סקירה תקופתית של הממונה</PricingFeature>
-                  <PricingFeature>זמינות מורחבת לשאלות</PricingFeature>
+                  <PricingFeature>סקירה רבעונית של הממונה</PricingFeature>
+                  <PricingFeature>30 דק׳ זמן DPO/חודש</PricingFeature>
                   <PricingFeature>ליווי באירועי אבטחה</PricingFeature>
-                  <PricingFeature>דוחות תאימות רבעוניים</PricingFeature>
-                  <PricingFeature>עד 8 פניות לממונה ברבעון</PricingFeature>
-                  <PricingFeature>עדיפות בתגובה</PricingFeature>
+                  <PricingFeature>תמיכה טלפונית</PricingFeature>
+                  <PricingFeature>זמן תגובה: 24 שעות</PricingFeature>
+                  <PricingFeature>עד 3 משתמשים</PricingFeature>
                 </ul>
                 <Link href="/onboarding?tier=extended" className="block mt-6">
                   <Button className="w-full" size="lg">בחירת חבילה</Button>
+                </Link>
+              </CardContent>
+            </Card>
+
+            {/* Enterprise Plan */}
+            <Card className="relative bg-gradient-to-b from-slate-50 to-slate-100">
+              <div className="absolute -top-3 right-4">
+                <Badge variant="secondary" className="bg-slate-800 text-white">
+                  <Building2 className="h-3 w-3 ml-1" />
+                  לארגונים
+                </Badge>
+              </div>
+              <CardHeader>
+                <CardTitle>חבילה ארגונית</CardTitle>
+                <CardDescription>לארגונים עם דרישות מורכבות</CardDescription>
+                <div className="pt-4">
+                  <span className="text-4xl font-bold">₪3,500</span>
+                  <span className="text-gray-600"> / חודש</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <PricingFeature>כל מה שבחבילה המורחבת</PricingFeature>
+                  <PricingFeature>2 שעות זמן DPO/חודש</PricingFeature>
+                  <PricingFeature>סקירה חודשית</PricingFeature>
+                  <PricingFeature>הדרכת עובדים רבעונית</PricingFeature>
+                  <PricingFeature>DPIA מלא כלול</PricingFeature>
+                  <PricingFeature>זמן תגובה: 4 שעות</PricingFeature>
+                  <PricingFeature>משתמשים ללא הגבלה</PricingFeature>
+                  <PricingFeature>SLA מובטח</PricingFeature>
+                </ul>
+                <Link href="/subscribe" className="block mt-6">
+                  <Button className="w-full bg-slate-800 hover:bg-slate-900" size="lg">צרו קשר</Button>
                 </Link>
               </CardContent>
             </Card>
