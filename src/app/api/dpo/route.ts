@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
+import { Resend } from 'resend'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // Allow up to 60 seconds for AI analysis
@@ -14,7 +15,151 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!
 })
 
+const resend = new Resend(process.env.RESEND_API_KEY)
+
+// =========================================
+// Email Templates
+// =========================================
+
+function generateEscalationResponseEmail(
+  orgName: string,
+  originalQuestion: string,
+  dpoResponse: string
+): string {
+  return `
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.8; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; direction: rtl;">
+  <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+    <h1 style="margin: 0; font-size: 24px;">🛡️ תשובה מהממונה על הגנת הפרטיות</h1>
+    <p style="margin: 10px 0 0 0; opacity: 0.9;">${orgName}</p>
+  </div>
+  
+  <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0; border-top: none;">
+    <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border-right: 4px solid #94a3b8;">
+      <h3 style="color: #64748b; margin: 0 0 10px 0; font-size: 14px;">השאלה שלך:</h3>
+      <p style="margin: 0; color: #475569;">${originalQuestion}</p>
+    </div>
+    
+    <div style="background: white; padding: 20px; border-radius: 8px; border-right: 4px solid #3b82f6;">
+      <h3 style="color: #1e40af; margin: 0 0 15px 0; font-size: 16px;">✉️ תשובת הממונה:</h3>
+      <div style="color: #334155; white-space: pre-wrap;">${dpoResponse}</div>
+    </div>
+    
+    <div style="margin-top: 25px; padding: 15px; background: #eff6ff; border-radius: 8px; text-align: center;">
+      <p style="margin: 0; color: #1e40af; font-size: 14px;">
+        יש לך שאלות נוספות? היכנס ללוח הבקרה שלך
+      </p>
+    </div>
+  </div>
+  
+  <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 12px;">
+    <p style="margin: 0;">הודעה זו נשלחה באמצעות DPO-Pro</p>
+    <p style="margin: 5px 0 0 0;">© ${new Date().getFullYear()} DPO-Pro - שירותי ממונה הגנת פרטיות</p>
+  </div>
+</body>
+</html>
+`
+}
+
+function generateDSRResponseEmail(
+  orgName: string,
+  requestType: string,
+  requesterName: string,
+  dpoResponse: string,
+  status: 'completed' | 'rejected'
+): string {
+  const statusText = status === 'completed' ? 'אושרה' : 'נדחתה'
+  const statusColor = status === 'completed' ? '#22c55e' : '#ef4444'
+  const statusIcon = status === 'completed' ? '✅' : '❌'
+  
+  return `
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.8; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; direction: rtl;">
+  <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
+    <h1 style="margin: 0; font-size: 24px;">🛡️ עדכון לבקשת נושא מידע</h1>
+    <p style="margin: 10px 0 0 0; opacity: 0.9;">${orgName}</p>
+  </div>
+  
+  <div style="background: #f8fafc; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0; border-top: none;">
+    <p style="font-size: 16px; margin-bottom: 20px;">שלום ${requesterName},</p>
+    
+    <div style="background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <span style="font-weight: bold;">סוג הבקשה:</span>
+        <span>${requestType}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: bold;">סטטוס:</span>
+        <span style="background: ${statusColor}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 14px;">
+          ${statusIcon} ${statusText}
+        </span>
+      </div>
+    </div>
+    
+    <div style="background: white; padding: 20px; border-radius: 8px; border-right: 4px solid #3b82f6;">
+      <h3 style="color: #1e40af; margin: 0 0 15px 0; font-size: 16px;">📋 תשובת הממונה:</h3>
+      <div style="color: #334155; white-space: pre-wrap;">${dpoResponse}</div>
+    </div>
+    
+    <div style="margin-top: 25px; padding: 15px; background: #fef3c7; border-radius: 8px;">
+      <p style="margin: 0; color: #92400e; font-size: 14px;">
+        <strong>💡 שימו לב:</strong> על פי חוק הגנת הפרטיות, זכותך לפנות לרשות להגנת הפרטיות אם אינך מרוצה מהתשובה.
+      </p>
+    </div>
+  </div>
+  
+  <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 12px;">
+    <p style="margin: 0;">הודעה זו נשלחה באמצעות DPO-Pro</p>
+    <p style="margin: 5px 0 0 0;">© ${new Date().getFullYear()} DPO-Pro - שירותי ממונה הגנת פרטיות</p>
+  </div>
+</body>
+</html>
+`
+}
+
+// =========================================
+// Send Email Helper
+// =========================================
+
+async function sendResponseEmail(
+  to: string,
+  subject: string,
+  html: string
+): Promise<boolean> {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: 'DPO-Pro <dpo@dpo-pro.co.il>',
+      to: [to],
+      subject: subject,
+      html: html
+    })
+    
+    if (error) {
+      console.error('Email send error:', error)
+      return false
+    }
+    
+    console.log('Email sent successfully:', data?.id)
+    return true
+  } catch (err) {
+    console.error('Email send exception:', err)
+    return false
+  }
+}
+
+// =========================================
 // Helper function to analyze a queue item
+// =========================================
 async function analyzeQueueItem(itemId: string) {
   const { data: item } = await supabase
     .from('dpo_queue')
@@ -101,122 +246,96 @@ ${contextText || 'אין הקשר נוסף'}
 }
 `
 
-  const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 2000,
-    messages: [
-      { role: 'user', content: userPrompt }
-    ],
-    system: systemPrompt
-  })
-
-  const aiText = response.content[0].type === 'text' ? response.content[0].text : ''
-  
-  let analysis
   try {
-    const jsonMatch = aiText.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      analysis = JSON.parse(jsonMatch[0])
-    } else {
-      analysis = {
-        summary: aiText.substring(0, 200),
-        recommendation: 'לא ניתן לנתח אוטומטית',
-        draft_response: '',
-        confidence: 0.5,
-        risks: []
-      }
-    }
-  } catch {
-    analysis = {
-      summary: aiText.substring(0, 200),
-      recommendation: 'לא ניתן לנתח אוטומטית',
-      draft_response: '',
-      confidence: 0.5,
-      risks: []
-    }
-  }
-
-  // Update queue item with analysis
-  await supabase
-    .from('dpo_queue')
-    .update({
-      ai_summary: analysis.summary,
-      ai_recommendation: analysis.recommendation,
-      ai_draft_response: analysis.draft_response,
-      ai_confidence: analysis.confidence,
-      ai_risk_score: analysis.risks?.length > 0 ? 0.3 + (analysis.risks.length * 0.1) : 0.1,
-      ai_analyzed_at: new Date().toISOString()
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [
+        { role: 'user', content: userPrompt }
+      ],
+      system: systemPrompt
     })
-    .eq('id', itemId)
 
-  return analysis
+    const content = response.content[0]
+    if (content.type !== 'text') return null
+
+    // Parse JSON from response
+    const jsonMatch = content.text.match(/\{[\s\S]*\}/)
+    if (!jsonMatch) return null
+
+    const analysis = JSON.parse(jsonMatch[0])
+
+    // Update the queue item with analysis
+    await supabase
+      .from('dpo_queue')
+      .update({
+        ai_summary: analysis.summary,
+        ai_recommendation: analysis.recommendation,
+        ai_draft_response: analysis.draft_response,
+        ai_confidence: analysis.confidence,
+        ai_risk_score: analysis.risks?.length > 0 ? 0.3 + (analysis.risks.length * 0.1) : 0.1,
+        ai_analyzed_at: new Date().toISOString(),
+        metadata: { ...item.metadata, risks: analysis.risks }
+      })
+      .eq('id', itemId)
+
+    return analysis
+  } catch (error) {
+    console.error('AI analysis error:', error)
+    return null
+  }
 }
 
+// =========================================
+// GET Handler
+// =========================================
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action')
 
     // =========================================
-    // Get Dashboard Stats
+    // Dashboard Stats
     // =========================================
     if (action === 'stats') {
-      const { data: queueStats } = await supabase
+      const { data: stats, error } = await supabase
         .from('dpo_queue')
-        .select('priority, status')
-        .eq('status', 'pending')
+        .select('status, priority, resolution_type, time_spent_seconds, resolved_at')
 
-      const stats = {
-        critical: 0,
-        high: 0,
-        medium: 0,
-        low: 0,
-        total_pending: 0
-      }
+      if (error) throw error
 
-      queueStats?.forEach(item => {
-        stats[item.priority as keyof typeof stats]++
-        stats.total_pending++
-      })
+      const now = new Date()
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+
+      const pending = stats?.filter(s => s.status === 'pending') || []
+      const resolvedThisMonth = stats?.filter(s => 
+        s.status === 'resolved' && 
+        s.resolved_at && 
+        new Date(s.resolved_at) > thirtyDaysAgo
+      ) || []
 
       const { count: orgCount } = await supabase
         .from('organizations')
         .select('*', { count: 'exact', head: true })
-        .eq('subscription_status', 'active')
-
-      const startOfMonth = new Date()
-      startOfMonth.setDate(1)
-      startOfMonth.setHours(0, 0, 0, 0)
-
-      const { data: resolvedData } = await supabase
-        .from('dpo_queue')
-        .select('time_spent_seconds, resolution_type')
-        .eq('status', 'resolved')
-        .gte('resolved_at', startOfMonth.toISOString())
-
-      const resolvedThisMonth = resolvedData?.length || 0
-      const aiApprovedCount = resolvedData?.filter(r => r.resolution_type === 'approved_ai').length || 0
-      const avgTimeSeconds = resolvedData?.length 
-        ? resolvedData.reduce((sum, r) => sum + (r.time_spent_seconds || 0), 0) / resolvedData.length 
-        : 0
+        .eq('status', 'active')
 
       return NextResponse.json({
-        queue: stats,
-        organizations: {
-          active: orgCount || 0,
-          healthy: orgCount || 0
-        },
-        monthly: {
-          resolved: resolvedThisMonth,
-          ai_approved: aiApprovedCount,
-          ai_approval_rate: resolvedThisMonth ? Math.round((aiApprovedCount / resolvedThisMonth) * 100) : 0,
-          avg_time_minutes: Math.round(avgTimeSeconds / 60)
-        }
+        critical_count: pending.filter(p => p.priority === 'critical').length,
+        high_count: pending.filter(p => p.priority === 'high').length,
+        medium_count: pending.filter(p => p.priority === 'medium').length,
+        low_count: pending.filter(p => p.priority === 'low').length,
+        total_pending: pending.length,
+        resolved_this_month: resolvedThisMonth.length,
+        ai_approved_count: resolvedThisMonth.filter(r => r.resolution_type === 'approved_ai').length,
+        avg_time_seconds: resolvedThisMonth.length > 0 
+          ? Math.round(resolvedThisMonth.reduce((sum, r) => sum + (r.time_spent_seconds || 0), 0) / resolvedThisMonth.length)
+          : 0,
+        active_orgs: orgCount || 0
       })
     }
 
     // =========================================
-    // Get Queue Items
+    // Queue List
     // =========================================
     if (action === 'queue') {
       const status = searchParams.get('status') || 'pending'
@@ -235,46 +354,32 @@ export async function GET(request: NextRequest) {
           )
         `)
         .eq('status', status)
-        .order('priority', { ascending: true })
-        .order('deadline_at', { ascending: true, nullsFirst: false })
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1)
 
-      if (priority) {
-        query = query.eq('priority', priority)
-      }
-      if (type) {
-        query = query.eq('type', type)
-      }
+      if (priority) query = query.eq('priority', priority)
+      if (type) query = query.eq('type', type)
 
-      const { data, error, count } = await query
+      const { data, error } = await query
 
-      if (error) {
-        console.error('Queue fetch error:', error)
-        return NextResponse.json({ error: error.message }, { status: 500 })
-      }
+      if (error) throw error
 
-      const priorityOrder: Record<string, number> = { critical: 0, high: 1, medium: 2, low: 3 }
-      const sorted = data?.sort((a: any, b: any) => {
-        const pA = priorityOrder[a.priority] || 4
-        const pB = priorityOrder[b.priority] || 4
-        if (pA !== pB) return pA - pB
-        if (a.deadline_at && b.deadline_at) {
-          return new Date(a.deadline_at).getTime() - new Date(b.deadline_at).getTime()
-        }
-        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      // Sort by priority
+      const priorityOrder: Record<string, number> = { critical: 1, high: 2, medium: 3, low: 4 }
+      const sorted = (data || []).sort((a: any, b: any) => {
+        return (priorityOrder[a.priority] || 5) - (priorityOrder[b.priority] || 5)
       })
 
-      return NextResponse.json({ items: sorted, total: count })
+      return NextResponse.json({ items: sorted, total: sorted.length })
     }
 
     // =========================================
-    // Get Single Queue Item with Full Context
+    // Single Queue Item with Full Context
     // =========================================
     if (action === 'queue_item') {
-      const itemId = searchParams.get('id')
-      if (!itemId) {
-        return NextResponse.json({ error: 'Missing item ID' }, { status: 400 })
+      const id = searchParams.get('id')
+      if (!id) {
+        return NextResponse.json({ error: 'Missing id' }, { status: 400 })
       }
 
       const { data: item, error } = await supabase
@@ -284,98 +389,98 @@ export async function GET(request: NextRequest) {
           organizations (
             id,
             name,
-            created_at
+            status
           )
         `)
-        .eq('id', itemId)
+        .eq('id', id)
         .single()
 
       if (error || !item) {
         return NextResponse.json({ error: 'Item not found' }, { status: 404 })
       }
 
-      let context: any = {}
+      // Get related data based on type
+      let thread = null
+      let messages = null
+      let dsr = null
 
       if (item.type === 'escalation' && item.related_thread_id) {
-        const { data: thread } = await supabase
+        const { data: threadData } = await supabase
           .from('message_threads')
           .select('*')
           .eq('id', item.related_thread_id)
           .single()
+        thread = threadData
 
-        const { data: messages } = await supabase
+        const { data: messagesData } = await supabase
           .from('messages')
           .select('*')
           .eq('thread_id', item.related_thread_id)
           .order('created_at', { ascending: true })
-
-        context.thread = thread
-        context.messages = messages
+        messages = messagesData
       }
 
       if (item.type === 'dsr' && item.related_dsr_id) {
-        const { data: dsr } = await supabase
+        const { data: dsrData } = await supabase
           .from('data_subject_requests')
           .select('*')
           .eq('id', item.related_dsr_id)
           .single()
-
-        context.dsr = dsr
+        dsr = dsrData
       }
 
+      // Get org documents
       const { data: documents } = await supabase
         .from('documents')
         .select('id, name, type, status')
         .eq('org_id', item.org_id)
         .eq('status', 'active')
 
-      context.documents = documents
-
+      // Get org compliance score
       const { data: compliance } = await supabase
         .from('org_compliance_scores')
         .select('*')
         .eq('org_id', item.org_id)
         .single()
 
-      context.compliance = compliance
-
+      // Get recent history for this org
       const { data: history } = await supabase
         .from('dpo_queue')
         .select('id, type, title, status, resolved_at, resolution_type')
         .eq('org_id', item.org_id)
-        .neq('id', itemId)
+        .neq('id', id)
         .order('created_at', { ascending: false })
         .limit(5)
 
-      context.recent_history = history
-
-      return NextResponse.json({ item, context })
+      return NextResponse.json({
+        item,
+        thread,
+        messages,
+        dsr,
+        documents,
+        compliance,
+        history
+      })
     }
 
     // =========================================
-    // Get Organizations List
+    // Organizations List
     // =========================================
     if (action === 'organizations') {
-      const { data, error } = await supabase
+      const { data: orgs, error } = await supabase
         .from('organizations')
         .select(`
           id,
           name,
-          subscription_status,
-          created_at,
-          org_compliance_scores (
-            overall_score,
-            risk_level,
-            next_review_at
-          )
+          status,
+          created_at
         `)
-        .eq('subscription_status', 'active')
+        .eq('status', 'active')
         .order('name')
 
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 })
-      }
+      if (error) throw error
 
+      // Get pending counts per org
       const { data: pendingCounts } = await supabase
         .from('dpo_queue')
         .select('org_id')
@@ -386,17 +491,28 @@ export async function GET(request: NextRequest) {
         pendingByOrg[p.org_id] = (pendingByOrg[p.org_id] || 0) + 1
       })
 
-      const orgsWithCounts = data?.map(org => ({
+      // Get compliance scores
+      const { data: scores } = await supabase
+        .from('org_compliance_scores')
+        .select('org_id, overall_score, risk_level')
+
+      const scoresByOrg: Record<string, any> = {}
+      scores?.forEach(s => {
+        scoresByOrg[s.org_id] = s
+      })
+
+      const enrichedOrgs = orgs?.map(org => ({
         ...org,
-        pending_items: pendingByOrg[org.id] || 0,
-        compliance: org.org_compliance_scores?.[0] || null
+        pending_count: pendingByOrg[org.id] || 0,
+        compliance_score: scoresByOrg[org.id]?.overall_score || null,
+        risk_level: scoresByOrg[org.id]?.risk_level || 'unknown'
       }))
 
-      return NextResponse.json({ organizations: orgsWithCounts })
+      return NextResponse.json({ organizations: enrichedOrgs })
     }
 
     // =========================================
-    // Get Organization Detail
+    // Organization Detail
     // =========================================
     if (action === 'org_detail') {
       const orgId = searchParams.get('org_id')
@@ -468,16 +584,19 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// =========================================
+// POST Handler
+// =========================================
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { action } = body
 
     // =========================================
-    // Resolve Queue Item
+    // Resolve Queue Item (with email notification)
     // =========================================
     if (action === 'resolve') {
-      const { itemId, resolutionType, response, notes, timeSpentSeconds } = body
+      const { itemId, resolutionType, response, notes, timeSpentSeconds, sendEmail = true } = body
 
       if (!itemId || !resolutionType) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -493,6 +612,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Item not found' }, { status: 404 })
       }
 
+      // Update queue item
       const { error: updateError } = await supabase
         .from('dpo_queue')
         .update({
@@ -509,6 +629,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: updateError.message }, { status: 500 })
       }
 
+      // Log time
       if (timeSpentSeconds) {
         await supabase.from('dpo_time_log').insert({
           org_id: item.org_id,
@@ -519,7 +640,12 @@ export async function POST(request: NextRequest) {
         })
       }
 
+      let emailSent = false
+      const orgName = item.organizations?.name || 'הארגון'
+
+      // Handle ESCALATION resolution
       if (item.type === 'escalation' && item.related_thread_id && response) {
+        // Add DPO response as message
         await supabase.from('messages').insert({
           thread_id: item.related_thread_id,
           sender_type: 'dpo',
@@ -527,30 +653,99 @@ export async function POST(request: NextRequest) {
           content: response
         })
 
+        // Update thread status
         await supabase
           .from('message_threads')
           .update({ status: 'resolved' })
           .eq('id', item.related_thread_id)
+
+        // Get thread to find user email
+        if (sendEmail) {
+          const { data: thread } = await supabase
+            .from('message_threads')
+            .select('user_email, subject')
+            .eq('id', item.related_thread_id)
+            .single()
+
+          if (thread?.user_email) {
+            // Get original question from first message
+            const { data: firstMessage } = await supabase
+              .from('messages')
+              .select('content')
+              .eq('thread_id', item.related_thread_id)
+              .eq('sender_type', 'user')
+              .order('created_at', { ascending: true })
+              .limit(1)
+              .single()
+
+            const originalQuestion = firstMessage?.content || thread.subject || item.title
+
+            const emailHtml = generateEscalationResponseEmail(
+              orgName,
+              originalQuestion,
+              response
+            )
+
+            emailSent = await sendResponseEmail(
+              thread.user_email,
+              `תשובה לפנייתך - ${orgName}`,
+              emailHtml
+            )
+          }
+        }
       }
 
+      // Handle DSR resolution
       if (item.type === 'dsr' && item.related_dsr_id) {
+        const dsrStatus = resolutionType === 'rejected' ? 'rejected' : 'completed'
+        
+        // Update DSR
         await supabase
           .from('data_subject_requests')
           .update({
-            status: resolutionType === 'rejected' ? 'rejected' : 'completed',
+            status: dsrStatus,
             response_text: response,
             responded_at: new Date().toISOString()
           })
           .eq('id', item.related_dsr_id)
+
+        // Send email to requester
+        if (sendEmail) {
+          const { data: dsr } = await supabase
+            .from('data_subject_requests')
+            .select('email, full_name, request_type')
+            .eq('id', item.related_dsr_id)
+            .single()
+
+          if (dsr?.email) {
+            const emailHtml = generateDSRResponseEmail(
+              orgName,
+              dsr.request_type,
+              dsr.full_name,
+              response,
+              dsrStatus as 'completed' | 'rejected'
+            )
+
+            emailSent = await sendResponseEmail(
+              dsr.email,
+              `עדכון בקשת נושא מידע - ${orgName}`,
+              emailHtml
+            )
+          }
+        }
       }
 
+      // Update compliance score
       try {
         await supabase.rpc('update_compliance_score', { p_org_id: item.org_id })
       } catch (e) {
         // Ignore if function doesn't exist
       }
 
-      return NextResponse.json({ success: true })
+      return NextResponse.json({ 
+        success: true,
+        email_sent: emailSent
+      })
     }
 
     // =========================================
@@ -608,7 +803,7 @@ export async function POST(request: NextRequest) {
     // Bulk Approve AI Recommendations
     // =========================================
     if (action === 'bulk_approve') {
-      const { itemIds, minConfidence = 0.85 } = body
+      const { itemIds, minConfidence = 0.85, sendEmails = true } = body
 
       if (!itemIds || !Array.isArray(itemIds)) {
         return NextResponse.json({ error: 'Missing itemIds array' }, { status: 400 })
@@ -616,50 +811,51 @@ export async function POST(request: NextRequest) {
 
       const { data: items } = await supabase
         .from('dpo_queue')
-        .select('*')
+        .select('*, organizations(name)')
         .in('id', itemIds)
+        .eq('status', 'pending')
         .gte('ai_confidence', minConfidence)
-        .not('ai_draft_response', 'is', null)
 
       if (!items || items.length === 0) {
-        return NextResponse.json({ approved: 0, message: 'No items met criteria' })
+        return NextResponse.json({ approved: 0, message: 'No items meet criteria' })
       }
 
       let approvedCount = 0
+      let emailsSent = 0
 
       for (const item of items) {
-        await supabase
-          .from('dpo_queue')
-          .update({
-            status: 'resolved',
-            resolution_type: 'approved_ai',
-            resolution_response: item.ai_draft_response,
-            resolved_at: new Date().toISOString(),
-            time_spent_seconds: 5
-          })
-          .eq('id', item.id)
+        if (!item.ai_draft_response) continue
 
-        if (item.type === 'escalation' && item.related_thread_id) {
-          await supabase.from('messages').insert({
-            thread_id: item.related_thread_id,
-            sender_type: 'dpo',
-            sender_name: 'ממונה הגנת הפרטיות',
-            content: item.ai_draft_response
+        try {
+          // Use the resolve action for each item
+          const result = await fetch(request.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'resolve',
+              itemId: item.id,
+              resolutionType: 'approved_ai',
+              response: item.ai_draft_response,
+              notes: 'אושר אוטומטית - ביטחון AI גבוה',
+              timeSpentSeconds: 30, // 30 seconds for review
+              sendEmail: sendEmails
+            })
           })
 
-          await supabase
-            .from('message_threads')
-            .update({ status: 'resolved' })
-            .eq('id', item.related_thread_id)
+          if (result.ok) {
+            const data = await result.json()
+            approvedCount++
+            if (data.email_sent) emailsSent++
+          }
+        } catch (e) {
+          console.error(`Failed to approve item ${item.id}:`, e)
         }
-
-        approvedCount++
       }
 
       return NextResponse.json({ 
         approved: approvedCount, 
-        total: itemIds.length,
-        skipped: itemIds.length - approvedCount 
+        total: items.length,
+        emails_sent: emailsSent
       })
     }
 
@@ -667,12 +863,13 @@ export async function POST(request: NextRequest) {
     // Create Security Incident
     // =========================================
     if (action === 'create_incident') {
-      const { orgId, title, description, severity, discoveredAt, dataTypesAffected } = body
+      const { orgId, title, description, severity, discoveredAt, dataTypesAffected, recordsAffected } = body
 
-      if (!orgId || !title || !severity) {
+      if (!orgId || !title || !severity || !discoveredAt) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
       }
 
+      // Create incident
       const { data: incident, error: incidentError } = await supabase
         .from('security_incidents')
         .insert({
@@ -680,8 +877,9 @@ export async function POST(request: NextRequest) {
           title,
           description,
           severity,
-          discovered_at: discoveredAt || new Date().toISOString(),
-          data_types_affected: dataTypesAffected || [],
+          discovered_at: discoveredAt,
+          data_types_affected: dataTypesAffected,
+          records_affected: recordsAffected,
           requires_notification: severity === 'critical' || severity === 'high'
         })
         .select()
@@ -691,38 +889,32 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: incidentError.message }, { status: 500 })
       }
 
-      const { data: queueItem } = await supabase
-        .from('dpo_queue')
-        .insert({
-          org_id: orgId,
-          type: 'incident',
-          priority: severity === 'critical' ? 'critical' : severity === 'high' ? 'high' : 'medium',
-          title: `אירוע אבטחה: ${title}`,
-          description,
-          sla_hours: severity === 'critical' ? 4 : 24,
-          deadline_at: new Date(Date.now() + (severity === 'critical' ? 4 : 24) * 60 * 60 * 1000).toISOString()
-        })
-        .select()
-        .single()
+      // Create queue item for incident
+      const deadlineHours = severity === 'critical' ? 4 : severity === 'high' ? 24 : 72
+      
+      await supabase.from('dpo_queue').insert({
+        org_id: orgId,
+        type: 'incident',
+        priority: severity === 'critical' ? 'critical' : severity === 'high' ? 'high' : 'medium',
+        title: `אירוע אבטחה: ${title}`,
+        description: description,
+        sla_hours: deadlineHours,
+        deadline_at: new Date(Date.now() + deadlineHours * 60 * 60 * 1000).toISOString(),
+        metadata: { incident_id: incident.id }
+      })
 
-      if (queueItem) {
-        await supabase
-          .from('security_incidents')
-          .update({ queue_item_id: queueItem.id })
-          .eq('id', incident.id)
-
-        // Auto-analyze the new incident
-        analyzeQueueItem(queueItem.id).catch(console.error)
-      }
-
-      return NextResponse.json({ incident, queueItem })
+      return NextResponse.json({ incident })
     }
 
     // =========================================
-    // Update Queue Item Priority
+    // Update Priority
     // =========================================
     if (action === 'update_priority') {
       const { itemId, priority } = body
+
+      if (!itemId || !priority) {
+        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      }
 
       const { error } = await supabase
         .from('dpo_queue')
@@ -737,10 +929,14 @@ export async function POST(request: NextRequest) {
     }
 
     // =========================================
-    // Log DPO Time
+    // Log Time Manually
     // =========================================
     if (action === 'log_time') {
       const { orgId, queueItemId, actionType, description, durationSeconds } = body
+
+      if (!orgId || !actionType || !durationSeconds) {
+        return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+      }
 
       const { error } = await supabase.from('dpo_time_log').insert({
         org_id: orgId,
