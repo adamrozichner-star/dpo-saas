@@ -232,7 +232,7 @@ export async function GET(request: NextRequest) {
     // =========================================
     // List incidents for organization
     // =========================================
-    if (action === 'list' && orgId) {
+    if ((action === 'list' || !action) && orgId) {
       const { data: incidents, error } = await supabase
         .from('security_incidents')
         .select('*')
