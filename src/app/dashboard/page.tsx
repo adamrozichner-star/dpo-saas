@@ -14,7 +14,6 @@ import {
   MessageSquare, 
   CheckCircle2,
   AlertCircle,
-  AlertTriangle,
   Download,
   Send,
   User,
