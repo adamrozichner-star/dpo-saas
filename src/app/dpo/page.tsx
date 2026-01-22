@@ -36,7 +36,8 @@ import {
   Activity,
   Mail,
   Calendar,
-  Bell
+  Bell,
+  Database
 } from 'lucide-react'
 
 // Types
@@ -152,7 +153,7 @@ export default function DPODashboard() {
   const [resolving, setResolving] = useState(false)
   const [editedResponse, setEditedResponse] = useState('')
   const [resolutionNotes, setResolutionNotes] = useState('')
-  const [activeTab, setActiveTab] = useState<'queue' | 'organizations' | 'incidents'>('queue')
+  const [activeTab, setActiveTab] = useState<'queue' | 'organizations' | 'incidents' | 'ropa'>('queue')
   const [filterPriority, setFilterPriority] = useState<string | null>(null)
   const [filterType, setFilterType] = useState<string | null>(null)
   const [orgSearch, setOrgSearch] = useState('')
@@ -166,6 +167,11 @@ export default function DPODashboard() {
   const [incidentDetails, setIncidentDetails] = useState<any>(null)
   const [incidentTab, setIncidentTab] = useState<'assessment' | 'authority' | 'individuals' | 'timeline'>('assessment')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  
+  // ROPA state
+  const [ropaOrgs, setRopaOrgs] = useState<any[]>([])
+  const [ropaStats, setRopaStats] = useState({ total: 0, critical: 0, high: 0, requires_ppa: 0 })
+  const [selectedRopaOrg, setSelectedRopaOrg] = useState<any>(null)
 
   // Check DPO auth
   useEffect(() => {
@@ -193,6 +199,9 @@ export default function DPODashboard() {
       
       // Load incidents
       await loadIncidents()
+      
+      // Load ROPA
+      await loadRopa()
     } catch (error) {
       console.error('Failed to load dashboard:', error)
     }
@@ -233,6 +242,26 @@ export default function DPODashboard() {
       setIncidentDetails(data)
     } catch (error) {
       console.error('Fetch details error:', error)
+    }
+  }
+
+  const loadRopa = async () => {
+    try {
+      const response = await fetch('/api/ropa?action=dashboard')
+      const data = await response.json()
+      setRopaOrgs(data.organizations || [])
+      
+      // Calculate total stats
+      const stats = { total: 0, critical: 0, high: 0, requires_ppa: 0 }
+      for (const org of data.organizations || []) {
+        stats.total += org.stats.total
+        stats.critical += org.stats.critical
+        stats.high += org.stats.high
+        stats.requires_ppa += org.stats.requires_ppa
+      }
+      setRopaStats(stats)
+    } catch (error) {
+      console.error('Fetch ROPA error:', error)
     }
   }
 
@@ -687,6 +716,17 @@ export default function DPODashboard() {
           >
             <Building2 className="h-4 w-4" />
             ארגונים ({stats?.active_orgs || 0})
+          </Button>
+          <Button
+            variant={activeTab === 'ropa' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('ropa')}
+            className={`gap-2 ${ropaStats.critical + ropaStats.high > 0 ? 'border-orange-300' : ''}`}
+          >
+            <Database className="h-4 w-4" />
+            ROPA ({ropaStats.total || 0})
+            {ropaStats.requires_ppa > 0 && (
+              <Badge variant="warning" className="mr-1 bg-amber-100 text-amber-700">{ropaStats.requires_ppa}</Badge>
+            )}
           </Button>
         </div>
 
@@ -1499,6 +1539,156 @@ export default function DPODashboard() {
                     <Building2 className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                     <p>בחר ארגון מהרשימה</p>
                     <p className="text-sm">לצפייה בפרטים מלאים</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ROPA TAB */}
+        {activeTab === 'ropa' && (
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* ROPA Stats */}
+            <div className="lg:col-span-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <p className="text-3xl font-bold text-primary">{ropaStats.total}</p>
+                    <p className="text-sm text-gray-500">סה"כ פעילויות</p>
+                  </CardContent>
+                </Card>
+                <Card className={ropaStats.critical > 0 ? 'border-red-300 bg-red-50' : ''}>
+                  <CardContent className="p-4 text-center">
+                    <p className="text-3xl font-bold text-red-600">{ropaStats.critical}</p>
+                    <p className="text-sm text-gray-500">סיכון קריטי</p>
+                  </CardContent>
+                </Card>
+                <Card className={ropaStats.high > 0 ? 'border-orange-300 bg-orange-50' : ''}>
+                  <CardContent className="p-4 text-center">
+                    <p className="text-3xl font-bold text-orange-600">{ropaStats.high}</p>
+                    <p className="text-sm text-gray-500">סיכון גבוה</p>
+                  </CardContent>
+                </Card>
+                <Card className={ropaStats.requires_ppa > 0 ? 'border-amber-300 bg-amber-50' : ''}>
+                  <CardContent className="p-4 text-center">
+                    <p className="text-3xl font-bold text-amber-600">{ropaStats.requires_ppa}</p>
+                    <p className="text-sm text-gray-500">טעונים רישום ברשות</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* Organizations with ROPA */}
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Database className="h-5 w-5" />
+                    מפת עיבוד לפי ארגון
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {ropaOrgs.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500">
+                      <Database className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                      <p>אין פעילויות עיבוד רשומות</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y max-h-[500px] overflow-y-auto">
+                      {ropaOrgs.map(org => (
+                        <div
+                          key={org.org_id}
+                          className={`p-4 hover:bg-gray-50 cursor-pointer ${selectedRopaOrg?.org_id === org.org_id ? 'bg-blue-50' : ''}`}
+                          onClick={() => setSelectedRopaOrg(org)}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium">{org.org_name}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Badge variant="outline">{org.stats.total} פעילויות</Badge>
+                                {org.stats.critical > 0 && (
+                                  <Badge variant="destructive">{org.stats.critical} קריטי</Badge>
+                                )}
+                                {org.stats.high > 0 && (
+                                  <Badge className="bg-orange-100 text-orange-700">{org.stats.high} גבוה</Badge>
+                                )}
+                                {org.stats.requires_ppa > 0 && (
+                                  <Badge className="bg-amber-100 text-amber-700">{org.stats.requires_ppa} לרישום</Badge>
+                                )}
+                              </div>
+                            </div>
+                            <ChevronLeft className="h-5 w-5 text-gray-400" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Selected Org Activities */}
+            <div>
+              {selectedRopaOrg ? (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">{selectedRopaOrg.org_name}</CardTitle>
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedRopaOrg(null)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <CardDescription>
+                      {selectedRopaOrg.stats.total} פעילויות עיבוד
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3 max-h-[400px] overflow-y-auto">
+                    {selectedRopaOrg.activities.map((activity: any) => (
+                      <div key={activity.id} className="p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium text-sm">{activity.name}</p>
+                            <p className="text-xs text-gray-500 mt-1">{activity.department}</p>
+                          </div>
+                          <Badge className={
+                            activity.risk_level === 'critical' ? 'bg-red-100 text-red-700' :
+                            activity.risk_level === 'high' ? 'bg-orange-100 text-orange-700' :
+                            activity.risk_level === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-green-100 text-green-700'
+                          }>
+                            {activity.risk_level === 'critical' ? 'קריטי' :
+                             activity.risk_level === 'high' ? 'גבוה' :
+                             activity.risk_level === 'medium' ? 'בינוני' : 'נמוך'}
+                          </Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {activity.requires_ppa_registration && (
+                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">טעון רישום</span>
+                          )}
+                          {activity.requires_dpia && !activity.dpia_completed && (
+                            <span className="text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded">DPIA נדרש</span>
+                          )}
+                          {activity.international_transfers && (
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">העברה לחו"ל</span>
+                          )}
+                        </div>
+                        {activity.data_categories?.length > 0 && (
+                          <p className="text-xs text-gray-400 mt-2">
+                            {activity.data_categories.length} סוגי מידע
+                            {activity.special_categories?.length > 0 && ` • ${activity.special_categories.length} רגישים`}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center text-gray-500">
+                    <Database className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <p>בחר ארגון מהרשימה</p>
+                    <p className="text-sm">לצפייה בפעילויות העיבוד</p>
                   </CardContent>
                 </Card>
               )}
