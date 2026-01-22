@@ -135,7 +135,7 @@ export default function IncidentReportTab({ orgId, incidents, onRefresh }: Incid
             reportedByRole: ''
           })
           onRefresh()
-        }, 3000)
+        }, 8000)
       } else {
         alert('שגיאה בשליחת הדיווח')
       }
