@@ -137,7 +137,7 @@ function DashboardContent() {
 
   const loadIncidents = async (orgId: string) => {
     try {
-      const response = await fetch(`/api/incidents?orgId=${orgId}`)
+      const response = await fetch(`/api/incidents?action=list&orgId=${orgId}`)
       const data = await response.json()
       setIncidents(data.incidents || [])
     } catch (err) {
