@@ -587,147 +587,163 @@ export default function DPODashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
-      {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-40">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Shield className="h-8 w-8 text-primary" />
+    <div className="min-h-screen bg-slate-50" dir="rtl">
+      {/* Modern Header */}
+      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <Shield className="h-6 w-6 text-white" />
+            </div>
             <div>
-              <h1 className="font-bold text-lg">DPO Dashboard</h1>
-              <p className="text-xs text-gray-500">ממשק ניהול לממונה</p>
+              <h1 className="font-bold text-xl text-slate-900">DPO Pro</h1>
+              <p className="text-sm text-slate-500">ממשק ניהול לממונה</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={loadDashboard}>
-              <RefreshCw className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => {
-              localStorage.removeItem('dpo_authenticated')
-              router.push('/dpo/login')
-            }}>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={loadDashboard}
+              className="p-2 hover:bg-slate-100 rounded-lg transition"
+            >
+              <RefreshCw className="h-5 w-5 text-slate-400" />
+            </button>
+            <button 
+              onClick={() => {
+                localStorage.removeItem('dpo_authenticated')
+                router.push('/dpo/login')
+              }}
+              className="text-sm text-slate-500 hover:text-slate-900 px-3 py-2 hover:bg-slate-100 rounded-lg transition"
+            >
               יציאה
-            </Button>
+            </button>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
-          <Card className={stats?.critical_count ? 'border-red-300 bg-red-50' : ''}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">קריטי</p>
-                  <p className="text-3xl font-bold text-red-600">{stats?.critical_count || 0}</p>
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* Status Banner - Only shows if there are urgent items */}
+        {(stats?.critical_count || 0) + (stats?.high_count || 0) + incidentStats.critical + incidentStats.overdue > 0 && (
+          <div className="bg-gradient-to-l from-red-500 via-red-500 to-orange-500 rounded-2xl p-6 mb-8 shadow-lg shadow-red-500/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                  <AlertTriangle className="h-6 w-6 text-white" />
                 </div>
-                <AlertTriangle className="h-8 w-8 text-red-400" />
+                <div>
+                  <p className="text-white/80 text-sm">דורש טיפול מיידי</p>
+                  <h2 className="text-3xl font-bold text-white">
+                    {(stats?.critical_count || 0) + (stats?.high_count || 0) + incidentStats.critical + incidentStats.overdue} פריטים
+                  </h2>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+              <button 
+                onClick={() => setActiveTab('queue')}
+                className="bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-xl font-medium transition flex items-center gap-2"
+              >
+                התחל לטפל
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        )}
 
-          <Card className={stats?.high_count ? 'border-orange-300 bg-orange-50' : ''}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">גבוה</p>
-                  <p className="text-3xl font-bold text-orange-600">{stats?.high_count || 0}</p>
-                </div>
-                <AlertCircle className="h-8 w-8 text-orange-400" />
+        {/* Quick Stats Row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-indigo-600" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">בינוני + נמוך</p>
-                  <p className="text-3xl font-bold">{(stats?.medium_count || 0) + (stats?.low_count || 0)}</p>
-                </div>
-                <Clock className="h-8 w-8 text-gray-400" />
+              <span className="text-slate-500 text-sm">ארגונים</span>
+            </div>
+            <p className="text-3xl font-bold text-slate-900">{stats?.active_orgs || 0}</p>
+          </div>
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
+                <Database className="h-5 w-5 text-purple-600" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className={incidentStats.overdue + incidentStats.critical > 0 ? 'border-red-300 bg-red-50' : 'bg-orange-50 border-orange-200'}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">אירועי אבטחה</p>
-                  <p className="text-3xl font-bold text-orange-600">{incidentStats.total || 0}</p>
-                </div>
-                <Bell className="h-8 w-8 text-orange-400" />
+              <span className="text-slate-500 text-sm">ROPA</span>
+            </div>
+            <p className="text-3xl font-bold text-slate-900">{ropaStats.total || 0}</p>
+          </div>
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center">
+                <Bell className="h-5 w-5 text-orange-600" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-green-50 border-green-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">לקוחות</p>
-                  <p className="text-3xl font-bold text-green-600">{stats?.active_orgs || 0}</p>
-                </div>
-                <Building2 className="h-8 w-8 text-green-400" />
+              <span className="text-slate-500 text-sm">אירועים</span>
+            </div>
+            <p className="text-3xl font-bold text-slate-900">{incidentStats.total || 0}</p>
+          </div>
+          <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-blue-50 border-blue-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-500">טופלו החודש</p>
-                  <p className="text-3xl font-bold text-blue-600">{stats?.resolved_this_month || 0}</p>
-                </div>
-                <CheckCircle2 className="h-8 w-8 text-blue-400" />
-              </div>
-            </CardContent>
-          </Card>
+              <span className="text-slate-500 text-sm">טופלו החודש</span>
+            </div>
+            <p className="text-3xl font-bold text-slate-900">{stats?.resolved_this_month || 0}</p>
+          </div>
         </div>
 
-        {/* Tab Buttons */}
-        <div className="flex gap-2 mb-6">
-          <Button
-            variant={activeTab === 'queue' ? 'default' : 'outline'}
+        {/* Modern Filter Tabs */}
+        <div className="flex gap-2 mb-6 bg-white p-1.5 rounded-xl border border-slate-200/60 w-fit shadow-sm">
+          <button
             onClick={() => setActiveTab('queue')}
-            className="gap-2"
+            className={`px-5 py-2.5 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+              activeTab === 'queue' 
+                ? 'bg-indigo-600 text-white shadow-md' 
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
           >
             <MessageSquare className="h-4 w-4" />
-            תור המתנה ({stats?.total_pending || 0})
-          </Button>
-          <Button
-            variant={activeTab === 'incidents' ? 'default' : 'outline'}
+            תור המתנה
+            {(stats?.total_pending || 0) > 0 && (
+              <span className={`px-2 py-0.5 rounded-full text-xs ${
+                activeTab === 'queue' ? 'bg-white/20' : 'bg-slate-200'
+              }`}>{stats?.total_pending || 0}</span>
+            )}
+          </button>
+          <button
             onClick={() => setActiveTab('incidents')}
-            className={`gap-2 ${activeIncidentsCount > 0 ? 'border-red-300' : ''}`}
+            className={`px-5 py-2.5 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+              activeTab === 'incidents' 
+                ? 'bg-indigo-600 text-white shadow-md' 
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
           >
             <Bell className="h-4 w-4" />
-            אירועי אבטחה ({incidentStats.total || 0})
+            אירועים
             {activeIncidentsCount > 0 && (
-              <Badge variant="destructive" className="mr-1">{activeIncidentsCount}</Badge>
+              <span className="bg-red-500 text-white px-2 py-0.5 rounded-full text-xs">{activeIncidentsCount}</span>
             )}
-          </Button>
-          <Button
-            variant={activeTab === 'organizations' ? 'default' : 'outline'}
+          </button>
+          <button
             onClick={() => setActiveTab('organizations')}
-            className="gap-2"
+            className={`px-5 py-2.5 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+              activeTab === 'organizations' 
+                ? 'bg-indigo-600 text-white shadow-md' 
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
           >
             <Building2 className="h-4 w-4" />
-            ארגונים ({stats?.active_orgs || 0})
-          </Button>
-          <Button
-            variant={activeTab === 'ropa' ? 'default' : 'outline'}
+            ארגונים
+          </button>
+          <button
             onClick={() => setActiveTab('ropa')}
-            className={`gap-2 ${ropaStats.critical + ropaStats.high > 0 ? 'border-orange-300' : ''}`}
+            className={`px-5 py-2.5 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
+              activeTab === 'ropa' 
+                ? 'bg-indigo-600 text-white shadow-md' 
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
           >
             <Database className="h-4 w-4" />
-            ROPA ({ropaStats.total || 0})
+            ROPA
             {ropaStats.requires_ppa > 0 && (
-              <Badge variant="warning" className="mr-1 bg-amber-100 text-amber-700">{ropaStats.requires_ppa}</Badge>
+              <span className="bg-amber-500 text-white px-2 py-0.5 rounded-full text-xs">{ropaStats.requires_ppa}</span>
             )}
-          </Button>
+          </button>
         </div>
 
         {/* QUEUE TAB */}
@@ -735,26 +751,29 @@ export default function DPODashboard() {
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Queue List */}
             <div className="lg:col-span-2">
-              <Card>
-                <CardHeader className="pb-3">
+              <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
+                <div className="p-5 border-b border-slate-100">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="flex items-center gap-2">
-                      <MessageSquare className="h-5 w-5" />
+                    <h3 className="font-semibold text-lg text-slate-900 flex items-center gap-2">
+                      <MessageSquare className="h-5 w-5 text-slate-400" />
                       תור המתנה ({queueItems.length})
-                    </CardTitle>
+                    </h3>
                     <div className="flex items-center gap-2">
                       {queueItems.some(i => (i.ai_confidence || 0) >= 0.85) && (
-                        <Button size="sm" variant="outline" onClick={bulkApprove}>
-                          <Zap className="h-4 w-4 ml-1" />
+                        <button 
+                          onClick={bulkApprove}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-sm font-medium hover:bg-green-100 transition"
+                        >
+                          <Zap className="h-4 w-4" />
                           אישור מרוכז
-                        </Button>
+                        </button>
                       )}
                     </div>
                   </div>
-                  {/* Filters */}
-                  <div className="flex gap-2 mt-3">
+                  {/* Modern Filters */}
+                  <div className="flex gap-2 mt-4">
                     <select
-                      className="text-sm border rounded px-2 py-1"
+                      className="text-sm bg-slate-50 border-0 rounded-lg px-3 py-2 text-slate-600 focus:ring-2 focus:ring-indigo-500"
                       value={filterPriority || ''}
                       onChange={e => setFilterPriority(e.target.value || null)}
                     >
@@ -765,7 +784,7 @@ export default function DPODashboard() {
                       <option value="low">נמוך</option>
                     </select>
                     <select
-                      className="text-sm border rounded px-2 py-1"
+                      className="text-sm bg-slate-50 border-0 rounded-lg px-3 py-2 text-slate-600 focus:ring-2 focus:ring-indigo-500"
                       value={filterType || ''}
                       onChange={e => setFilterType(e.target.value || null)}
                     >
@@ -776,16 +795,18 @@ export default function DPODashboard() {
                       <option value="review">סקירה</option>
                     </select>
                   </div>
-                </CardHeader>
-                <CardContent className="p-0">
+                </div>
+                <div>
                   {queueItems.length === 0 ? (
-                    <div className="p-8 text-center text-gray-500">
-                      <CheckCircle2 className="h-12 w-12 mx-auto mb-3 text-green-400" />
-                      <p className="font-medium">אין פריטים בתור!</p>
-                      <p className="text-sm">הכל מטופל ✨</p>
+                    <div className="p-12 text-center">
+                      <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle2 className="h-8 w-8 text-green-500" />
+                      </div>
+                      <p className="font-medium text-slate-900">אין פריטים בתור!</p>
+                      <p className="text-sm text-slate-500 mt-1">הכל מטופל ✨</p>
                     </div>
                   ) : (
-                    <div className="divide-y max-h-[600px] overflow-y-auto">
+                    <div className="divide-y divide-slate-100 max-h-[600px] overflow-y-auto">
                       {queueItems.map(item => {
                         const config = priorityConfig[item.priority]
                         const typeConf = typeConfig[item.type]
@@ -795,53 +816,60 @@ export default function DPODashboard() {
                         return (
                           <div
                             key={item.id}
-                            className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'bg-blue-50' : ''}`}
+                            className={`p-4 hover:bg-slate-50 cursor-pointer transition-all ${
+                              selectedItem?.id === item.id ? 'bg-indigo-50 border-r-4 border-indigo-500' : ''
+                            } ${item.priority === 'critical' ? 'bg-red-50/50' : item.priority === 'high' ? 'bg-orange-50/30' : ''}`}
                             onClick={() => openItem(item)}
                           >
-                            <div className="flex items-start gap-3">
-                              <div className={`w-2 h-2 rounded-full mt-2 ${config.color}`} />
+                            <div className="flex items-start gap-4">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                                item.priority === 'critical' ? 'bg-red-100' :
+                                item.priority === 'high' ? 'bg-orange-100' : 'bg-slate-100'
+                              }`}>
+                                <TypeIcon className={`h-5 w-5 ${
+                                  item.priority === 'critical' ? 'text-red-600' :
+                                  item.priority === 'high' ? 'text-orange-600' : 'text-slate-500'
+                                }`} />
+                              </div>
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Badge variant="outline" className={`${config.bgLight} ${config.textColor} text-xs`}>
-                                    {config.label}
-                                  </Badge>
-                                  <Badge variant="outline" className="text-xs">
-                                    <TypeIcon className="h-3 w-3 ml-1" />
-                                    {typeConf.label}
-                                  </Badge>
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${
+                                    item.priority === 'critical' ? 'bg-red-100 text-red-700' :
+                                    item.priority === 'high' ? 'bg-orange-100 text-orange-700' :
+                                    item.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-slate-100 text-slate-600'
+                                  }`}>{config.label}</span>
                                   {item.ai_confidence && item.ai_confidence > 0.85 && (
-                                    <Badge className="bg-green-100 text-green-700 text-xs">
-                                      <Zap className="h-3 w-3 ml-1" />
+                                    <span className="px-2 py-0.5 rounded-md text-xs font-medium bg-green-100 text-green-700 flex items-center gap-1">
+                                      <Zap className="h-3 w-3" />
                                       AI {Math.round(item.ai_confidence * 100)}%
-                                    </Badge>
+                                    </span>
                                   )}
                                 </div>
-                                <p className="font-medium truncate">{item.title}</p>
-                                <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                                  <span>{item.organizations?.name}</span>
+                                <p className="font-medium text-slate-900 truncate">{item.title}</p>
+                                <div className="flex items-center gap-2 text-xs text-slate-500 mt-1.5">
+                                  <span className="font-medium text-slate-700">{item.organizations?.name}</span>
                                   <span>•</span>
                                   <span>{formatTimeAgo(item.created_at)}</span>
                                   {deadline && (
                                     <>
                                       <span>•</span>
                                       <span className={deadline.urgent ? 'text-red-600 font-medium' : ''}>
-                                        דדליין: {deadline.text}
+                                        {deadline.text}
                                       </span>
                                     </>
                                   )}
                                 </div>
                               </div>
-                              <div className="text-xs text-gray-400">
-                                ~{estimatedTime(item)} דק׳
-                              </div>
+                              <ChevronLeft className="h-5 w-5 text-slate-300 flex-shrink-0" />
                             </div>
                           </div>
                         )
                       })}
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
             {/* Item Detail */}
@@ -1695,7 +1723,7 @@ export default function DPODashboard() {
             </div>
           </div>
         )}
-      </div>
+      </main>
     </div>
   )
 }
