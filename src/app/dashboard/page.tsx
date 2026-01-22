@@ -37,12 +37,13 @@ import WelcomeModal from '@/components/WelcomeModal'
 import ComplianceChecklist from '@/components/ComplianceChecklist'
 import ComplianceScoreCard from '@/components/ComplianceScoreCard'
 import DataSubjectRequests from '@/components/DataSubjectRequests'
+import IncidentReportTab from '@/components/IncidentReportTab'
 
 function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, session, signOut, loading, supabase } = useAuth()
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'qa' | 'checklist' | 'requests' | 'doc-review' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'qa' | 'checklist' | 'requests' | 'doc-review' | 'settings' | 'incidents'>('overview')
   const [question, setQuestion] = useState('')
   const [isAsking, setIsAsking] = useState(false)
   const [qaHistory, setQaHistory] = useState<any[]>([])
@@ -52,6 +53,7 @@ function DashboardContent() {
   const [showWelcome, setShowWelcome] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [documentReviews, setDocumentReviews] = useState<any[]>([])
+  const [incidents, setIncidents] = useState<any[]>([])
   const [complianceData, setComplianceData] = useState<{
     score: number
     gaps: string[]
@@ -106,6 +108,9 @@ function DashboardContent() {
       
       if (qa) setQaHistory(qa)
 
+      // Load incidents
+      loadIncidents(userData.organizations.id)
+
       const { data: profile } = await supabase
         .from('organization_profiles')
         .select('compliance_score, compliance_gaps, compliance_checklist')
@@ -125,6 +130,16 @@ function DashboardContent() {
           checklist: generateDefaultChecklist(docs || [])
         })
       }
+    }
+  }
+
+  const loadIncidents = async (orgId: string) => {
+    try {
+      const response = await fetch(`/api/incidents?orgId=${orgId}`)
+      const data = await response.json()
+      setIncidents(data.incidents || [])
+    } catch (err) {
+      console.error('Error loading incidents:', err)
     }
   }
 
@@ -231,6 +246,9 @@ function DashboardContent() {
     return null
   }
 
+  // Count active incidents for badge
+  const activeIncidentsCount = incidents.filter(i => !['resolved', 'closed'].includes(i.status)).length
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile Header */}
@@ -264,8 +282,14 @@ function DashboardContent() {
           <NavButton icon={<Users />} label="בקשות פרטיות" active={activeTab === 'requests'} onClick={() => { setActiveTab('requests'); setMobileMenuOpen(false) }} />
           <NavButton icon={<MessageSquare />} label="שאלות ותשובות" active={activeTab === 'qa'} onClick={() => { setActiveTab('qa'); setMobileMenuOpen(false) }} />
           <NavButton icon={<FileSearch />} label="בדיקת מסמכים" active={activeTab === 'doc-review'} onClick={() => { setActiveTab('doc-review'); setMobileMenuOpen(false) }} />
+          <NavButton 
+            icon={<AlertTriangle />} 
+            label="אירועי אבטחה" 
+            active={activeTab === 'incidents'} 
+            onClick={() => { setActiveTab('incidents'); setMobileMenuOpen(false) }} 
+            badge={activeIncidentsCount > 0 ? activeIncidentsCount : undefined}
+          />
           <NavButton icon={<User />} label="הגדרות" active={activeTab === 'settings'} onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false) }} />
-          <NavButton icon={<AlertTriangle />} label="אירועי אבטחה" active={activeTab === 'incidents'} onClick={() => { setActiveTab('incidents'); setMobileMenuOpen(false) }} />
         </nav>
 
         <div className="absolute bottom-0 right-0 left-0 p-4 border-t bg-white">
@@ -323,7 +347,7 @@ function DashboardContent() {
           </Card>
         ) : (
           <>
-            {activeTab === 'overview' && <OverviewTab organization={organization} documents={documents} complianceScore={complianceData.score} complianceGaps={complianceData.gaps} onNavigate={(tab) => setActiveTab(tab as any)} onRegenerateDocs={handleRegenerateDocs} isRegenerating={isRegenerating} />}
+            {activeTab === 'overview' && <OverviewTab organization={organization} documents={documents} complianceScore={complianceData.score} complianceGaps={complianceData.gaps} onNavigate={(tab) => setActiveTab(tab as any)} onRegenerateDocs={handleRegenerateDocs} isRegenerating={isRegenerating} incidents={incidents} />}
             {activeTab === 'documents' && <DocumentsTab documents={documents} isPaid={organization?.subscription_status === 'active'} onRegenerate={handleRegenerateDocs} isRegenerating={isRegenerating} />}
             {activeTab === 'checklist' && (
               <div className="space-y-6">
@@ -334,6 +358,13 @@ function DashboardContent() {
             {activeTab === 'requests' && organization && <DataSubjectRequests orgId={organization.id} />}
             {activeTab === 'qa' && <QATab qaHistory={qaHistory} question={question} setQuestion={setQuestion} onAsk={handleAskQuestion} isAsking={isAsking} orgId={organization?.id} />}
             {activeTab === 'doc-review' && <DocumentReviewTab orgId={organization?.id} reviews={documentReviews} setReviews={setDocumentReviews} />}
+            {activeTab === 'incidents' && organization && (
+              <IncidentReportTab 
+                orgId={organization.id} 
+                incidents={incidents} 
+                onRefresh={() => loadIncidents(organization.id)} 
+              />
+            )}
             {activeTab === 'settings' && <SettingsTab organization={organization} user={user} />}
           </>
         )}
@@ -342,20 +373,46 @@ function DashboardContent() {
   )
 }
 
-function NavButton({ icon, label, active, onClick }: any) {
+function NavButton({ icon, label, active, onClick, badge }: any) {
   return (
     <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${active ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
       {icon}
-      <span>{label}</span>
+      <span className="flex-1 text-right">{label}</span>
+      {badge && (
+        <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+          {badge}
+        </span>
+      )}
     </button>
   )
 }
 
-function OverviewTab({ organization, documents, complianceScore, complianceGaps, onNavigate, onRegenerateDocs, isRegenerating = false }: { organization: any, documents: any[], complianceScore: number, complianceGaps: string[], onNavigate: (tab: string) => void, onRegenerateDocs: () => void, isRegenerating?: boolean }) {
+function OverviewTab({ organization, documents, complianceScore, complianceGaps, onNavigate, onRegenerateDocs, isRegenerating = false, incidents = [] }: { organization: any, documents: any[], complianceScore: number, complianceGaps: string[], onNavigate: (tab: string) => void, onRegenerateDocs: () => void, isRegenerating?: boolean, incidents?: any[] }) {
   const hasSubscription = organization?.subscription_status === 'active'
+  const activeIncidents = incidents.filter(i => !['resolved', 'closed'].includes(i.status))
   
   return (
     <div className="space-y-6">
+      {/* Active Incidents Alert */}
+      {activeIncidents.length > 0 && (
+        <Card className="bg-red-50 border-red-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-red-800">{activeIncidents.length} אירועי אבטחה פעילים</p>
+                  <p className="text-sm text-red-600">נדרשת תשומת לב מיידית</p>
+                </div>
+              </div>
+              <Button variant="destructive" onClick={() => onNavigate('incidents')}>צפייה באירועים</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {!hasSubscription && (
         <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
           <CardContent className="p-4">
@@ -451,12 +508,13 @@ function OverviewTab({ organization, documents, complianceScore, complianceGaps,
           <CardTitle>פעולות מהירות</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => onNavigate('documents')}><FileText className="h-5 w-5" /><span>צפייה במסמכים</span></Button>
             <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => onNavigate('qa')}><MessageSquare className="h-5 w-5" /><span>שאלה לממונה</span></Button>
             <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={onRegenerateDocs} disabled={isRegenerating}>{isRegenerating ? <Loader2 className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}<span>{isRegenerating ? 'מייצר...' : 'יצירת מסמכים'}</span></Button>
             <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => onNavigate('requests')}><Users className="h-5 w-5" /><span>בקשות פרטיות</span></Button>
             <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => onNavigate('checklist')}><ClipboardList className="h-5 w-5" /><span>רשימת ציות</span></Button>
+            <Button variant="outline" className="h-auto py-4 flex-col gap-2 border-red-200 text-red-600 hover:bg-red-50" onClick={() => onNavigate('incidents')}><AlertTriangle className="h-5 w-5" /><span>דיווח אירוע</span></Button>
           </div>
         </CardContent>
       </Card>
