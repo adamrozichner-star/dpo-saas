@@ -30,7 +30,8 @@ import {
   RefreshCw,
   Upload,
   FileSearch,
-  AlertTriangle
+  AlertTriangle,
+  Database
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import WelcomeModal from '@/components/WelcomeModal'
@@ -38,12 +39,13 @@ import ComplianceChecklist from '@/components/ComplianceChecklist'
 import ComplianceScoreCard from '@/components/ComplianceScoreCard'
 import DataSubjectRequests from '@/components/DataSubjectRequests'
 import IncidentReportTab from '@/components/IncidentReportTab'
+import ROPATab from '@/components/ROPATab'
 
 function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, session, signOut, loading, supabase } = useAuth()
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'qa' | 'checklist' | 'requests' | 'doc-review' | 'settings' | 'incidents'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'qa' | 'checklist' | 'requests' | 'doc-review' | 'settings' | 'incidents' | 'ropa'>('overview')
   const [question, setQuestion] = useState('')
   const [isAsking, setIsAsking] = useState(false)
   const [qaHistory, setQaHistory] = useState<any[]>([])
@@ -282,6 +284,7 @@ function DashboardContent() {
           <NavButton icon={<Users />} label="בקשות פרטיות" active={activeTab === 'requests'} onClick={() => { setActiveTab('requests'); setMobileMenuOpen(false) }} />
           <NavButton icon={<MessageSquare />} label="שאלות ותשובות" active={activeTab === 'qa'} onClick={() => { setActiveTab('qa'); setMobileMenuOpen(false) }} />
           <NavButton icon={<FileSearch />} label="בדיקת מסמכים" active={activeTab === 'doc-review'} onClick={() => { setActiveTab('doc-review'); setMobileMenuOpen(false) }} />
+          <NavButton icon={<Database />} label="מפת עיבוד (ROPA)" active={activeTab === 'ropa'} onClick={() => { setActiveTab('ropa'); setMobileMenuOpen(false) }} />
           <NavButton 
             icon={<AlertTriangle />} 
             label="אירועי אבטחה" 
@@ -358,6 +361,7 @@ function DashboardContent() {
             {activeTab === 'requests' && organization && <DataSubjectRequests orgId={organization.id} />}
             {activeTab === 'qa' && <QATab qaHistory={qaHistory} question={question} setQuestion={setQuestion} onAsk={handleAskQuestion} isAsking={isAsking} orgId={organization?.id} />}
             {activeTab === 'doc-review' && <DocumentReviewTab orgId={organization?.id} reviews={documentReviews} setReviews={setDocumentReviews} />}
+            {activeTab === 'ropa' && organization && <ROPATab orgId={organization.id} />}
             {activeTab === 'incidents' && organization && (
               <IncidentReportTab 
                 orgId={organization.id} 
