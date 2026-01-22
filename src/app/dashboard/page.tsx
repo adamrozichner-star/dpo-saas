@@ -14,6 +14,7 @@ import {
   MessageSquare, 
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   Download,
   Send,
   User,
@@ -265,6 +266,7 @@ function DashboardContent() {
           <NavButton icon={<MessageSquare />} label="שאלות ותשובות" active={activeTab === 'qa'} onClick={() => { setActiveTab('qa'); setMobileMenuOpen(false) }} />
           <NavButton icon={<FileSearch />} label="בדיקת מסמכים" active={activeTab === 'doc-review'} onClick={() => { setActiveTab('doc-review'); setMobileMenuOpen(false) }} />
           <NavButton icon={<User />} label="הגדרות" active={activeTab === 'settings'} onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false) }} />
+          <NavButton icon={<AlertTriangle />} label="אירועי אבטחה" active={activeTab === 'incidents'} onClick={() => { setActiveTab('incidents'); setMobileMenuOpen(false) }} />
         </nav>
 
         <div className="absolute bottom-0 right-0 left-0 p-4 border-t bg-white">
