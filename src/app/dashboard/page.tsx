@@ -43,7 +43,7 @@ function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, session, signOut, loading, supabase } = useAuth()
-const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'qa' | 'checklist' | 'requests' | 'doc-review' | 'settings' | 'incidents'>('overview')  
+  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'qa' | 'checklist' | 'requests' | 'doc-review' | 'settings' | 'incidents'>('overview')
   const [question, setQuestion] = useState('')
   const [isAsking, setIsAsking] = useState(false)
   const [qaHistory, setQaHistory] = useState<any[]>([])
@@ -825,18 +825,18 @@ function QATab({ qaHistory, question, setQuestion, onAsk, isAsking, orgId }: any
 
       {showEscalateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-lg">
-            <CardHeader>
+          <Card className="w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+            <CardHeader className="flex-shrink-0">
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" />פנייה לממונה אנושי</CardTitle>
                 <Button variant="ghost" size="icon" onClick={() => setShowEscalateModal(null)}><X className="h-5 w-5" /></Button>
               </div>
               <CardDescription>הממונה יקבל את השאלה המקורית ותשובת הבוט, ויחזיר תשובה מקצועית</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 flex-1 overflow-y-auto">
               <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                 <div><p className="text-xs text-gray-500 mb-1">השאלה המקורית:</p><p className="text-sm font-medium">{showEscalateModal.question}</p></div>
-                <div><p className="text-xs text-gray-500 mb-1">תשובת הבוט:</p><p className="text-sm">{showEscalateModal.answer}</p></div>
+                <div><p className="text-xs text-gray-500 mb-1">תשובת הבוט:</p><p className="text-sm max-h-32 overflow-y-auto">{showEscalateModal.answer}</p></div>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">הערות נוספות (אופציונלי)</label>
@@ -844,7 +844,7 @@ function QATab({ qaHistory, question, setQuestion, onAsk, isAsking, orgId }: any
               </div>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3"><p className="text-sm text-blue-800">⏱️ זמן תגובה משוער: עד 24 שעות בימי עסקים</p></div>
             </CardContent>
-            <div className="border-t p-4 flex justify-end gap-3">
+            <div className="border-t p-4 flex justify-end gap-3 flex-shrink-0">
               <Button variant="outline" onClick={() => setShowEscalateModal(null)}>ביטול</Button>
               <Button onClick={() => handleEscalateToDPO(showEscalateModal, escalateMessage)} disabled={isEscalating}>
                 {isEscalating ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Send className="h-4 w-4 ml-2" />}שלח לממונה
