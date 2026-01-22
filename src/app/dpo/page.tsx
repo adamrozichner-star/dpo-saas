@@ -35,7 +35,8 @@ import {
   TrendingDown,
   Activity,
   Mail,
-  Calendar
+  Calendar,
+  Bell
 } from 'lucide-react'
 
 // Types
@@ -81,6 +82,36 @@ interface DashboardStats {
   active_orgs: number
 }
 
+interface Incident {
+  id: string
+  org_id: string
+  title: string
+  description: string
+  incident_type: string
+  severity: string
+  status: string
+  discovered_at: string
+  reported_at: string
+  authority_deadline: string
+  hours_remaining: number
+  urgency: string
+  data_types_affected: string[]
+  records_affected: number
+  individuals_affected: number
+  requires_authority_notification: boolean
+  requires_individual_notification: boolean
+  ai_summary: string
+  ai_risk_assessment: string
+  ai_recommendations: string
+  ai_authority_draft: string
+  ai_individuals_draft: string
+  authority_notified_at: string | null
+  individuals_notified_at: string | null
+  contained_at: string | null
+  resolved_at: string | null
+  organizations?: { name: string }
+}
+
 // Priority config
 const priorityConfig = {
   critical: { color: 'bg-red-500', textColor: 'text-red-700', bgLight: 'bg-red-50', label: 'קריטי', icon: AlertTriangle },
@@ -121,12 +152,20 @@ export default function DPODashboard() {
   const [resolving, setResolving] = useState(false)
   const [editedResponse, setEditedResponse] = useState('')
   const [resolutionNotes, setResolutionNotes] = useState('')
-  const [activeTab, setActiveTab] = useState<'queue' | 'organizations'>('queue')
+  const [activeTab, setActiveTab] = useState<'queue' | 'organizations' | 'incidents'>('queue')
   const [filterPriority, setFilterPriority] = useState<string | null>(null)
   const [filterType, setFilterType] = useState<string | null>(null)
   const [orgSearch, setOrgSearch] = useState('')
   const [orgSort, setOrgSort] = useState<'name' | 'risk' | 'pending'>('pending')
   const [startTime, setStartTime] = useState<number | null>(null)
+  
+  // Incidents state
+  const [incidents, setIncidents] = useState<Incident[]>([])
+  const [incidentStats, setIncidentStats] = useState({ total: 0, overdue: 0, critical: 0, urgent: 0, notified: 0 })
+  const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null)
+  const [incidentDetails, setIncidentDetails] = useState<any>(null)
+  const [incidentTab, setIncidentTab] = useState<'assessment' | 'authority' | 'individuals' | 'timeline'>('assessment')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Check DPO auth
   useEffect(() => {
@@ -151,6 +190,9 @@ export default function DPODashboard() {
       
       // Load organizations
       await loadOrganizations()
+      
+      // Load incidents
+      await loadIncidents()
     } catch (error) {
       console.error('Failed to load dashboard:', error)
     }
@@ -173,11 +215,46 @@ export default function DPODashboard() {
     setOrganizations(data.organizations || [])
   }
 
+  const loadIncidents = async () => {
+    try {
+      const response = await fetch('/api/incidents?action=dashboard')
+      const data = await response.json()
+      setIncidents(data.incidents || [])
+      setIncidentStats(data.stats || { total: 0, overdue: 0, critical: 0, urgent: 0, notified: 0 })
+    } catch (error) {
+      console.error('Fetch incidents error:', error)
+    }
+  }
+
+  const loadIncidentDetails = async (id: string) => {
+    try {
+      const response = await fetch(`/api/incidents?action=get&id=${id}`)
+      const data = await response.json()
+      setIncidentDetails(data)
+    } catch (error) {
+      console.error('Fetch details error:', error)
+    }
+  }
+
   useEffect(() => {
     if (!loading) {
       loadQueue()
     }
   }, [filterPriority, filterType])
+
+  useEffect(() => {
+    if (selectedIncident) {
+      loadIncidentDetails(selectedIncident.id)
+    }
+  }, [selectedIncident])
+
+  // Auto-refresh incidents every minute
+  useEffect(() => {
+    if (activeTab === 'incidents') {
+      const interval = setInterval(loadIncidents, 60000)
+      return () => clearInterval(interval)
+    }
+  }, [activeTab])
 
   const openItem = async (item: QueueItem) => {
     setSelectedItem(item)
@@ -296,6 +373,100 @@ export default function DPODashboard() {
     }
   }
 
+  // Incident actions
+  const updateIncidentStatus = async (status: string, notes?: string) => {
+    if (!selectedIncident) return
+    setIsSubmitting(true)
+
+    try {
+      await fetch('/api/incidents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_status',
+          incidentId: selectedIncident.id,
+          status,
+          notes
+        })
+      })
+      loadIncidents()
+      loadIncidentDetails(selectedIncident.id)
+    } catch (error) {
+      console.error('Update status error:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const notifyAuthority = async (content: string, referenceNumber?: string) => {
+    if (!selectedIncident) return
+    setIsSubmitting(true)
+
+    try {
+      await fetch('/api/incidents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'notify_authority',
+          incidentId: selectedIncident.id,
+          notificationContent: content,
+          referenceNumber
+        })
+      })
+      alert('✅ דיווח לרשות נרשם בהצלחה')
+      loadIncidents()
+      loadIncidentDetails(selectedIncident.id)
+    } catch (error) {
+      console.error('Notify authority error:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const notifyIndividuals = async (content: string, count: number) => {
+    if (!selectedIncident) return
+    setIsSubmitting(true)
+
+    try {
+      await fetch('/api/incidents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'notify_individuals',
+          incidentId: selectedIncident.id,
+          notificationContent: content,
+          recipientCount: count
+        })
+      })
+      alert('✅ הודעה לנפגעים נרשמה בהצלחה')
+      loadIncidents()
+      loadIncidentDetails(selectedIncident.id)
+    } catch (error) {
+      console.error('Notify individuals error:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const analyzeIncident = async (incidentId: string) => {
+    setIsSubmitting(true)
+    try {
+      await fetch('/api/incidents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'analyze', incidentId })
+      })
+      loadIncidents()
+      if (selectedIncident?.id === incidentId) {
+        loadIncidentDetails(incidentId)
+      }
+    } catch (error) {
+      console.error('Analyze error:', error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const formatTimeAgo = (date: string) => {
     const diff = Date.now() - new Date(date).getTime()
     const minutes = Math.floor(diff / 60000)
@@ -327,6 +498,25 @@ export default function DPODashboard() {
     })
   }
 
+  const formatTimeRemaining = (hours: number) => {
+    if (hours < 0) return 'חלף המועד!'
+    if (hours < 1) return `${Math.round(hours * 60)} דקות`
+    if (hours < 24) return `${Math.round(hours)} שעות`
+    return `${Math.round(hours / 24)} ימים`
+  }
+
+  const getUrgencyStyle = (urgency: string) => {
+    const styles: Record<string, { bg: string; border: string; text: string; label: string }> = {
+      overdue: { bg: 'bg-black', border: 'border-black', text: 'text-white', label: '⚫ חלף המועד!' },
+      critical: { bg: 'bg-red-600', border: 'border-red-600', text: 'text-white', label: '🔴 קריטי' },
+      urgent: { bg: 'bg-orange-500', border: 'border-orange-500', text: 'text-white', label: '🟠 דחוף' },
+      warning: { bg: 'bg-yellow-500', border: 'border-yellow-500', text: 'text-black', label: '🟡 אזהרה' },
+      ok: { bg: 'bg-green-500', border: 'border-green-500', text: 'text-white', label: '🟢 תקין' },
+      notified: { bg: 'bg-blue-500', border: 'border-blue-500', text: 'text-white', label: '✅ דווח' }
+    }
+    return styles[urgency] || styles.ok
+  }
+
   const estimatedTime = (item: QueueItem) => {
     const baseTime = {
       escalation: 2,
@@ -355,6 +545,9 @@ export default function DPODashboard() {
       }
       return 0
     })
+
+  // Count active incidents
+  const activeIncidentsCount = incidents.filter(i => !['resolved', 'closed'].includes(i.status) && (i.urgency === 'critical' || i.urgency === 'urgent' || i.urgency === 'overdue')).length
 
   if (loading) {
     return (
@@ -392,7 +585,7 @@ export default function DPODashboard() {
 
       <div className="container mx-auto px-4 py-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
           <Card className={stats?.critical_count ? 'border-red-300 bg-red-50' : ''}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -425,6 +618,18 @@ export default function DPODashboard() {
                   <p className="text-3xl font-bold">{(stats?.medium_count || 0) + (stats?.low_count || 0)}</p>
                 </div>
                 <Clock className="h-8 w-8 text-gray-400" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className={incidentStats.overdue + incidentStats.critical > 0 ? 'border-red-300 bg-red-50' : 'bg-orange-50 border-orange-200'}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500">אירועי אבטחה</p>
+                  <p className="text-3xl font-bold text-orange-600">{incidentStats.total || 0}</p>
+                </div>
+                <Bell className="h-8 w-8 text-orange-400" />
               </div>
             </CardContent>
           </Card>
@@ -463,6 +668,17 @@ export default function DPODashboard() {
           >
             <MessageSquare className="h-4 w-4" />
             תור המתנה ({stats?.total_pending || 0})
+          </Button>
+          <Button
+            variant={activeTab === 'incidents' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('incidents')}
+            className={`gap-2 ${activeIncidentsCount > 0 ? 'border-red-300' : ''}`}
+          >
+            <Bell className="h-4 w-4" />
+            אירועי אבטחה ({incidentStats.total || 0})
+            {activeIncidentsCount > 0 && (
+              <Badge variant="destructive" className="mr-1">{activeIncidentsCount}</Badge>
+            )}
           </Button>
           <Button
             variant={activeTab === 'organizations' ? 'default' : 'outline'}
@@ -745,6 +961,382 @@ export default function DPODashboard() {
           </div>
         )}
 
+        {/* INCIDENTS TAB */}
+        {activeTab === 'incidents' && (
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Incidents List */}
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Bell className="h-5 w-5" />
+                      אירועי אבטחה ({incidents.length})
+                    </CardTitle>
+                    <Button size="sm" variant="outline" onClick={loadIncidents}>
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {/* Stats */}
+                  <div className="flex gap-3 mt-3">
+                    {incidentStats.overdue > 0 && (
+                      <Badge className="bg-black text-white">⚫ {incidentStats.overdue} באיחור</Badge>
+                    )}
+                    {incidentStats.critical > 0 && (
+                      <Badge className="bg-red-600 text-white">🔴 {incidentStats.critical} קריטי</Badge>
+                    )}
+                    {incidentStats.urgent > 0 && (
+                      <Badge className="bg-orange-500 text-white">🟠 {incidentStats.urgent} דחוף</Badge>
+                    )}
+                    {incidentStats.notified > 0 && (
+                      <Badge className="bg-blue-500 text-white">✅ {incidentStats.notified} דווחו</Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {incidents.length === 0 ? (
+                    <div className="p-8 text-center text-gray-500">
+                      <Shield className="h-12 w-12 mx-auto mb-3 text-green-400" />
+                      <p className="font-medium">אין אירועי אבטחה פעילים</p>
+                      <p className="text-sm">הכל תקין ✨</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y max-h-[600px] overflow-y-auto">
+                      {incidents.map(incident => {
+                        const urgencyStyle = getUrgencyStyle(incident.urgency)
+                        
+                        return (
+                          <div
+                            key={incident.id}
+                            className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${selectedIncident?.id === incident.id ? 'bg-blue-50' : ''}`}
+                            onClick={() => setSelectedIncident(incident)}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`w-3 h-3 rounded-full mt-1.5 ${urgencyStyle.bg}`} />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge className={`${urgencyStyle.bg} ${urgencyStyle.text} text-xs`}>
+                                    {urgencyStyle.label}
+                                  </Badge>
+                                  <Badge variant="outline" className="text-xs">
+                                    {incident.severity}
+                                  </Badge>
+                                </div>
+                                <p className="font-medium truncate">{incident.title}</p>
+                                <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
+                                  <span>{incident.organizations?.name}</span>
+                                  <span>•</span>
+                                  <span>נתגלה: {formatDate(incident.discovered_at)}</span>
+                                </div>
+                              </div>
+                              <div className="text-left">
+                                {incident.hours_remaining > 0 && !incident.authority_notified_at && (
+                                  <div className={`text-sm font-bold ${incident.hours_remaining < 12 ? 'text-red-600' : 'text-gray-700'}`}>
+                                    {formatTimeRemaining(incident.hours_remaining)}
+                                  </div>
+                                )}
+                                {incident.authority_notified_at && (
+                                  <Badge className="bg-green-100 text-green-700 text-xs">דווח ✓</Badge>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Incident Detail */}
+            <div>
+              {selectedIncident ? (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">{selectedIncident.organizations?.name}</CardTitle>
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedIncident(null)}>
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <CardDescription>{selectedIncident.title}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Urgency Banner */}
+                    {!selectedIncident.authority_notified_at && (
+                      <div className={`p-3 rounded-lg ${selectedIncident.hours_remaining < 12 ? 'bg-red-100' : 'bg-amber-100'}`}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">⏱️ זמן נותר לדיווח:</span>
+                          <span className={`text-xl font-bold ${selectedIncident.hours_remaining < 12 ? 'text-red-600' : 'text-amber-600'}`}>
+                            {formatTimeRemaining(selectedIncident.hours_remaining)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tabs */}
+                    <div className="flex gap-1 border-b">
+                      {['assessment', 'authority', 'individuals', 'timeline'].map(tab => (
+                        <button
+                          key={tab}
+                          onClick={() => setIncidentTab(tab as any)}
+                          className={`px-3 py-2 text-sm ${incidentTab === tab ? 'border-b-2 border-primary font-medium' : 'text-gray-500'}`}
+                        >
+                          {tab === 'assessment' && 'הערכה'}
+                          {tab === 'authority' && 'דיווח לרשות'}
+                          {tab === 'individuals' && 'הודעה לנפגעים'}
+                          {tab === 'timeline' && 'ציר זמן'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Assessment Tab */}
+                    {incidentTab === 'assessment' && (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="p-3 bg-gray-50 rounded">
+                            <p className="text-gray-500">סוג</p>
+                            <p className="font-medium">{selectedIncident.incident_type}</p>
+                          </div>
+                          <div className="p-3 bg-gray-50 rounded">
+                            <p className="text-gray-500">חומרה</p>
+                            <p className="font-medium">{selectedIncident.severity}</p>
+                          </div>
+                          {selectedIncident.individuals_affected && (
+                            <div className="p-3 bg-gray-50 rounded">
+                              <p className="text-gray-500">נפגעים</p>
+                              <p className="font-medium">{selectedIncident.individuals_affected.toLocaleString()}</p>
+                            </div>
+                          )}
+                          {selectedIncident.records_affected && (
+                            <div className="p-3 bg-gray-50 rounded">
+                              <p className="text-gray-500">רשומות</p>
+                              <p className="font-medium">{selectedIncident.records_affected.toLocaleString()}</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {selectedIncident.description && (
+                          <div>
+                            <p className="text-sm font-medium mb-1">תיאור:</p>
+                            <p className="text-sm bg-gray-50 p-3 rounded">{selectedIncident.description}</p>
+                          </div>
+                        )}
+
+                        {selectedIncident.ai_summary ? (
+                          <div className="space-y-3">
+                            <div className="p-3 bg-blue-50 rounded-lg">
+                              <p className="text-sm font-medium text-blue-800 mb-1">📊 סיכום AI:</p>
+                              <p className="text-sm text-blue-700">{selectedIncident.ai_summary}</p>
+                            </div>
+                            {selectedIncident.ai_risk_assessment && (
+                              <div className="p-3 bg-amber-50 rounded-lg">
+                                <p className="text-sm font-medium text-amber-800 mb-1">⚠️ הערכת סיכון:</p>
+                                <p className="text-sm text-amber-700 whitespace-pre-line">{selectedIncident.ai_risk_assessment}</p>
+                              </div>
+                            )}
+                            {selectedIncident.ai_recommendations && (
+                              <div className="p-3 bg-green-50 rounded-lg">
+                                <p className="text-sm font-medium text-green-800 mb-1">💡 המלצות:</p>
+                                <p className="text-sm text-green-700 whitespace-pre-line">{selectedIncident.ai_recommendations}</p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <Button 
+                            variant="outline" 
+                            className="w-full"
+                            onClick={() => analyzeIncident(selectedIncident.id)}
+                            disabled={isSubmitting}
+                          >
+                            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Zap className="h-4 w-4 ml-2" />}
+                            נתח עם AI
+                          </Button>
+                        )}
+
+                        {/* Quick Actions */}
+                        <div className="flex gap-2 pt-3 border-t">
+                          {!selectedIncident.contained_at && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateIncidentStatus('contained', 'הוכל ע"י DPO')}
+                              disabled={isSubmitting}
+                            >
+                              🛡️ סמן כהוכל
+                            </Button>
+                          )}
+                          {selectedIncident.authority_notified_at && !selectedIncident.resolved_at && (
+                            <Button
+                              size="sm"
+                              onClick={() => updateIncidentStatus('resolved', 'נפתר')}
+                              disabled={isSubmitting}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              ✅ סמן כנפתר
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Authority Tab */}
+                    {incidentTab === 'authority' && (
+                      <div className="space-y-3">
+                        {selectedIncident.authority_notified_at ? (
+                          <div className="p-4 bg-green-50 rounded-lg text-center">
+                            <CheckCircle2 className="h-12 w-12 mx-auto mb-2 text-green-600" />
+                            <p className="font-medium text-green-800">דווח לרשות בהצלחה</p>
+                            <p className="text-sm text-green-700">
+                              {new Date(selectedIncident.authority_notified_at).toLocaleString('he-IL')}
+                            </p>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="p-3 bg-amber-50 rounded-lg">
+                              <p className="text-sm text-amber-800">
+                                ⚠️ יש לדווח לרשות להגנת הפרטיות תוך 72 שעות מגילוי האירוע.
+                              </p>
+                              <a 
+                                href="https://www.gov.il/he/service/data_security_breach_report" 
+                                target="_blank"
+                                className="text-sm text-blue-600 underline"
+                              >
+                                טופס דיווח אירוע אבטחה →
+                              </a>
+                            </div>
+
+                            {selectedIncident.ai_authority_draft && (
+                              <div className="p-3 bg-blue-50 rounded-lg">
+                                <p className="text-sm font-medium text-blue-800 mb-2">📝 טיוטת דיווח (AI):</p>
+                                <div className="bg-white p-3 rounded text-sm border whitespace-pre-line max-h-48 overflow-y-auto">
+                                  {selectedIncident.ai_authority_draft}
+                                </div>
+                                <button
+                                  onClick={() => navigator.clipboard.writeText(selectedIncident.ai_authority_draft)}
+                                  className="mt-2 text-sm text-blue-600 hover:underline"
+                                >
+                                  📋 העתק לזיכרון
+                                </button>
+                              </div>
+                            )}
+
+                            <Button
+                              className="w-full bg-red-600 hover:bg-red-700"
+                              onClick={() => {
+                                const refNum = prompt('הזן מספר אסמכתא מהרשות (אופציונלי):')
+                                notifyAuthority(selectedIncident.ai_authority_draft || 'דיווח בוצע', refNum || undefined)
+                              }}
+                              disabled={isSubmitting}
+                            >
+                              ✅ סמן כדווח לרשות
+                            </Button>
+                            <p className="text-xs text-gray-500 text-center">
+                              לחץ לאחר שביצעת את הדיווח בפועל באתר הרשות
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Individuals Tab */}
+                    {incidentTab === 'individuals' && (
+                      <div className="space-y-3">
+                        {selectedIncident.individuals_notified_at ? (
+                          <div className="p-4 bg-green-50 rounded-lg text-center">
+                            <CheckCircle2 className="h-12 w-12 mx-auto mb-2 text-green-600" />
+                            <p className="font-medium text-green-800">הודעה לנפגעים נשלחה</p>
+                            <p className="text-sm text-green-700">
+                              {new Date(selectedIncident.individuals_notified_at).toLocaleString('he-IL')}
+                            </p>
+                          </div>
+                        ) : (
+                          <>
+                            {!selectedIncident.requires_individual_notification ? (
+                              <div className="p-3 bg-gray-50 rounded-lg text-center text-gray-600">
+                                לפי הערכת הסיכון, לא נדרשת הודעה לנפגעים.
+                              </div>
+                            ) : (
+                              <div className="p-3 bg-orange-50 rounded-lg">
+                                <p className="text-sm text-orange-800">
+                                  ⚠️ נדרשת הודעה לנפגעים בשל הסיכון הגבוה לזכויותיהם.
+                                </p>
+                              </div>
+                            )}
+
+                            {selectedIncident.ai_individuals_draft && (
+                              <div className="p-3 bg-blue-50 rounded-lg">
+                                <p className="text-sm font-medium text-blue-800 mb-2">📝 טיוטת הודעה (AI):</p>
+                                <div className="bg-white p-3 rounded text-sm border whitespace-pre-line max-h-48 overflow-y-auto">
+                                  {selectedIncident.ai_individuals_draft}
+                                </div>
+                                <button
+                                  onClick={() => navigator.clipboard.writeText(selectedIncident.ai_individuals_draft)}
+                                  className="mt-2 text-sm text-blue-600 hover:underline"
+                                >
+                                  📋 העתק לזיכרון
+                                </button>
+                              </div>
+                            )}
+
+                            <Button
+                              className="w-full bg-orange-500 hover:bg-orange-600"
+                              onClick={() => {
+                                const count = prompt('כמה נפגעים קיבלו הודעה?')
+                                if (count) {
+                                  notifyIndividuals(selectedIncident.ai_individuals_draft || 'הודעה נשלחה', parseInt(count))
+                                }
+                              }}
+                              disabled={isSubmitting}
+                            >
+                              ✅ סמן ששלחתי הודעה לנפגעים
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Timeline Tab */}
+                    {incidentTab === 'timeline' && (
+                      <div className="space-y-3">
+                        {[
+                          { label: 'נתגלה', time: selectedIncident.discovered_at, icon: '🔍', color: 'bg-gray-500' },
+                          { label: 'דווח במערכת', time: selectedIncident.reported_at, icon: '📝', color: 'bg-blue-500' },
+                          selectedIncident.contained_at && { label: 'הוכל', time: selectedIncident.contained_at, icon: '🛡️', color: 'bg-green-500' },
+                          selectedIncident.authority_notified_at && { label: 'דווח לרשות', time: selectedIncident.authority_notified_at, icon: '📤', color: 'bg-purple-500' },
+                          selectedIncident.individuals_notified_at && { label: 'הודעה לנפגעים', time: selectedIncident.individuals_notified_at, icon: '👥', color: 'bg-orange-500' },
+                          selectedIncident.resolved_at && { label: 'נפתר', time: selectedIncident.resolved_at, icon: '✅', color: 'bg-green-600' }
+                        ].filter(Boolean).map((event: any, index) => (
+                          <div key={index} className="flex gap-3">
+                            <div className={`w-8 h-8 ${event.color} rounded-full flex items-center justify-center text-white text-sm`}>
+                              {event.icon}
+                            </div>
+                            <div>
+                              <div className="font-medium">{event.label}</div>
+                              <div className="text-sm text-gray-500">
+                                {new Date(event.time).toLocaleString('he-IL')}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="p-8 text-center text-gray-500">
+                    <Bell className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <p>בחר אירוע מהרשימה</p>
+                    <p className="text-sm">לצפייה בפרטים ולטיפול</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ORGANIZATIONS TAB */}
         {activeTab === 'organizations' && (
           <div className="grid lg:grid-cols-3 gap-6">
@@ -869,20 +1461,6 @@ export default function DPODashboard() {
                                 style={{ width: `${orgDetail.compliance.overall_score}%` }}
                               />
                             </div>
-                            <div className="grid grid-cols-3 gap-2 mt-3 text-xs">
-                              <div className="text-center">
-                                <p className="text-gray-500">מסמכים</p>
-                                <p className="font-medium">{Math.round(orgDetail.compliance.documents_score || 0)}</p>
-                              </div>
-                              <div className="text-center">
-                                <p className="text-gray-500">אירועים</p>
-                                <p className="font-medium">{Math.round(orgDetail.compliance.incidents_score || 100)}</p>
-                              </div>
-                              <div className="text-center">
-                                <p className="text-gray-500">תגובות</p>
-                                <p className="font-medium">{Math.round(orgDetail.compliance.response_time_score || 100)}</p>
-                              </div>
-                            </div>
                           </div>
                         )}
 
@@ -900,56 +1478,12 @@ export default function DPODashboard() {
                           </div>
                         </div>
 
-                        {/* Documents */}
-                        {orgDetail.documents && orgDetail.documents.length > 0 && (
-                          <div>
-                            <p className="text-sm font-medium mb-2">📄 מסמכים:</p>
-                            <div className="space-y-1">
-                              {orgDetail.documents.slice(0, 5).map((doc: any) => (
-                                <div key={doc.id} className="flex items-center gap-2 text-sm p-2 bg-gray-50 rounded">
-                                  <FileText className="h-4 w-4 text-gray-400" />
-                                  <span className="truncate">{doc.name}</span>
-                                  <Badge variant="outline" className="text-xs mr-auto">{doc.type}</Badge>
-                                </div>
-                              ))}
-                              {orgDetail.documents.length > 5 && (
-                                <p className="text-xs text-gray-500 text-center">
-                                  ועוד {orgDetail.documents.length - 5} מסמכים...
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Recent Queue History */}
-                        {orgDetail.queue_history && orgDetail.queue_history.length > 0 && (
-                          <div>
-                            <p className="text-sm font-medium mb-2">📋 היסטוריה אחרונה:</p>
-                            <div className="space-y-2">
-                              {orgDetail.queue_history.slice(0, 5).map((item: any) => (
-                                <div key={item.id} className="flex items-center gap-2 text-sm">
-                                  <Badge variant="outline" className={`text-xs ${item.status === 'resolved' ? 'bg-green-50' : 'bg-yellow-50'}`}>
-                                    {item.status === 'resolved' ? '✓' : '⏳'}
-                                  </Badge>
-                                  <span className="truncate flex-1">{item.title}</span>
-                                  {item.resolved_at && (
-                                    <span className="text-xs text-gray-400">{formatDate(item.resolved_at)}</span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
                         {/* Pending Items for this Org */}
                         {selectedOrg.pending_count > 0 && (
                           <Button
                             variant="outline"
                             className="w-full"
-                            onClick={() => {
-                              setActiveTab('queue')
-                              // Could add org filter here
-                            }}
+                            onClick={() => setActiveTab('queue')}
                           >
                             <MessageSquare className="h-4 w-4 ml-2" />
                             צפה ב-{selectedOrg.pending_count} פניות ממתינות
