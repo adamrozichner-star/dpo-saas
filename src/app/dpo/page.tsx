@@ -650,45 +650,45 @@ export default function DPODashboard() {
         {/* Quick Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition">
-            <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-slate-500 text-sm">ארגונים</span>
               <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
                 <Building2 className="h-5 w-5 text-indigo-600" />
               </div>
-              <span className="text-slate-500 text-sm">ארגונים</span>
             </div>
             <p className="text-3xl font-bold text-slate-900">{stats?.active_orgs || 0}</p>
           </div>
           <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition">
-            <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-slate-500 text-sm">ROPA</span>
               <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
                 <Database className="h-5 w-5 text-purple-600" />
               </div>
-              <span className="text-slate-500 text-sm">ROPA</span>
             </div>
             <p className="text-3xl font-bold text-slate-900">{ropaStats.total || 0}</p>
           </div>
           <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition">
-            <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-slate-500 text-sm">אירועים</span>
               <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center">
                 <Bell className="h-5 w-5 text-orange-600" />
               </div>
-              <span className="text-slate-500 text-sm">אירועים</span>
             </div>
             <p className="text-3xl font-bold text-slate-900">{incidentStats.total || 0}</p>
           </div>
           <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition">
-            <div className="flex items-center gap-3 mb-3">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-slate-500 text-sm">טופלו החודש</span>
               <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
               </div>
-              <span className="text-slate-500 text-sm">טופלו החודש</span>
             </div>
             <p className="text-3xl font-bold text-slate-900">{stats?.resolved_this_month || 0}</p>
           </div>
         </div>
 
         {/* Modern Filter Tabs */}
-        <div className="flex gap-2 mb-6 bg-white p-1.5 rounded-xl border border-slate-200/60 w-fit shadow-sm">
+        <div className="flex gap-2 mb-6 bg-white p-1.5 rounded-xl border border-slate-200/60 shadow-sm" style={{ width: 'fit-content' }}>
           <button
             onClick={() => setActiveTab('queue')}
             className={`px-5 py-2.5 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
@@ -749,8 +749,8 @@ export default function DPODashboard() {
         {/* QUEUE TAB */}
         {activeTab === 'queue' && (
           <div className="grid lg:grid-cols-3 gap-6">
-            {/* Queue List */}
-            <div className="lg:col-span-2">
+            {/* Queue List - Takes 2 columns */}
+            <div className="lg:col-span-2 order-1">
               <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-slate-100">
                   <div className="flex items-center justify-between">
@@ -873,7 +873,7 @@ export default function DPODashboard() {
             </div>
 
             {/* Item Detail */}
-            <div>
+            <div className="order-2">
               {selectedItem ? (
                 <Card>
                   <CardHeader className="pb-3">
