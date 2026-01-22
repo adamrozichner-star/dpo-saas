@@ -823,7 +823,8 @@ function ActivityWizard({ orgId, onClose, onSave }: { orgId: string; onClose: ()
 // =============================================
 // Activity Detail Modal
 // =============================================
-function ActivityDetail({ activity, onClose, onRefresh }: { activity: ProcessingActivity; onClose: () => void; onRefresh: () => void }) {
+function ActivityDetail({ activity: initialActivity, onClose, onRefresh }: { activity: ProcessingActivity; onClose: () => void; onRefresh: () => void }) {
+  const [activity, setActivity] = useState(initialActivity)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   const analyzeActivity = async () => {
@@ -836,8 +837,14 @@ function ActivityDetail({ activity, onClose, onRefresh }: { activity: Processing
       })
       
       if (response.ok) {
+        const data = await response.json()
+        // Fetch the updated activity to show AI results
+        const activityResponse = await fetch(`/api/ropa?action=get&id=${activity.id}`)
+        if (activityResponse.ok) {
+          const activityData = await activityResponse.json()
+          setActivity(activityData.activity)
+        }
         onRefresh()
-        alert('הניתוח הושלם בהצלחה')
       }
     } catch (error) {
       console.error('Analysis error:', error)
