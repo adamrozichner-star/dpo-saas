@@ -704,6 +704,12 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
               { icon: '⚠️', text: 'מה חסר במסמך?' },
               { icon: '👁️', text: 'בקש סקירה מממונה' },
             ])
+
+            // Send to AI for analysis
+            setUploadProgress(100)
+            await sendMessage(aiPrompt)
+            setUploadProgress(null)
+            return
             
           } else {
             // Couldn't parse - offer manual options
