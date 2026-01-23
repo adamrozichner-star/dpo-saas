@@ -273,7 +273,15 @@ function DashboardContent() {
         <div className="p-4 border-b">
           <Link href="/" className="flex items-center gap-2">
             <Shield className="h-8 w-8 text-primary" />
-            <span className="font-bold text-xl">DPO-Pro</span>
+            <span className="font-bold text-xl">Kept</span>
+          </Link>
+        </div>
+
+        {/* Chat Button - Primary Action */}
+        <div className="p-4 border-b">
+          <Link href="/chat" className="flex items-center gap-3 bg-gradient-to-l from-indigo-600 to-indigo-700 text-white px-4 py-3 rounded-xl hover:from-indigo-700 hover:to-indigo-800 transition shadow-lg shadow-indigo-600/20">
+            <MessageSquare className="h-5 w-5" />
+            <span className="font-medium">צ׳אט עם הממונה</span>
           </Link>
         </div>
 
