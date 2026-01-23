@@ -245,10 +245,10 @@ function OnboardingContent() {
       localStorage.removeItem('dpo_onboarding_step')
 
       setGenerationProgress(100)
-      setStatus('הושלם! מעבירים ללוח הבקרה...')
+      setStatus('הושלם! מעבירים לעוזר הפרטיות שלך...')
       
       setTimeout(() => {
-        router.push('/dashboard?welcome=true')
+        router.push('/chat?welcome=true')
       }, 1500)
 
     } catch (err: any) {
