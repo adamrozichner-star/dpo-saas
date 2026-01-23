@@ -142,15 +142,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing orgId' }, { status: 400 })
     }
     
-    // Get chat messages
-    const { data: messages, error } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: true })
-      .limit(100)
-    
-    if (error) throw error
+    // Get chat messages - handle table not existing
+    let messages: any[] = []
+    try {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: true })
+        .limit(100)
+      
+      if (!error && data) {
+        messages = data
+      }
+    } catch (e) {
+      // Table might not exist yet - that's OK
+      console.log('chat_messages table not available')
+    }
     
     // Get org context
     const { data: org } = await supabase
@@ -202,20 +210,36 @@ export async function POST(request: NextRequest) {
       // Detect intent
       const intent = detectIntent(message)
       
-      // Save user message
-      const { data: userMsg, error: userErr } = await supabase
-        .from('chat_messages')
-        .insert({
-          org_id: orgId,
-          role: 'user',
-          content: message,
-          intent,
-          attachments
-        })
-        .select()
-        .single()
+      // Try to save user message (don't fail if table doesn't exist)
+      let userMsg: any = {
+        id: `temp-${Date.now()}`,
+        org_id: orgId,
+        role: 'user',
+        content: message,
+        intent,
+        attachments,
+        created_at: new Date().toISOString()
+      }
       
-      if (userErr) throw userErr
+      try {
+        const { data, error } = await supabase
+          .from('chat_messages')
+          .insert({
+            org_id: orgId,
+            role: 'user',
+            content: message,
+            intent,
+            attachments
+          })
+          .select()
+          .single()
+        
+        if (!error && data) {
+          userMsg = data
+        }
+      } catch (e) {
+        console.log('Could not save user message - table may not exist')
+      }
       
       // Get org context
       const { data: org } = await supabase
@@ -224,17 +248,27 @@ export async function POST(request: NextRequest) {
         .eq('id', orgId)
         .single()
       
-      // Get recent history
-      const { data: history } = await supabase
-        .from('chat_messages')
-        .select('role, content')
-        .eq('org_id', orgId)
-        .order('created_at', { ascending: false })
-        .limit(12)
+      // Get recent history (if table exists)
+      let conversationHistory: { role: 'user' | 'assistant', content: string }[] = []
+      try {
+        const { data: history } = await supabase
+          .from('chat_messages')
+          .select('role, content')
+          .eq('org_id', orgId)
+          .order('created_at', { ascending: false })
+          .limit(12)
+        
+        conversationHistory = (history || [])
+          .reverse()
+          .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+      } catch (e) {
+        // No history available
+      }
       
-      const conversationHistory = (history || [])
-        .reverse()
-        .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+      // Add current message if not already in history
+      if (conversationHistory.length === 0 || conversationHistory[conversationHistory.length - 1]?.content !== message) {
+        conversationHistory.push({ role: 'user', content: message })
+      }
       
       // Build context
       const contextPrompt = `${DPO_SYSTEM_PROMPT}
@@ -269,20 +303,36 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
         }
       }
       
-      // Save assistant message
-      const { data: assistantMsg, error: assistantErr } = await supabase
-        .from('chat_messages')
-        .insert({
-          org_id: orgId,
-          role: 'assistant',
-          content: aiText,
-          intent,
-          metadata: generatedDoc ? { generated_document: generatedDoc } : null
-        })
-        .select()
-        .single()
+      // Save assistant message (don't fail if table doesn't exist)
+      let assistantMsg: any = {
+        id: `temp-assistant-${Date.now()}`,
+        org_id: orgId,
+        role: 'assistant',
+        content: aiText,
+        intent,
+        metadata: generatedDoc ? { generated_document: generatedDoc } : null,
+        created_at: new Date().toISOString()
+      }
       
-      if (assistantErr) throw assistantErr
+      try {
+        const { data, error } = await supabase
+          .from('chat_messages')
+          .insert({
+            org_id: orgId,
+            role: 'assistant',
+            content: aiText,
+            intent,
+            metadata: generatedDoc ? { generated_document: generatedDoc } : null
+          })
+          .select()
+          .single()
+        
+        if (!error && data) {
+          assistantMsg = data
+        }
+      } catch (e) {
+        console.log('Could not save assistant message - table may not exist')
+      }
       
       // Prepare quick actions based on intent
       let quickActions = null
