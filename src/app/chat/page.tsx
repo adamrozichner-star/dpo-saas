@@ -7,7 +7,8 @@ import {
   Send, Upload, Paperclip, Mic, Check, CheckCheck, FileText, Shield, 
   AlertTriangle, Plus, X, Sparkles, Download, Loader2, Phone, 
   BarChart3, File, Copy, Share2, Edit3, Eye, ExternalLink,
-  MessageSquare, Settings, ChevronDown, RefreshCw, Clock
+  MessageSquare, Settings, ChevronDown, RefreshCw, Clock,
+  Menu, PanelLeftClose, PanelLeft, History, FolderOpen, Trash2
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
@@ -56,6 +57,15 @@ export default function ChatPage() {
     { icon: '👤', text: 'בקשת מחיקה מלקוח' },
     { icon: '📝', text: 'הסכם עיבוד לספק' },
   ]
+
+  // Conversation history type
+  interface Conversation {
+    id: string
+    title: string
+    preview: string
+    created_at: string
+    updated_at: string
+  }
   
   // State
   const [messages, setMessages] = useState<Message[]>([
@@ -82,6 +92,11 @@ export default function ChatPage() {
   const [isGeneratingDoc, setIsGeneratingDoc] = useState(false)
   const [showUpsellBanner, setShowUpsellBanner] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+  
+  // Sidebar state
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
   
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -247,6 +262,75 @@ export default function ChatPage() {
       setSuggestions(defaultSuggestions)
     }
   }
+
+  // Load conversation history for sidebar
+  const loadConversations = async () => {
+    if (!organization?.id || !supabase) return
+    
+    try {
+      // Get distinct conversations from chat messages
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('id, content, created_at, conversation_id')
+        .eq('org_id', organization.id)
+        .eq('role', 'user')
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (error) {
+        console.log('Could not load conversations:', error)
+        return
+      }
+
+      // Group by conversation or create from messages
+      const convMap = new Map<string, Conversation>()
+      data?.forEach(msg => {
+        const convId = msg.conversation_id || msg.created_at.split('T')[0]
+        if (!convMap.has(convId)) {
+          convMap.set(convId, {
+            id: convId,
+            title: msg.content.slice(0, 40) + (msg.content.length > 40 ? '...' : ''),
+            preview: msg.content.slice(0, 60),
+            created_at: msg.created_at,
+            updated_at: msg.created_at
+          })
+        }
+      })
+
+      setConversations(Array.from(convMap.values()).slice(0, 10))
+    } catch (e) {
+      console.log('Conversations loading skipped')
+    }
+  }
+
+  // Start new conversation
+  const startNewChat = () => {
+    setMessages([{
+      id: 'initial-welcome',
+      role: 'assistant',
+      content: `היי! 👋 אני כאן לעזור לך עם הפרטיות והאבטחה בארגון.\n\nאפשר לשאול אותי שאלות, לבקש מסמכים, או לדווח על אירועים.`,
+      created_at: new Date().toISOString()
+    }])
+    setCurrentConversationId(null)
+    setSuggestions(defaultSuggestions)
+    setCurrentDocument(null)
+    setShowUpsellBanner(false)
+    inputRef.current?.focus()
+  }
+
+  // Load specific conversation
+  const loadConversation = async (convId: string) => {
+    if (!organization?.id) return
+    setCurrentConversationId(convId)
+    await loadChatHistory(organization.id)
+  }
+
+  // Load conversations when organization is ready
+  useEffect(() => {
+    if (organization?.id) {
+      loadConversations()
+    }
+  }, [organization?.id])
 
   const sendMessage = async (text?: string) => {
     const messageText = text || input.trim()
@@ -858,58 +942,152 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
   }
 
   return (
-    <div className="h-screen bg-slate-50 flex flex-col" dir="rtl">
-      {/* Header */}
-      <header className="bg-gradient-to-l from-indigo-600 to-indigo-700 text-white flex-shrink-0">
-        <div className="px-4 py-3 flex items-center gap-3">
-          <Link 
-            href="/dashboard"
-            className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition"
-          >
-            <BarChart3 className="w-5 h-5" />
-          </Link>
-          
-          <div className="relative">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-white/30 to-white/10 flex items-center justify-center border-2 border-white/30">
-              {orgLoading ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
-              ) : (
-                <Shield className="w-6 h-6" />
-              )}
+    <div className="h-screen bg-slate-50 flex" dir="rtl">
+      {/* Sidebar */}
+      <aside className={`${sidebarOpen ? 'w-72' : 'w-0'} bg-slate-900 text-white flex-shrink-0 transition-all duration-300 overflow-hidden flex flex-col`}>
+        {/* Sidebar Header */}
+        <div className="p-4 border-b border-slate-700">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Shield className="w-6 h-6 text-indigo-400" />
+              <span className="font-bold text-lg">Kept</span>
             </div>
-            {!orgLoading && organization && (
-              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-400 rounded-full border-2 border-indigo-600"></div>
-            )}
+            <button 
+              onClick={() => setSidebarOpen(false)}
+              className="p-1.5 hover:bg-slate-700 rounded-lg transition"
+            >
+              <PanelLeftClose className="w-5 h-5 text-slate-400" />
+            </button>
           </div>
           
-          <div className="flex-1">
-            <h1 className="font-bold text-lg">Kept</h1>
-            <p className="text-sm text-indigo-200 flex items-center gap-1.5">
-              <Sparkles className="w-3 h-3" />
-              {orgLoading ? 'טוען...' : (organization?.name || 'לא נמצא ארגון')}
-            </p>
-          </div>
-          
-          <div className={`bg-gradient-to-b ${getScoreBg(complianceScore)} backdrop-blur rounded-xl px-3 py-2 text-center border border-white/10`}>
-            <p className={`text-2xl font-bold ${getScoreColor(complianceScore)}`}>{complianceScore}%</p>
-            <p className="text-xs text-indigo-200">ציות</p>
-          </div>
+          {/* New Chat Button */}
+          <button 
+            onClick={startNewChat}
+            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 px-4 rounded-xl font-medium transition flex items-center justify-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            שיחה חדשה
+          </button>
         </div>
         
-        {/* Alert Bar */}
-        {pendingTasks > 0 && (
+        {/* Conversations List */}
+        <div className="flex-1 overflow-y-auto p-3">
+          <div className="text-xs text-slate-500 font-medium px-2 mb-2 flex items-center gap-1.5">
+            <History className="w-3.5 h-3.5" />
+            שיחות אחרונות
+          </div>
+          
+          {conversations.length === 0 ? (
+            <div className="text-center py-8 text-slate-500 text-sm">
+              <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p>אין שיחות קודמות</p>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {conversations.map(conv => (
+                <button
+                  key={conv.id}
+                  onClick={() => loadConversation(conv.id)}
+                  className={`w-full text-right p-3 rounded-xl transition group ${
+                    currentConversationId === conv.id 
+                      ? 'bg-slate-700 text-white' 
+                      : 'hover:bg-slate-800 text-slate-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    <MessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0 opacity-60" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{conv.title}</p>
+                      <p className="text-xs text-slate-500 truncate mt-0.5">{conv.preview}</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* Sidebar Footer */}
+        <div className="p-3 border-t border-slate-700">
           <Link 
             href="/dashboard"
-            className="bg-amber-400 px-4 py-2 flex items-center justify-between hover:bg-amber-300 transition"
+            className="flex items-center gap-3 p-3 hover:bg-slate-800 rounded-xl transition text-slate-300"
           >
-            <div className="flex items-center gap-2 text-amber-900">
-              <Clock className="w-4 h-4" />
-              <span className="text-sm font-medium">{pendingTasks} משימות ממתינות</span>
-            </div>
-            <span className="text-sm font-bold text-amber-900">צפה ←</span>
+            <BarChart3 className="w-5 h-5" />
+            <span className="text-sm">לוח בקרה</span>
           </Link>
-        )}
-      </header>
+          <Link 
+            href="/dashboard?tab=documents"
+            className="flex items-center gap-3 p-3 hover:bg-slate-800 rounded-xl transition text-slate-300"
+          >
+            <FolderOpen className="w-5 h-5" />
+            <span className="text-sm">מסמכים</span>
+          </Link>
+          <Link 
+            href="/settings"
+            className="flex items-center gap-3 p-3 hover:bg-slate-800 rounded-xl transition text-slate-300"
+          >
+            <Settings className="w-5 h-5" />
+            <span className="text-sm">הגדרות</span>
+          </Link>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Header */}
+        <header className="bg-gradient-to-l from-indigo-600 to-indigo-700 text-white flex-shrink-0">
+          <div className="px-4 py-3 flex items-center gap-3">
+            {!sidebarOpen && (
+              <button 
+                onClick={() => setSidebarOpen(true)}
+                className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition"
+              >
+                <PanelLeft className="w-5 h-5" />
+              </button>
+            )}
+            
+            <div className="relative">
+              <div className="w-11 h-11 rounded-full bg-gradient-to-br from-white/30 to-white/10 flex items-center justify-center border-2 border-white/30">
+                {orgLoading ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  <Shield className="w-6 h-6" />
+                )}
+              </div>
+              {!orgLoading && organization && (
+                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-400 rounded-full border-2 border-indigo-600"></div>
+              )}
+            </div>
+            
+            <div className="flex-1">
+              <h1 className="font-bold text-lg">הממונה שלך</h1>
+              <p className="text-sm text-indigo-200 flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3" />
+                {orgLoading ? 'טוען...' : (organization?.name || 'לא נמצא ארגון')}
+              </p>
+            </div>
+            
+            <div className={`bg-gradient-to-b ${getScoreBg(complianceScore)} backdrop-blur rounded-xl px-3 py-2 text-center border border-white/10`}>
+              <p className={`text-2xl font-bold ${getScoreColor(complianceScore)}`}>{complianceScore}%</p>
+              <p className="text-xs text-indigo-200">ציות</p>
+            </div>
+          </div>
+          
+          {/* Alert Bar */}
+          {pendingTasks > 0 && (
+            <Link 
+              href="/dashboard"
+              className="bg-amber-400 px-4 py-2 flex items-center justify-between hover:bg-amber-300 transition"
+            >
+              <div className="flex items-center gap-2 text-amber-900">
+                <Clock className="w-4 h-4" />
+                <span className="text-sm font-medium">{pendingTasks} משימות ממתינות</span>
+              </div>
+              <span className="text-sm font-bold text-amber-900">צפה ←</span>
+            </Link>
+          )}
+        </header>
 
       {/* Chat Area */}
       <div 
@@ -1258,6 +1436,7 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }
