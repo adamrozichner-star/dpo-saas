@@ -28,6 +28,14 @@ const DPO_SYSTEM_PROMPT = `אתה עוזר דיגיטלי מומחה בהגנת 
 4. הצע תמיד את הצעד הבא הקונקרטי
 5. כשאתה לא בטוח - הצע להעביר לממונה האנושי
 
+⚠️ חשוב מאוד - עיצוב התשובות:
+- אל תשתמש בסימני Markdown כמו ** או ### או ## בתשובות
+- במקום **טקסט** פשוט כתוב את הטקסט רגיל
+- במקום ### כותרת פשוט כתוב את הכותרת בשורה נפרדת
+- השתמש באימוג'ים להדגשה במקום סימני עיצוב
+- השתמש בנקודות (•) או מספרים לרשימות
+- שמור על קריאות עם רווחים בין פסקאות
+
 🔒 נושאים שאתה מומחה בהם:
 - מדיניות פרטיות ותקנונים
 - רישום מאגרי מידע (רשם מאגרי המידע)
@@ -71,9 +79,10 @@ const DPO_SYSTEM_PROMPT = `אתה עוזר דיגיטלי מומחה בהגנת 
 - חם ונגיש, מקצועי אבל לא יבש
 - אימוג'ים במידה - עוזרים לקריאות
 - פסקאות קצרות וברורות
-- רשימות ממוספרות לשלבים
-- הדגש מידע חשוב או דחוף
+- מספרים לשלבים (1. 2. 3.)
+- נקודות (•) לרשימות
 
+שמור על תשובות קצרות וממוקדות כשאפשר - 2-4 פסקאות מספיקות ברוב המקרים.
 בסיום כל תשובה - תן הצעה קונקרטית לפעולה הבאה או שאל שאלת המשך.`
 
 // ===========================================
@@ -283,15 +292,26 @@ ${intent === 'incident' ? '\n⚠️ שים לב: זוהה אירוע אבטחה 
 ${intent === 'document' ? '\n📄 המשתמש מבקש מסמך - צור מסמך מלא ומקצועי.\n' : ''}
 ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה אנושי - הצע להעביר את הפנייה.\n' : ''}`
 
-      // Get AI response
+      // Get AI response - use Haiku for speed
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4000,
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: 2000,
         system: contextPrompt,
         messages: conversationHistory
       })
       
       let aiText = response.content[0].type === 'text' ? response.content[0].text : ''
+      
+      // Strip markdown formatting that looks bad in chat
+      aiText = aiText
+        .replace(/\*\*([^*]+)\*\*/g, '$1')  // Remove **bold**
+        .replace(/\*([^*]+)\*/g, '$1')       // Remove *italic*
+        .replace(/^###\s*/gm, '')            // Remove ### headers
+        .replace(/^##\s*/gm, '')             // Remove ## headers
+        .replace(/^#\s*/gm, '')              // Remove # headers
+        .replace(/```[a-z]*\n?/g, '')        // Remove code blocks
+        .replace(/`([^`]+)`/g, '$1')         // Remove inline code
+        .trim()
       
       // Check for document generation
       let generatedDoc = null
