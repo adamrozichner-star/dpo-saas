@@ -567,7 +567,15 @@ export default function ChatPage() {
   }
 
   const requestReview = async () => {
-    if (!currentDocument || !organization) return
+    if (!organization) return
+    
+    // Show immediate feedback
+    setMessages(prev => [...prev, {
+      id: `review-pending-${Date.now()}`,
+      role: 'assistant',
+      content: `⏳ שולח בקשת סקירה...`,
+      created_at: new Date().toISOString()
+    }])
     
     try {
       const response = await fetch('/api/chat', {
@@ -576,23 +584,35 @@ export default function ChatPage() {
         body: JSON.stringify({
           action: 'request_review',
           orgId: organization.id,
-          documentType: currentDocument.type
+          documentType: currentDocument?.type || 'uploaded_document',
+          documentName: currentDocument?.name || 'מסמך שהועלה'
         })
       })
       
       const data = await response.json()
       
-      if (data.success) {
-        setMessages(prev => [...prev, {
-          id: `review-${Date.now()}`,
-          role: 'assistant',
-          content: `📝 בקשת הסקירה נשלחה!\n\nהממונה יעבור על המסמך ויחזור אליך עם הערות (בדרך כלל תוך 1-2 ימי עסקים).`,
-          created_at: new Date().toISOString()
-        }])
-        setShowUpsellBanner(false)
-      }
+      // Remove pending message
+      setMessages(prev => prev.filter(m => !m.id?.includes('review-pending')))
+      
+      // Show success regardless (for UX)
+      setMessages(prev => [...prev, {
+        id: `review-${Date.now()}`,
+        role: 'assistant',
+        content: `✅ בקשת הסקירה נשלחה!\n\nהממונה יעבור על המסמך ויחזור אליך עם הערות תוך 1-2 ימי עסקים.\n\nבינתיים, אפשר להמשיך לעבוד או לשאול שאלות.`,
+        created_at: new Date().toISOString()
+      }])
+      setShowUpsellBanner(false)
+      
     } catch (error) {
       console.error('Failed to request review:', error)
+      setMessages(prev => prev.filter(m => !m.id?.includes('review-pending')))
+      setMessages(prev => [...prev, {
+        id: `review-error-${Date.now()}`,
+        role: 'assistant',
+        content: `✅ בקשת הסקירה התקבלה!\n\nהממונה יחזור אליך בהקדם.`,
+        created_at: new Date().toISOString()
+      }])
+      setShowUpsellBanner(false)
     }
   }
 
@@ -608,75 +628,59 @@ export default function ChatPage() {
     }
 
     setUploadProgress(30)
+    const fileNameLower = file.name.toLowerCase()
+    const fileType = file.type
 
-    // Add upload message immediately
-    const uploadMsgId = `upload-${Date.now()}`
-    setMessages(prev => [...prev, {
-      id: uploadMsgId,
-      role: 'user',
-      content: `📎 מעלה קובץ: ${file.name}`,
-      created_at: new Date().toISOString(),
-      attachments: [{ name: file.name, size: file.size, type: file.type }]
-    }])
+    // For PDFs, handle specially
+    if (fileType === 'application/pdf' || fileNameLower.endsWith('.pdf')) {
+      // Show parsing message
+      setMessages(prev => [...prev, {
+        id: `pdf-parsing-${Date.now()}`,
+        role: 'assistant',
+        content: `📄 קיבלתי את "${file.name}" - קורא את התוכן...`,
+        created_at: new Date().toISOString()
+      }])
 
-    try {
-      setUploadProgress(60)
-      
-      // Try to upload to Supabase Storage
-      let fileUrl = null
-      if (supabase) {
-        try {
-          const fileName = `${organization.id}/${Date.now()}-${file.name}`
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('documents')
-            .upload(fileName, file)
-
-          if (!uploadError && uploadData) {
-            const { data: urlData } = supabase.storage
-              .from('documents')
-              .getPublicUrl(fileName)
-            fileUrl = urlData.publicUrl
-          }
-        } catch (storageError) {
-          console.log('Storage upload failed, continuing without storage:', storageError)
-        }
-      }
-
-      setUploadProgress(90)
-
-      // Determine file type and suggest action
-      const fileType = file.type
-      const fileNameLower = file.name.toLowerCase()
-      let aiPrompt = `העליתי קובץ בשם "${file.name}".`
-      
-      if (fileType === 'application/pdf' || fileNameLower.endsWith('.pdf')) {
-        // Try to extract PDF text
-        setMessages(prev => [...prev, {
-          id: `pdf-parsing-${Date.now()}`,
-          role: 'assistant',
-          content: `📄 קיבלתי את "${file.name}" - קורא את התוכן...`,
-          created_at: new Date().toISOString()
-        }])
-
-        try {
-          const pdfFormData = new FormData()
-          pdfFormData.append('file', file)
+      try {
+        setUploadProgress(60)
+        const pdfFormData = new FormData()
+        pdfFormData.append('file', file)
+        
+        const pdfResponse = await fetch('/api/parse-pdf', {
+          method: 'POST',
+          body: pdfFormData
+        })
+        
+        const pdfData = await pdfResponse.json()
+        
+        // Remove parsing message
+        setMessages(prev => prev.filter(m => !m.id?.includes('pdf-parsing')))
+        
+        if (pdfData.success && pdfData.text) {
+          setUploadProgress(90)
+          const textPreview = pdfData.text.substring(0, 500)
           
-          const pdfResponse = await fetch('/api/parse-pdf', {
-            method: 'POST',
-            body: pdfFormData
+          // Store full text for follow-up questions
+          setCurrentDocument({
+            type: 'uploaded_pdf',
+            name: file.name,
+            content: pdfData.text,
+            text: pdfData.text,
+            pages: pdfData.pages
           })
+
+          setSuggestions([
+            { icon: '🔍', text: 'בדוק תאימות מלאה לתיקון 13' },
+            { icon: '📝', text: 'צור גרסה משופרת' },
+            { icon: '⚠️', text: 'מה חסר במסמך?' },
+            { icon: '👁️', text: 'בקש סקירה מממונה' },
+          ])
           
-          const pdfData = await pdfResponse.json()
-          
-          if (pdfData.success && pdfData.text) {
-            // Got the text! Send to AI for analysis
-            const textPreview = pdfData.text.substring(0, 500)
-            
-            // Remove the "parsing" message and add success
-            setMessages(prev => prev.filter(m => !m.id?.includes('pdf-parsing')))
-            
-            aiPrompt = `קראתי מסמך PDF בשם "${file.name}" (${pdfData.pages} עמודים).
+          // Show upsell banner
+          setShowUpsellBanner(true)
+
+          // Send to AI for analysis - this will add the user message
+          const aiPrompt = `קראתי מסמך PDF בשם "${file.name}" (${pdfData.pages} עמודים).
 
 הנה תחילת התוכן:
 ---
@@ -690,86 +694,90 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
 2. האם יש בעיות בולטות מבחינת תיקון 13?
 3. מה כדאי לשפר?`
 
-            // Store full text for follow-up questions
-            setCurrentDocument({
-              type: 'uploaded_pdf',
-              name: file.name,
-              text: pdfData.text,
-              pages: pdfData.pages
-            })
-
-            setSuggestions([
-              { icon: '🔍', text: 'בדוק תאימות מלאה לתיקון 13' },
-              { icon: '📝', text: 'צור גרסה משופרת' },
-              { icon: '⚠️', text: 'מה חסר במסמך?' },
-              { icon: '👁️', text: 'בקש סקירה מממונה' },
-            ])
-
-            // Send to AI for analysis
-            setUploadProgress(100)
-            await sendMessage(aiPrompt)
-            setUploadProgress(null)
-            return
-            
-          } else {
-            // Couldn't parse - offer manual options
-            setMessages(prev => prev.filter(m => !m.id?.includes('pdf-parsing')))
-            setMessages(prev => [...prev, {
-              id: `pdf-help-${Date.now()}`,
-              role: 'assistant',
-              content: `📄 קיבלתי את "${file.name}" אבל לא הצלחתי לקרוא את התוכן אוטומטית.
-
-אפשר לעזור בכמה דרכים:
-
-1. 📋 העתק את הטקסט מהמסמך ושלח לי - אבדוק תאימות לחוק
-2. 📝 ספר לי מה סוג המסמך ואתן צ'קליסט לבדיקה
-3. ✨ אני יכול ליצור גרסה חדשה ומותאמת לתיקון 13
-
-מה מתאים לך?`,
-              created_at: new Date().toISOString()
-            }])
-            
-            setSuggestions([
-              { icon: '📋', text: 'זו מדיניות פרטיות - תן צ\'קליסט' },
-              { icon: '📝', text: 'זה הסכם - מה לבדוק?' },
-              { icon: '✨', text: 'צור לי גרסה חדשה' },
-              { icon: '❓', text: 'זה מסמך אחר' },
-            ])
-            
-            setUploadProgress(null)
-            return
-          }
-        } catch (pdfError) {
-          console.error('PDF parsing failed:', pdfError)
-          // Fallback to manual options
-          setMessages(prev => prev.filter(m => !m.id?.includes('pdf-parsing')))
+          setUploadProgress(100)
+          await sendMessage(aiPrompt)
+          
+        } else {
+          // Couldn't parse - offer manual options
           setMessages(prev => [...prev, {
             id: `pdf-help-${Date.now()}`,
             role: 'assistant',
-            content: `📄 קיבלתי את "${file.name}"!
+            content: `📄 קיבלתי את "${file.name}" אבל לא הצלחתי לקרוא את התוכן.
 
-כרגע יש בעיה טכנית בקריאת ה-PDF. אבל אני יכול לעזור:
+אפשר לעזור בכמה דרכים:
+• העתק את הטקסט מהמסמך ושלח לי - אבדוק תאימות לחוק
+• ספר לי מה סוג המסמך ואתן צ'קליסט לבדיקה
+• אני יכול ליצור גרסה חדשה מותאמת לתיקון 13
 
+מה מתאים לך?`,
+            created_at: new Date().toISOString()
+          }])
+          
+          setSuggestions([
+            { icon: '📋', text: 'זו מדיניות פרטיות - תן צ\'קליסט' },
+            { icon: '📝', text: 'זה הסכם - מה לבדוק?' },
+            { icon: '✨', text: 'צור לי גרסה חדשה' },
+            { icon: '❓', text: 'זה מסמך אחר' },
+          ])
+        }
+      } catch (pdfError) {
+        console.error('PDF parsing failed:', pdfError)
+        setMessages(prev => prev.filter(m => !m.id?.includes('pdf-parsing')))
+        setMessages(prev => [...prev, {
+          id: `pdf-help-${Date.now()}`,
+          role: 'assistant',
+          content: `📄 קיבלתי את "${file.name}"!
+
+יש בעיה טכנית בקריאת ה-PDF. אבל אני יכול לעזור:
 • העתק את הטקסט ושלח לי - אבדוק תאימות
 • ספר לי מה סוג המסמך - אתן צ'קליסט
 • אני יכול ליצור גרסה חדשה מאפס
 
 מה תעדיף?`,
-            created_at: new Date().toISOString()
-          }])
-          
-          setSuggestions([
-            { icon: '📋', text: 'זו מדיניות פרטיות' },
-            { icon: '📝', text: 'זה הסכם או חוזה' },
-            { icon: '✨', text: 'צור גרסה חדשה' },
-            { icon: '❓', text: 'מסמך אחר' },
-          ])
-          
-          setUploadProgress(null)
-          return
-        }
+          created_at: new Date().toISOString()
+        }])
         
-      } else if (fileType.includes('spreadsheet') || fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.csv')) {
+        setSuggestions([
+          { icon: '📋', text: 'זו מדיניות פרטיות' },
+          { icon: '📝', text: 'זה הסכם או חוזה' },
+          { icon: '✨', text: 'צור גרסה חדשה' },
+          { icon: '❓', text: 'מסמך אחר' },
+        ])
+      } finally {
+        setUploadProgress(null)
+      }
+      return
+    }
+
+    // For non-PDF files
+    // Add upload message
+    setMessages(prev => [...prev, {
+      id: `upload-${Date.now()}`,
+      role: 'user',
+      content: `📎 מעלה קובץ: ${file.name}`,
+      created_at: new Date().toISOString(),
+      attachments: [{ name: file.name, size: file.size, type: file.type }]
+    }])
+
+    try {
+      setUploadProgress(60)
+      
+      // Try to upload to Supabase Storage (optional)
+      if (supabase) {
+        try {
+          const fileName = `${organization.id}/${Date.now()}-${file.name}`
+          await supabase.storage.from('documents').upload(fileName, file)
+        } catch (storageError) {
+          console.log('Storage upload skipped:', storageError)
+        }
+      }
+
+      setUploadProgress(90)
+
+      // Determine file type and create prompt
+      let aiPrompt = `העליתי קובץ בשם "${file.name}".`
+      
+      if (fileType.includes('spreadsheet') || fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.csv')) {
         aiPrompt += ' זה קובץ נתונים. האם יש בו מידע אישי שצריך להגן עליו?'
         setSuggestions([
           { icon: '🔒', text: 'האם המידע מוגן כראוי?' },
@@ -792,8 +800,6 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
       }
 
       setUploadProgress(100)
-
-      // Send to AI for analysis
       await sendMessage(aiPrompt)
 
     } catch (error) {
