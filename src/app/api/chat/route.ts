@@ -292,10 +292,10 @@ ${intent === 'incident' ? '\n⚠️ שים לב: זוהה אירוע אבטחה 
 ${intent === 'document' ? '\n📄 המשתמש מבקש מסמך - צור מסמך מלא ומקצועי.\n' : ''}
 ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה אנושי - הצע להעביר את הפנייה.\n' : ''}`
 
-      // Get AI response - use Haiku for speed
+      // Get AI response - use Haiku for speed (3-5x faster, 10x cheaper)
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
+        model: 'claude-3-5-haiku-latest',
+        max_tokens: 1500,
         system: contextPrompt,
         messages: conversationHistory
       })
