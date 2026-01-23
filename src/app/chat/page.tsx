@@ -650,14 +650,39 @@ export default function ChatPage() {
       let aiPrompt = `העליתי קובץ בשם "${file.name}".`
       
       if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
-        aiPrompt += ' זה מסמך PDF. האם תוכל לעזור לי להבין אם יש בו בעיות פרטיות או אם הוא עומד בדרישות?'
+        // PDF files - we can't read content but can help
+        aiPrompt = `העליתי מסמך PDF בשם "${file.name}". 
+        
+אני רוצה לבדוק אם המסמך עומד בדרישות הפרטיות. איך אתה יכול לעזור לי?`
+        
+        // Show immediate helpful message
+        setMessages(prev => [...prev, {
+          id: `pdf-help-${Date.now()}`,
+          role: 'assistant',
+          content: `📄 קיבלתי את הקובץ "${file.name}"!
+
+כרגע אני לא יכול לקרוא את תוכן ה-PDF ישירות, אבל יש כמה דרכים שאני יכול לעזור:
+
+1. העתק את הטקסט מהמסמך ושלח לי אותו - אבדוק תאימות לחוק
+2. ספר לי מה סוג המסמך (מדיניות פרטיות? הסכם? טופס?) ואתן לך צ'קליסט לבדיקה
+3. אני יכול ליצור לך גרסה חדשה ומותאמת לתיקון 13
+
+מה מתאים לך?`,
+          created_at: new Date().toISOString()
+        }])
+        
         // Update suggestions for document review
         setSuggestions([
-          { icon: '🔍', text: 'בדוק תאימות למדיניות פרטיות' },
-          { icon: '📝', text: 'הצע שיפורים למסמך' },
-          { icon: '⚠️', text: 'האם יש בעיות פרטיות?' },
-          { icon: '✅', text: 'צור רשימת תיקונים' },
+          { icon: '📋', text: 'זו מדיניות פרטיות - תן צ\'קליסט' },
+          { icon: '📝', text: 'זה הסכם - מה לבדוק?' },
+          { icon: '✨', text: 'צור לי גרסה חדשה' },
+          { icon: '❓', text: 'זה מסמך אחר' },
         ])
+        
+        setUploadProgress(100)
+        setUploadProgress(null)
+        return // Don't send another message
+        
       } else if (fileType.includes('spreadsheet') || fileName.endsWith('.xlsx') || fileName.endsWith('.csv')) {
         aiPrompt += ' זה קובץ נתונים. האם יש בו מידע אישי שצריך להגן עליו?'
         setSuggestions([
@@ -668,6 +693,14 @@ export default function ChatPage() {
         ])
       } else if (fileType.includes('image')) {
         aiPrompt += ' זו תמונה. יש לי שאלה לגביה.'
+      } else if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
+        aiPrompt = `העליתי מסמך וורד בשם "${file.name}". אני רוצה לבדוק אם הוא עומד בדרישות הפרטיות.`
+        setSuggestions([
+          { icon: '📋', text: 'זו מדיניות פרטיות' },
+          { icon: '📝', text: 'זה הסכם או חוזה' },
+          { icon: '📄', text: 'זה נוהל פנימי' },
+          { icon: '❓', text: 'מסמך אחר' },
+        ])
       } else {
         aiPrompt += ' מה עושים עם זה?'
       }
