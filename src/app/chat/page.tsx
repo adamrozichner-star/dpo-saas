@@ -323,6 +323,9 @@ export default function ChatPage() {
         setCurrentDocument(data.generatedDocument)
       }
 
+      // Update suggestions dynamically based on intent
+      updateSuggestionsForIntent(data.intent, messageText)
+
     } catch (error) {
       console.error('Failed to send message:', error)
       setMessages(prev => [
@@ -340,12 +343,81 @@ export default function ChatPage() {
     }
   }
 
+  // Dynamic suggestions based on conversation context
+  const updateSuggestionsForIntent = (intent: string, lastMessage: string) => {
+    switch (intent) {
+      case 'incident':
+        setSuggestions([
+          { icon: '📝', text: 'מה לכלול בדיווח לרשות?' },
+          { icon: '⏰', text: '72 השעות - מתי מתחילות?' },
+          { icon: '📋', text: 'תבנית דיווח לרשות' },
+          { icon: '🔒', text: 'איך למנוע אירועים עתידיים?' },
+        ])
+        break
+      case 'document':
+        setSuggestions([
+          { icon: '✏️', text: 'ערוך את המסמך' },
+          { icon: '👁️', text: 'בקש סקירה מממונה' },
+          { icon: '📄', text: 'צריך עוד מסמך' },
+          { icon: '📤', text: 'איך לפרסם את המסמך?' },
+        ])
+        break
+      case 'dsar':
+        setSuggestions([
+          { icon: '⏰', text: 'כמה זמן יש לי להשיב?' },
+          { icon: '📝', text: 'תבנית תשובה לבקשה' },
+          { icon: '🔍', text: 'איך מאתרים את המידע?' },
+          { icon: '❌', text: 'מתי אפשר לסרב לבקשה?' },
+        ])
+        break
+      case 'status':
+        setSuggestions([
+          { icon: '📈', text: 'איך משפרים את הציון?' },
+          { icon: '📋', text: 'מה המשימות הדחופות?' },
+          { icon: '📄', text: 'אילו מסמכים חסרים?' },
+          { icon: '🎯', text: 'תוכנית פעולה לשבוע הקרוב' },
+        ])
+        break
+      case 'question':
+        // Keep suggestions relevant to follow-up questions
+        setSuggestions([
+          { icon: '📚', text: 'תסביר יותר לעומק' },
+          { icon: '📄', text: 'צור מסמך בנושא' },
+          { icon: '👤', text: 'רוצה לדבר עם ממונה' },
+          { icon: '🔙', text: 'שאלה אחרת' },
+        ])
+        break
+      case 'ropa':
+        setSuggestions([
+          { icon: '➕', text: 'הוסף פעילות עיבוד' },
+          { icon: '📊', text: 'הצג את מפת העיבוד' },
+          { icon: '⚠️', text: 'אילו עיבודים מסוכנים?' },
+          { icon: '📝', text: 'עדכן פעילות קיימת' },
+        ])
+        break
+      case 'escalate':
+        setSuggestions([
+          { icon: '📞', text: 'מתי הממונה יחזור?' },
+          { icon: '❓', text: 'שאלה אחרת בינתיים' },
+          { icon: '📄', text: 'צריך מסמך דחוף' },
+          { icon: '🚨', text: 'יש אירוע אבטחה' },
+        ])
+        break
+      default:
+        // Return to default suggestions
+        setSuggestions(defaultSuggestions)
+    }
+  }
+
   const handleQuickActionClick = async (buttonId: string) => {
     if (!organization) return
 
     setActiveQuickAction(null)
 
     if (buttonId === 'start_incident') {
+      // Show immediate feedback
+      setIsLoading(true)
+      
       // Get last few messages for context
       const context = messages.slice(-3).map(m => m.content).join('\n')
       
@@ -361,16 +433,52 @@ export default function ChatPage() {
         })
         
         const data = await response.json()
-        if (data.success) {
-          // Refresh chat to show system message
-          await loadChatHistory(organization.id)
+        
+        if (data.success || data.incident) {
+          // Add success message directly
+          const deadline = new Date(Date.now() + 72 * 60 * 60 * 1000)
+          setMessages(prev => [...prev, {
+            id: `incident-created-${Date.now()}`,
+            role: 'assistant',
+            content: `✅ נפתח דיווח אירוע אבטחה!\n\n⏰ דדליין לדיווח לרשות: ${deadline.toLocaleDateString('he-IL')} ${deadline.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}\n\nהשלב הבא: לך ללוח הבקרה → "אירועי אבטחה" למילוי הפרטים המלאים.`,
+            created_at: new Date().toISOString()
+          }])
+          
+          // Update suggestions to incident-related actions
+          setSuggestions([
+            { icon: '📝', text: 'מה עלי לכלול בדיווח?' },
+            { icon: '⏰', text: 'מה קורה אם לא מדווחים בזמן?' },
+            { icon: '📋', text: 'צריך תבנית לדיווח לרשות' },
+            { icon: '👤', text: 'רוצה לדבר עם הממונה' },
+          ])
+        } else {
+          throw new Error(data.error || 'Failed to create incident')
         }
       } catch (error) {
         console.error('Failed to create incident:', error)
+        setMessages(prev => [...prev, {
+          id: `incident-error-${Date.now()}`,
+          role: 'assistant',
+          content: '❌ לא הצלחתי לפתוח דיווח. נסה שוב או פנה ללוח הבקרה.',
+          created_at: new Date().toISOString()
+        }])
+      } finally {
+        setIsLoading(false)
       }
     }
 
+    if (buttonId === 'just_question') {
+      // User said it's just a question - update suggestions
+      setSuggestions([
+        { icon: '📄', text: 'צריך מדיניות פרטיות' },
+        { icon: '❓', text: 'עובד שאל על פרטיות' },
+        { icon: '📊', text: 'מה הסטטוס שלי?' },
+        { icon: '📋', text: 'צריך טופס הסכמה' },
+      ])
+    }
+
     if (buttonId === 'escalate_now') {
+      setIsLoading(true)
       const context = messages.slice(-5).map(m => `${m.role}: ${m.content}`).join('\n')
       
       try {
@@ -386,11 +494,23 @@ export default function ChatPage() {
         
         const data = await response.json()
         if (data.success) {
-          await loadChatHistory(organization.id)
+          setMessages(prev => [...prev, {
+            id: `escalate-${Date.now()}`,
+            role: 'assistant',
+            content: '📞 הפנייה הועברה לממונה האנושי!\n\nהממונה יחזור אליך בהקדם (בדרך כלל תוך יום עסקים אחד).\n\nבינתיים, אפשר להמשיך לשאול אותי שאלות.',
+            created_at: new Date().toISOString()
+          }])
         }
       } catch (error) {
         console.error('Failed to escalate:', error)
+      } finally {
+        setIsLoading(false)
       }
+    }
+
+    if (buttonId === 'continue_chat') {
+      // Just dismiss, restore default suggestions
+      setSuggestions(defaultSuggestions)
     }
 
     if (buttonId === 'save_doc' && currentDocument) {
@@ -477,44 +597,92 @@ export default function ChatPage() {
   }
 
   const handleFileUpload = async (file: File) => {
-    if (!organization || !supabase) return
+    if (!organization) {
+      setMessages(prev => [...prev, {
+        id: `upload-error-${Date.now()}`,
+        role: 'assistant',
+        content: '❌ לא ניתן להעלות קובץ - נסה לרענן את הדף.',
+        created_at: new Date().toISOString()
+      }])
+      return
+    }
 
-    setUploadProgress(50) // Show indeterminate progress
+    setUploadProgress(30)
+
+    // Add upload message immediately
+    const uploadMsgId = `upload-${Date.now()}`
+    setMessages(prev => [...prev, {
+      id: uploadMsgId,
+      role: 'user',
+      content: `📎 מעלה קובץ: ${file.name}`,
+      created_at: new Date().toISOString(),
+      attachments: [{ name: file.name, size: file.size, type: file.type }]
+    }])
 
     try {
-      // Upload to Supabase Storage
-      const fileName = `${organization.id}/${Date.now()}-${file.name}`
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(fileName, file)
+      setUploadProgress(60)
+      
+      // Try to upload to Supabase Storage
+      let fileUrl = null
+      if (supabase) {
+        try {
+          const fileName = `${organization.id}/${Date.now()}-${file.name}`
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('documents')
+            .upload(fileName, file)
 
-      if (uploadError) throw uploadError
+          if (!uploadError && uploadData) {
+            const { data: urlData } = supabase.storage
+              .from('documents')
+              .getPublicUrl(fileName)
+            fileUrl = urlData.publicUrl
+          }
+        } catch (storageError) {
+          console.log('Storage upload failed, continuing without storage:', storageError)
+        }
+      }
+
+      setUploadProgress(90)
+
+      // Determine file type and suggest action
+      const fileType = file.type
+      const fileName = file.name.toLowerCase()
+      let aiPrompt = `העליתי קובץ בשם "${file.name}".`
+      
+      if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
+        aiPrompt += ' זה מסמך PDF. האם תוכל לעזור לי להבין אם יש בו בעיות פרטיות או אם הוא עומד בדרישות?'
+        // Update suggestions for document review
+        setSuggestions([
+          { icon: '🔍', text: 'בדוק תאימות למדיניות פרטיות' },
+          { icon: '📝', text: 'הצע שיפורים למסמך' },
+          { icon: '⚠️', text: 'האם יש בעיות פרטיות?' },
+          { icon: '✅', text: 'צור רשימת תיקונים' },
+        ])
+      } else if (fileType.includes('spreadsheet') || fileName.endsWith('.xlsx') || fileName.endsWith('.csv')) {
+        aiPrompt += ' זה קובץ נתונים. האם יש בו מידע אישי שצריך להגן עליו?'
+        setSuggestions([
+          { icon: '🔒', text: 'האם המידע מוגן כראוי?' },
+          { icon: '📊', text: 'מיפוי סוגי המידע בקובץ' },
+          { icon: '🗑️', text: 'מה צריך למחוק?' },
+          { icon: '📋', text: 'צור מדיניות שמירת מידע' },
+        ])
+      } else if (fileType.includes('image')) {
+        aiPrompt += ' זו תמונה. יש לי שאלה לגביה.'
+      } else {
+        aiPrompt += ' מה עושים עם זה?'
+      }
 
       setUploadProgress(100)
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('documents')
-        .getPublicUrl(fileName)
-
-      // Add upload message
-      setMessages(prev => [...prev, {
-        id: `upload-${Date.now()}`,
-        role: 'user',
-        content: `📎 העלאת קובץ: ${file.name}`,
-        created_at: new Date().toISOString(),
-        attachments: [{ name: file.name, size: file.size, type: file.type, url: urlData.publicUrl }]
-      }])
-
-      // Send context message
-      await sendMessage(`העליתי קובץ בשם "${file.name}". מה עושים עם זה?`)
+      // Send to AI for analysis
+      await sendMessage(aiPrompt)
 
     } catch (error) {
       console.error('Upload failed:', error)
       setMessages(prev => [...prev, {
         id: `upload-error-${Date.now()}`,
         role: 'assistant',
-        content: '❌ ההעלאה נכשלה. בבקשה נסה שוב.',
+        content: '❌ ההעלאה נכשלה. נסה שוב או שלח את שם הקובץ ואספר לך מה לעשות.',
         created_at: new Date().toISOString()
       }])
     } finally {
