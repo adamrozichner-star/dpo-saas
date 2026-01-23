@@ -27,7 +27,7 @@ export default function LoginPage() {
       if (error) {
         setError('פרטי ההתחברות שגויים')
       } else {
-        router.push('/dashboard')
+        router.push('/chat')
       }
     } catch (err) {
       setError('אירעה שגיאה, נסו שוב')
@@ -41,8 +41,8 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link href="/" className="inline-flex items-center justify-center gap-2 mb-4">
-            <Shield className="h-8 w-8 text-primary" />
-            <span className="font-bold text-xl">DPO-Pro</span>
+            <Shield className="h-8 w-8 text-indigo-600" />
+            <span className="font-bold text-xl text-indigo-600">Kept</span>
           </Link>
           <CardTitle>התחברות</CardTitle>
           <CardDescription>היכנסו לחשבון שלכם לניהול הפרטיות</CardDescription>
