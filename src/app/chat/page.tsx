@@ -43,7 +43,7 @@ interface Suggestion {
 
 export default function ChatPage() {
   const router = useRouter()
-  const { user, supabase } = useAuth()
+  const { user, supabase, loading: authLoading } = useAuth()
   
   // Default suggestions - show immediately
   const defaultSuggestions: Suggestion[] = [
@@ -72,6 +72,7 @@ export default function ChatPage() {
   const [dragOver, setDragOver] = useState(false)
   const [showQuickActions, setShowQuickActions] = useState(false)
   const [organization, setOrganization] = useState<any>(null)
+  const [orgLoading, setOrgLoading] = useState(true)
   const [complianceScore, setComplianceScore] = useState(0)
   const [pendingTasks, setPendingTasks] = useState(0)
   const [suggestions, setSuggestions] = useState<Suggestion[]>(defaultSuggestions)
@@ -86,12 +87,22 @@ export default function ChatPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Load initial data when user is available
+  // Load initial data when auth is ready
   useEffect(() => {
-    if (user && supabase) {
+    // Wait for auth to finish loading
+    if (authLoading) return
+    
+    // If no user, redirect to login
+    if (!user) {
+      router.push('/login')
+      return
+    }
+    
+    // If supabase client is ready, load organization
+    if (supabase) {
       loadOrganization()
     }
-  }, [user, supabase])
+  }, [authLoading, user, supabase])
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -108,21 +119,23 @@ export default function ChatPage() {
 
   const loadOrganization = async () => {
     if (!user || !supabase) {
-      // No user logged in
-      router.push('/login')
+      setOrgLoading(false)
       return
     }
     
+    setOrgLoading(true)
+    
     try {
-      // Get user profile with organization (same as dashboard)
+      // Get user with organization (same query as dashboard)
       const { data: userData, error } = await supabase
-        .from('profiles')
+        .from('users')
         .select('*, organizations(*)')
-        .eq('id', user.id)
+        .eq('auth_user_id', user.id)
         .single()
 
       if (error) {
-        console.error('Error loading profile:', error)
+        console.error('Error loading user data:', error)
+        setOrgLoading(false)
         return
       }
       
@@ -155,6 +168,8 @@ export default function ChatPage() {
       }
     } catch (error) {
       console.error('Failed to load org:', error)
+    } finally {
+      setOrgLoading(false)
     }
   }
 
@@ -237,13 +252,23 @@ export default function ChatPage() {
     const messageText = text || input.trim()
     if (!messageText || isLoading) return
     
-    // If no organization yet, show error
+    // If still loading organization, show message
+    if (orgLoading) {
+      setMessages(prev => [...prev, {
+        id: `loading-${Date.now()}`,
+        role: 'assistant',
+        content: '⏳ רק רגע, טוען את פרטי הארגון...',
+        created_at: new Date().toISOString()
+      }])
+      return
+    }
+    
+    // If no organization loaded, show error
     if (!organization) {
-      console.log('No organization loaded yet')
       setMessages(prev => [...prev, {
         id: `error-${Date.now()}`,
         role: 'assistant',
-        content: 'עדיין טוען את פרטי הארגון... נסה שוב בעוד רגע.',
+        content: '❌ לא הצלחתי לטעון את פרטי הארגון. נסה לרענן את הדף.',
         created_at: new Date().toISOString()
       }])
       return
@@ -527,6 +552,18 @@ export default function ChatPage() {
     return 'from-red-500/20 to-red-500/5'
   }
 
+  // Show loading screen while auth is loading
+  if (authLoading) {
+    return (
+      <div className="h-screen bg-slate-50 flex items-center justify-center" dir="rtl">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
+          <p className="text-slate-600">טוען...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="h-screen bg-slate-50 flex flex-col" dir="rtl">
       {/* Header */}
@@ -541,16 +578,22 @@ export default function ChatPage() {
           
           <div className="relative">
             <div className="w-11 h-11 rounded-full bg-gradient-to-br from-white/30 to-white/10 flex items-center justify-center border-2 border-white/30">
-              <Shield className="w-6 h-6" />
+              {orgLoading ? (
+                <Loader2 className="w-6 h-6 animate-spin" />
+              ) : (
+                <Shield className="w-6 h-6" />
+              )}
             </div>
-            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-400 rounded-full border-2 border-indigo-600"></div>
+            {!orgLoading && organization && (
+              <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-400 rounded-full border-2 border-indigo-600"></div>
+            )}
           </div>
           
           <div className="flex-1">
             <h1 className="font-bold text-lg">Kept</h1>
             <p className="text-sm text-indigo-200 flex items-center gap-1.5">
               <Sparkles className="w-3 h-3" />
-              {organization?.name || 'טוען...'}
+              {orgLoading ? 'טוען...' : (organization?.name || 'לא נמצא ארגון')}
             </p>
           </div>
           
