@@ -52,6 +52,9 @@ export default function ChatPage() {
     { icon: '🚨', text: 'יש אירוע אבטחה' },
     { icon: '📊', text: 'מה הסטטוס שלי?' },
     { icon: '📋', text: 'צריך טופס הסכמה' },
+    { icon: '🔒', text: 'נוהל אבטחת מידע' },
+    { icon: '👤', text: 'בקשת מחיקה מלקוח' },
+    { icon: '📝', text: 'הסכם עיבוד לספק' },
   ]
   
   // State
@@ -83,10 +86,12 @@ export default function ChatPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Load initial data
+  // Load initial data when user is available
   useEffect(() => {
-    loadOrganization()
-  }, [])
+    if (user && supabase) {
+      loadOrganization()
+    }
+  }, [user, supabase])
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -102,13 +107,28 @@ export default function ChatPage() {
   }, [messages.length])
 
   const loadOrganization = async () => {
+    if (!user || !supabase) {
+      // No user logged in
+      router.push('/login')
+      return
+    }
+    
     try {
-      const response = await fetch('/api/user')
-      const data = await response.json()
+      // Get user profile with organization (same as dashboard)
+      const { data: userData, error } = await supabase
+        .from('profiles')
+        .select('*, organizations(*)')
+        .eq('id', user.id)
+        .single()
+
+      if (error) {
+        console.error('Error loading profile:', error)
+        return
+      }
       
-      if (data.organization) {
-        setOrganization(data.organization)
-        setComplianceScore(data.organization.compliance_score || 0)
+      if (userData?.organizations) {
+        setOrganization(userData.organizations)
+        setComplianceScore(userData.organizations.compliance_score || 0)
         
         // Check if this is first visit after onboarding
         const urlParams = new URLSearchParams(window.location.search)
@@ -120,31 +140,21 @@ export default function ChatPage() {
             {
               id: 'welcome-1',
               role: 'assistant',
-              content: `שלום! 👋 אני הממונה הדיגיטלי שלך ב-${data.organization.name}.\n\nסיימתי לנתח את הפרטים שמילאת ואני מכין לך את המסמכים הנדרשים.\n\nבינתיים, יש משהו שאני יכול לעזור בו?`,
+              content: `שלום! 👋 אני הממונה הדיגיטלי שלך ב-${userData.organizations.name}.\n\nסיימתי לנתח את הפרטים שמילאת ואני מכין לך את המסמכים הנדרשים.\n\nבמה אפשר לעזור?`,
               created_at: new Date().toISOString()
             }
           ])
-          // Load suggestions based on org data
-          await loadSuggestions(data.organization.id)
-        } else {
-          // Regular visit - try to load chat history
-          await loadChatHistory(data.organization.id)
-          await loadSuggestions(data.organization.id)
         }
+        
+        // Load chat history and suggestions
+        await loadChatHistory(userData.organizations.id)
+        await loadSuggestions(userData.organizations.id)
       } else {
+        // No organization - redirect to onboarding
         router.push('/onboarding')
       }
     } catch (error) {
       console.error('Failed to load org:', error)
-      // Show generic welcome even if API fails
-      setMessages([
-        {
-          id: 'welcome-fallback',
-          role: 'assistant',
-          content: `היי! 👋 אני כאן לעזור לך עם הפרטיות והאבטחה בארגון.\n\nאפשר לשאול אותי שאלות, לבקש מסמכים, או לדווח על אירועים.`,
-          created_at: new Date().toISOString()
-        }
-      ])
     }
   }
 
@@ -225,7 +235,19 @@ export default function ChatPage() {
 
   const sendMessage = async (text?: string) => {
     const messageText = text || input.trim()
-    if (!messageText || !organization || isLoading) return
+    if (!messageText || isLoading) return
+    
+    // If no organization yet, show error
+    if (!organization) {
+      console.log('No organization loaded yet')
+      setMessages(prev => [...prev, {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: 'עדיין טוען את פרטי הארגון... נסה שוב בעוד רגע.',
+        created_at: new Date().toISOString()
+      }])
+      return
+    }
 
     setInput('')
     setIsLoading(true)
@@ -749,13 +771,13 @@ export default function ChatPage() {
 
       {/* Suggestions */}
       <div className="bg-white/80 backdrop-blur border-t border-slate-200 flex-shrink-0">
-        <div className="flex gap-2 p-3 overflow-x-auto max-w-3xl mx-auto">
+        <div className="flex flex-wrap justify-center gap-2 p-3 max-w-4xl mx-auto md:flex-wrap md:overflow-visible overflow-x-auto">
           {suggestions.map((s, i) => (
             <button 
               key={i}
               onClick={() => sendMessage(s.text)}
               disabled={isLoading}
-              className="flex-shrink-0 bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 disabled:opacity-50 px-4 py-2.5 rounded-full text-sm text-slate-700 transition flex items-center gap-2 shadow-sm"
+              className="flex-shrink-0 md:flex-shrink bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 disabled:opacity-50 px-4 py-2.5 rounded-full text-sm text-slate-700 transition flex items-center gap-2 shadow-sm whitespace-nowrap"
             >
               <span>{s.icon}</span>
               <span>{s.text}</span>
@@ -811,7 +833,12 @@ export default function ChatPage() {
                 className="flex-1 bg-transparent border-0 focus:outline-none py-3 text-slate-800"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    sendMessage()
+                  }
+                }}
                 disabled={isLoading}
               />
               <button 
