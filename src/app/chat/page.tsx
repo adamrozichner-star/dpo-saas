@@ -354,20 +354,18 @@ export default function ChatPage() {
   const handleFileUpload = async (file: File) => {
     if (!organization || !supabase) return
 
-    setUploadProgress(0)
+    setUploadProgress(50) // Show indeterminate progress
 
     try {
       // Upload to Supabase Storage
       const fileName = `${organization.id}/${Date.now()}-${file.name}`
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('documents')
-        .upload(fileName, file, {
-          onUploadProgress: (progress) => {
-            setUploadProgress(Math.round((progress.loaded / progress.total) * 100))
-          }
-        })
+        .upload(fileName, file)
 
       if (uploadError) throw uploadError
+
+      setUploadProgress(100)
 
       // Get public URL
       const { data: urlData } = supabase.storage
