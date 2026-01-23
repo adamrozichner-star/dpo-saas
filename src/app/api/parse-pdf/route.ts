@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-// Simple PDF text extraction using pdf-parse
-// Install: npm install pdf-parse
+// @ts-ignore - pdf-parse doesn't have type declarations
+import pdfParse from 'pdf-parse'
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,8 +27,6 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer)
 
     try {
-      // Dynamic import of pdf-parse
-      const pdfParse = (await import('pdf-parse')).default
       const data = await pdfParse(buffer)
       
       // Extract text (limit to first 15000 chars for API limits)
@@ -48,15 +46,6 @@ export async function POST(request: NextRequest) {
       
     } catch (parseError: any) {
       console.error('PDF parse error:', parseError)
-      
-      // If pdf-parse not installed, return helpful error
-      if (parseError.code === 'MODULE_NOT_FOUND') {
-        return NextResponse.json({
-          success: false,
-          error: 'PDF parsing not available',
-          message: 'יש להתקין את ספריית pdf-parse: npm install pdf-parse'
-        }, { status: 500 })
-      }
       
       return NextResponse.json({
         success: false,
