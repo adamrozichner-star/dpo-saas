@@ -646,44 +646,124 @@ export default function ChatPage() {
 
       // Determine file type and suggest action
       const fileType = file.type
-      const fileName = file.name.toLowerCase()
+      const fileNameLower = file.name.toLowerCase()
       let aiPrompt = `העליתי קובץ בשם "${file.name}".`
       
-      if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
-        // PDF files - we can't read content but can help
-        aiPrompt = `העליתי מסמך PDF בשם "${file.name}". 
-        
-אני רוצה לבדוק אם המסמך עומד בדרישות הפרטיות. איך אתה יכול לעזור לי?`
-        
-        // Show immediate helpful message
+      if (fileType === 'application/pdf' || fileNameLower.endsWith('.pdf')) {
+        // Try to extract PDF text
         setMessages(prev => [...prev, {
-          id: `pdf-help-${Date.now()}`,
+          id: `pdf-parsing-${Date.now()}`,
           role: 'assistant',
-          content: `📄 קיבלתי את הקובץ "${file.name}"!
-
-כרגע אני לא יכול לקרוא את תוכן ה-PDF ישירות, אבל יש כמה דרכים שאני יכול לעזור:
-
-1. העתק את הטקסט מהמסמך ושלח לי אותו - אבדוק תאימות לחוק
-2. ספר לי מה סוג המסמך (מדיניות פרטיות? הסכם? טופס?) ואתן לך צ'קליסט לבדיקה
-3. אני יכול ליצור לך גרסה חדשה ומותאמת לתיקון 13
-
-מה מתאים לך?`,
+          content: `📄 קיבלתי את "${file.name}" - קורא את התוכן...`,
           created_at: new Date().toISOString()
         }])
+
+        try {
+          const pdfFormData = new FormData()
+          pdfFormData.append('file', file)
+          
+          const pdfResponse = await fetch('/api/parse-pdf', {
+            method: 'POST',
+            body: pdfFormData
+          })
+          
+          const pdfData = await pdfResponse.json()
+          
+          if (pdfData.success && pdfData.text) {
+            // Got the text! Send to AI for analysis
+            const textPreview = pdfData.text.substring(0, 500)
+            
+            // Remove the "parsing" message and add success
+            setMessages(prev => prev.filter(m => !m.id?.includes('pdf-parsing')))
+            
+            aiPrompt = `קראתי מסמך PDF בשם "${file.name}" (${pdfData.pages} עמודים).
+
+הנה תחילת התוכן:
+---
+${textPreview}${pdfData.text.length > 500 ? '...' : ''}
+---
+
+${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)' : ''}
+
+אנא בדוק:
+1. האם זה נראה כמו מדיניות פרטיות / הסכם / מסמך אחר?
+2. האם יש בעיות בולטות מבחינת תיקון 13?
+3. מה כדאי לשפר?`
+
+            // Store full text for follow-up questions
+            setCurrentDocument({
+              type: 'uploaded_pdf',
+              name: file.name,
+              text: pdfData.text,
+              pages: pdfData.pages
+            })
+
+            setSuggestions([
+              { icon: '🔍', text: 'בדוק תאימות מלאה לתיקון 13' },
+              { icon: '📝', text: 'צור גרסה משופרת' },
+              { icon: '⚠️', text: 'מה חסר במסמך?' },
+              { icon: '👁️', text: 'בקש סקירה מממונה' },
+            ])
+            
+          } else {
+            // Couldn't parse - offer manual options
+            setMessages(prev => prev.filter(m => !m.id?.includes('pdf-parsing')))
+            setMessages(prev => [...prev, {
+              id: `pdf-help-${Date.now()}`,
+              role: 'assistant',
+              content: `📄 קיבלתי את "${file.name}" אבל לא הצלחתי לקרוא את התוכן אוטומטית.
+
+אפשר לעזור בכמה דרכים:
+
+1. 📋 העתק את הטקסט מהמסמך ושלח לי - אבדוק תאימות לחוק
+2. 📝 ספר לי מה סוג המסמך ואתן צ'קליסט לבדיקה
+3. ✨ אני יכול ליצור גרסה חדשה ומותאמת לתיקון 13
+
+מה מתאים לך?`,
+              created_at: new Date().toISOString()
+            }])
+            
+            setSuggestions([
+              { icon: '📋', text: 'זו מדיניות פרטיות - תן צ\'קליסט' },
+              { icon: '📝', text: 'זה הסכם - מה לבדוק?' },
+              { icon: '✨', text: 'צור לי גרסה חדשה' },
+              { icon: '❓', text: 'זה מסמך אחר' },
+            ])
+            
+            setUploadProgress(null)
+            return
+          }
+        } catch (pdfError) {
+          console.error('PDF parsing failed:', pdfError)
+          // Fallback to manual options
+          setMessages(prev => prev.filter(m => !m.id?.includes('pdf-parsing')))
+          setMessages(prev => [...prev, {
+            id: `pdf-help-${Date.now()}`,
+            role: 'assistant',
+            content: `📄 קיבלתי את "${file.name}"!
+
+כרגע יש בעיה טכנית בקריאת ה-PDF. אבל אני יכול לעזור:
+
+• העתק את הטקסט ושלח לי - אבדוק תאימות
+• ספר לי מה סוג המסמך - אתן צ'קליסט
+• אני יכול ליצור גרסה חדשה מאפס
+
+מה תעדיף?`,
+            created_at: new Date().toISOString()
+          }])
+          
+          setSuggestions([
+            { icon: '📋', text: 'זו מדיניות פרטיות' },
+            { icon: '📝', text: 'זה הסכם או חוזה' },
+            { icon: '✨', text: 'צור גרסה חדשה' },
+            { icon: '❓', text: 'מסמך אחר' },
+          ])
+          
+          setUploadProgress(null)
+          return
+        }
         
-        // Update suggestions for document review
-        setSuggestions([
-          { icon: '📋', text: 'זו מדיניות פרטיות - תן צ\'קליסט' },
-          { icon: '📝', text: 'זה הסכם - מה לבדוק?' },
-          { icon: '✨', text: 'צור לי גרסה חדשה' },
-          { icon: '❓', text: 'זה מסמך אחר' },
-        ])
-        
-        setUploadProgress(100)
-        setUploadProgress(null)
-        return // Don't send another message
-        
-      } else if (fileType.includes('spreadsheet') || fileName.endsWith('.xlsx') || fileName.endsWith('.csv')) {
+      } else if (fileType.includes('spreadsheet') || fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.csv')) {
         aiPrompt += ' זה קובץ נתונים. האם יש בו מידע אישי שצריך להגן עליו?'
         setSuggestions([
           { icon: '🔒', text: 'האם המידע מוגן כראוי?' },
@@ -693,7 +773,7 @@ export default function ChatPage() {
         ])
       } else if (fileType.includes('image')) {
         aiPrompt += ' זו תמונה. יש לי שאלה לגביה.'
-      } else if (fileName.endsWith('.docx') || fileName.endsWith('.doc')) {
+      } else if (fileNameLower.endsWith('.docx') || fileNameLower.endsWith('.doc')) {
         aiPrompt = `העליתי מסמך וורד בשם "${file.name}". אני רוצה לבדוק אם הוא עומד בדרישות הפרטיות.`
         setSuggestions([
           { icon: '📋', text: 'זו מדיניות פרטיות' },
