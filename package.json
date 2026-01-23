@@ -30,6 +30,7 @@
     "docx": "^8.5.0",
     "file-saver": "^2.0.5",
     "pdfmake": "^0.2.10",
+    "pdf-parse": "^1.1.1",
     "resend": "^4.0.0"
   },
   "devDependencies": {
