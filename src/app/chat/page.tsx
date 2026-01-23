@@ -45,8 +45,24 @@ export default function ChatPage() {
   const router = useRouter()
   const { user, supabase } = useAuth()
   
+  // Default suggestions - show immediately
+  const defaultSuggestions: Suggestion[] = [
+    { icon: '📄', text: 'צריך מדיניות פרטיות' },
+    { icon: '❓', text: 'עובד שאל על פרטיות' },
+    { icon: '🚨', text: 'יש אירוע אבטחה' },
+    { icon: '📊', text: 'מה הסטטוס שלי?' },
+    { icon: '📋', text: 'צריך טופס הסכמה' },
+  ]
+  
   // State
-  const [messages, setMessages] = useState<Message[]>([])
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 'initial-welcome',
+      role: 'assistant',
+      content: `היי! 👋 אני כאן לעזור לך עם הפרטיות והאבטחה בארגון.\n\nאפשר לשאול אותי שאלות, לבקש מסמכים, או לדווח על אירועים.`,
+      created_at: new Date().toISOString()
+    }
+  ])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isTyping, setIsTyping] = useState(false)
@@ -55,7 +71,7 @@ export default function ChatPage() {
   const [organization, setOrganization] = useState<any>(null)
   const [complianceScore, setComplianceScore] = useState(0)
   const [pendingTasks, setPendingTasks] = useState(0)
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([])
+  const [suggestions, setSuggestions] = useState<Suggestion[]>(defaultSuggestions)
   const [activeQuickAction, setActiveQuickAction] = useState<QuickAction | null>(null)
   const [showDocModal, setShowDocModal] = useState(false)
   const [currentDocument, setCurrentDocument] = useState<any>(null)
@@ -92,14 +108,43 @@ export default function ChatPage() {
       
       if (data.organization) {
         setOrganization(data.organization)
-        await loadChatHistory(data.organization.id)
-        await loadSuggestions(data.organization.id)
         setComplianceScore(data.organization.compliance_score || 0)
+        
+        // Check if this is first visit after onboarding
+        const urlParams = new URLSearchParams(window.location.search)
+        const isWelcome = urlParams.get('welcome') === 'true'
+        
+        if (isWelcome) {
+          // Show personalized welcome after onboarding
+          setMessages([
+            {
+              id: 'welcome-1',
+              role: 'assistant',
+              content: `שלום! 👋 אני הממונה הדיגיטלי שלך ב-${data.organization.name}.\n\nסיימתי לנתח את הפרטים שמילאת ואני מכין לך את המסמכים הנדרשים.\n\nבינתיים, יש משהו שאני יכול לעזור בו?`,
+              created_at: new Date().toISOString()
+            }
+          ])
+          // Load suggestions based on org data
+          await loadSuggestions(data.organization.id)
+        } else {
+          // Regular visit - try to load chat history
+          await loadChatHistory(data.organization.id)
+          await loadSuggestions(data.organization.id)
+        }
       } else {
         router.push('/onboarding')
       }
     } catch (error) {
       console.error('Failed to load org:', error)
+      // Show generic welcome even if API fails
+      setMessages([
+        {
+          id: 'welcome-fallback',
+          role: 'assistant',
+          content: `היי! 👋 אני כאן לעזור לך עם הפרטיות והאבטחה בארגון.\n\nאפשר לשאול אותי שאלות, לבקש מסמכים, או לדווח על אירועים.`,
+          created_at: new Date().toISOString()
+        }
+      ])
     }
   }
 
@@ -108,10 +153,24 @@ export default function ChatPage() {
       const response = await fetch(`/api/chat?orgId=${orgId}`)
       const data = await response.json()
       
+      if (data.error) {
+        console.error('Chat API error:', data.error)
+        // Show welcome message on error
+        setMessages([
+          {
+            id: 'welcome-1',
+            role: 'assistant',
+            content: `היי! 👋 אני כאן לעזור לך עם הפרטיות והאבטחה בארגון.\n\nאפשר לשאול אותי שאלות, לבקש מסמכים, או לדווח על אירועים.`,
+            created_at: new Date().toISOString()
+          }
+        ])
+        return
+      }
+      
       if (data.messages?.length > 0) {
         setMessages(data.messages)
       } else {
-        // Welcome messages
+        // No messages yet - show welcome
         setMessages([
           {
             id: 'welcome-1',
@@ -128,10 +187,28 @@ export default function ChatPage() {
       }
     } catch (error) {
       console.error('Failed to load chat:', error)
+      // Show welcome on error
+      setMessages([
+        {
+          id: 'welcome-error',
+          role: 'assistant',
+          content: `היי! 👋 אני כאן לעזור לך עם הפרטיות והאבטחה בארגון.\n\nאפשר לשאול אותי שאלות, לבקש מסמכים, או לדווח על אירועים.`,
+          created_at: new Date().toISOString()
+        }
+      ])
     }
   }
 
   const loadSuggestions = async (orgId: string) => {
+    // Default suggestions - always show these
+    const defaultSuggestions = [
+      { icon: '📄', text: 'צריך מדיניות פרטיות' },
+      { icon: '❓', text: 'עובד שאל על פרטיות' },
+      { icon: '🚨', text: 'יש אירוע אבטחה' },
+      { icon: '📊', text: 'מה הסטטוס שלי?' },
+      { icon: '📋', text: 'צריך טופס הסכמה' },
+    ]
+    
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -139,9 +216,10 @@ export default function ChatPage() {
         body: JSON.stringify({ action: 'get_suggestions', orgId })
       })
       const data = await response.json()
-      setSuggestions(data.suggestions || [])
+      setSuggestions(data.suggestions?.length > 0 ? data.suggestions : defaultSuggestions)
     } catch (error) {
       console.error('Failed to load suggestions:', error)
+      setSuggestions(defaultSuggestions)
     }
   }
 
