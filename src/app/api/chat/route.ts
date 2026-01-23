@@ -314,15 +314,19 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
         }
       }
       
-      // Log Q&A for analytics
+      // Log Q&A for analytics (don't fail if this fails)
       if (['question', 'dsar', 'general'].includes(intent)) {
-        await supabase.from('qa_log').insert({
-          org_id: orgId,
-          question: message,
-          answer: aiText,
-          intent,
-          source: 'chat'
-        }).catch(() => {}) // Don't fail if this fails
+        try {
+          await supabase.from('qa_log').insert({
+            org_id: orgId,
+            question: message,
+            answer: aiText,
+            intent,
+            source: 'chat'
+          })
+        } catch {
+          // Silently ignore Q&A logging errors
+        }
       }
       
       return NextResponse.json({
