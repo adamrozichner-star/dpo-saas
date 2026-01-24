@@ -934,7 +934,7 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
     return (
       <div className="h-screen bg-slate-50 flex items-center justify-center" dir="rtl">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 text-blue-700 animate-spin mx-auto mb-4" />
           <p className="text-slate-600">טוען...</p>
         </div>
       </div>
@@ -949,8 +949,10 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
         <div className="p-4 border-b border-slate-700">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Shield className="w-6 h-6 text-indigo-400" />
-              <span className="font-bold text-lg">Kept</span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <span className="font-bold text-lg">MyDPO</span>
             </div>
             <button 
               onClick={() => setSidebarOpen(false)}
@@ -963,7 +965,8 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
           {/* New Chat Button */}
           <button 
             onClick={startNewChat}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 px-4 rounded-xl font-medium transition flex items-center justify-center gap-2"
+            className="w-full text-white py-2.5 px-4 rounded-xl font-medium transition flex items-center justify-center gap-2"
+            style={{backgroundColor: '#10b981'}}
           >
             <Plus className="w-5 h-5" />
             שיחה חדשה
@@ -1036,7 +1039,7 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="bg-gradient-to-l from-indigo-600 to-indigo-700 text-white flex-shrink-0">
+        <header className="text-white flex-shrink-0" style={{background: 'linear-gradient(to left, #1e3a5f, #1e40af)'}}>
           <div className="px-4 py-3 flex items-center gap-3">
             {!sidebarOpen && (
               <button 
@@ -1056,13 +1059,13 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
                 )}
               </div>
               {!orgLoading && organization && (
-                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-400 rounded-full border-2 border-indigo-600"></div>
+                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2" style={{backgroundColor: '#10b981', borderColor: '#1e40af'}}></div>
               )}
             </div>
             
             <div className="flex-1">
               <h1 className="font-bold text-lg">הממונה שלך</h1>
-              <p className="text-sm text-indigo-200 flex items-center gap-1.5">
+              <p className="text-sm text-blue-200 flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3" />
                 {orgLoading ? 'טוען...' : (organization?.name || 'לא נמצא ארגון')}
               </p>
@@ -1070,7 +1073,7 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
             
             <div className={`bg-gradient-to-b ${getScoreBg(complianceScore)} backdrop-blur rounded-xl px-3 py-2 text-center border border-white/10`}>
               <p className={`text-2xl font-bold ${getScoreColor(complianceScore)}`}>{complianceScore}%</p>
-              <p className="text-xs text-indigo-200">ציות</p>
+              <p className="text-xs text-blue-200">ציות</p>
             </div>
           </div>
           
@@ -1091,7 +1094,7 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
 
       {/* Chat Area */}
       <div 
-        className={`flex-1 overflow-y-auto transition-all ${dragOver ? 'bg-indigo-100 scale-[0.99]' : ''}`}
+        className={`flex-1 overflow-y-auto transition-all ${dragOver ? 'bg-blue-100 scale-[0.99]' : ''}`}
         style={{ 
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236366f1' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }}
@@ -1101,10 +1104,10 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
       >
         {/* Drag Overlay */}
         {dragOver && (
-          <div className="fixed inset-0 bg-indigo-600/20 backdrop-blur-sm flex items-center justify-center z-20 pointer-events-none">
+          <div className="fixed inset-0 bg-blue-800/20 backdrop-blur-sm flex items-center justify-center z-20 pointer-events-none">
             <div className="bg-white rounded-3xl p-10 shadow-2xl text-center">
-              <div className="w-20 h-20 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Upload className="w-10 h-10 text-indigo-600" />
+              <div className="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Upload className="w-10 h-10 text-blue-700" />
               </div>
               <p className="text-2xl font-bold text-slate-900 mb-2">שחרר להעלאה</p>
               <p className="text-slate-500">מסמכים, תמונות, או כל קובץ</p>
@@ -1123,13 +1126,16 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
           {/* Messages */}
           {messages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
-              <div className={`max-w-[85%] group ${
-                msg.role === 'user' 
-                  ? 'bg-indigo-600 text-white rounded-2xl rounded-br-md' 
-                  : msg.role === 'system'
-                  ? 'bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl'
-                  : 'bg-white text-slate-800 rounded-2xl rounded-bl-md shadow-sm border border-slate-100'
-              }`}>
+              <div 
+                className={`max-w-[85%] group ${
+                  msg.role === 'user' 
+                    ? 'text-white rounded-2xl rounded-br-md' 
+                    : msg.role === 'system'
+                    ? 'bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl'
+                    : 'bg-white text-slate-800 rounded-2xl rounded-bl-md shadow-sm border border-slate-100'
+                }`}
+                style={msg.role === 'user' ? {backgroundColor: '#1e40af'} : {}}
+              >
                 {/* Message Content */}
                 <div className="px-4 py-3">
                   <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
@@ -1150,10 +1156,10 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
 
                 {/* Generated Document */}
                 {msg.metadata?.generated_document && (
-                  <div className="mx-3 mb-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-100">
+                  <div className="mx-3 mb-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-100">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-indigo-600" />
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-blue-700" />
                       </div>
                       <div>
                         <p className="font-medium text-slate-900">מסמך נוצר</p>
@@ -1166,7 +1172,7 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
                           setCurrentDocument(msg.metadata?.generated_document)
                           setShowDocModal(true)
                         }}
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
+                        className="flex-1 bg-blue-800 hover:bg-blue-900 text-white py-2 px-4 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
                       >
                         <Eye className="w-4 h-4" />
                         צפה ושמור
@@ -1183,7 +1189,7 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
                 
                 {/* Message Footer */}
                 <div className={`px-4 pb-2 flex items-center justify-between ${
-                  msg.role === 'user' ? 'text-indigo-200' : 'text-slate-400'
+                  msg.role === 'user' ? 'text-blue-200' : 'text-slate-400'
                 }`}>
                   <span className="text-xs">{formatTime(msg.created_at)}</span>
                   <div className="flex items-center gap-1">
@@ -1213,7 +1219,7 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
                       onClick={() => handleQuickActionClick(btn.id)}
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
                         btn.style === 'danger' ? 'bg-red-500 hover:bg-red-600 text-white' :
-                        btn.style === 'primary' ? 'bg-indigo-600 hover:bg-indigo-700 text-white' :
+                        btn.style === 'primary' ? 'bg-blue-800 hover:bg-blue-900 text-white' :
                         btn.style === 'outline' ? 'border border-slate-200 hover:bg-slate-50 text-slate-700' :
                         'bg-slate-100 hover:bg-slate-200 text-slate-700'
                       }`}
@@ -1242,12 +1248,12 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
           {/* Upload Progress */}
           {uploadProgress !== null && (
             <div className="flex justify-start">
-              <div className="bg-indigo-600 text-white rounded-2xl rounded-br-md px-4 py-3">
+              <div className="bg-blue-800 text-white rounded-2xl rounded-br-md px-4 py-3">
                 <div className="flex items-center gap-3">
                   <Loader2 className="w-5 h-5 animate-spin" />
                   <div>
                     <p className="text-sm">מעלה קובץ...</p>
-                    <div className="w-32 h-1.5 bg-indigo-400 rounded-full mt-1">
+                    <div className="w-32 h-1.5 bg-blue-400 rounded-full mt-1">
                       <div 
                         className="h-full bg-white rounded-full transition-all"
                         style={{ width: `${uploadProgress}%` }}
@@ -1265,7 +1271,7 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
 
       {/* Upsell Banner */}
       {showUpsellBanner && (
-        <div className="mx-4 mb-2 bg-gradient-to-l from-purple-600 to-indigo-600 text-white rounded-2xl p-4 shadow-lg relative">
+        <div className="mx-4 mb-2 text-white rounded-2xl p-4 shadow-lg relative" style={{background: 'linear-gradient(to left, #1e3a5f, #1e40af)'}}>
           <button 
             onClick={() => setShowUpsellBanner(false)}
             className="absolute top-2 left-2 p-1 hover:bg-white/20 rounded-full"
@@ -1273,10 +1279,11 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
             <X className="w-4 h-4" />
           </button>
           <p className="font-medium mb-1">💡 רוצה סקירה מקצועית?</p>
-          <p className="text-sm text-indigo-200 mb-3">הממונה שלנו יעבור על המסמכים ויוודא שהכל תקין</p>
+          <p className="text-sm text-blue-200 mb-3">הממונה שלנו יעבור על המסמכים ויוודא שהכל תקין</p>
           <button 
             onClick={() => requestReview()}
-            className="w-full bg-white text-indigo-600 py-2 rounded-xl font-medium text-sm hover:bg-indigo-50 transition"
+            className="w-full bg-white py-2 rounded-xl font-medium text-sm hover:bg-blue-50 transition"
+            style={{color: '#1e40af'}}
           >
             בקש סקירה
           </button>
@@ -1291,7 +1298,7 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
               key={i}
               onClick={() => sendMessage(s.text)}
               disabled={isLoading}
-              className="flex-shrink-0 md:flex-shrink bg-white border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 disabled:opacity-50 px-4 py-2.5 rounded-full text-sm text-slate-700 transition flex items-center gap-2 shadow-sm whitespace-nowrap"
+              className="flex-shrink-0 md:flex-shrink bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50 px-4 py-2.5 rounded-full text-sm text-slate-700 transition flex items-center gap-2 shadow-sm whitespace-nowrap"
             >
               <span>{s.icon}</span>
               <span>{s.text}</span>
@@ -1333,13 +1340,13 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
             <button 
               onClick={() => setShowQuickActions(!showQuickActions)}
               className={`p-3 rounded-full transition flex-shrink-0 ${
-                showQuickActions ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-slate-100 text-slate-500'
+                showQuickActions ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-100 text-slate-500'
               }`}
             >
               {showQuickActions ? <X className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
             </button>
             
-            <div className="flex-1 bg-slate-100 rounded-full flex items-center px-4 border-2 border-transparent focus-within:border-indigo-300 focus-within:bg-white transition">
+            <div className="flex-1 bg-slate-100 rounded-full flex items-center px-4 border-2 border-transparent focus-within:border-blue-400 focus-within:bg-white transition">
               <input
                 ref={inputRef}
                 type="text"
@@ -1366,7 +1373,8 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
             <button 
               onClick={() => sendMessage()}
               disabled={!input.trim() || isLoading}
-              className="p-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 rounded-full transition shadow-lg shadow-indigo-600/30 disabled:shadow-none flex-shrink-0"
+              className="p-3 rounded-full transition shadow-lg disabled:bg-slate-300 disabled:shadow-none flex-shrink-0"
+              style={{backgroundColor: '#1e40af'}}
             >
               {isLoading ? (
                 <Loader2 className="w-6 h-6 text-white animate-spin" />
@@ -1423,7 +1431,7 @@ ${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)'
                   setShowDocModal(false)
                 }}
                 disabled={isGeneratingDoc}
-                className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-blue-800 hover:bg-blue-900 disabled:bg-blue-400 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"
               >
                 {isGeneratingDoc ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
