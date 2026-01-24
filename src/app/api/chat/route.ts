@@ -17,7 +17,7 @@ const anthropic = new Anthropic({
 // ===========================================
 // DPO SYSTEM PROMPT - Best Practices Built In
 // ===========================================
-const DPO_SYSTEM_PROMPT = `אתה עוזר דיגיטלי מומחה בהגנת פרטיות ואבטחת מידע בישראל. אתה עובד עבור "Kept" - שירות DPO (ממונה הגנת פרטיות) לעסקים.
+const DPO_SYSTEM_PROMPT = `אתה עוזר דיגיטלי מומחה בהגנת פרטיות ואבטחת מידע בישראל. אתה עובד עבור "MyDPO" - שירות DPO (ממונה הגנת פרטיות) לעסקים.
 
 🎯 המטרה שלך: לעזור לעסקים לעמוד בדרישות תיקון 13 לחוק הגנת הפרטיות בצורה פשוטה וידידותית.
 
@@ -27,6 +27,21 @@ const DPO_SYSTEM_PROMPT = `אתה עוזר דיגיטלי מומחה בהגנת 
 3. כשמשהו דחוף (כמו אירוע אבטחה) - הדגש את הדחיפות בעדינות
 4. הצע תמיד את הצעד הבא הקונקרטי
 5. כשאתה לא בטוח - הצע להעביר לממונה האנושי
+
+📎 כשמקבלים קובץ/מסמך ללא הסבר מה לעשות איתו:
+- תן סיכום קצר בשורה אחת של התוכן
+- שאל את המשתמש מה הוא רוצה לעשות עם הקובץ
+- הצע אפשרויות רלוונטיות כמו: לבדוק תאימות לתיקון 13, לערוך ולשפר, לסכם, לזהות בעיות
+- אל תתחיל מיד לנתח - קודם שאל מה המשתמש צריך
+
+לדוגמה כשמעלים קובץ:
+"📄 קיבלתי את [שם הקובץ] - זו מדיניות פרטיות של אתר מסחר.
+
+מה תרצה שאעשה?
+• לבדוק תאימות לתיקון 13
+• לזהות חסרים ובעיות
+• לסכם את עיקרי המסמך
+• ליצור גרסה משופרת"
 
 ⚠️ חשוב מאוד - עיצוב התשובות:
 - אל תשתמש בסימני Markdown כמו ** או ### או ## בתשובות
@@ -210,7 +225,7 @@ export async function POST(request: NextRequest) {
     // SEND MESSAGE & GET AI RESPONSE
     // ===========================================
     if (action === 'send_message') {
-      const { orgId, message, attachments } = body
+      const { orgId, message, attachments, conversationId } = body
       
       if (!orgId || !message) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -218,6 +233,9 @@ export async function POST(request: NextRequest) {
       
       // Detect intent
       const intent = detectIntent(message)
+      
+      // Generate conversation ID if not provided
+      const convId = conversationId || `conv-${Date.now()}`
       
       // Try to save user message (don't fail if table doesn't exist)
       let userMsg: any = {
@@ -227,6 +245,7 @@ export async function POST(request: NextRequest) {
         content: message,
         intent,
         attachments,
+        conversation_id: convId,
         created_at: new Date().toISOString()
       }
       
@@ -238,7 +257,8 @@ export async function POST(request: NextRequest) {
             role: 'user',
             content: message,
             intent,
-            attachments
+            attachments,
+            conversation_id: convId
           })
           .select()
           .single()
@@ -294,7 +314,7 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
 
       // Get AI response - use Haiku for speed (3-5x faster, 10x cheaper)
       const response = await anthropic.messages.create({
-        model: 'claude-3-5-haiku-latest',
+        model: 'claude-haiku-4-20250514',
         max_tokens: 1500,
         system: contextPrompt,
         messages: conversationHistory
@@ -330,6 +350,7 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
         role: 'assistant',
         content: aiText,
         intent,
+        conversation_id: convId,
         metadata: generatedDoc ? { generated_document: generatedDoc } : null,
         created_at: new Date().toISOString()
       }
@@ -342,6 +363,7 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
             role: 'assistant',
             content: aiText,
             intent,
+            conversation_id: convId,
             metadata: generatedDoc ? { generated_document: generatedDoc } : null
           })
           .select()
@@ -404,7 +426,8 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
         assistantMessage: assistantMsg,
         intent,
         quickActions,
-        generatedDocument: generatedDoc
+        generatedDocument: generatedDoc,
+        conversationId: convId
       })
     }
     
