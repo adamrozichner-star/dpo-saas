@@ -256,8 +256,10 @@ function DashboardContent() {
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b z-50 flex items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
-          <Shield className="h-7 w-7 text-primary" />
-          <span className="font-bold text-lg">DPO-Pro</span>
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+            <Shield className="h-5 w-5 text-white" />
+          </div>
+          <span className="font-bold text-lg" style={{color: '#1e40af'}}>MyDPO</span>
         </Link>
         <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
           {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -272,14 +274,16 @@ function DashboardContent() {
       <aside className={`fixed top-0 h-full w-64 bg-white border-l shadow-sm z-50 transition-transform duration-300 ease-in-out md:right-0 md:translate-x-0 ${mobileMenuOpen ? 'right-0 translate-x-0' : '-right-64 translate-x-full md:translate-x-0 md:right-0'}`}>
         <div className="p-4 border-b">
           <Link href="/" className="flex items-center gap-2">
-            <Shield className="h-8 w-8 text-primary" />
-            <span className="font-bold text-xl">Kept</span>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+              <Shield className="h-6 w-6 text-white" />
+            </div>
+            <span className="font-bold text-xl" style={{color: '#1e40af'}}>MyDPO</span>
           </Link>
         </div>
 
         {/* Chat Button - Primary Action */}
         <div className="p-4 border-b">
-          <Link href="/chat" className="flex items-center gap-3 bg-gradient-to-l from-indigo-600 to-indigo-700 text-white px-4 py-3 rounded-xl hover:from-indigo-700 hover:to-indigo-800 transition shadow-lg shadow-indigo-600/20">
+          <Link href="/chat" className="flex items-center gap-3 text-white px-4 py-3 rounded-xl hover:opacity-90 transition shadow-lg" style={{backgroundColor: '#10b981'}}>
             <MessageSquare className="h-5 w-5" />
             <span className="font-medium">צ׳אט עם הממונה</span>
           </Link>
@@ -545,7 +549,7 @@ function DocumentsTab({ documents, isPaid = false, onRegenerate, isRegenerating 
   const downloadDocument = (doc: any) => {
     if (!isPaid) return
     const header = `${'═'.repeat(50)}\n${doc.title}\n${'═'.repeat(50)}\n\n`
-    const footer = `\n\n${'─'.repeat(50)}\nנוצר על ידי DPO-Pro\nתאריך: ${new Date().toLocaleDateString('he-IL')}\n`
+    const footer = `\n\n${'─'.repeat(50)}\nנוצר על ידי MyDPO\nתאריך: ${new Date().toLocaleDateString('he-IL')}\n`
     const content = header + (doc.content || '') + footer
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
     const url = URL.createObjectURL(blob)
