@@ -67,8 +67,10 @@ export default function ForgotPasswordPage() {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <Link href="/" className="flex items-center gap-2">
-              <Shield className="h-8 w-8 text-primary" />
-              <span className="font-bold text-xl">DPO-Pro</span>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+                <Shield className="h-6 w-6 text-white" />
+              </div>
+              <span className="font-bold text-xl" style={{color: '#1e40af'}}>MyDPO</span>
             </Link>
           </div>
           <CardTitle>שכחתי סיסמה</CardTitle>
@@ -97,7 +99,12 @@ export default function ForgotPasswordPage() {
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full text-white" 
+              style={{backgroundColor: '#10b981'}}
+              disabled={isLoading}
+            >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin ml-2" />
               ) : null}
