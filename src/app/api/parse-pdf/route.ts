@@ -1,9 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || ''
-})
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,25 +20,31 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer()
     const base64 = Buffer.from(arrayBuffer).toString('base64')
 
-    const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'document',
-              source: {
-                type: 'base64',
-                media_type: 'application/pdf',
-                data: base64
-              }
-            },
-            {
-              type: 'text',
-              text: `קרא את המסמך הזה והחזר את התוכן שלו.
-              
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'document',
+                source: {
+                  type: 'base64',
+                  media_type: 'application/pdf',
+                  data: base64
+                }
+              },
+              {
+                type: 'text',
+                text: `קרא את המסמך הזה והחזר את התוכן שלו.
 ענה בפורמט הבא בלבד:
 ---CONTENT_START---
 [התוכן המלא של המסמך כאן]
@@ -52,13 +53,21 @@ export async function POST(request: NextRequest) {
 [מספר העמודים המשוער]
 ---TYPE---
 [סוג המסמך: מדיניות פרטיות / הסכם / תקנון / טופס / אחר]`
-            }
-          ]
-        }
-      ]
+              }
+            ]
+          }
+        ]
+      })
     })
 
-    const responseText = response.content[0].type === 'text' ? response.content[0].text : ''
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error('Anthropic API error:', errorData)
+      throw new Error(errorData.error?.message || 'API request failed')
+    }
+
+    const data = await response.json()
+    const responseText = data.content?.[0]?.text || ''
     
     const contentMatch = responseText.match(/---CONTENT_START---([\s\S]*?)---CONTENT_END---/)
     const pagesMatch = responseText.match(/---PAGES---\s*(\d+)/)
