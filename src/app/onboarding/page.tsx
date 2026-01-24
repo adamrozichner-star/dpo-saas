@@ -415,8 +415,10 @@ function OnboardingContent() {
 
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 mb-4">
-              <Shield className="h-8 w-8 text-primary" />
-              <span className="font-bold text-2xl">DPO-Pro</span>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+                <Shield className="h-6 w-6 text-white" />
+              </div>
+              <span className="font-bold text-2xl" style={{color: '#1e40af'}}>MyDPO</span>
             </div>
             <h1 className="text-3xl font-bold mb-2">בחרו את החבילה שלכם</h1>
             <p className="text-gray-600">התחילו עם 14 ימי ניסיון חינם</p>
@@ -597,8 +599,10 @@ function OnboardingContent() {
               הקודם
             </Button>
             <div className="flex items-center gap-2">
-              <Shield className="h-6 w-6 text-primary" />
-              <span className="font-bold">DPO-Pro</span>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+                <Shield className="h-5 w-5 text-white" />
+              </div>
+              <span className="font-bold" style={{color: '#1e40af'}}>MyDPO</span>
             </div>
           </div>
 
@@ -699,8 +703,10 @@ function OnboardingContent() {
             חזרה
           </Link>
           <div className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-primary" />
-            <span className="font-bold">DPO-Pro</span>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+              <Shield className="h-5 w-5 text-white" />
+            </div>
+            <span className="font-bold" style={{color: '#1e40af'}}>MyDPO</span>
           </div>
         </div>
 
