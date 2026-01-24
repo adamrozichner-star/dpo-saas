@@ -816,7 +816,7 @@ function DocumentsTab({ documents, organization, onRefresh }: { documents: Docum
   }
 
   const filteredDocs = filter === 'all' ? documents : documents.filter(d => d.type === filter)
-  const docTypes = [...new Set(documents.map(d => d.type))]
+  const docTypes = Array.from(new Set(documents.map(d => d.type)))
 
   return (
     <div className="space-y-6">
