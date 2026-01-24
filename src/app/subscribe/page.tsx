@@ -180,7 +180,7 @@ function SubscribeContent() {
           <CardContent className="p-8">
             <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <h1 className="text-2xl font-bold mb-2">התשלום בוצע בהצלחה!</h1>
-            <p className="text-gray-600 mb-6">המנוי שלך הופעל. ברוכים הבאים ל-DPO-Pro!</p>
+            <p className="text-gray-600 mb-6">המנוי שלך הופעל. ברוכים הבאים ל-MyDPO!</p>
             <Button onClick={() => router.push('/dashboard')}>
               המשך ללוח הבקרה
             </Button>
@@ -195,8 +195,10 @@ function SubscribeContent() {
       <header className="bg-white border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <Shield className="h-8 w-8 text-primary" />
-            <span className="font-bold text-xl">DPO-Pro</span>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+              <Shield className="h-6 w-6 text-white" />
+            </div>
+            <span className="font-bold text-xl" style={{color: '#1e40af'}}>MyDPO</span>
           </Link>
           <Link href="/dashboard">
             <Button variant="ghost">חזרה ללוח הבקרה</Button>
