@@ -305,13 +305,16 @@ export default function ChatPage() {
 
   // Start new conversation
   const startNewChat = () => {
+    // Generate new conversation ID
+    const newConvId = `conv-${Date.now()}`
+    setCurrentConversationId(newConvId)
+    
     setMessages([{
       id: 'initial-welcome',
       role: 'assistant',
       content: `היי! 👋 אני כאן לעזור לך עם הפרטיות והאבטחה בארגון.\n\nאפשר לשאול אותי שאלות, לבקש מסמכים, או לדווח על אירועים.`,
       created_at: new Date().toISOString()
     }])
-    setCurrentConversationId(null)
     setSuggestions(defaultSuggestions)
     setCurrentDocument(null)
     setShowUpsellBanner(false)
@@ -374,13 +377,20 @@ export default function ChatPage() {
     setMessages(prev => [...prev, tempUserMsg])
 
     try {
+      // Create conversation ID if not exists
+      const convId = currentConversationId || `conv-${Date.now()}`
+      if (!currentConversationId) {
+        setCurrentConversationId(convId)
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'send_message',
           orgId: organization.id,
-          message: messageText
+          message: messageText,
+          conversationId: convId
         })
       })
 
@@ -396,6 +406,14 @@ export default function ChatPage() {
         data.userMessage,
         data.assistantMessage
       ])
+
+      // Update conversation ID if returned
+      if (data.conversationId) {
+        setCurrentConversationId(data.conversationId)
+      }
+
+      // Reload conversations list to show new chat
+      loadConversations()
 
       // Handle quick actions
       if (data.quickActions) {
@@ -721,7 +739,7 @@ export default function ChatPage() {
       setMessages(prev => [...prev, {
         id: `pdf-parsing-${Date.now()}`,
         role: 'assistant',
-        content: `📄 קיבלתי את "${file.name}" - קורא את התוכן...`,
+        content: `📄 קורא את "${file.name}"...`,
         created_at: new Date().toISOString()
       }])
 
@@ -742,7 +760,6 @@ export default function ChatPage() {
         
         if (pdfData.success && pdfData.text) {
           setUploadProgress(90)
-          const textPreview = pdfData.text.substring(0, 500)
           
           // Store full text for follow-up questions
           setCurrentDocument({
@@ -750,36 +767,41 @@ export default function ChatPage() {
             name: file.name,
             content: pdfData.text,
             text: pdfData.text,
-            pages: pdfData.pages
+            pages: pdfData.pages,
+            docType: pdfData.docType,
+            summary: pdfData.summary
           })
 
+          // Show summary and ASK what to do (don't auto-analyze)
+          const summaryText = pdfData.summary || 'מסמך שהועלה'
+          const docTypeText = pdfData.docType || 'מסמך'
+          
+          setMessages(prev => [...prev, {
+            id: `pdf-ready-${Date.now()}`,
+            role: 'assistant',
+            content: `📄 קיבלתי את "${file.name}" (${pdfData.pages || 1} עמודים)
+
+זה נראה כמו: ${docTypeText}
+${summaryText}
+
+מה תרצה שאעשה?
+• בדוק תאימות לתיקון 13
+• זהה חסרים ובעיות
+• סכם את עיקרי המסמך
+• צור גרסה משופרת`,
+            created_at: new Date().toISOString()
+          }])
+
           setSuggestions([
-            { icon: '🔍', text: 'בדוק תאימות מלאה לתיקון 13' },
-            { icon: '📝', text: 'צור גרסה משופרת' },
+            { icon: '🔍', text: 'בדוק תאימות לתיקון 13' },
             { icon: '⚠️', text: 'מה חסר במסמך?' },
-            { icon: '👁️', text: 'בקש סקירה מממונה' },
+            { icon: '📝', text: 'סכם את המסמך' },
+            { icon: '✨', text: 'צור גרסה משופרת' },
           ])
           
           // Show upsell banner
           setShowUpsellBanner(true)
-
-          // Send to AI for analysis - this will add the user message
-          const aiPrompt = `קראתי מסמך PDF בשם "${file.name}" (${pdfData.pages} עמודים).
-
-הנה תחילת התוכן:
----
-${textPreview}${pdfData.text.length > 500 ? '...' : ''}
----
-
-${pdfData.truncated ? '(המסמך ארוך - קוצר לצורך הניתוח)' : ''}
-
-אנא בדוק:
-1. האם זה נראה כמו מדיניות פרטיות / הסכם / מסמך אחר?
-2. האם יש בעיות בולטות מבחינת תיקון 13?
-3. מה כדאי לשפר?`
-
           setUploadProgress(100)
-          await sendMessage(aiPrompt)
           
         } else {
           // Couldn't parse - offer manual options
