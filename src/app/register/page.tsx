@@ -80,8 +80,10 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link href="/" className="inline-flex items-center justify-center gap-2 mb-4">
-            <Shield className="h-8 w-8 text-primary" />
-            <span className="font-bold text-xl">DPO-Pro</span>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+              <Shield className="h-6 w-6 text-white" />
+            </div>
+            <span className="font-bold text-xl" style={{color: '#1e40af'}}>MyDPO</span>
           </Link>
           <CardTitle>הרשמה</CardTitle>
           <CardDescription>צרו חשבון חדש והתחילו לנהל את הפרטיות</CardDescription>
@@ -134,8 +136,13 @@ export default function RegisterPage() {
             
             {error && <p className="text-sm text-destructive">{error}</p>}
 
-            <Button type="submit" className="w-full" isLoading={isLoading}>
-              הרשמה
+            <Button 
+              type="submit" 
+              className="w-full text-white" 
+              style={{backgroundColor: '#10b981'}}
+              disabled={isLoading}
+            >
+              {isLoading ? 'נרשם...' : 'הרשמה'}
             </Button>
 
             <p className="text-xs text-gray-500 text-center">
