@@ -37,12 +37,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{background: 'linear-gradient(to bottom, #dbeafe, white)'}}>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link href="/" className="inline-flex items-center justify-center gap-2 mb-4">
-            <Shield className="h-8 w-8 text-indigo-600" />
-            <span className="font-bold text-xl text-indigo-600">Kept</span>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+              <Shield className="h-6 w-6 text-white" />
+            </div>
+            <span className="font-bold text-xl" style={{color: '#1e40af'}}>MyDPO</span>
           </Link>
           <CardTitle>התחברות</CardTitle>
           <CardDescription>היכנסו לחשבון שלכם לניהול הפרטיות</CardDescription>
@@ -73,22 +75,27 @@ export default function LoginPage() {
             </div>
 
             <div className="text-left">
-              <Link href="/forgot-password" className="text-sm text-primary hover:underline">
+              <Link href="/forgot-password" className="text-sm hover:underline" style={{color: '#1e40af'}}>
                 שכחת סיסמה?
               </Link>
             </div>
             
             {error && <p className="text-sm text-destructive">{error}</p>}
 
-            <Button type="submit" className="w-full" isLoading={isLoading}>
-              התחברות
+            <Button 
+              type="submit" 
+              className="w-full text-white" 
+              style={{backgroundColor: '#10b981'}}
+              disabled={isLoading}
+            >
+              {isLoading ? 'מתחבר...' : 'התחברות'}
             </Button>
           </form>
 
           <div className="mt-6 pt-6 border-t text-center">
             <p className="text-sm text-gray-600">
               עדיין אין לכם חשבון?{' '}
-              <Link href="/register" className="text-primary hover:underline font-medium">הרשמה</Link>
+              <Link href="/register" className="hover:underline font-medium" style={{color: '#1e40af'}}>הרשמה</Link>
             </p>
           </div>
         </CardContent>
