@@ -70,7 +70,7 @@ export default function DPOLoginPage() {
           </form>
 
           <p className="text-center text-xs text-gray-500 mt-6">
-            מערכת ניהול DPO-Pro
+            מערכת ניהול MyDPO
             <br />
             גישה מותרת לממונים מורשים בלבד
           </p>
