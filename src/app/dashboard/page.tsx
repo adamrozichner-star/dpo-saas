@@ -272,7 +272,14 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-slate-50 flex" dir="rtl">
       {/* Welcome Modal */}
-      {showWelcome && <WelcomeModal onClose={() => setShowWelcome(false)} orgName={organization?.name} />}
+      {showWelcome && (
+        <WelcomeModal 
+          onClose={() => setShowWelcome(false)} 
+          orgName={organization?.name || ''} 
+          documentsCount={documents.length}
+          complianceScore={complianceScore}
+        />
+      )}
 
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 right-0 z-50 w-64 bg-white border-l transform transition-transform duration-200 ease-in-out ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0 lg:static`}>
