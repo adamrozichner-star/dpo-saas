@@ -314,7 +314,7 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
 
       // Get AI response - use Haiku for speed (3-5x faster, 10x cheaper)
       const response = await anthropic.messages.create({
-        model: 'claude-haiku-4-20250514',
+        model: 'claude-3-haiku-20240307',
         max_tokens: 1500,
         system: contextPrompt,
         messages: conversationHistory
