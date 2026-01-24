@@ -76,15 +76,17 @@ export default function CalculatorPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/" className="flex items-center gap-2">
-              <Shield className="h-8 w-8 text-primary" />
-              <span className="font-bold text-xl">DPO-Pro</span>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+                <Shield className="h-6 w-6 text-white" />
+              </div>
+              <span className="font-bold text-xl" style={{color: '#1e40af'}}>MyDPO</span>
             </Link>
             <div className="flex items-center gap-4">
               <Link href="/login">
                 <Button variant="ghost">התחברות</Button>
               </Link>
               <Link href="/onboarding">
-                <Button>התחל עכשיו</Button>
+                <Button className="text-white" style={{backgroundColor: '#10b981'}}>התחל עכשיו</Button>
               </Link>
             </div>
           </div>
@@ -307,7 +309,7 @@ export default function CalculatorPage() {
 
       {/* Footer */}
       <footer className="border-t py-8 text-center text-sm text-gray-500">
-        <p>© 2026 DPO-Pro. כל הזכויות שמורות.</p>
+        <p>© 2026 MyDPO. כל הזכויות שמורות.</p>
         <div className="flex justify-center gap-4 mt-2">
           <Link href="/terms" className="hover:text-gray-700">תנאי שימוש</Link>
           <Link href="/privacy" className="hover:text-gray-700">מדיניות פרטיות</Link>
