@@ -468,7 +468,7 @@ function OverviewTab({
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold text-stone-800">
-          👋 שלום, {organization?.name || userName}
+          👋 שלום, {organization?.name || 'משתמש'}
         </h1>
         <p className="text-stone-500 mt-1">הנה סקירה של מצב הציות שלכם</p>
       </div>
