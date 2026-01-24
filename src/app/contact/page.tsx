@@ -43,10 +43,12 @@ export default function ContactPage() {
       <div className="min-h-screen bg-gray-50" dir="rtl">
         <header className="bg-white border-b">
           <div className="container mx-auto px-4 py-4">
-            <Link href="/" className="flex items-center gap-2">
-              <Shield className="h-8 w-8 text-primary" />
-              <span className="font-bold text-xl">DPO-Pro</span>
-            </Link>
+          <Link href="/" className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+              <Shield className="h-6 w-6 text-white" />
+            </div>
+            <span className="font-bold text-xl" style={{color: '#1e40af'}}>MyDPO</span>
+          </Link>
           </div>
         </header>
         <main className="container mx-auto px-4 py-20">
@@ -68,8 +70,10 @@ export default function ContactPage() {
       <header className="bg-white border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <Shield className="h-8 w-8 text-primary" />
-            <span className="font-bold text-xl">DPO-Pro</span>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+              <Shield className="h-6 w-6 text-white" />
+            </div>
+            <span className="font-bold text-xl" style={{color: '#1e40af'}}>MyDPO</span>
           </Link>
           <Link href="/"><Button variant="ghost" className="gap-2"><ArrowRight className="h-4 w-4" />חזרה</Button></Link>
         </div>
