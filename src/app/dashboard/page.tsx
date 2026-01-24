@@ -223,7 +223,9 @@ function DashboardContent() {
         title: `בקשת ${dsar.request_type === 'access' ? 'עיון' : dsar.request_type === 'deletion' ? 'מחיקה' : 'תיקון'} ממידע`,
         description: `מאת: ${dsar.requester_name || 'לא ידוע'}`,
         priority: 'medium',
-        deadline: dsar.deadline
+        deadline: dsar.deadline,
+        action: 'טפל בבקשה',
+        actionPath: '/chat'
       })
     })
 
