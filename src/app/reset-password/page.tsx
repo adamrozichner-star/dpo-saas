@@ -77,8 +77,10 @@ export default function ResetPasswordPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link href="/" className="flex items-center justify-center gap-2 mb-4">
-            <Shield className="h-10 w-10 text-primary" />
-            <span className="font-bold text-2xl">DPO-Pro</span>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+              <Shield className="h-7 w-7 text-white" />
+            </div>
+            <span className="font-bold text-2xl" style={{color: '#1e40af'}}>MyDPO</span>
           </Link>
           <CardTitle>בחר סיסמה חדשה</CardTitle>
           <CardDescription>
