@@ -28,8 +28,10 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
-              <Shield className="h-8 w-8 text-primary" />
-              <span className="font-bold text-xl">DPO-Pro</span>
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+                <Shield className="h-6 w-6 text-white" />
+              </div>
+              <span className="font-bold text-xl text-slate-900">MyDPO</span>
             </div>
             <div className="flex items-center gap-4">
               <Link href="/calculator" className="hidden sm:block">
@@ -42,7 +44,7 @@ export default function HomePage() {
                 <Button variant="ghost">התחברות</Button>
               </Link>
               <Link href="/onboarding">
-                <Button>התחל עכשיו</Button>
+                <Button style={{backgroundColor: '#10b981'}} className="hover:opacity-90 text-white">התחל עכשיו</Button>
               </Link>
             </div>
           </div>
@@ -69,7 +71,7 @@ export default function HomePage() {
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
             ממונה הגנת פרטיות
             <br />
-            <span className="text-primary">ב-500 ₪ לחודש</span>
+            <span style={{color: '#1e40af'}}>ב-500 ₪ לחודש</span>
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
             פתרון מלא לעמידה ברגולציה: ממונה אנושי מוסמך + מערכת AI שעושה את העבודה.
@@ -78,13 +80,13 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/onboarding">
-              <Button size="lg" className="gap-2 text-lg px-8">
+              <Button size="lg" className="gap-2 text-lg px-8 text-white" style={{backgroundColor: '#10b981'}}>
                 התחילו תוך 15 דקות
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
             <Link href="/calculator">
-              <Button size="lg" variant="outline" className="gap-2 text-lg px-8">
+              <Button size="lg" variant="outline" className="gap-2 text-lg px-8" style={{borderColor: '#1e40af', color: '#1e40af'}}>
                 <Calculator className="h-5 w-5" />
                 בדיקה חינמית
               </Button>
@@ -101,19 +103,19 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
             <div>
-              <div className="text-3xl font-bold text-primary">500+</div>
+              <div className="text-3xl font-bold" style={{color: '#1e40af'}}>500+</div>
               <div className="text-gray-600">עסקים משתמשים</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-primary">98%</div>
+              <div className="text-3xl font-bold" style={{color: '#1e40af'}}>98%</div>
               <div className="text-gray-600">אוטומציה מלאה</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-primary">15 דק׳</div>
+              <div className="text-3xl font-bold" style={{color: '#1e40af'}}>15 דק׳</div>
               <div className="text-gray-600">זמן הצטרפות</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-primary">24/7</div>
+              <div className="text-3xl font-bold" style={{color: '#1e40af'}}>24/7</div>
               <div className="text-gray-600">מענה AI זמין</div>
             </div>
           </div>
@@ -192,15 +194,15 @@ export default function HomePage() {
                   <PricingFeature>זמן תגובה: 72 שעות</PricingFeature>
                 </ul>
                 <Link href="/onboarding?tier=basic" className="block mt-6">
-                  <Button className="w-full" size="lg" variant="outline">בחירת חבילה</Button>
+                  <Button className="w-full" size="lg" variant="outline" style={{borderColor: '#1e40af', color: '#1e40af'}}>בחירת חבילה</Button>
                 </Link>
               </CardContent>
             </Card>
 
             {/* Extended Plan */}
-            <Card className="relative border-primary border-2 shadow-lg">
+            <Card className="relative border-2 shadow-lg" style={{borderColor: '#1e40af'}}>
               <div className="absolute -top-3 right-4">
-                <Badge>הכי פופולרי</Badge>
+                <Badge style={{backgroundColor: '#1e40af'}}>הכי פופולרי</Badge>
               </div>
               <CardHeader>
                 <CardTitle>חבילה מורחבת</CardTitle>
@@ -221,7 +223,7 @@ export default function HomePage() {
                   <PricingFeature>עד 3 משתמשים</PricingFeature>
                 </ul>
                 <Link href="/onboarding?tier=extended" className="block mt-6">
-                  <Button className="w-full" size="lg">בחירת חבילה</Button>
+                  <Button className="w-full text-white" size="lg" style={{backgroundColor: '#10b981'}}>בחירת חבילה</Button>
                 </Link>
               </CardContent>
             </Card>
@@ -254,7 +256,7 @@ export default function HomePage() {
                   <PricingFeature>SLA מובטח</PricingFeature>
                 </ul>
                 <Link href="/onboarding?tier=enterprise" className="block mt-6">
-                  <Button className="w-full bg-slate-800 hover:bg-slate-900" size="lg">צרו קשר</Button>
+                  <Button className="w-full bg-slate-800 hover:bg-slate-900 text-white" size="lg">צרו קשר</Button>
                 </Link>
               </CardContent>
             </Card>
@@ -275,7 +277,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 px-4 bg-primary text-white">
+      <section className="py-20 px-4 text-white" style={{background: 'linear-gradient(to left, #1e3a5f, #1e40af)'}}>
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold mb-4">האכיפה כבר כאן. אתם מוכנים?</h2>
           <p className="text-xl opacity-90 mb-8">
@@ -284,7 +286,7 @@ export default function HomePage() {
             אל תחכו לקנס - התחילו היום.
           </p>
           <Link href="/onboarding">
-            <Button size="lg" variant="secondary" className="gap-2">
+            <Button size="lg" className="gap-2 text-white" style={{backgroundColor: '#10b981'}}>
               התחילו עכשיו - חינם לשבועיים
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -298,8 +300,10 @@ export default function HomePage() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center gap-2 text-white mb-4">
-                <Shield className="h-6 w-6" />
-                <span className="font-bold">DPO-Pro</span>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+                  <Shield className="h-5 w-5" />
+                </div>
+                <span className="font-bold">MyDPO</span>
               </div>
               <p className="text-sm">
                 פתרון AI מקיף להגנת פרטיות ועמידה ברגולציה לעסקים בישראל.
@@ -330,7 +334,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-sm text-center">
-            © 2026 DPO-Pro. כל הזכויות שמורות.
+            © 2026 MyDPO. כל הזכויות שמורות.
           </div>
         </div>
       </footer>
@@ -342,8 +346,8 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode, titl
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardContent className="pt-6">
-        <div className="rounded-lg bg-primary/10 w-12 h-12 flex items-center justify-center text-primary mb-4">
-          {icon}
+        <div className="rounded-lg w-12 h-12 flex items-center justify-center mb-4" style={{backgroundColor: '#dbeafe'}}>
+          <div style={{color: '#1e40af'}}>{icon}</div>
         </div>
         <h3 className="font-semibold text-lg mb-2">{title}</h3>
         <p className="text-gray-600 text-sm">{description}</p>
@@ -355,7 +359,7 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode, titl
 function PricingFeature({ children }: { children: React.ReactNode }) {
   return (
     <li className="flex items-center gap-2">
-      <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+      <CheckCircle2 className="h-5 w-5 flex-shrink-0" style={{color: '#10b981'}} />
       <span>{children}</span>
     </li>
   )
