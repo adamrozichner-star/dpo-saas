@@ -10,7 +10,8 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83% 53.3%;
+    /* Navy Blue Primary - #1e40af */
+    --primary: 224 58% 40%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -22,8 +23,13 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83% 53.3%;
+    --ring: 224 58% 40%;
     --radius: 0.75rem;
+    /* Custom brand colors */
+    --brand-navy: 224 58% 40%;
+    --brand-navy-dark: 215 50% 23%;
+    --brand-emerald: 160 84% 39%;
+    --brand-light: 214 100% 93%;
   }
 
   .dark {
@@ -33,7 +39,7 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 224 58% 50%;
     --primary-foreground: 222.2 47.4% 11.2%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -45,7 +51,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    --ring: 224 58% 50%;
   }
 }
 
@@ -55,19 +61,16 @@
   }
   body {
     @apply bg-background text-foreground;
-    /* Prevent horizontal scroll on mobile */
     overflow-x: hidden;
-    /* Better touch scrolling */
     -webkit-overflow-scrolling: touch;
   }
   html {
     direction: rtl;
-    /* Prevent zoom on input focus on iOS */
     -webkit-text-size-adjust: 100%;
   }
 }
 
-/* Mobile touch targets - minimum 44px */
+/* Mobile touch targets */
 @layer components {
   .touch-target {
     min-height: 44px;
@@ -75,7 +78,7 @@
   }
 }
 
-/* Hebrew typography improvements */
+/* Hebrew typography */
 .hebrew-text {
   font-feature-settings: "kern" 1;
   text-rendering: optimizeLegibility;
@@ -101,35 +104,38 @@
   background: hsl(var(--muted-foreground) / 0.5);
 }
 
-/* Hide scrollbar on mobile for cleaner look */
 @media (max-width: 768px) {
   ::-webkit-scrollbar {
     width: 4px;
   }
 }
 
-/* Smooth transitions */
+/* Transitions */
 .transition-all-200 {
   transition: all 200ms ease-in-out;
 }
 
-/* Glass effect for cards */
+/* Glass effect */
 .glass {
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-/* Gradient backgrounds */
+/* Brand gradients - Navy */
 .gradient-primary {
-  background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(221.2 83% 43.3%) 100%);
+  background: linear-gradient(135deg, #1e40af 0%, #1e3a5f 100%);
+}
+
+.gradient-navy {
+  background: linear-gradient(to left, #1e3a5f, #1e40af);
 }
 
 .gradient-subtle {
   background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--muted)) 100%);
 }
 
-/* Safe area padding for mobile devices with notches */
+/* Safe area padding */
 @supports (padding: max(0px)) {
   .safe-area-inset-top {
     padding-top: max(1rem, env(safe-area-inset-top));
@@ -173,26 +179,25 @@
   animation: pulse-soft 2s infinite;
 }
 
-/* Focus styles for accessibility */
+/* Focus styles */
 *:focus-visible {
-  outline: 2px solid hsl(var(--primary));
+  outline: 2px solid #1e40af;
   outline-offset: 2px;
 }
 
-/* Better tap highlight on mobile */
+/* Mobile tap highlight */
 @media (max-width: 768px) {
   button, a, input, select, textarea {
-    -webkit-tap-highlight-color: rgba(59, 130, 246, 0.1);
+    -webkit-tap-highlight-color: rgba(30, 64, 175, 0.1);
   }
 }
 
-/* Prevent text selection on UI elements */
 .no-select {
   -webkit-user-select: none;
   user-select: none;
 }
 
-/* Loading skeleton animation */
+/* Loading skeleton */
 .skeleton {
   background: linear-gradient(90deg, 
     hsl(var(--muted)) 0%, 
