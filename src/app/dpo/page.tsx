@@ -592,7 +592,7 @@ export default function DPODashboard() {
       <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-700 to-blue-800 rounded-xl flex items-center justify-center shadow-lg shadow-blue-700/20">
               <Shield className="h-6 w-6 text-white" />
             </div>
             <div>
@@ -652,8 +652,8 @@ export default function DPODashboard() {
           <div className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-sm hover:shadow-md transition">
             <div className="flex items-center justify-between mb-3">
               <span className="text-slate-500 text-sm">ארגונים</span>
-              <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
-                <Building2 className="h-5 w-5 text-indigo-600" />
+              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-blue-700" />
               </div>
             </div>
             <p className="text-3xl font-bold text-slate-900">{stats?.active_orgs || 0}</p>
@@ -693,7 +693,7 @@ export default function DPODashboard() {
             onClick={() => setActiveTab('queue')}
             className={`px-5 py-2.5 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
               activeTab === 'queue' 
-                ? 'bg-indigo-600 text-white shadow-md' 
+                ? 'bg-blue-800 text-white shadow-md' 
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -709,7 +709,7 @@ export default function DPODashboard() {
             onClick={() => setActiveTab('incidents')}
             className={`px-5 py-2.5 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
               activeTab === 'incidents' 
-                ? 'bg-indigo-600 text-white shadow-md' 
+                ? 'bg-blue-800 text-white shadow-md' 
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -723,7 +723,7 @@ export default function DPODashboard() {
             onClick={() => setActiveTab('organizations')}
             className={`px-5 py-2.5 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
               activeTab === 'organizations' 
-                ? 'bg-indigo-600 text-white shadow-md' 
+                ? 'bg-blue-800 text-white shadow-md' 
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -734,7 +734,7 @@ export default function DPODashboard() {
             onClick={() => setActiveTab('ropa')}
             className={`px-5 py-2.5 rounded-lg text-sm font-medium transition flex items-center gap-2 ${
               activeTab === 'ropa' 
-                ? 'bg-indigo-600 text-white shadow-md' 
+                ? 'bg-blue-800 text-white shadow-md' 
                 : 'text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -773,7 +773,7 @@ export default function DPODashboard() {
                   {/* Modern Filters */}
                   <div className="flex gap-2 mt-4">
                     <select
-                      className="text-sm bg-slate-50 border-0 rounded-lg px-3 py-2 text-slate-600 focus:ring-2 focus:ring-indigo-500"
+                      className="text-sm bg-slate-50 border-0 rounded-lg px-3 py-2 text-slate-600 focus:ring-2 focus:ring-blue-500"
                       value={filterPriority || ''}
                       onChange={e => setFilterPriority(e.target.value || null)}
                     >
@@ -784,7 +784,7 @@ export default function DPODashboard() {
                       <option value="low">נמוך</option>
                     </select>
                     <select
-                      className="text-sm bg-slate-50 border-0 rounded-lg px-3 py-2 text-slate-600 focus:ring-2 focus:ring-indigo-500"
+                      className="text-sm bg-slate-50 border-0 rounded-lg px-3 py-2 text-slate-600 focus:ring-2 focus:ring-blue-500"
                       value={filterType || ''}
                       onChange={e => setFilterType(e.target.value || null)}
                     >
@@ -817,7 +817,7 @@ export default function DPODashboard() {
                           <div
                             key={item.id}
                             className={`p-4 hover:bg-slate-50 cursor-pointer transition-all ${
-                              selectedItem?.id === item.id ? 'bg-indigo-50 border-r-4 border-indigo-500' : ''
+                              selectedItem?.id === item.id ? 'bg-blue-50 border-r-4 border-blue-700' : ''
                             } ${item.priority === 'critical' ? 'bg-red-50/50' : item.priority === 'high' ? 'bg-orange-50/30' : ''}`}
                             onClick={() => openItem(item)}
                           >
