@@ -132,8 +132,8 @@ function detectIntent(message: string): string {
     return 'incident'
   }
   
-  // Document creation
-  if (/מדיניות פרטיות|privacy policy|תקנון|נוהל|טופס (הסכמה|consent)|מסמך|צור לי|תכין לי|צריך מסמך|תייצר|הסכם עיבוד|dpa/.test(msg)) {
+  // Document creation - expanded patterns
+  if (/מדיניות פרטיות|privacy policy|תקנון|נוהל|טופס (הסכמה|consent)|מסמך|צור לי|צור עבור|תכין לי|צריך מסמך|תייצר|הסכם עיבוד|dpa|כתב מינוי|אנא צור/.test(msg)) {
     return 'document'
   }
   
@@ -356,13 +356,12 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
         .replace(/`([^`]+)`/g, '$1')         // Remove inline code
         .trim()
       
-      // Check for document generation - only use explicit marker
+      // Check for document generation
       let generatedDoc = null
       
-      // Only detect document if AI explicitly marked it with [DOCUMENT_GENERATED]
+      // Method 1: Explicit marker from AI
       if (aiText.includes('[DOCUMENT_GENERATED]')) {
         aiText = aiText.replace('[DOCUMENT_GENERATED]', '').trim()
-        // Also remove the reminder text that sometimes follows
         if (aiText.includes('המסמך מוכן!')) {
           aiText = aiText.split('המסמך מוכן!')[0].trim()
         }
@@ -371,6 +370,47 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
           type: detectDocType(message),
           content: aiText,
           name: getDocTitle(detectDocType(message))
+        }
+        console.log('[DOC] Detected via marker')
+      }
+      // Method 2: Smart fallback - detect actual documents (not explanations)
+      else if (intent === 'document' && aiText.length > 800) {
+        // Count strong document indicators
+        const strongIndicators = [
+          /\d+\.\s+[א-ת]/m,             // Numbered section like "1. מבוא"
+          /\d+\.\d+\.?\s+[א-ת]/m,       // Sub-section like "1.1 סעיף"
+          /גרסה/i,                      // Version
+          /מדיניות/,                    // "מדיניות"
+          /נוהל/,                       // "נוהל"
+          /תחולה/,                      // "תחולה"
+          /הגדרות/,                     // "הגדרות"
+          /אחריות/,                     // "אחריות"
+          /מטרה/,                       // "מטרה"
+          /בקרה/,                       // "בקרה"
+        ]
+        
+        const matchCount = strongIndicators.filter(regex => regex.test(aiText)).length
+        console.log(`[DOC] Intent: ${intent}, Length: ${aiText.length}, Matches: ${matchCount}`)
+        
+        // Must have at least 3 strong indicators AND not be a question/explanation
+        const isExplanation = (
+          aiText.includes('צריך לכלול') ||
+          aiText.includes('כדאי לכלול') ||
+          aiText.includes('מומלץ לכלול') ||
+          aiText.includes('להלן הסברים') ||
+          aiText.includes('אסביר') ||
+          aiText.startsWith('בטח') ||
+          aiText.startsWith('כמובן') ||
+          (aiText.match(/\?/g) || []).length > 2
+        )
+        
+        if (matchCount >= 3 && !isExplanation) {
+          generatedDoc = {
+            type: detectDocType(message),
+            content: aiText,
+            name: getDocTitle(detectDocType(message))
+          }
+          console.log('[DOC] Detected via fallback')
         }
       }
       
