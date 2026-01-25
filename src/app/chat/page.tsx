@@ -8,7 +8,7 @@ import {
   AlertTriangle, Plus, X, Sparkles, Download, Loader2, Phone, 
   BarChart3, File, Copy, Share2, Edit3, Eye, ExternalLink,
   MessageSquare, Settings, ChevronDown, RefreshCw, Clock,
-  Menu, PanelLeftClose, PanelLeft, History, FolderOpen, Trash2
+  Menu, PanelLeftClose, PanelLeft, History, FolderOpen, Trash2, FileDown
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
@@ -960,6 +960,35 @@ ${summaryText}
     navigator.clipboard.writeText(text)
   }
 
+  const downloadAsPdf = async (content: string, title: string) => {
+    try {
+      // Create form and submit to get printable HTML
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          content,
+          orgName: organization?.name
+        })
+      })
+      
+      if (!response.ok) throw new Error('Failed to generate PDF')
+      
+      const html = await response.text()
+      
+      // Open in new window for printing
+      const printWindow = window.open('', '_blank')
+      if (printWindow) {
+        printWindow.document.write(html)
+        printWindow.document.close()
+      }
+    } catch (error) {
+      console.error('PDF download error:', error)
+      alert('שגיאה בהורדת המסמך. נסה שוב.')
+    }
+  }
+
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString('he-IL', { 
       hour: '2-digit', 
@@ -1485,13 +1514,20 @@ ${summaryText}
               </pre>
             </div>
             
-            <div className="p-4 border-t flex gap-3 flex-shrink-0">
+            <div className="p-4 border-t flex gap-2 flex-shrink-0">
               <button
                 onClick={() => copyToClipboard(currentDocument.content)}
-                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium transition flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
               >
-                <Copy className="w-5 h-5" />
+                <Copy className="w-4 h-4" />
                 העתק
+              </button>
+              <button
+                onClick={() => downloadAsPdf(currentDocument.content, currentDocument.name || 'מסמך')}
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
+              >
+                <FileDown className="w-4 h-4" />
+                PDF
               </button>
               <button
                 onClick={() => {
@@ -1499,14 +1535,14 @@ ${summaryText}
                   setShowDocModal(false)
                 }}
                 disabled={isGeneratingDoc}
-                className="flex-1 py-3 bg-blue-800 hover:bg-blue-900 disabled:bg-blue-400 text-white rounded-xl font-medium transition flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-blue-800 hover:bg-blue-900 disabled:bg-blue-400 text-white rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
               >
                 {isGeneratingDoc ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  <Download className="w-5 h-5" />
+                  <Download className="w-4 h-4" />
                 )}
-                שמור למסמכים
+                שמור
               </button>
             </div>
           </div>
