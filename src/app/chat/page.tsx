@@ -1500,18 +1500,42 @@ ${summaryText}
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
             <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
               <h3 className="font-bold text-lg">מסמך שנוצר</h3>
-              <button 
-                onClick={() => setShowDocModal(false)}
-                className="p-2 hover:bg-slate-100 rounded-full transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setCurrentDocument({
+                    ...currentDocument,
+                    isEditing: !currentDocument.isEditing
+                  })}
+                  className={`p-2 rounded-full transition ${currentDocument.isEditing ? 'bg-blue-100 text-blue-700' : 'hover:bg-slate-100'}`}
+                  title={currentDocument.isEditing ? 'סיום עריכה' : 'עריכה'}
+                >
+                  <Edit3 className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => setShowDocModal(false)}
+                  className="p-2 hover:bg-slate-100 rounded-full transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4">
-              <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed">
-                {currentDocument.content}
-              </pre>
+              {currentDocument.isEditing ? (
+                <textarea
+                  value={currentDocument.content}
+                  onChange={(e) => setCurrentDocument({
+                    ...currentDocument,
+                    content: e.target.value
+                  })}
+                  className="w-full h-full min-h-[300px] p-3 border border-slate-200 rounded-lg text-sm text-slate-700 font-sans leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  dir="rtl"
+                />
+              ) : (
+                <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed">
+                  {currentDocument.content}
+                </pre>
+              )}
             </div>
             
             <div className="p-4 border-t flex gap-2 flex-shrink-0">
