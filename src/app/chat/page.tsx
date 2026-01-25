@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { 
   Send, Upload, Paperclip, Mic, Check, CheckCheck, FileText, Shield, 
@@ -44,6 +44,7 @@ interface Suggestion {
 
 export default function ChatPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, supabase, loading: authLoading } = useAuth()
   
   // Default suggestions - show immediately
@@ -131,6 +132,10 @@ export default function ChatPage() {
       setTimeout(() => setShowUpsellBanner(false), 10000)
     }
   }, [messages.length])
+
+  // Handle URL prompt parameter - auto-send message when coming from dashboard task
+  const promptHandledRef = useRef(false)
+  const urlPrompt = searchParams.get('prompt')
 
   const loadOrganization = async () => {
     if (!user || !supabase) {
@@ -304,7 +309,10 @@ export default function ChatPage() {
   }
 
   // Start new conversation
-  const startNewChat = () => {
+  const startNewChat = async () => {
+    // First, reload conversations to save current chat in sidebar
+    await loadConversations()
+    
     // Generate new conversation ID
     const newConvId = `conv-${Date.now()}`
     setCurrentConversationId(newConvId)
@@ -323,9 +331,28 @@ export default function ChatPage() {
 
   // Load specific conversation
   const loadConversation = async (convId: string) => {
-    if (!organization?.id) return
+    if (!organization?.id || !supabase) return
     setCurrentConversationId(convId)
-    await loadChatHistory(organization.id)
+    
+    try {
+      // Load messages for this specific conversation
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .eq('org_id', organization.id)
+        .eq('conversation_id', convId)
+        .order('created_at', { ascending: true })
+      
+      if (!error && data && data.length > 0) {
+        setMessages(data)
+      } else {
+        // Fallback to loading all messages if conversation_id filter fails
+        await loadChatHistory(organization.id)
+      }
+    } catch (e) {
+      console.log('Could not load conversation')
+      await loadChatHistory(organization.id)
+    }
   }
 
   // Load conversations when organization is ready
@@ -423,6 +450,7 @@ export default function ChatPage() {
       // Handle generated document
       if (data.generatedDocument) {
         setCurrentDocument(data.generatedDocument)
+        setShowDocModal(true)  // Auto-open modal when document is generated
       }
 
       // Update suggestions dynamically based on intent
@@ -950,6 +978,24 @@ ${summaryText}
     if (score >= 60) return 'from-amber-500/20 to-amber-500/5'
     return 'from-red-500/20 to-red-500/5'
   }
+
+  // Effect to handle URL prompt - auto-send message from dashboard tasks
+  useEffect(() => {
+    if (urlPrompt && organization && !promptHandledRef.current && !isLoading && !orgLoading) {
+      promptHandledRef.current = true
+      
+      // Clear the URL parameters without refreshing the page
+      const url = new URL(window.location.href)
+      url.searchParams.delete('prompt')
+      url.searchParams.delete('task')
+      url.searchParams.delete('incident')
+      url.searchParams.delete('dsar')
+      window.history.replaceState({}, '', url.pathname)
+      
+      // Send the message
+      sendMessage(urlPrompt)
+    }
+  }, [urlPrompt, organization, isLoading, orgLoading])
 
   // Show loading screen while auth is loading
   if (authLoading) {
