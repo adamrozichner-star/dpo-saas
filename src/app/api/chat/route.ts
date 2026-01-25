@@ -333,13 +333,41 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
         .replace(/`([^`]+)`/g, '$1')         // Remove inline code
         .trim()
       
-      // Check for document generation
+      // Check for document generation - multiple detection methods
       let generatedDoc = null
+      
+      // Method 1: Explicit marker
       if (aiText.includes('[DOCUMENT_GENERATED]')) {
         aiText = aiText.replace('[DOCUMENT_GENERATED]', '').trim()
         generatedDoc = {
           type: detectDocType(message),
-          content: aiText
+          content: aiText,
+          name: getDocTitle(detectDocType(message))
+        }
+      }
+      // Method 2: Intent-based detection when content looks like a document
+      else if (intent === 'document' && aiText.length > 500) {
+        // Check if response looks like a structured document
+        const docIndicators = [
+          'מדיניות',
+          'נוהל',
+          'הסכם',
+          'טופס',
+          'תקנון',
+          '1.',
+          'סעיף',
+          'הגדרות',
+          'מטרה',
+          'תחולה'
+        ]
+        const hasDocStructure = docIndicators.filter(ind => aiText.includes(ind)).length >= 3
+        
+        if (hasDocStructure) {
+          generatedDoc = {
+            type: detectDocType(message),
+            content: aiText,
+            name: getDocTitle(detectDocType(message))
+          }
         }
       }
       
@@ -537,21 +565,41 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
     if (action === 'save_document') {
       const { orgId, title, content, documentType } = body
       
+      // Map document types to valid enum values
+      const typeMapping: Record<string, string> = {
+        'privacy_policy': 'privacy_policy',
+        'security_policy': 'security_policy',
+        'security_procedure': 'security_policy',
+        'database_registration': 'database_registration',
+        'database_definition': 'database_registration',
+        'consent_form': 'custom',
+        'dpa': 'custom',
+        'employee_policy': 'procedure',
+        'retention_policy': 'procedure',
+        'ropa': 'procedure',
+        'general': 'custom'
+      }
+      
+      const validType = typeMapping[documentType] || 'custom'
+      const docTitle = title || getDocTitle(documentType)
+      
       const { data: doc, error } = await supabase
         .from('documents')
         .insert({
           org_id: orgId,
-          name: title || getDocTitle(documentType),
-          type: documentType,
+          title: docTitle,
+          type: validType,
           content,
           status: 'draft',
-          generated_by: 'ai',
-          source: 'chat'
+          generated_by: 'ai'
         })
         .select()
         .single()
       
-      if (error) throw error
+      if (error) {
+        console.error('Failed to save document:', error)
+        throw error
+      }
       
       return NextResponse.json({ document: doc, success: true })
     }
@@ -646,12 +694,37 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
 // Helper: detect document type
 function detectDocType(message: string): string {
   const msg = message.toLowerCase()
-  if (msg.includes('מדיניות פרטיות')) return 'privacy_policy'
-  if (msg.includes('הסכמה') || msg.includes('consent')) return 'consent_form'
-  if (msg.includes('עיבוד') || msg.includes('dpa')) return 'dpa'
-  if (msg.includes('עובד') || msg.includes('employee')) return 'employee_policy'
-  if (msg.includes('אבטח')) return 'security_procedure'
-  if (msg.includes('שמיר') || msg.includes('retention')) return 'retention_policy'
+  
+  // Privacy policy
+  if (msg.includes('מדיניות פרטיות') || msg.includes('privacy policy')) return 'privacy_policy'
+  
+  // Security policy/procedure
+  if (msg.includes('אבטחת מידע') || msg.includes('נוהל אבטח') || msg.includes('security')) return 'security_procedure'
+  
+  // Consent form
+  if (msg.includes('הסכמה') || msg.includes('consent') || msg.includes('טופס הסכמה')) return 'consent_form'
+  
+  // DPA
+  if (msg.includes('הסכם עיבוד') || msg.includes('dpa') || msg.includes('data processing')) return 'dpa'
+  
+  // Employee policy
+  if (msg.includes('עובד') || msg.includes('employee') || msg.includes('מדיניות עובדים')) return 'employee_policy'
+  
+  // Retention policy
+  if (msg.includes('שמירת מידע') || msg.includes('retention') || msg.includes('מחיקה')) return 'retention_policy'
+  
+  // Database registration
+  if (msg.includes('מאגר') || msg.includes('רישום מאגר') || msg.includes('database')) return 'database_registration'
+  
+  // ROPA
+  if (msg.includes('ropa') || msg.includes('מפת עיבוד') || msg.includes('record of processing')) return 'ropa'
+  
+  // DPO appointment
+  if (msg.includes('מינוי') || msg.includes('כתב מינוי') || msg.includes('dpo appointment')) return 'dpo_appointment'
+  
+  // Terms of service
+  if (msg.includes('תקנון') || msg.includes('תנאי שימוש') || msg.includes('terms')) return 'terms_of_service'
+  
   return 'general'
 }
 
@@ -659,12 +732,19 @@ function detectDocType(message: string): string {
 function getDocTitle(type: string): string {
   const titles: Record<string, string> = {
     privacy_policy: 'מדיניות פרטיות',
+    security_policy: 'מדיניות אבטחת מידע',
+    security_procedure: 'נוהל אבטחת מידע',
     consent_form: 'טופס הסכמה',
     dpa: 'הסכם עיבוד מידע',
     employee_policy: 'נוהל פרטיות לעובדים',
-    security_procedure: 'נוהל אבטחת מידע',
     retention_policy: 'מדיניות שמירת מידע',
-    general: 'מסמך'
+    database_registration: 'רישום מאגר מידע',
+    ropa: 'מפת עיבוד מידע (ROPA)',
+    dpo_appointment: 'כתב מינוי ממונה פרטיות',
+    terms_of_service: 'תקנון ותנאי שימוש',
+    general: 'מסמך',
+    custom: 'מסמך',
+    procedure: 'נוהל'
   }
   return titles[type] || 'מסמך'
 }
