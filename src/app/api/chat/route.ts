@@ -363,7 +363,9 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
       if (aiText.includes('[DOCUMENT_GENERATED]')) {
         aiText = aiText.replace('[DOCUMENT_GENERATED]', '').trim()
         // Also remove the reminder text that sometimes follows
-        aiText = aiText.replace(/המסמך מוכן!.*$/s, '').trim()
+        if (aiText.includes('המסמך מוכן!')) {
+          aiText = aiText.split('המסמך מוכן!')[0].trim()
+        }
         
         generatedDoc = {
           type: detectDocType(message),
