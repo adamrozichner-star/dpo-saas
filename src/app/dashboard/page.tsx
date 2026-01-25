@@ -25,7 +25,9 @@ import {
   Eye,
   Download,
   X,
-  Copy
+  Copy,
+  Edit3,
+  Save
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import WelcomeModal from '@/components/WelcomeModal'
@@ -388,7 +390,7 @@ function DashboardContent() {
             <TasksTab tasks={tasks} />
           )}
           {activeTab === 'documents' && (
-            <DocumentsTab documents={documents} organization={organization} />
+            <DocumentsTab documents={documents} organization={organization} supabase={supabase} />
           )}
           {activeTab === 'incidents' && (
             <IncidentsTab incidents={incidents} orgId={organization?.id} />
@@ -697,9 +699,12 @@ function TasksTab({ tasks }: { tasks: Task[] }) {
 // ============================================
 // DOCUMENTS TAB
 // ============================================
-function DocumentsTab({ documents, organization }: { documents: Document[], organization: any }) {
+function DocumentsTab({ documents, organization, supabase }: { documents: Document[], organization: any, supabase: any }) {
   const [filter, setFilter] = useState<string>('all')
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedContent, setEditedContent] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
   const isPaid = organization?.subscription_status === 'active'
 
   const getDocTypeLabel = (type: string) => {
@@ -736,12 +741,13 @@ function DocumentsTab({ documents, organization }: { documents: Document[], orga
 
   const downloadAsPdf = async (doc: Document) => {
     try {
+      const content = isEditing ? editedContent : doc.content
       const response = await fetch('/api/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: doc.title || doc.name || getDocTypeLabel(doc.type),
-          content: doc.content || 'אין תוכן',
+          content: content || 'אין תוכן',
           orgName: organization?.name
         })
       })
@@ -757,6 +763,36 @@ function DocumentsTab({ documents, organization }: { documents: Document[], orga
     } catch (error) {
       console.error('PDF download error:', error)
       alert('שגיאה בהורדת המסמך')
+    }
+  }
+
+  const openDoc = (doc: Document) => {
+    setSelectedDoc(doc)
+    setEditedContent(doc.content || '')
+    setIsEditing(false)
+  }
+
+  const saveDocumentChanges = async () => {
+    if (!selectedDoc || !supabase) return
+    
+    setIsSaving(true)
+    try {
+      const { error } = await supabase
+        .from('documents')
+        .update({ content: editedContent, updated_at: new Date().toISOString() })
+        .eq('id', selectedDoc.id)
+      
+      if (error) throw error
+      
+      // Update local state
+      selectedDoc.content = editedContent
+      setIsEditing(false)
+      alert('המסמך נשמר בהצלחה!')
+    } catch (error) {
+      console.error('Error saving document:', error)
+      alert('שגיאה בשמירת המסמך')
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -845,7 +881,7 @@ function DocumentsTab({ documents, organization }: { documents: Document[], orga
                 </div>
                 <div className="flex gap-1">
                   <button 
-                    onClick={() => setSelectedDoc(doc)}
+                    onClick={() => openDoc(doc)}
                     className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center hover:bg-stone-200 transition-colors" 
                     title="צפייה"
                   >
@@ -871,24 +907,45 @@ function DocumentsTab({ documents, organization }: { documents: Document[], orga
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
             <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
               <h3 className="font-bold text-lg">{selectedDoc.title || selectedDoc.name || getDocTypeLabel(selectedDoc.type)}</h3>
-              <button 
-                onClick={() => setSelectedDoc(null)}
-                className="p-2 hover:bg-slate-100 rounded-full transition"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setIsEditing(!isEditing)}
+                  className={`p-2 rounded-full transition ${isEditing ? 'bg-blue-100 text-blue-700' : 'hover:bg-slate-100'}`}
+                  title={isEditing ? 'סיום עריכה' : 'עריכה'}
+                >
+                  <Edit3 className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => {
+                    setSelectedDoc(null)
+                    setIsEditing(false)
+                  }}
+                  className="p-2 hover:bg-slate-100 rounded-full transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             
             <div className="flex-1 overflow-y-auto p-4">
-              <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed">
-                {selectedDoc.content || 'אין תוכן למסמך זה'}
-              </pre>
+              {isEditing ? (
+                <textarea
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  className="w-full h-full min-h-[300px] p-3 border border-slate-200 rounded-lg text-sm text-slate-700 font-sans leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  dir="rtl"
+                />
+              ) : (
+                <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed">
+                  {selectedDoc.content || 'אין תוכן למסמך זה'}
+                </pre>
+              )}
             </div>
             
             <div className="p-4 border-t flex gap-2 flex-shrink-0">
               <button
                 onClick={() => {
-                  navigator.clipboard.writeText(selectedDoc.content || '')
+                  navigator.clipboard.writeText(isEditing ? editedContent : selectedDoc.content || '')
                 }}
                 className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
               >
@@ -897,11 +954,25 @@ function DocumentsTab({ documents, organization }: { documents: Document[], orga
               </button>
               <button
                 onClick={() => downloadAsPdf(selectedDoc)}
-                className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
               >
                 <Download className="w-4 h-4" />
-                הורד PDF
+                PDF
               </button>
+              {isEditing && (
+                <button
+                  onClick={saveDocumentChanges}
+                  disabled={isSaving}
+                  className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 text-white rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
+                >
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  שמור שינויים
+                </button>
+              )}
             </div>
           </div>
         </div>
