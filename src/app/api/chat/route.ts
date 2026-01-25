@@ -69,18 +69,39 @@ const DPO_SYSTEM_PROMPT = `אתה עוזר דיגיטלי מומחה בהגנת 
 הסבר: יש 72 שעות לדווח לרשות להגנת הפרטיות על אירוע אבטחה חמור!
 הנחה אותו לתעד מיידית: מה קרה, מתי, כמה אנשים מושפעים.
 
-📄 יצירת מסמכים:
-כשמבקשים ממך ליצור מסמך (מדיניות, נוהל, טופס) - צור אותו במלואו, מקצועי ומותאם לחקיקה הישראלית.
-המסמכים צריכים להיות:
-- מנוסחים בעברית תקינה ומקצועית
-- כוללים את כל הסעיפים הנדרשים בחוק
-- מותאמים לסוג הארגון
-- מעודכנים לתיקון 13
+📄 יצירת מסמכים - חשוב מאוד!
+כשמבקשים ממך ליצור מסמך (מדיניות, נוהל, טופס, הסכם) - אל תסביר מה צריך להיות במסמך!
+במקום זאת - צור את המסמך המלא עצמו, מוכן לשימוש.
 
-כשתסיים לייצר מסמך, הוסף בסוף:
+דוגמה לבקשה: "צריך ליצור נוהל אבטחת מידע לארגון"
+תשובה לא נכונה: "נוהל אבטחת מידע צריך לכלול: 1. הגדרת תפקידים 2. בקרות אבטחה..."
+תשובה נכונה: המסמך המלא עצמו עם כל הסעיפים כתובים במלואם!
+
+המסמך צריך להיות:
+- מלא ומוכן לשימוש (לא רשימת נושאים!)
+- מנוסח בעברית מקצועית
+- כולל את כל הסעיפים הנדרשים בחוק
+- מותאם לתיקון 13
+
+מבנה מסמך לדוגמה:
+
+[שם המסמך]
+גרסה: 1.0
+תאריך: [תאריך היום]
+
+1. מבוא ומטרה
+[טקסט מלא]
+
+2. הגדרות
+[טקסט מלא]
+
+3. תחולה
+[טקסט מלא]
+
+[המשך סעיפים...]
+
 ---
 [DOCUMENT_GENERATED]
-הזכר למשתמש: "המסמך מוכן! אפשר להוריד אותו, לערוך אותו, או לשתף. רוצה שממונה אנושי יעבור עליו לפני פרסום?"
 
 💰 הצעות שירות (upsell עדין ורלוונטי בלבד):
 רק כשזה באמת מתאים:
@@ -309,13 +330,15 @@ export async function POST(request: NextRequest) {
 - ציון ציות: ${org?.compliance_score || 0}%
 
 ${intent === 'incident' ? '\n⚠️ שים לב: זוהה אירוע אבטחה פוטנציאלי! וודא שהמשתמש מבין את הדחיפות (72 שעות לדיווח) והנחה אותו לתעד את האירוע.\n' : ''}
-${intent === 'document' ? '\n📄 המשתמש מבקש מסמך - צור מסמך מלא ומקצועי.\n' : ''}
+${intent === 'document' ? '\n📄 המשתמש מבקש מסמך - צור את המסמך המלא עצמו, לא הסבר על מה צריך להיות בו! השתמש ב-[DOCUMENT_GENERATED] בסוף.\n' : ''}
 ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה אנושי - הצע להעביר את הפנייה.\n' : ''}`
 
-      // Get AI response - use Haiku for speed (3-5x faster, 10x cheaper)
+      // Get AI response - use more tokens for documents
+      const maxTokens = intent === 'document' ? 4000 : 1500
+      
       const response = await anthropic.messages.create({
         model: 'claude-3-haiku-20240307',
-        max_tokens: 1500,
+        max_tokens: maxTokens,
         system: contextPrompt,
         messages: conversationHistory
       })
@@ -333,41 +356,19 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
         .replace(/`([^`]+)`/g, '$1')         // Remove inline code
         .trim()
       
-      // Check for document generation - multiple detection methods
+      // Check for document generation - only use explicit marker
       let generatedDoc = null
       
-      // Method 1: Explicit marker
+      // Only detect document if AI explicitly marked it with [DOCUMENT_GENERATED]
       if (aiText.includes('[DOCUMENT_GENERATED]')) {
         aiText = aiText.replace('[DOCUMENT_GENERATED]', '').trim()
+        // Also remove the reminder text that sometimes follows
+        aiText = aiText.replace(/המסמך מוכן!.*$/s, '').trim()
+        
         generatedDoc = {
           type: detectDocType(message),
           content: aiText,
           name: getDocTitle(detectDocType(message))
-        }
-      }
-      // Method 2: Intent-based detection when content looks like a document
-      else if (intent === 'document' && aiText.length > 500) {
-        // Check if response looks like a structured document
-        const docIndicators = [
-          'מדיניות',
-          'נוהל',
-          'הסכם',
-          'טופס',
-          'תקנון',
-          '1.',
-          'סעיף',
-          'הגדרות',
-          'מטרה',
-          'תחולה'
-        ]
-        const hasDocStructure = docIndicators.filter(ind => aiText.includes(ind)).length >= 3
-        
-        if (hasDocStructure) {
-          generatedDoc = {
-            type: detectDocType(message),
-            content: aiText,
-            name: getDocTitle(detectDocType(message))
-          }
         }
       }
       
