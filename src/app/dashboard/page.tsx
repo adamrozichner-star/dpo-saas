@@ -167,7 +167,7 @@ function DashboardContent() {
         description: 'מדיניות פרטיות היא דרישה בסיסית בתיקון 13',
         priority: 'high',
         action: 'התחל',
-        actionPath: '/chat'
+        actionPath: '/chat?task=privacy_policy&prompt=' + encodeURIComponent('צריך ליצור מדיניות פרטיות לעסק שלי')
       })
     }
 
@@ -179,7 +179,7 @@ function DashboardContent() {
         description: 'נדרש נוהל אבטחה מתועד לארגון',
         priority: 'high',
         action: 'התחל',
-        actionPath: '/chat'
+        actionPath: '/chat?task=security_policy&prompt=' + encodeURIComponent('צריך ליצור נוהל אבטחת מידע לארגון')
       })
     }
 
@@ -191,7 +191,7 @@ function DashboardContent() {
         description: 'יש להפיק כתב מינוי רשמי לממונה',
         priority: 'medium',
         action: 'התחל',
-        actionPath: '/chat'
+        actionPath: '/chat?task=dpo_appointment&prompt=' + encodeURIComponent('צריך להפיק כתב מינוי לממונה הגנת פרטיות (DPO)')
       })
     }
 
@@ -208,20 +208,21 @@ function DashboardContent() {
         priority: isUrgent ? 'high' : 'medium',
         deadline: deadline?.toLocaleDateString('he-IL'),
         action: 'טפל',
-        actionPath: `/chat?incident=${incident.id}`
+        actionPath: `/chat?incident=${incident.id}&prompt=` + encodeURIComponent(`יש לי אירוע אבטחה פתוח: ${incident.title}. מה עלי לעשות?`)
       })
     })
 
     dsars.forEach(dsar => {
+      const requestTypeHebrew = dsar.request_type === 'access' ? 'עיון' : dsar.request_type === 'deletion' ? 'מחיקה' : 'תיקון'
       tasks.push({
         id: `dsar-${dsar.id}`,
         type: 'dsar',
-        title: `בקשת ${dsar.request_type === 'access' ? 'עיון' : dsar.request_type === 'deletion' ? 'מחיקה' : 'תיקון'} ממידע`,
+        title: `בקשת ${requestTypeHebrew} ממידע`,
         description: `מאת: ${dsar.requester_name || 'לא ידוע'}`,
         priority: 'medium',
         deadline: dsar.deadline,
         action: 'טפל',
-        actionPath: '/chat'
+        actionPath: `/chat?dsar=${dsar.id}&prompt=` + encodeURIComponent(`קיבלתי בקשת ${requestTypeHebrew} ממידע מאת ${dsar.requester_name || 'נושא מידע'}. איך לטפל בזה?`)
       })
     })
 
