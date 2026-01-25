@@ -167,7 +167,7 @@ function DashboardContent() {
         description: 'מדיניות פרטיות היא דרישה בסיסית בתיקון 13',
         priority: 'high',
         action: 'התחל',
-        actionPath: '/chat?task=privacy_policy&prompt=' + encodeURIComponent('צריך ליצור מדיניות פרטיות לעסק שלי')
+        actionPath: '/chat?task=privacy_policy&prompt=' + encodeURIComponent('אנא צור עבורי מדיניות פרטיות מלאה ומוכנה לשימוש עבור העסק שלי')
       })
     }
 
@@ -179,7 +179,7 @@ function DashboardContent() {
         description: 'נדרש נוהל אבטחה מתועד לארגון',
         priority: 'high',
         action: 'התחל',
-        actionPath: '/chat?task=security_policy&prompt=' + encodeURIComponent('צריך ליצור נוהל אבטחת מידע לארגון')
+        actionPath: '/chat?task=security_policy&prompt=' + encodeURIComponent('אנא צור עבורי נוהל אבטחת מידע מלא ומוכן לשימוש עבור הארגון שלי')
       })
     }
 
@@ -191,7 +191,7 @@ function DashboardContent() {
         description: 'יש להפיק כתב מינוי רשמי לממונה',
         priority: 'medium',
         action: 'התחל',
-        actionPath: '/chat?task=dpo_appointment&prompt=' + encodeURIComponent('צריך להפיק כתב מינוי לממונה הגנת פרטיות (DPO)')
+        actionPath: '/chat?task=dpo_appointment&prompt=' + encodeURIComponent('אנא צור עבורי כתב מינוי רשמי לממונה הגנת פרטיות (DPO) מוכן לחתימה')
       })
     }
 
