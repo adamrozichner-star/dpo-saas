@@ -24,7 +24,8 @@ import {
   Plus,
   Eye,
   Download,
-  X
+  X,
+  Copy
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import WelcomeModal from '@/components/WelcomeModal'
@@ -698,6 +699,7 @@ function TasksTab({ tasks }: { tasks: Task[] }) {
 // ============================================
 function DocumentsTab({ documents, organization }: { documents: Document[], organization: any }) {
   const [filter, setFilter] = useState<string>('all')
+  const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   const isPaid = organization?.subscription_status === 'active'
 
   const getDocTypeLabel = (type: string) => {
@@ -730,6 +732,32 @@ function DocumentsTab({ documents, organization }: { documents: Document[], orga
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = { active: 'פעיל', draft: 'טיוטה', pending: 'ממתין' }
     return labels[status] || status
+  }
+
+  const downloadAsPdf = async (doc: Document) => {
+    try {
+      const response = await fetch('/api/generate-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: doc.title || doc.name || getDocTypeLabel(doc.type),
+          content: doc.content || 'אין תוכן',
+          orgName: organization?.name
+        })
+      })
+      
+      if (!response.ok) throw new Error('Failed to generate PDF')
+      
+      const html = await response.text()
+      const printWindow = window.open('', '_blank')
+      if (printWindow) {
+        printWindow.document.write(html)
+        printWindow.document.close()
+      }
+    } catch (error) {
+      console.error('PDF download error:', error)
+      alert('שגיאה בהורדת המסמך')
+    }
   }
 
   const filteredDocs = filter === 'all' ? documents : documents.filter(d => d.type === filter)
@@ -816,18 +844,66 @@ function DocumentsTab({ documents, organization }: { documents: Document[], orga
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <button className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center hover:bg-stone-200 transition-colors" title="צפייה">
+                  <button 
+                    onClick={() => setSelectedDoc(doc)}
+                    className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center hover:bg-stone-200 transition-colors" 
+                    title="צפייה"
+                  >
                     <Eye className="h-4 w-4 text-stone-500" />
                   </button>
-                  {isPaid && (
-                    <button className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center hover:bg-stone-200 transition-colors" title="הורדה">
-                      <Download className="h-4 w-4 text-stone-500" />
-                    </button>
-                  )}
+                  <button 
+                    onClick={() => downloadAsPdf(doc)}
+                    className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center hover:bg-stone-200 transition-colors" 
+                    title="הורד PDF"
+                  >
+                    <Download className="h-4 w-4 text-stone-500" />
+                  </button>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Document View Modal */}
+      {selectedDoc && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
+              <h3 className="font-bold text-lg">{selectedDoc.title || selectedDoc.name || getDocTypeLabel(selectedDoc.type)}</h3>
+              <button 
+                onClick={() => setSelectedDoc(null)}
+                className="p-2 hover:bg-slate-100 rounded-full transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4">
+              <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed">
+                {selectedDoc.content || 'אין תוכן למסמך זה'}
+              </pre>
+            </div>
+            
+            <div className="p-4 border-t flex gap-2 flex-shrink-0">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(selectedDoc.content || '')
+                }}
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
+              >
+                <Copy className="w-4 h-4" />
+                העתק
+              </button>
+              <button
+                onClick={() => downloadAsPdf(selectedDoc)}
+                className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
+              >
+                <Download className="w-4 h-4" />
+                הורד PDF
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
