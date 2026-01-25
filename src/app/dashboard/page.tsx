@@ -45,7 +45,8 @@ interface Task {
 
 interface Document {
   id: string
-  name: string
+  name?: string
+  title?: string
   type: string
   status: string
   created_at: string
@@ -709,7 +710,9 @@ function DocumentsTab({ documents, organization }: { documents: Document[], orga
       consent_form: 'טופס הסכמה',
       employee_policy: 'מדיניות עובדים',
       ropa: 'מפת עיבוד (ROPA)',
-      dpa: 'הסכם עיבוד מידע'
+      dpa: 'הסכם עיבוד מידע',
+      procedure: 'נוהל',
+      custom: 'מסמך'
     }
     return labels[type] || type
   }
@@ -801,7 +804,7 @@ function DocumentsTab({ documents, organization }: { documents: Document[], orga
                   <FileText className="h-5 w-5 text-blue-600" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-stone-800 truncate">{doc.name || getDocTypeLabel(doc.type)}</h3>
+                  <h3 className="font-medium text-stone-800 truncate">{doc.title || doc.name || getDocTypeLabel(doc.type)}</h3>
                   <div className="flex items-center gap-2 mt-1">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusStyle(doc.status)}`}>
                       {getStatusLabel(doc.status)}
