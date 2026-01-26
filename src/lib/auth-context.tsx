@@ -76,6 +76,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: name,
         role: 'admin'
       })
+
+      // Send welcome email
+      try {
+        await fetch('/api/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            template: 'welcome',
+            to: email,
+            data: {
+              name: name,
+              orgName: 'הארגון שלך' // Will be updated after onboarding
+            }
+          })
+        })
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError)
+        // Don't fail registration if email fails
+      }
     }
 
     return { error: error as Error | null }
