@@ -119,18 +119,18 @@ export default function HomePage() {
       </section>
 
       {/* Value Proposition - Simple */}
-      <section className="py-16 px-6 bg-white">
+      <section className="py-20 px-6 bg-white">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-6">
             הכל במנוי אחד פשוט
           </h2>
-          <p className="text-xl text-slate-600 mb-12">
+          <p className="text-xl text-slate-600 mb-10">
             במקום להוציא עשרות אלפי שקלים על יועצים -
             <br />
             קבלו הכל ב-<span className="font-bold text-emerald-600">500 ₪</span> לחודש
           </p>
 
-          <div className="grid sm:grid-cols-2 gap-6 max-w-2xl mx-auto text-right">
+          <div className="grid sm:grid-cols-2 gap-5 max-w-2xl mx-auto text-right mt-8">
             <BenefitItem>ממונה הגנת פרטיות מוסמך</BenefitItem>
             <BenefitItem>מדיניות פרטיות מותאמת</BenefitItem>
             <BenefitItem>רישום מאגרי מידע (ROPA)</BenefitItem>
@@ -142,9 +142,9 @@ export default function HomePage() {
       </section>
 
       {/* Social Proof - Minimal */}
-      <section className="py-12 px-6 bg-gradient-to-b from-slate-50 to-slate-100">
+      <section className="py-16 px-6 bg-gradient-to-b from-slate-50 to-slate-100">
         <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-3 gap-8 text-center">
+          <div className="grid grid-cols-3 gap-12 text-center">
             <div>
               <div className="text-4xl font-bold text-slate-900 mb-2">500+</div>
               <div className="text-slate-500 text-sm">ארגונים מוגנים</div>
@@ -162,9 +162,9 @@ export default function HomePage() {
       </section>
 
       {/* Testimonial */}
-      <section className="py-16 px-6 bg-white border-t border-slate-100">
+      <section className="py-20 px-6 bg-white border-t border-slate-100">
         <div className="max-w-3xl mx-auto text-center">
-          <p className="text-xl sm:text-2xl text-slate-700 mb-8 leading-relaxed">
+          <p className="text-xl sm:text-2xl text-slate-700 mb-10 leading-relaxed">
             "תוך שעה היה לנו DPO ממונה וכל המסמכים הנדרשים. 
             חסכנו אלפי שקלים ובעיקר - שקט נפשי מול הרגולציה."
           </p>
