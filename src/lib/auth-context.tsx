@@ -12,6 +12,7 @@ interface AuthContextType {
   supabase: SupabaseClient | null
   signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>
+  signInWithGoogle: () => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   loading: boolean
 }
@@ -110,6 +111,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null }
   }
 
+  const signInWithGoogle = async () => {
+    if (!supabaseClient) return { error: new Error('Supabase not initialized') }
+
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    })
+    return { error: error as Error | null }
+  }
+
   const signOut = async () => {
     if (supabaseClient) {
       await supabaseClient.auth.signOut()
@@ -123,6 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       supabase: supabaseClient,
       signUp,
       signIn,
+      signInWithGoogle,
       signOut,
       loading
     }}>
