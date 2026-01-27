@@ -1,12 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import { Loader2 } from 'lucide-react';
 
 export default function AuthCallbackPage() {
-  const router = useRouter();
   const [status, setStatus] = useState('מתחבר...');
 
   useEffect(() => {
@@ -17,32 +15,31 @@ export default function AuthCallbackPage() {
 
         if (!supabaseUrl || !supabaseAnonKey) {
           console.error('Missing Supabase env vars');
-          router.push('/login?error=config');
+          window.location.href = '/login?error=config';
           return;
         }
 
         const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-        // Handle the OAuth callback - exchange code for session
+        // Check for code in query params (PKCE flow - most common)
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+
+        // Also check hash for implicit flow
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const accessToken = hashParams.get('access_token');
         const refreshToken = hashParams.get('refresh_token');
 
-        // Also check for code in query params (for PKCE flow)
-        const urlParams = new URLSearchParams(window.location.search);
-        const code = urlParams.get('code');
-
         if (code) {
-          // PKCE flow - exchange code for session
           setStatus('מאמת...');
-          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) {
             console.error('Code exchange error:', error);
-            router.push('/login?error=auth');
+            window.location.href = '/login?error=auth';
             return;
           }
+          console.log('Session established via code exchange');
         } else if (accessToken) {
-          // Implicit flow - set session from tokens
           setStatus('מאמת...');
           const { error } = await supabase.auth.setSession({
             access_token: accessToken,
@@ -50,33 +47,49 @@ export default function AuthCallbackPage() {
           });
           if (error) {
             console.error('Set session error:', error);
-            router.push('/login?error=auth');
+            window.location.href = '/login?error=auth';
             return;
           }
+          console.log('Session established via tokens');
+        } else {
+          console.log('No code or tokens in URL, checking existing session');
         }
 
-        // Now get the session
+        // Wait a moment for session to be fully established
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Get the session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-        if (sessionError || !session?.user) {
+        if (sessionError) {
           console.error('Session error:', sessionError);
-          router.push('/login?error=session');
+          window.location.href = '/login?error=session';
           return;
         }
 
+        if (!session?.user) {
+          console.error('No session found');
+          window.location.href = '/login?error=nosession';
+          return;
+        }
+
+        console.log('Session user:', session.user.email);
         setStatus('בודק פרופיל...');
 
         // Check if user profile exists
-        const { data: existingUser } = await supabase
+        const { data: existingUser, error: userError } = await supabase
           .from('users')
           .select('id')
           .eq('auth_user_id', session.user.id)
           .single();
 
+        if (userError && userError.code !== 'PGRST116') {
+          console.error('User lookup error:', userError);
+        }
+
         if (!existingUser) {
           setStatus('יוצר חשבון...');
           
-          // Create user profile for new Google users
           const name = session.user.user_metadata?.full_name || 
                        session.user.user_metadata?.name ||
                        session.user.email?.split('@')[0] || 'משתמש';
@@ -90,44 +103,35 @@ export default function AuthCallbackPage() {
 
           if (insertError) {
             console.error('User insert error:', insertError);
-            // Continue anyway - user might already exist
           }
 
-          // Send welcome email
-          try {
-            await fetch('/api/email', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                template: 'welcome',
-                to: session.user.email,
-                data: {
-                  name: name,
-                  orgName: 'הארגון שלך'
-                }
-              })
-            });
-          } catch (e) {
-            console.error('Failed to send welcome email:', e);
-          }
+          // Send welcome email (don't wait)
+          fetch('/api/email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              template: 'welcome',
+              to: session.user.email,
+              data: { name, orgName: 'הארגון שלך' }
+            })
+          }).catch(e => console.error('Email error:', e));
 
-          // New user - redirect to onboarding
+          // New user - go to onboarding
           setStatus('מעביר להגדרות...');
-          router.push('/onboarding');
+          window.location.href = '/onboarding';
         } else {
-          // Existing user - redirect to dashboard
+          // Existing user - go to dashboard
           setStatus('מעביר ללוח הבקרה...');
-          router.push('/dashboard');
+          window.location.href = '/dashboard';
         }
       } catch (err) {
         console.error('Callback error:', err);
-        router.push('/login?error=unknown');
+        window.location.href = '/login?error=unknown';
       }
     };
 
-    // Small delay to ensure URL params are available
-    setTimeout(handleCallback, 100);
-  }, [router]);
+    handleCallback();
+  }, []);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white" dir="rtl">
