@@ -245,10 +245,29 @@ function OnboardingContent() {
       localStorage.removeItem('dpo_onboarding_step')
 
       setGenerationProgress(100)
-      setStatus('הושלם! מעבירים לעוזר הפרטיות שלך...')
+      setStatus('הושלם! מעבירים ללוח הבקרה...')
+      
+      // Send welcome email with org details
+      try {
+        const orgName = answers.find(a => a.questionId === 'org_name')?.value || 'הארגון שלך'
+        await fetch('/api/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            template: 'welcome',
+            to: user?.email,
+            data: { 
+              name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'משתמש',
+              orgName: orgName
+            }
+          })
+        })
+      } catch (emailErr) {
+        console.log('Welcome email skipped:', emailErr)
+      }
       
       setTimeout(() => {
-        router.push('/chat?welcome=true')
+        router.push('/dashboard?welcome=true')
       }, 1500)
 
     } catch (err: any) {
