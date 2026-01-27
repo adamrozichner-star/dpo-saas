@@ -96,7 +96,7 @@ export default function HomePage() {
       </section>
 
       {/* Features - Clean White Section */}
-      <section className="py-24 px-6 bg-slate-50">
+      <section className="py-16 px-6 bg-slate-50">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-3 gap-8">
             <FeatureCard
@@ -119,7 +119,7 @@ export default function HomePage() {
       </section>
 
       {/* Value Proposition - Simple */}
-      <section className="py-24 px-6 bg-white">
+      <section className="py-16 px-6 bg-white">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-6">
             הכל במנוי אחד פשוט
@@ -142,7 +142,7 @@ export default function HomePage() {
       </section>
 
       {/* Social Proof - Minimal */}
-      <section className="py-20 px-6 bg-slate-50">
+      <section className="py-12 px-6 bg-gradient-to-b from-slate-50 to-slate-100">
         <div className="max-w-4xl mx-auto">
           <div className="grid grid-cols-3 gap-8 text-center">
             <div>
@@ -162,7 +162,7 @@ export default function HomePage() {
       </section>
 
       {/* Testimonial */}
-      <section className="py-20 px-6 bg-white">
+      <section className="py-16 px-6 bg-white border-t border-slate-100">
         <div className="max-w-3xl mx-auto text-center">
           <p className="text-xl sm:text-2xl text-slate-700 mb-8 leading-relaxed">
             "תוך שעה היה לנו DPO ממונה וכל המסמכים הנדרשים. 
@@ -181,7 +181,7 @@ export default function HomePage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-24 px-6 bg-white">
+      <section id="pricing" className="py-16 px-6 bg-slate-50">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">חבילות ומחירים</h2>
@@ -281,7 +281,7 @@ export default function HomePage() {
       </section>
 
       {/* Compliance Checklist Section */}
-      <section className="py-24 px-6 bg-gradient-to-b from-slate-50 to-slate-100">
+      <section className="py-16 px-6 bg-white">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Text Side */}
@@ -298,8 +298,8 @@ export default function HomePage() {
                   className="text-lg px-8 py-6 h-auto rounded-xl font-semibold"
                   style={{ backgroundColor: '#10b981' }}
                 >
-                  התחל עכשיו - חינם לשבועיים
-                  <ArrowLeft className="h-5 w-5 mr-2" />
+                  <Calculator className="h-5 w-5 ml-2" />
+                  בדוק עכשיו - חינם
                 </Button>
               </Link>
             </div>
@@ -336,7 +336,7 @@ export default function HomePage() {
 
       {/* Final CTA Section */}
       <section 
-        className="py-24 px-6"
+        className="py-16 px-6"
         style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%)' }}
       >
         <div className="max-w-3xl mx-auto text-center">
