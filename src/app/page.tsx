@@ -180,40 +180,185 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA Section */}
+      {/* Pricing Section */}
+      <section id="pricing" className="py-24 px-6 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">חבילות ומחירים</h2>
+            <p className="text-slate-600">בחרו את החבילה המתאימה לעסק שלכם</p>
+          </div>
+          
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {/* Basic Plan */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-lg transition-shadow">
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-bold text-slate-900 mb-1">חבילה בסיסית</h3>
+                <p className="text-slate-500 text-sm">לעסקים קטנים ובינוניים</p>
+              </div>
+              <div className="text-center mb-6">
+                <span className="text-4xl font-bold text-slate-900">₪500</span>
+                <span className="text-slate-500"> / חודש</span>
+              </div>
+              <ul className="space-y-3 mb-6">
+                <PricingFeature>ממונה הגנת פרטיות מוסמך</PricingFeature>
+                <PricingFeature>מסמכים אוטומטיים</PricingFeature>
+                <PricingFeature>בוט Q&A לעובדים</PricingFeature>
+                <PricingFeature>יומן ביקורת</PricingFeature>
+                <PricingFeature>תמיכה בדוא"ל</PricingFeature>
+                <PricingFeature>זמן תגובה: 72 שעות</PricingFeature>
+              </ul>
+              <Link href="/onboarding?tier=basic" className="block">
+                <Button variant="outline" className="w-full py-5 rounded-xl">בחירת חבילה</Button>
+              </Link>
+            </div>
+
+            {/* Extended Plan - Popular */}
+            <div className="bg-white rounded-2xl border-2 border-emerald-500 p-6 relative shadow-lg">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                <span className="bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full">הכי פופולרי</span>
+              </div>
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-bold text-slate-900 mb-1">חבילה מורחבת</h3>
+                <p className="text-slate-500 text-sm">לעסקים עם מידע רגיש</p>
+              </div>
+              <div className="text-center mb-6">
+                <span className="text-4xl font-bold text-slate-900">₪1,200</span>
+                <span className="text-slate-500"> / חודש</span>
+              </div>
+              <ul className="space-y-3 mb-6">
+                <PricingFeature>כל מה שבחבילה הבסיסית</PricingFeature>
+                <PricingFeature>סקירה רבעונית של הממונה</PricingFeature>
+                <PricingFeature>30 דק׳ זמן DPO/חודש</PricingFeature>
+                <PricingFeature>ליווי באירועי אבטחה</PricingFeature>
+                <PricingFeature>תמיכה טלפונית</PricingFeature>
+                <PricingFeature>זמן תגובה: 24 שעות</PricingFeature>
+                <PricingFeature>עד 3 משתמשים</PricingFeature>
+              </ul>
+              <Link href="/onboarding?tier=extended" className="block">
+                <Button className="w-full py-5 rounded-xl" style={{ backgroundColor: '#10b981' }}>בחירת חבילה</Button>
+              </Link>
+            </div>
+
+            {/* Enterprise Plan */}
+            <div className="bg-slate-900 rounded-2xl p-6 text-white">
+              <div className="text-center mb-6">
+                <span className="inline-flex items-center gap-1 text-xs bg-white/10 px-2 py-1 rounded-full mb-2">
+                  <Shield className="h-3 w-3" /> לארגונים
+                </span>
+                <h3 className="text-xl font-bold mb-1">חבילה ארגונית</h3>
+                <p className="text-slate-400 text-sm">לארגונים עם דרישות מורכבות</p>
+              </div>
+              <div className="text-center mb-6">
+                <span className="text-4xl font-bold">₪3,500</span>
+                <span className="text-slate-400"> / חודש</span>
+              </div>
+              <ul className="space-y-3 mb-6">
+                <PricingFeatureLight>כל מה שבחבילה המורחבת</PricingFeatureLight>
+                <PricingFeatureLight>2 שעות זמן DPO/חודש</PricingFeatureLight>
+                <PricingFeatureLight>סקירה חודשית</PricingFeatureLight>
+                <PricingFeatureLight>הדרכת עובדים רבעונית</PricingFeatureLight>
+                <PricingFeatureLight>DPIA מלא כלול</PricingFeatureLight>
+                <PricingFeatureLight>זמן תגובה: 4 שעות</PricingFeatureLight>
+                <PricingFeatureLight>משתמשים ללא הגבלה</PricingFeatureLight>
+                <PricingFeatureLight>SLA מובטח</PricingFeatureLight>
+              </ul>
+              <Link href="/contact" className="block">
+                <Button variant="secondary" className="w-full py-5 rounded-xl bg-white text-slate-900 hover:bg-slate-100">צרו קשר</Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Upsell Services */}
+          <div className="mt-12 text-center">
+            <p className="text-slate-500 text-sm mb-4">שירותים נוספים לפי דרישה:</p>
+            <div className="flex flex-wrap justify-center gap-3">
+              {['DPIA - הערכת השפעה', 'חוות דעת משפטית', 'הדרכות לעובדים', 'ביקורת תאימות', 'ליווי אירוע אבטחה'].map((service, i) => (
+                <span key={i} className="text-sm text-slate-600 bg-slate-100 px-4 py-2 rounded-full">{service}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Compliance Checklist Section */}
+      <section className="py-24 px-6 bg-gradient-to-b from-slate-50 to-slate-100">
+        <div className="max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Text Side */}
+            <div className="text-right">
+              <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
+                האם העסק שלך עומד בדרישות?
+              </h2>
+              <p className="text-slate-600 mb-8">
+                תיקון 13 לחוק הגנת הפרטיות מחייב אלפי עסקים בישראל. הקנסות מגיעים עד 3.2 מיליון ש״ח.
+              </p>
+              <Link href="/calculator">
+                <Button 
+                  size="lg" 
+                  className="text-lg px-8 py-6 h-auto rounded-xl font-semibold"
+                  style={{ backgroundColor: '#10b981' }}
+                >
+                  התחל עכשיו - חינם לשבועיים
+                  <ArrowLeft className="h-5 w-5 mr-2" />
+                </Button>
+              </Link>
+            </div>
+
+            {/* Checklist Card */}
+            <div className="bg-white rounded-2xl shadow-xl p-6 border border-slate-200">
+              <div className="flex items-center gap-3 mb-6 justify-end">
+                <span className="font-bold text-slate-900">רשימת תאימות לתיקון 13</span>
+                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Shield className="h-4 w-4 text-blue-600" />
+                </div>
+              </div>
+              <ul className="space-y-4">
+                {[
+                  'מינוי ממונה הגנת פרטיות (DPO)',
+                  'מדיניות פרטיות מעודכנת',
+                  'רישום מאגרי מידע (ROPA)',
+                  'נהלי אבטחת מידע',
+                  'תהליך לטיפול באירועי אבטחה'
+                ].map((item, i) => (
+                  <li key={i} className="flex items-center justify-end gap-3">
+                    <span className="text-slate-700">{item}</span>
+                    <div className="w-5 h-5 rounded-full border-2 border-slate-300" />
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6 pt-4 border-t border-slate-100 text-center">
+                <p className="text-sm text-slate-500">עם MyDPO, כל הרשימה מסומנת ✓ תוך דקות</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Final CTA Section */}
       <section 
         className="py-24 px-6"
         style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%)' }}
       >
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6">
-            מוכנים להתחיל?
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+            האכיפה כבר כאן. אתם מוכנים?
           </h2>
-          <p className="text-xl text-blue-100/80 mb-10">
-            14 ימי ניסיון חינם. ללא כרטיס אשראי.
+          <p className="text-xl text-blue-100/80 mb-4">
+            תיקון 13 לחוק הגנת הפרטיות מחייב מינוי DPO.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/onboarding">
-              <Button 
-                size="lg" 
-                className="text-lg px-8 py-6 h-auto rounded-xl font-semibold w-full sm:w-auto"
-                style={{ backgroundColor: '#10b981' }}
-              >
-                התחל עכשיו
-                <ArrowLeft className="h-5 w-5 mr-2" />
-              </Button>
-            </Link>
-            <Link href="/calculator">
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="text-lg px-8 py-6 h-auto rounded-xl font-semibold w-full sm:w-auto border-white/30 text-white hover:bg-white/10 hover:text-white"
-              >
-                <Calculator className="h-5 w-5 ml-2" />
-                בדיקה חינמית
-              </Button>
-            </Link>
-          </div>
+          <p className="text-blue-100/60 mb-10">
+            אל תחכו לקנס - התחילו היום.
+          </p>
+          <Link href="/onboarding">
+            <Button 
+              size="lg" 
+              className="text-lg px-8 py-6 h-auto rounded-xl font-semibold"
+              style={{ backgroundColor: '#10b981' }}
+            >
+              התחילו עכשיו - חינם לשבועיים
+              <ArrowLeft className="h-5 w-5 mr-2" />
+            </Button>
+          </Link>
         </div>
       </section>
 
@@ -263,5 +408,23 @@ function BenefitItem({ children }: { children: React.ReactNode }) {
       <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />
       <span className="text-slate-700">{children}</span>
     </div>
+  )
+}
+
+function PricingFeature({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex items-center gap-2 justify-end text-right">
+      <span className="text-slate-700 text-sm">{children}</span>
+      <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+    </li>
+  )
+}
+
+function PricingFeatureLight({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex items-center gap-2 justify-end text-right">
+      <span className="text-slate-300 text-sm">{children}</span>
+      <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+    </li>
   )
 }
