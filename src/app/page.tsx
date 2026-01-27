@@ -17,7 +17,12 @@ import {
   Lock,
   Zap,
   AlertTriangle,
-  Calculator
+  Calculator,
+  Stethoscope,
+  GraduationCap,
+  ShoppingCart,
+  Scale,
+  FileCheck
 } from 'lucide-react'
 
 export default function HomePage() {
@@ -51,14 +56,21 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* Urgency Banner */}
-      <div className="bg-red-600 text-white py-2 px-4 text-center text-sm">
-        <span className="font-bold">⚠️ האכיפה כבר התחילה!</span>
-        {' '}תיקון 13 לחוק הגנת הפרטיות נכנס לתוקף. עסקים ללא DPO חשופים לקנסות.
-        {' '}
-        <Link href="/calculator" className="underline font-semibold hover:no-underline">
-          בדקו אם אתם חייבים →
-        </Link>
+      {/* Urgency Banner - Enhanced */}
+      <div className="bg-gradient-to-r from-red-600 to-orange-500 text-white py-3 px-4" dir="rtl">
+        <div className="max-w-6xl mx-auto flex flex-wrap items-center justify-center gap-3 text-sm md:text-base">
+          <AlertTriangle className="w-5 h-5 flex-shrink-0 animate-pulse" />
+          <span>
+            <strong>אכיפה פעילה:</strong> רשות הגנת הפרטיות מבצעת ביקורות בענפי הבריאות, החינוך והמסחר.
+            <span className="hidden md:inline"> האם העסק שלך מוכן?</span>
+          </span>
+          <Link
+            href="/calculator"
+            className="bg-white text-red-600 px-3 py-1 rounded-full text-sm font-medium hover:bg-red-50 transition-colors flex-shrink-0"
+          >
+            בדוק עכשיו
+          </Link>
+        </div>
       </div>
 
       {/* Hero Section */}
@@ -98,25 +110,82 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Trust Indicators */}
-      <section className="py-12 bg-white border-y">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-3xl font-bold" style={{color: '#1e40af'}}>500+</div>
-              <div className="text-gray-600">עסקים משתמשים</div>
+      {/* Social Proof Section - Enhanced */}
+      <section className="py-16 bg-gradient-to-b from-slate-50 to-white border-y">
+        <div className="max-w-6xl mx-auto px-4">
+          {/* Trust Badges */}
+          <div className="flex flex-wrap justify-center items-center gap-4 md:gap-6 mb-12">
+            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-200">
+              <Shield className="w-5 h-5" style={{color: '#16a34a'}} />
+              <span className="text-sm font-medium text-slate-700">מאושר ע"י עורכי דין</span>
             </div>
-            <div>
-              <div className="text-3xl font-bold" style={{color: '#1e40af'}}>98%</div>
-              <div className="text-gray-600">אוטומציה מלאה</div>
+            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-200">
+              <FileCheck className="w-5 h-5" style={{color: '#1e40af'}} />
+              <span className="text-sm font-medium text-slate-700">עומד בתקנות תיקון 13</span>
             </div>
-            <div>
-              <div className="text-3xl font-bold" style={{color: '#1e40af'}}>15 דק׳</div>
-              <div className="text-gray-600">זמן הצטרפות</div>
+            <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm border border-slate-200">
+              <Users className="w-5 h-5" style={{color: '#7c3aed'}} />
+              <span className="text-sm font-medium text-slate-700">DPO אנושי מוסמך</span>
             </div>
-            <div>
-              <div className="text-3xl font-bold" style={{color: '#1e40af'}}>24/7</div>
-              <div className="text-gray-600">מענה AI זמין</div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+            <div className="text-center">
+              <div className="text-3xl md:text-4xl font-bold mb-1" style={{color: '#1e40af'}}>500+</div>
+              <div className="text-sm text-slate-600">ארגונים מוגנים</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl md:text-4xl font-bold mb-1" style={{color: '#1e40af'}}>72</div>
+              <div className="text-sm text-slate-600">שעות לדיווח אירוע</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl md:text-4xl font-bold mb-1" style={{color: '#1e40af'}}>95%</div>
+              <div className="text-sm text-slate-600">עבודה אוטומטית</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl md:text-4xl font-bold mb-1" style={{color: '#1e40af'}}>₪500</div>
+              <div className="text-sm text-slate-600">במקום ₪5,000+</div>
+            </div>
+          </div>
+
+          {/* Industries */}
+          <div className="text-center mb-8">
+            <p className="text-slate-500 text-sm mb-4">מתאים לכל הענפים</p>
+            <div className="flex flex-wrap justify-center gap-3">
+              {[
+                { icon: Stethoscope, label: 'רפואה ובריאות' },
+                { icon: GraduationCap, label: 'חינוך והשכלה' },
+                { icon: ShoppingCart, label: 'מסחר אלקטרוני' },
+                { icon: Building2, label: 'נדל"ן ופיננסים' },
+                { icon: Scale, label: 'משפטים ויעוץ' },
+              ].map((industry, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-slate-200 hover:border-blue-300 hover:shadow-sm transition-all"
+                >
+                  <industry.icon className="w-4 h-4 text-slate-500" />
+                  <span className="text-sm text-slate-700">{industry.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Testimonial */}
+          <div className="max-w-2xl mx-auto bg-white rounded-2xl p-6 shadow-lg border border-slate-200">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                ד
+              </div>
+              <div>
+                <p className="text-slate-700 mb-3">
+                  "תוך שעה היה לנו DPO ממונה וכל המסמכים הנדרשים. 
+                  חסכנו אלפי שקלים ובעיקר - שקט נפשי מול הרגולציה."
+                </p>
+                <p className="text-sm text-slate-500">
+                  <strong className="text-slate-700">דני כהן</strong> • מנכ"ל, חברת טכנולוגיה
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -271,6 +340,57 @@ export default function HomePage() {
               <Badge variant="outline">הדרכות לעובדים</Badge>
               <Badge variant="outline">ביקורת תאימות</Badge>
               <Badge variant="outline">ליווי אירוע אבטחה</Badge>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Compliance Checklist Preview */}
+      <section className="py-16 bg-slate-900 text-white">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+                האם העסק שלך עומד בדרישות?
+              </h2>
+              <p className="text-slate-400 mb-6">
+                תיקון 13 לחוק הגנת הפרטיות מחייב אלפי עסקים בישראל.
+                הקנסות מגיעים עד 3.2 מיליון ₪.
+              </p>
+              <Link
+                href="/onboarding"
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              >
+                התחל עכשיו - חינם לשבועיים
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
+            </div>
+
+            <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Shield className="w-5 h-5 text-blue-400" />
+                רשימת תאימות לתיקון 13
+              </h3>
+              <ul className="space-y-3">
+                {[
+                  'מינוי ממונה הגנת פרטיות (DPO)',
+                  'מדיניות פרטיות מעודכנת',
+                  'רישום מאגרי מידע (ROPA)',
+                  'נהלי אבטחת מידע',
+                  'תהליך לטיפול באירועי אבטחה',
+                ].map((item, index) => (
+                  <li key={index} className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full border-2 border-slate-500 flex items-center justify-center">
+                    </div>
+                    <span className="text-white">{item}</span>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-6 pt-4 border-t border-slate-700">
+                <p className="text-sm text-slate-400">
+                  עם MyDPO, כל הרשימה מסומנת ✓ תוך דקות
+                </p>
+              </div>
             </div>
           </div>
         </div>
