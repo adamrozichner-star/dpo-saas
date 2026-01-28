@@ -202,7 +202,7 @@ export default function SettingsPage() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
             <Shield className="h-8 w-8 text-primary" />
-            <span className="font-bold text-xl">DPO-Pro</span>
+            <span className="font-bold text-xl">MyDPO</span>
           </Link>
           <div className="flex items-center gap-4">
             <Link href="/dashboard">
