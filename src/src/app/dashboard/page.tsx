@@ -4,63 +4,81 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import { Textarea } from '@/components/ui/textarea'
 import { 
   Shield, 
   FileText, 
   MessageSquare, 
   CheckCircle2,
-  AlertCircle,
-  Download,
-  Send,
   User,
   LogOut,
-  ChevronLeft,
   Bot,
   Loader2,
-  Eye,
-  X,
-  ClipboardList,
-  Users,
   Menu,
-  Lock,
-  RefreshCw,
-  Upload,
-  FileSearch,
   AlertTriangle,
-  Database
+  LayoutDashboard,
+  ClipboardList,
+  FolderOpen,
+  Settings,
+  ChevronLeft,
+  Clock,
+  Plus,
+  Eye,
+  Download,
+  X,
+  Copy,
+  Edit3,
+  Save
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import WelcomeModal from '@/components/WelcomeModal'
-import ComplianceChecklist from '@/components/ComplianceChecklist'
-import ComplianceScoreCard from '@/components/ComplianceScoreCard'
-import DataSubjectRequests from '@/components/DataSubjectRequests'
-import IncidentReportTab from '@/components/IncidentReportTab'
-import ROPATab from '@/components/ROPATab'
+import DocumentGenerationProgress from '@/components/DocumentGenerationProgress'
+import { OnboardingChecklist, markOnboardingStep } from '@/components/OnboardingChecklist'
+import { TrialBanner, ExpiredOverlay, UpgradeModal } from '@/components/TrialBanner'
 
+// ============================================
+// TYPES
+// ============================================
+interface Task {
+  id: string
+  type: 'missing_doc' | 'dsar' | 'review' | 'incident' | 'periodic'
+  title: string
+  description: string
+  priority: 'high' | 'medium' | 'low'
+  deadline?: string
+  action: string
+  actionPath?: string
+}
+
+interface Document {
+  id: string
+  name?: string
+  title?: string
+  type: string
+  status: string
+  created_at: string
+  content?: string
+}
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, session, signOut, loading, supabase } = useAuth()
-  const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'qa' | 'checklist' | 'requests' | 'doc-review' | 'settings' | 'incidents' | 'ropa'>('overview')
-  const [question, setQuestion] = useState('')
-  const [isAsking, setIsAsking] = useState(false)
-  const [qaHistory, setQaHistory] = useState<any[]>([])
+  
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'incidents' | 'settings'>('overview')
   const [organization, setOrganization] = useState<any>(null)
-  const [documents, setDocuments] = useState<any[]>([])
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [incidents, setIncidents] = useState<any[]>([])
+  const [tasks, setTasks] = useState<Task[]>([])
   const [userName, setUserName] = useState('')
   const [showWelcome, setShowWelcome] = useState(false)
+  const [showDocGeneration, setShowDocGeneration] = useState(false)
+  const [onboardingAnswers, setOnboardingAnswers] = useState<any[]>([])
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [documentReviews, setDocumentReviews] = useState<any[]>([])
-  const [incidents, setIncidents] = useState<any[]>([])
-  const [complianceData, setComplianceData] = useState<{
-    score: number
-    gaps: string[]
-    checklist: any[]
-  }>({ score: 0, gaps: [], checklist: [] })
+  const [complianceScore, setComplianceScore] = useState(0)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     if (!loading && !session) {
@@ -70,332 +88,411 @@ function DashboardContent() {
 
   useEffect(() => {
     if (searchParams.get('welcome') === 'true') {
-      setShowWelcome(true)
+      // Check if documents need to be generated
+      const savedAnswers = localStorage.getItem('dpo_onboarding_answers')
+      const savedOrgId = localStorage.getItem('dpo_onboarding_org_id')
+      const savedOrgName = localStorage.getItem('dpo_onboarding_org_name')
+      
+      if (savedAnswers && savedOrgId) {
+        try {
+          setOnboardingAnswers(JSON.parse(savedAnswers))
+          // Temporarily set org for doc generation if not loaded yet
+          if (!organization) {
+            setOrganization({ id: savedOrgId, name: savedOrgName || 'הארגון שלך' })
+          }
+          setShowDocGeneration(true)
+        } catch (e) {
+          setShowWelcome(true)
+        }
+      } else {
+        setShowWelcome(true)
+      }
       window.history.replaceState({}, '', '/dashboard')
     }
-  }, [searchParams])
+  }, [searchParams, organization])
 
   useEffect(() => {
     if (user && supabase) {
       setUserName(user.user_metadata?.name || user.email?.split('@')[0] || 'משתמש')
-      loadUserData()
+      loadAllData()
     }
   }, [user, supabase])
 
-  const loadUserData = async () => {
+  const loadAllData = async () => {
     if (!user || !supabase) return
+    setIsLoading(true)
 
-    const { data: userData } = await supabase
-      .from('users')
-      .select('*, organizations(*)')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (userData?.organizations) {
-      setOrganization(userData.organizations)
-      
-      const { data: docs } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('org_id', userData.organizations.id)
-      
-      if (docs) setDocuments(docs)
-
-      const { data: qa } = await supabase
-        .from('qa_interactions')
-        .select('*')
-        .eq('org_id', userData.organizations.id)
-        .order('created_at', { ascending: false })
-        .limit(10)
-      
-      if (qa) setQaHistory(qa)
-
-      // Load incidents
-      loadIncidents(userData.organizations.id)
-
-      const { data: profile } = await supabase
-        .from('organization_profiles')
-        .select('compliance_score, compliance_gaps, compliance_checklist')
-        .eq('org_id', userData.organizations.id)
+    try {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('*, organizations(*)')
+        .eq('auth_user_id', user.id)
         .single()
 
-      if (profile) {
-        setComplianceData({
-          score: profile.compliance_score || calculateDefaultScore(docs || []),
-          gaps: profile.compliance_gaps || [],
-          checklist: profile.compliance_checklist || generateDefaultChecklist(docs || [])
-        })
-      } else {
-        setComplianceData({
-          score: calculateDefaultScore(docs || []),
-          gaps: [],
-          checklist: generateDefaultChecklist(docs || [])
-        })
+      if (userData?.organizations) {
+        const org = userData.organizations
+        setOrganization(org)
+        
+        const { data: docs } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('org_id', org.id)
+          .order('created_at', { ascending: false })
+        
+        if (docs) setDocuments(docs)
+
+        const { data: incidentData } = await supabase
+          .from('security_incidents')
+          .select('*')
+          .eq('org_id', org.id)
+          .order('created_at', { ascending: false })
+        
+        if (incidentData) setIncidents(incidentData)
+
+        const { data: dsarData } = await supabase
+          .from('dsar_requests')
+          .select('*')
+          .eq('org_id', org.id)
+          .in('status', ['pending', 'in_progress'])
+
+        const score = calculateScore(docs || [], incidentData || [])
+        setComplianceScore(score)
+        
+        const generatedTasks = generateTasks(docs || [], incidentData || [], dsarData || [], org)
+        setTasks(generatedTasks)
       }
-    }
-  }
-
-  const loadIncidents = async (orgId: string) => {
-    try {
-      const response = await fetch(`/api/incidents?action=list&orgId=${orgId}`)
-      const data = await response.json()
-      setIncidents(data.incidents || [])
-    } catch (err) {
-      console.error('Error loading incidents:', err)
-    }
-  }
-
-  const calculateDefaultScore = (docs: any[]) => {
-    let score = 25
-    if (docs.length > 0) score += 25
-    if (docs.find(d => d.type === 'privacy_policy')) score += 15
-    if (docs.find(d => d.type === 'security_procedures' || d.type === 'security_policy')) score += 15
-    if (docs.find(d => d.type === 'database_definition' || d.type === 'database_registration')) score += 10
-    if (docs.find(d => d.type === 'dpo_appointment')) score += 10
-    return Math.min(score, 100)
-  }
-
-  const generateDefaultChecklist = (docs: any[]) => {
-    return [
-      { id: 'privacy_policy', title: 'מדיניות פרטיות', description: 'פרסום מדיניות פרטיות באתר', category: 'documentation', completed: docs.some(d => d.type === 'privacy_policy'), priority: 'high' },
-      { id: 'security_procedures', title: 'נהלי אבטחת מידע', description: 'נהלים כתובים לאבטחת מידע', category: 'documentation', completed: docs.some(d => d.type === 'security_procedures' || d.type === 'security_policy'), priority: 'high' },
-      { id: 'database_definition', title: 'הגדרות מאגר מידע', description: 'תיעוד מאגרי המידע בארגון', category: 'documentation', completed: docs.some(d => d.type === 'database_definition' || d.type === 'database_registration'), priority: 'high' },
-      { id: 'dpo_appointment', title: 'כתב מינוי DPO', description: 'כתב מינוי רשמי לממונה', category: 'documentation', completed: docs.some(d => d.type === 'dpo_appointment'), priority: 'high' },
-      { id: 'database_registration', title: 'רישום מאגרי מידע', description: 'רישום ברשות להגנת הפרטיות', category: 'registration', completed: false, priority: 'high', action: 'הגשת בקשה', actionUrl: 'https://www.gov.il/he/service/database_registration' },
-      { id: 'employee_training', title: 'הדרכת עובדים', description: 'הדרכת עובדים בנושאי פרטיות', category: 'training', completed: false, priority: 'medium' },
-      { id: 'access_control', title: 'בקרת גישה', description: 'הגדרת הרשאות גישה למערכות', category: 'security', completed: false, priority: 'high' },
-      { id: 'data_subject_process', title: 'תהליך טיפול בפניות', description: 'נוהל לטיפול בבקשות נושאי מידע', category: 'processes', completed: false, priority: 'medium' }
-    ]
-  }
-
-  const handleAskQuestion = async () => {
-    if (!question.trim() || !organization || !supabase) return
-    setIsAsking(true)
-    
-    try {
-      const response = await fetch('/api/qa', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question,
-          orgId: organization.id,
-          userId: user?.id
-        })
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setQaHistory([{
-          id: data.id || Date.now(),
-          question,
-          answer: data.answer,
-          confidence_score: data.confidenceScore,
-          created_at: new Date().toISOString()
-        }, ...qaHistory])
-      }
-      setQuestion('')
-    } catch (err) {
-      console.error('Error asking question:', err)
+    } catch (error) {
+      console.error('Error loading data:', error)
     } finally {
-      setIsAsking(false)
+      setIsLoading(false)
     }
+  }
+
+  const calculateScore = (docs: any[], incidents: any[]) => {
+    let score = 25
+    const docTypes = docs.map(d => d.type)
+    if (docTypes.includes('privacy_policy')) score += 15
+    if (docTypes.includes('security_policy') || docTypes.includes('security_procedures')) score += 15
+    if (docTypes.includes('dpo_appointment')) score += 10
+    if (docTypes.includes('database_registration') || docTypes.includes('database_definition')) score += 10
+    if (docs.length >= 5) score += 10
+    const openIncidents = incidents.filter(i => !['resolved', 'closed'].includes(i.status))
+    score -= openIncidents.length * 5
+    return Math.max(0, Math.min(100, score))
+  }
+
+  const generateTasks = (docs: any[], incidents: any[], dsars: any[], org: any): Task[] => {
+    const tasks: Task[] = []
+    const docTypes = docs.map(d => d.type)
+
+    if (!docTypes.includes('privacy_policy')) {
+      tasks.push({
+        id: 'missing-privacy',
+        type: 'missing_doc',
+        title: 'יצירת מדיניות פרטיות',
+        description: 'מדיניות פרטיות היא דרישה בסיסית בתיקון 13',
+        priority: 'high',
+        action: 'התחל',
+        actionPath: '/chat?task=privacy_policy&prompt=' + encodeURIComponent('אנא צור עבורי מדיניות פרטיות מלאה ומוכנה לשימוש עבור העסק שלי')
+      })
+    }
+
+    if (!docTypes.includes('security_policy') && !docTypes.includes('security_procedures')) {
+      tasks.push({
+        id: 'missing-security',
+        type: 'missing_doc',
+        title: 'יצירת נוהל אבטחת מידע',
+        description: 'נדרש נוהל אבטחה מתועד לארגון',
+        priority: 'high',
+        action: 'התחל',
+        actionPath: '/chat?task=security_policy&prompt=' + encodeURIComponent('אנא צור עבורי נוהל אבטחת מידע מלא ומוכן לשימוש עבור הארגון שלי')
+      })
+    }
+
+    if (!docTypes.includes('dpo_appointment')) {
+      tasks.push({
+        id: 'missing-dpo',
+        type: 'missing_doc',
+        title: 'כתב מינוי DPO',
+        description: 'יש להפיק כתב מינוי רשמי לממונה',
+        priority: 'medium',
+        action: 'התחל',
+        actionPath: '/chat?task=dpo_appointment&prompt=' + encodeURIComponent('אנא צור עבורי כתב מינוי רשמי לממונה הגנת פרטיות (DPO) מוכן לחתימה')
+      })
+    }
+
+    const openIncidents = incidents.filter(i => !['resolved', 'closed'].includes(i.status))
+    openIncidents.forEach(incident => {
+      const deadline = incident.authority_deadline ? new Date(incident.authority_deadline) : null
+      const isUrgent = deadline && (deadline.getTime() - Date.now()) < 24 * 60 * 60 * 1000
+
+      tasks.push({
+        id: `incident-${incident.id}`,
+        type: 'incident',
+        title: `טיפול באירוע: ${incident.title}`,
+        description: isUrgent ? 'פחות מ-24 שעות לדדליין!' : 'אירוע אבטחה פתוח דורש טיפול',
+        priority: isUrgent ? 'high' : 'medium',
+        deadline: deadline?.toLocaleDateString('he-IL'),
+        action: 'טפל',
+        actionPath: `/chat?incident=${incident.id}&prompt=` + encodeURIComponent(`יש לי אירוע אבטחה פתוח: ${incident.title}. מה עלי לעשות?`)
+      })
+    })
+
+    dsars.forEach(dsar => {
+      const requestTypeHebrew = dsar.request_type === 'access' ? 'עיון' : dsar.request_type === 'deletion' ? 'מחיקה' : 'תיקון'
+      tasks.push({
+        id: `dsar-${dsar.id}`,
+        type: 'dsar',
+        title: `בקשת ${requestTypeHebrew} ממידע`,
+        description: `מאת: ${dsar.requester_name || 'לא ידוע'}`,
+        priority: 'medium',
+        deadline: dsar.deadline,
+        action: 'טפל',
+        actionPath: `/chat?dsar=${dsar.id}&prompt=` + encodeURIComponent(`קיבלתי בקשת ${requestTypeHebrew} ממידע מאת ${dsar.requester_name || 'נושא מידע'}. איך לטפל בזה?`)
+      })
+    })
+
+    const priorityOrder = { high: 0, medium: 1, low: 2 }
+    tasks.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
+
+    return tasks
   }
 
   const handleSignOut = async () => {
     await signOut()
-    router.push('/')
+    router.push('/login')
   }
 
-  const [isRegenerating, setIsRegenerating] = useState(false)
+  const activeIncidentsCount = incidents.filter(i => !['resolved', 'closed'].includes(i.status)).length
+  const urgentTasksCount = tasks.filter(t => t.priority === 'high').length
 
-  const handleRegenerateDocs = async () => {
-    if (!organization?.id || isRegenerating || !supabase) return
-    
-    setIsRegenerating(true)
-    try {
-      const response = await fetch('/api/generate-documents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orgId: organization.id })
-      })
-      
-      if (response.ok) {
-        const { data: docs } = await supabase
-          .from('documents')
-          .select('*')
-          .eq('org_id', organization.id)
-          .order('created_at', { ascending: false })
-        
-        if (docs) setDocuments(docs)
-        setActiveTab('documents')
-      }
-    } catch (error) {
-      console.error('Error regenerating documents:', error)
-    } finally {
-      setIsRegenerating(false)
-    }
-  }
-
-  if (loading) {
+  if (loading || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center bg-stone-50">
+        <div className="text-center">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-indigo-500 flex items-center justify-center">
+            <Shield className="h-7 w-7 text-white animate-pulse" />
+          </div>
+          <Loader2 className="h-5 w-5 animate-spin text-indigo-500 mx-auto" />
+        </div>
       </div>
     )
   }
 
-  if (!session) {
-    return null
-  }
-
-  // Count active incidents for badge
-  const activeIncidentsCount = incidents.filter(i => !['resolved', 'closed'].includes(i.status)).length
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white border-b z-50 flex items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
-            <Shield className="h-5 w-5 text-white" />
-          </div>
-          <span className="font-bold text-lg" style={{color: '#1e40af'}}>MyDPO</span>
-        </Link>
-        <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-          {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </Button>
-      </div>
+    <div className="min-h-screen bg-stone-50 flex" dir="rtl">
+      {/* Document Generation Progress Modal */}
+      {showDocGeneration && organization && supabase && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <DocumentGenerationProgress
+            orgId={organization.id}
+            orgName={organization.name}
+            answers={onboardingAnswers}
+            supabase={supabase}
+            onComplete={(newDocs) => {
+              setShowDocGeneration(false)
+              setShowWelcome(true)
+              if (newDocs && newDocs.length > 0) {
+                setDocuments(prev => [...newDocs, ...prev])
+              }
+              loadAllData() // Refresh all data
+              // Clean up all onboarding localStorage
+              localStorage.removeItem('dpo_onboarding_answers')
+              localStorage.removeItem('dpo_onboarding_org_id')
+              localStorage.removeItem('dpo_onboarding_org_name')
+            }}
+          />
+        </div>
+      )}
 
-      {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setMobileMenuOpen(false)} />
+      {/* Welcome Modal */}
+      {showWelcome && (
+        <WelcomeModal 
+          onClose={() => setShowWelcome(false)} 
+          orgName={organization?.name || ''} 
+          documentsCount={documents.length}
+          complianceScore={complianceScore}
+        />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed top-0 h-full w-64 bg-white border-l shadow-sm z-50 transition-transform duration-300 ease-in-out md:right-0 md:translate-x-0 ${mobileMenuOpen ? 'right-0 translate-x-0' : '-right-64 translate-x-full md:translate-x-0 md:right-0'}`}>
-        <div className="p-4 border-b">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
-              <Shield className="h-6 w-6 text-white" />
-            </div>
-            <span className="font-bold text-xl" style={{color: '#1e40af'}}>MyDPO</span>
-          </Link>
-        </div>
+      <aside className={`fixed inset-y-0 right-0 z-50 w-64 bg-stone-100/80 backdrop-blur-sm border-l border-stone-200 transform transition-transform duration-200 ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0 lg:static`}>
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="p-5">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center">
+                <Shield className="h-5 w-5 text-white" />
+              </div>
+              <span className="font-semibold text-lg text-stone-800">MyDPO</span>
+            </Link>
+          </div>
 
-        {/* Chat Button - Primary Action */}
-        <div className="p-4 border-b">
-          <Link href="/chat" className="flex items-center gap-3 text-white px-4 py-3 rounded-xl hover:opacity-90 transition shadow-lg" style={{backgroundColor: '#10b981'}}>
-            <MessageSquare className="h-5 w-5" />
-            <span className="font-medium">צ׳אט עם הממונה</span>
-          </Link>
-        </div>
+          {/* Chat Button */}
+          <div className="px-4 pb-4">
+            <Link href="/chat">
+              <button className="w-full py-3 px-4 bg-teal-500 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-teal-600 transition-colors shadow-sm">
+                <Bot className="h-5 w-5" />
+                צ׳אט עם הממונה
+              </button>
+            </Link>
+          </div>
 
-        <nav className="p-4 space-y-2">
-          <NavButton icon={<CheckCircle2 />} label="סקירה כללית" active={activeTab === 'overview'} onClick={() => { setActiveTab('overview'); setMobileMenuOpen(false) }} />
-          <NavButton icon={<FileText />} label="מסמכים" active={activeTab === 'documents'} onClick={() => { setActiveTab('documents'); setMobileMenuOpen(false) }} />
-          <NavButton icon={<ClipboardList />} label="רשימת ציות" active={activeTab === 'checklist'} onClick={() => { setActiveTab('checklist'); setMobileMenuOpen(false) }} />
-          <NavButton icon={<Users />} label="בקשות פרטיות" active={activeTab === 'requests'} onClick={() => { setActiveTab('requests'); setMobileMenuOpen(false) }} />
-          <NavButton icon={<MessageSquare />} label="שאלות ותשובות" active={activeTab === 'qa'} onClick={() => { setActiveTab('qa'); setMobileMenuOpen(false) }} />
-          <NavButton icon={<FileSearch />} label="בדיקת מסמכים" active={activeTab === 'doc-review'} onClick={() => { setActiveTab('doc-review'); setMobileMenuOpen(false) }} />
-          <NavButton icon={<Database />} label="מפת עיבוד (ROPA)" active={activeTab === 'ropa'} onClick={() => { setActiveTab('ropa'); setMobileMenuOpen(false) }} />
-          <NavButton 
-            icon={<AlertTriangle />} 
-            label="אירועי אבטחה" 
-            active={activeTab === 'incidents'} 
-            onClick={() => { setActiveTab('incidents'); setMobileMenuOpen(false) }} 
-            badge={activeIncidentsCount > 0 ? activeIncidentsCount : undefined}
-          />
-          <NavButton icon={<User />} label="הגדרות" active={activeTab === 'settings'} onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false) }} />
-        </nav>
+          {/* Navigation */}
+          <nav className="flex-1 px-3 py-2 space-y-0.5">
+            <NavButton 
+              icon={<LayoutDashboard className="h-5 w-5" />} 
+              label="לוח בקרה" 
+              active={activeTab === 'overview'} 
+              onClick={() => { setActiveTab('overview'); setMobileMenuOpen(false) }} 
+            />
+            <NavButton 
+              icon={<ClipboardList className="h-5 w-5" />} 
+              label="משימות" 
+              active={activeTab === 'tasks'} 
+              onClick={() => { setActiveTab('tasks'); setMobileMenuOpen(false) }}
+              badge={urgentTasksCount > 0 ? urgentTasksCount : undefined}
+            />
+            <NavButton 
+              icon={<FolderOpen className="h-5 w-5" />} 
+              label="מסמכים" 
+              active={activeTab === 'documents'} 
+              onClick={() => { setActiveTab('documents'); setMobileMenuOpen(false) }} 
+            />
+            <NavButton 
+              icon={<AlertTriangle className="h-5 w-5" />} 
+              label="אירועי אבטחה" 
+              active={activeTab === 'incidents'} 
+              onClick={() => { setActiveTab('incidents'); setMobileMenuOpen(false) }}
+              badge={activeIncidentsCount > 0 ? activeIncidentsCount : undefined}
+            />
+            <NavButton 
+              icon={<Settings className="h-5 w-5" />} 
+              label="הגדרות" 
+              active={activeTab === 'settings'} 
+              onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false) }} 
+            />
+          </nav>
 
-        <div className="absolute bottom-0 right-0 left-0 p-4 border-t bg-white">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{userName}</p>
-              <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+          {/* User */}
+          <div className="p-4">
+            <div className="p-3 bg-white rounded-xl shadow-sm border border-stone-200">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center">
+                  <User className="h-5 w-5 text-indigo-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-stone-800 truncate">{userName}</p>
+                  <p className="text-xs text-stone-500 truncate">{user?.email}</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleSignOut}
+                className="mt-3 w-full flex items-center justify-center gap-2 py-2 text-sm text-stone-500 hover:text-stone-700 hover:bg-stone-50 rounded-lg transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                התנתקות
+              </button>
             </div>
           </div>
-          <Button variant="ghost" size="sm" className="w-full justify-start" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4 ml-2" />
-            התנתקות
-          </Button>
         </div>
       </aside>
 
+      {/* Mobile overlay */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 bg-black/20 z-40 lg:hidden" onClick={() => setMobileMenuOpen(false)} />
+      )}
+
       {/* Main Content */}
-      <main className="md:mr-64 p-4 md:p-8 pt-20 md:pt-8">
-        {showWelcome && organization && (
-          <WelcomeModal
-            orgName={organization.name}
-            documentsCount={documents.length}
-            complianceScore={complianceData.score}
-            onClose={() => setShowWelcome(false)}
+      <main className="flex-1 min-h-screen">
+        {/* Trial Banner */}
+        {organization && organization.subscription_status !== 'active' && (
+          <TrialBanner 
+            createdAt={organization.created_at || new Date().toISOString()}
+            subscriptionStatus={organization.subscription_status || 'trial'}
           />
         )}
+        
+        {/* Expired Overlay */}
+        {organization?.subscription_status === 'expired' && (
+          <ExpiredOverlay />
+        )}
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold">שלום, {userName}</h1>
-            <p className="text-gray-600 text-sm md:text-base">
-              {organization ? `ברוכים הבאים ללוח הבקרה של ${organization.name}` : 'ברוכים הבאים! השלימו את ההרשמה כדי להתחיל'}
-            </p>
+        {/* Mobile Header */}
+        <header className="lg:hidden sticky top-0 z-30 bg-stone-50/90 backdrop-blur-sm border-b border-stone-200 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center">
+              <Shield className="h-5 w-5 text-white" />
+            </div>
+            <span className="font-semibold text-stone-800">MyDPO</span>
           </div>
-          {organization ? (
-            <Badge variant={organization.status === 'active' ? 'success' : 'warning'}>
-              {organization.status === 'active' ? 'פעיל' : 'בהקמה'}
-            </Badge>
-          ) : (
-            <Link href="/onboarding"><Button>השלמת הגדרת ארגון</Button></Link>
+          <button 
+            onClick={() => setMobileMenuOpen(true)}
+            className="w-10 h-10 rounded-lg bg-white border border-stone-200 flex items-center justify-center"
+          >
+            <Menu className="h-5 w-5 text-stone-600" />
+          </button>
+        </header>
+
+        {/* Page Content */}
+        <div className="p-4 lg:p-8 max-w-5xl mx-auto">
+          {activeTab === 'overview' && (
+            <OverviewTab 
+              organization={organization}
+              complianceScore={complianceScore}
+              tasks={tasks}
+              documents={documents}
+              incidents={incidents}
+              onNavigate={setActiveTab}
+            />
+          )}
+          {activeTab === 'tasks' && (
+            <TasksTab tasks={tasks} />
+          )}
+          {activeTab === 'documents' && (
+            <DocumentsTab documents={documents} organization={organization} supabase={supabase} />
+          )}
+          {activeTab === 'incidents' && (
+            <IncidentsTab incidents={incidents} orgId={organization?.id} />
+          )}
+          {activeTab === 'settings' && (
+            <SettingsTab organization={organization} user={user} />
           )}
         </div>
-
-        {!organization ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Shield className="h-16 w-16 text-primary mx-auto mb-4 opacity-50" />
-              <h2 className="text-xl font-bold mb-2">עוד לא הגדרתם ארגון</h2>
-              <p className="text-gray-600 mb-4">השלימו את תהליך ההרשמה כדי להתחיל להשתמש במערכת</p>
-              <Link href="/onboarding"><Button size="lg">התחילו עכשיו</Button></Link>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {activeTab === 'overview' && <OverviewTab organization={organization} documents={documents} complianceScore={complianceData.score} complianceGaps={complianceData.gaps} onNavigate={(tab) => setActiveTab(tab as any)} onRegenerateDocs={handleRegenerateDocs} isRegenerating={isRegenerating} incidents={incidents} />}
-            {activeTab === 'documents' && <DocumentsTab documents={documents} isPaid={organization?.subscription_status === 'active'} onRegenerate={handleRegenerateDocs} isRegenerating={isRegenerating} />}
-            {activeTab === 'checklist' && (
-              <div className="space-y-6">
-                <h2 className="text-xl font-bold">רשימת ציות</h2>
-                <ComplianceChecklist items={complianceData.checklist} onToggle={(id) => { setComplianceData(prev => ({ ...prev, checklist: prev.checklist.map(item => item.id === id ? { ...item, completed: !item.completed } : item) })) }} />
-              </div>
-            )}
-            {activeTab === 'requests' && organization && <DataSubjectRequests orgId={organization.id} />}
-            {activeTab === 'qa' && <QATab qaHistory={qaHistory} question={question} setQuestion={setQuestion} onAsk={handleAskQuestion} isAsking={isAsking} orgId={organization?.id} />}
-            {activeTab === 'doc-review' && <DocumentReviewTab orgId={organization?.id} reviews={documentReviews} setReviews={setDocumentReviews} />}
-            {activeTab === 'ropa' && organization && <ROPATab orgId={organization.id} />}
-            {activeTab === 'incidents' && organization && (
-              <IncidentReportTab 
-                orgId={organization.id} 
-                incidents={incidents} 
-                onRefresh={() => loadIncidents(organization.id)} 
-              />
-            )}
-            {activeTab === 'settings' && <SettingsTab organization={organization} user={user} />}
-          </>
-        )}
       </main>
     </div>
   )
 }
 
-function NavButton({ icon, label, active, onClick, badge }: any) {
+// ============================================
+// NAV BUTTON
+// ============================================
+function NavButton({ 
+  icon, 
+  label, 
+  active, 
+  onClick, 
+  badge
+}: { 
+  icon: React.ReactNode
+  label: string
+  active: boolean
+  onClick: () => void
+  badge?: number
+}) {
   return (
-    <button onClick={onClick} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${active ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
-      {icon}
-      <span className="flex-1 text-right">{label}</span>
-      {badge && (
-        <span className="bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-right transition-colors ${
+        active 
+          ? 'bg-white text-indigo-600 font-medium shadow-sm' 
+          : 'text-stone-600 hover:bg-white/50'
+      }`}
+    >
+      <span className={active ? 'text-indigo-500' : 'text-stone-400'}>{icon}</span>
+      <span className="flex-1">{label}</span>
+      {badge !== undefined && badge > 0 && (
+        <span className="bg-rose-100 text-rose-600 text-xs font-medium px-2 py-0.5 rounded-full">
           {badge}
         </span>
       )}
@@ -403,724 +500,780 @@ function NavButton({ icon, label, active, onClick, badge }: any) {
   )
 }
 
-function OverviewTab({ organization, documents, complianceScore, complianceGaps, onNavigate, onRegenerateDocs, isRegenerating = false, incidents = [] }: { organization: any, documents: any[], complianceScore: number, complianceGaps: string[], onNavigate: (tab: string) => void, onRegenerateDocs: () => void, isRegenerating?: boolean, incidents?: any[] }) {
+// ============================================
+// OVERVIEW TAB
+// ============================================
+function OverviewTab({ 
+  organization, 
+  complianceScore, 
+  tasks, 
+  documents, 
+  incidents,
+  onNavigate 
+}: { 
+  organization: any
+  complianceScore: number
+  tasks: Task[]
+  documents: Document[]
+  incidents: any[]
+  onNavigate: (tab: any) => void
+}) {
   const hasSubscription = organization?.subscription_status === 'active'
-  const activeIncidents = incidents.filter(i => !['resolved', 'closed'].includes(i.status))
-  
+
+  const getScoreInfo = () => {
+    if (complianceScore >= 70) return { label: 'מצוין', bg: 'bg-emerald-100', text: 'text-emerald-700' }
+    if (complianceScore >= 40) return { label: 'טעון שיפור', bg: 'bg-amber-100', text: 'text-amber-700' }
+    return { label: 'דורש טיפול', bg: 'bg-rose-100', text: 'text-rose-700' }
+  }
+
+  const scoreInfo = getScoreInfo()
+
   return (
     <div className="space-y-6">
-      {/* Active Incidents Alert */}
-      {activeIncidents.length > 0 && (
-        <Card className="bg-red-50 border-red-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-red-800">{activeIncidents.length} אירועי אבטחה פעילים</p>
-                  <p className="text-sm text-red-600">נדרשת תשומת לב מיידית</p>
-                </div>
-              </div>
-              <Button variant="destructive" onClick={() => onNavigate('incidents')}>צפייה באירועים</Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {!hasSubscription && (
-        <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <Shield className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <p className="font-medium">שדרגו לחבילה מלאה</p>
-                  <p className="text-sm text-gray-600">קבלו גישה לכל הכלים והתמיכה של ממונה מוסמך</p>
-                </div>
-              </div>
-              <Link href="/subscribe"><Button>צפייה בחבילות</Button></Link>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid md:grid-cols-3 gap-6">
-        <ComplianceScoreCard score={complianceScore} gaps={complianceGaps} lastUpdated={new Date().toLocaleDateString('he-IL')} />
-
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
-                <FileText className="h-6 w-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">מסמכים פעילים</p>
-                <p className="text-3xl font-bold">{documents.length}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
-                <User className="h-6 w-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">זמן DPO שנוצל</p>
-                <p className="text-3xl font-bold">0 דק׳</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-6">
-            <div className="text-center">
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                <User className="h-8 w-8 text-primary" />
-              </div>
-              <Badge className="mb-2">הממונה שלכם</Badge>
-              <h3 className="font-bold">עו"ד דנה כהן</h3>
-              <p className="text-sm text-gray-500 mb-3">ממונה הגנת פרטיות</p>
-              <Button variant="outline" size="sm" className="w-full" onClick={() => onNavigate('qa')}>
-                <MessageSquare className="h-4 w-4 ml-2" />
-                שליחת הודעה
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-semibold text-stone-800">
+          👋 שלום, {organization?.name || 'משתמש'}
+        </h1>
+        <p className="text-stone-500 mt-1">הנה סקירה של מצב הציות שלכם</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>סטטוס עמידה בדרישות</CardTitle>
-          <CardDescription>התקדמות בעמידה בדרישות תיקון 13</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-4 gap-4">
-            <div className={`p-4 rounded-lg text-center ${documents.some(d => d.type === 'dpo_appointment') ? 'bg-green-50' : 'bg-gray-50'}`}>
-              {documents.some(d => d.type === 'dpo_appointment') ? <CheckCircle2 className="h-6 w-6 text-green-600 mx-auto mb-2" /> : <AlertCircle className="h-6 w-6 text-gray-400 mx-auto mb-2" />}
-              <p className="text-sm font-medium">DPO ממונה</p>
-            </div>
-            <div className={`p-4 rounded-lg text-center ${documents.some(d => d.type === 'privacy_policy') ? 'bg-green-50' : 'bg-gray-50'}`}>
-              {documents.some(d => d.type === 'privacy_policy') ? <CheckCircle2 className="h-6 w-6 text-green-600 mx-auto mb-2" /> : <AlertCircle className="h-6 w-6 text-gray-400 mx-auto mb-2" />}
-              <p className="text-sm font-medium">מדיניות פרטיות</p>
-            </div>
-            <div className={`p-4 rounded-lg text-center ${documents.some(d => d.type === 'security_procedures' || d.type === 'security_policy') ? 'bg-green-50' : 'bg-gray-50'}`}>
-              {documents.some(d => d.type === 'security_procedures' || d.type === 'security_policy') ? <CheckCircle2 className="h-6 w-6 text-green-600 mx-auto mb-2" /> : <AlertCircle className="h-6 w-6 text-gray-400 mx-auto mb-2" />}
-              <p className="text-sm font-medium">נהלי אבטחה</p>
-            </div>
-            <div className={`p-4 rounded-lg text-center ${documents.some(d => d.type === 'database_definition' || d.type === 'database_registration') ? 'bg-green-50' : 'bg-gray-50'}`}>
-              {documents.some(d => d.type === 'database_definition' || d.type === 'database_registration') ? <CheckCircle2 className="h-6 w-6 text-green-600 mx-auto mb-2" /> : <AlertCircle className="h-6 w-6 text-gray-400 mx-auto mb-2" />}
-              <p className="text-sm font-medium">הגדרות מאגר</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Onboarding Checklist - Show until complete */}
+      {organization?.id && (
+        <OnboardingChecklist organizationId={organization.id} />
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>פעולות מהירות</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => onNavigate('documents')}><FileText className="h-5 w-5" /><span>צפייה במסמכים</span></Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => onNavigate('qa')}><MessageSquare className="h-5 w-5" /><span>שאלה לממונה</span></Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={onRegenerateDocs} disabled={isRegenerating}>{isRegenerating ? <Loader2 className="h-5 w-5 animate-spin" /> : <RefreshCw className="h-5 w-5" />}<span>{isRegenerating ? 'מייצר...' : 'יצירת מסמכים'}</span></Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => onNavigate('requests')}><Users className="h-5 w-5" /><span>בקשות פרטיות</span></Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2" onClick={() => onNavigate('checklist')}><ClipboardList className="h-5 w-5" /><span>רשימת ציות</span></Button>
-            <Button variant="outline" className="h-auto py-4 flex-col gap-2 border-red-200 text-red-600 hover:bg-red-50" onClick={() => onNavigate('incidents')}><AlertTriangle className="h-5 w-5" /><span>דיווח אירוע</span></Button>
+      {/* Top Cards */}
+      <div className="grid md:grid-cols-2 gap-4">
+        {/* Score Card */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-medium text-stone-500">ציון ציות</p>
+            <span className={`px-2.5 py-1 ${scoreInfo.bg} ${scoreInfo.text} rounded-full text-xs font-medium`}>
+              {scoreInfo.label}
+            </span>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex items-baseline gap-1">
+            <span className="text-5xl font-bold text-stone-800">{complianceScore}</span>
+            <span className="text-stone-400 text-lg">/100</span>
+          </div>
+        </div>
+
+        {/* DPO Card */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
+          <p className="text-sm font-medium text-stone-500 mb-4">הממונה שלכם</p>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
+              <User className="h-6 w-6 text-indigo-500" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-stone-800">עו"ד דנה כהן</p>
+              <p className="text-sm text-stone-500">ממונה הגנת פרטיות</p>
+            </div>
+            <Link href="/chat">
+              <button className="px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium">
+                שלח הודעה
+              </button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-stone-200 flex items-center gap-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => onNavigate('documents')}>
+          <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+            <FileText className="h-5 w-5 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-stone-800">{documents.length}</p>
+            <p className="text-sm text-stone-500">מסמכים</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-stone-200 flex items-center gap-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => onNavigate('tasks')}>
+          <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+            <ClipboardList className="h-5 w-5 text-purple-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-stone-800">{tasks.length}</p>
+            <p className="text-sm text-stone-500">משימות פתוחות</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Tasks Section */}
+      {tasks.length > 0 && (
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-stone-800">📋 מה הצעד הבא?</h2>
+            <button 
+              onClick={() => onNavigate('tasks')}
+              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
+            >
+              כל המשימות
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {tasks.slice(0, 3).map((task, index) => (
+              <div 
+                key={task.id} 
+                className={`flex items-center gap-4 p-3 rounded-xl border ${
+                  task.priority === 'high' 
+                    ? 'bg-rose-50 border-rose-100' 
+                    : task.priority === 'medium' 
+                    ? 'bg-amber-50 border-amber-100' 
+                    : 'bg-stone-50 border-stone-100'
+                }`}
+              >
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                  task.priority === 'high' 
+                    ? 'bg-rose-200 text-rose-700' 
+                    : task.priority === 'medium' 
+                    ? 'bg-amber-200 text-amber-700' 
+                    : 'bg-stone-200 text-stone-700'
+                }`}>
+                  <span className="text-xs font-bold">{index + 1}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-stone-800">{task.title}</p>
+                  <p className="text-sm text-stone-500 truncate">{task.description}</p>
+                </div>
+                <Link href={task.actionPath || '/chat'}>
+                  <button className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 transition-colors">
+                    {task.action}
+                  </button>
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade Card */}
+      {!hasSubscription && (
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center">
+                <Shield className="h-6 w-6 text-indigo-500" />
+              </div>
+              <div>
+                <p className="font-semibold text-stone-800">שדרגו לחבילה מלאה</p>
+                <p className="text-sm text-stone-500">גישה לכל הכלים והתמיכה של ממונה מוסמך</p>
+              </div>
+            </div>
+            <Link href="/subscribe">
+              <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors">
+                צפייה בחבילות
+              </button>
+            </Link>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function DocumentsTab({ documents, isPaid = false, onRegenerate, isRegenerating = false }: { documents: any[], isPaid?: boolean, onRegenerate?: () => void, isRegenerating?: boolean }) {
-  const [selectedDoc, setSelectedDoc] = useState<any>(null)
-  
+// ============================================
+// TASKS TAB
+// ============================================
+function TasksTab({ tasks }: { tasks: Task[] }) {
+  const getPriorityStyle = (priority: string) => {
+    const styles = {
+      high: { bg: 'bg-rose-50', border: 'border-rose-100', badge: 'bg-rose-100 text-rose-700', number: 'bg-rose-200 text-rose-700' },
+      medium: { bg: 'bg-amber-50', border: 'border-amber-100', badge: 'bg-amber-100 text-amber-700', number: 'bg-amber-200 text-amber-700' },
+      low: { bg: 'bg-stone-50', border: 'border-stone-100', badge: 'bg-stone-100 text-stone-700', number: 'bg-stone-200 text-stone-700' }
+    }
+    return styles[priority as keyof typeof styles] || styles.low
+  }
+
+  const getPriorityLabel = (priority: string) => {
+    const labels = { high: 'דחוף', medium: 'רגיל', low: 'נמוך' }
+    return labels[priority as keyof typeof labels] || priority
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-stone-800">📋 משימות</h1>
+          <p className="text-stone-500 mt-1">כל מה שצריך לעשות במקום אחד</p>
+        </div>
+        <Link href="/chat">
+          <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            משימה חדשה
+          </button>
+        </Link>
+      </div>
+
+      {tasks.length === 0 ? (
+        <div className="bg-white rounded-2xl p-12 shadow-sm border border-stone-200 text-center">
+          <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+          </div>
+          <h3 className="text-lg font-semibold text-stone-800 mb-2">מצוין! אין משימות פתוחות</h3>
+          <p className="text-stone-500">כל המשימות הושלמו. המשיכו כך! 🎉</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {tasks.map((task, index) => {
+            const style = getPriorityStyle(task.priority)
+            return (
+              <div 
+                key={task.id} 
+                className={`${style.bg} rounded-xl p-4 border ${style.border}`}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`w-8 h-8 rounded-full ${style.number} flex items-center justify-center flex-shrink-0`}>
+                    <span className="text-sm font-bold">{index + 1}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-medium text-stone-800">{task.title}</h3>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${style.badge}`}>
+                        {getPriorityLabel(task.priority)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-stone-500">{task.description}</p>
+                    {task.deadline && (
+                      <p className="text-xs text-stone-400 mt-2 flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        דדליין: {task.deadline}
+                      </p>
+                    )}
+                  </div>
+                  <Link href={task.actionPath || '/chat'}>
+                    <button className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 transition-colors">
+                      {task.action}
+                    </button>
+                  </Link>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================
+// DOCUMENTS TAB
+// ============================================
+function DocumentsTab({ documents, organization, supabase }: { documents: Document[], organization: any, supabase: any }) {
+  const [filter, setFilter] = useState<string>('all')
+  const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editedContent, setEditedContent] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const isPaid = organization?.subscription_status === 'active'
+
   const getDocTypeLabel = (type: string) => {
-    const labels: Record<string, string> = { privacy_policy: 'מדיניות פרטיות', database_registration: 'רישום מאגר', security_policy: 'מדיניות אבטחה', procedure: 'נוהל', dpo_appointment: 'כתב מינוי DPO' }
+    const labels: Record<string, string> = {
+      privacy_policy: 'מדיניות פרטיות',
+      security_policy: 'מדיניות אבטחה',
+      security_procedures: 'נוהלי אבטחה',
+      dpo_appointment: 'כתב מינוי DPO',
+      database_registration: 'רישום מאגר',
+      database_definition: 'הגדרת מאגר',
+      consent_form: 'טופס הסכמה',
+      employee_policy: 'מדיניות עובדים',
+      ropa: 'מפת עיבוד (ROPA)',
+      dpa: 'הסכם עיבוד מידע',
+      procedure: 'נוהל',
+      custom: 'מסמך'
+    }
     return labels[type] || type
   }
 
-  const downloadDocument = (doc: any) => {
-    if (!isPaid) return
-    const header = `${'═'.repeat(50)}\n${doc.title}\n${'═'.repeat(50)}\n\n`
-    const footer = `\n\n${'─'.repeat(50)}\nנוצר על ידי MyDPO\nתאריך: ${new Date().toLocaleDateString('he-IL')}\n`
-    const content = header + (doc.content || '') + footer
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${doc.title}.txt`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
-  }
-
-  const downloadAllDocuments = () => {
-    if (!isPaid) return
-    documents.forEach((doc, index) => { setTimeout(() => downloadDocument(doc), index * 500) })
-  }
-
-  if (documents.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">אין מסמכים עדיין</h2>
-          <p className="text-gray-600 mb-6">לחצו על הכפתור כדי ליצור את המסמכים שלכם</p>
-          {onRegenerate && (
-            <Button onClick={onRegenerate} disabled={isRegenerating}>
-              {isRegenerating ? <><Loader2 className="h-4 w-4 animate-spin ml-2" />מייצר מסמכים...</> : <><RefreshCw className="h-4 w-4 ml-2" />יצירת מסמכים</>}
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-    )
-  }
-
-  return (
-    <div className="space-y-6">
-      {!isPaid && (
-        <Card className="bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center">
-                  <Lock className="h-7 w-7 text-amber-600" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg">המסמכים מוכנים! 🎉</h3>
-                  <p className="text-gray-600">שלמו כדי להוריד את המסמכים ולקבל גישה מלאה למערכת</p>
-                </div>
-              </div>
-              <Link href="/subscribe">
-                <Button size="lg" className="bg-amber-600 hover:bg-amber-700"><Lock className="h-4 w-4 ml-2" />שלם לגישה מלאה - ₪500/חודש</Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">מסמכים ({documents.length})</h2>
-        <Button variant="outline" onClick={downloadAllDocuments} disabled={!isPaid} className={!isPaid ? 'opacity-50' : ''}>
-          <Download className="h-4 w-4 ml-2" />הורדת הכל{!isPaid && <Lock className="h-3 w-3 mr-2" />}
-        </Button>
-      </div>
-
-      <div className="grid gap-4">
-        {documents.map((doc) => (
-          <Card key={doc.id} className={`hover:shadow-md transition-shadow ${!isPaid ? 'relative' : ''}`}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => setSelectedDoc(doc)}>
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <FileText className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">{doc.title}</h3>
-                    <p className="text-sm text-gray-500">{getDocTypeLabel(doc.type)} • גרסה {doc.version}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={doc.status === 'active' ? 'success' : 'secondary'}>{doc.status === 'active' ? 'פעיל' : 'טיוטה'}</Badge>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedDoc(doc)}><Eye className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="sm" onClick={() => downloadDocument(doc)} disabled={!isPaid} className={!isPaid ? 'opacity-50' : ''}>{isPaid ? <Download className="h-4 w-4" /> : <Lock className="h-4 w-4" />}</Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {selectedDoc && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            <CardHeader className="flex-shrink-0 border-b">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>{selectedDoc.title}</CardTitle>
-                  <CardDescription>{getDocTypeLabel(selectedDoc.type)} • גרסה {selectedDoc.version}</CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  {isPaid ? (
-                    <Button variant="outline" onClick={() => downloadDocument(selectedDoc)}><Download className="h-4 w-4 ml-2" />הורדה</Button>
-                  ) : (
-                    <Link href="/subscribe"><Button className="bg-amber-600 hover:bg-amber-700"><Lock className="h-4 w-4 ml-2" />שלם להורדה</Button></Link>
-                  )}
-                  <Button variant="ghost" size="icon" onClick={() => setSelectedDoc(null)}><X className="h-5 w-5" /></Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-auto p-6 relative">
-              <div className={`whitespace-pre-wrap text-right leading-relaxed ${!isPaid ? 'blur-sm select-none' : ''}`} dir="rtl">{selectedDoc.content || 'אין תוכן זמין'}</div>
-              {!isPaid && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/60">
-                  <div className="text-center p-6">
-                    <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4"><Lock className="h-8 w-8 text-amber-600" /></div>
-                    <h3 className="font-bold text-xl mb-2">תוכן נעול</h3>
-                    <p className="text-gray-600 mb-4">שלמו כדי לצפות ולהוריד את המסמך המלא</p>
-                    <Link href="/subscribe"><Button className="bg-amber-600 hover:bg-amber-700">שלם לגישה - ₪500/חודש</Button></Link>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function QATab({ qaHistory, question, setQuestion, onAsk, isAsking, orgId }: any) {
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadResult, setUploadResult] = useState<any>(null)
-  const [escalateMessage, setEscalateMessage] = useState('')
-  const [showEscalateModal, setShowEscalateModal] = useState<any>(null)
-  const [isEscalating, setIsEscalating] = useState(false)
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !orgId) return
-    setUploadedFile(file)
-    setIsUploading(true)
-    setUploadResult(null)
-    try {
-      const formData = new FormData()
-      formData.append('action', 'upload_and_review')
-      formData.append('file', file)
-      formData.append('orgId', orgId)
-      formData.append('reviewType', 'other')
-      const response = await fetch('/api/document-review', { method: 'POST', body: formData })
-      const data = await response.json()
-      if (data.success) setUploadResult(data.aiReview)
-    } catch (err) {
-      console.error('Upload error:', err)
-    } finally {
-      setIsUploading(false)
+  const getStatusStyle = (status: string) => {
+    const styles: Record<string, string> = {
+      active: 'bg-emerald-100 text-emerald-700',
+      draft: 'bg-stone-100 text-stone-700',
+      pending: 'bg-amber-100 text-amber-700'
     }
+    return styles[status] || 'bg-stone-100 text-stone-700'
   }
 
-  const handleEscalateToDPO = async (qa: any, additionalMessage: string = '') => {
-    setIsEscalating(true)
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = { active: 'פעיל', draft: 'טיוטה', pending: 'ממתין' }
+    return labels[status] || status
+  }
+
+  const downloadAsPdf = async (doc: Document) => {
     try {
-      const response = await fetch('/api/messages', {
+      const content = isEditing ? editedContent : doc.content
+      const response = await fetch('/api/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create_escalation', orgId, originalQuestion: qa.question, aiAnswer: qa.answer, additionalMessage, qaId: qa.id })
+        body: JSON.stringify({
+          title: doc.title || doc.name || getDocTypeLabel(doc.type),
+          content: content || 'אין תוכן',
+          orgName: organization?.name
+        })
       })
-      if (response.ok) {
-        alert('הפנייה נשלחה בהצלחה לממונה. תקבלו תשובה בהקדם.')
-        setShowEscalateModal(null)
-        setEscalateMessage('')
-      } else {
-        alert('שגיאה בשליחת הפנייה. נסו שוב.')
+      
+      if (!response.ok) throw new Error('Failed to generate PDF')
+      
+      const html = await response.text()
+      const printWindow = window.open('', '_blank')
+      if (printWindow) {
+        printWindow.document.write(html)
+        printWindow.document.close()
       }
-    } catch (err) {
-      console.error('Escalation error:', err)
-      alert('שגיאה בשליחת הפנייה')
-    } finally {
-      setIsEscalating(false)
+    } catch (error) {
+      console.error('PDF download error:', error)
+      alert('שגיאה בהורדת המסמך')
     }
   }
 
-  return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold">שאלות ותשובות</h2>
+  const openDoc = (doc: Document) => {
+    setSelectedDoc(doc)
+    setEditedContent(doc.content || '')
+    setIsEditing(false)
+  }
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Bot className="h-5 w-5 text-primary" />שאלו את הבוט</CardTitle>
-          <CardDescription>שאלו שאלות בנושאי פרטיות או העלו מסמך לבדיקה מהירה</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="הקלידו את השאלה שלכם..." className="min-h-[80px]" />
-          <div className="flex items-center justify-between mt-3">
-            <div className="flex items-center gap-2">
-              <input type="file" id="qa-file-upload" className="hidden" accept=".pdf,.docx,.doc,.txt" onChange={handleFileUpload} />
-              <Button variant="outline" size="sm" onClick={() => document.getElementById('qa-file-upload')?.click()} disabled={isUploading}>
-                {isUploading ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Upload className="h-4 w-4 ml-2" />}
-                {isUploading ? 'מעלה...' : 'העלאת מסמך לבדיקה'}
-              </Button>
-              {uploadedFile && !isUploading && <span className="text-sm text-gray-500">{uploadedFile.name}</span>}
-            </div>
-            <Button onClick={onAsk} disabled={!question.trim() || isAsking}>
-              {isAsking ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Send className="h-4 w-4 ml-2" />}שליחה
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {uploadResult && (
-        <Card className="border-primary">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><FileSearch className="h-5 w-5 text-primary" />תוצאות בדיקת AI</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className={`p-4 rounded-lg ${uploadResult.risk_score >= 70 ? 'bg-red-50 border border-red-200' : uploadResult.risk_score >= 40 ? 'bg-amber-50 border border-amber-200' : 'bg-green-50 border border-green-200'}`}>
-              <div className="flex items-center justify-between">
-                <span className="font-medium">ציון סיכון:</span>
-                <span className={`text-2xl font-bold ${uploadResult.risk_score >= 70 ? 'text-red-600' : uploadResult.risk_score >= 40 ? 'text-amber-600' : 'text-green-600'}`}>{uploadResult.risk_score}%</span>
-              </div>
-            </div>
-            {uploadResult.summary && <div><h4 className="font-medium mb-2">סיכום:</h4><p className="text-gray-700">{uploadResult.summary}</p></div>}
-            {uploadResult.issues?.length > 0 && (
-              <div>
-                <h4 className="font-medium mb-2">בעיות שזוהו:</h4>
-                <div className="space-y-2">
-                  {uploadResult.issues.map((issue: any, i: number) => (
-                    <div key={i} className={`p-3 rounded-lg border-r-4 ${issue.severity === 'high' ? 'bg-red-50 border-red-500' : issue.severity === 'medium' ? 'bg-amber-50 border-amber-500' : 'bg-gray-50 border-gray-300'}`}>
-                      <p className="font-medium">{issue.issue}</p>
-                      {issue.suggestion && <p className="text-sm text-gray-600 mt-1">💡 {issue.suggestion}</p>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {uploadResult.recommendation && <div className="p-4 bg-blue-50 rounded-lg"><h4 className="font-medium mb-1">המלצה:</h4><p>{uploadResult.recommendation}</p></div>}
-            {uploadResult.requires_dpo_review && (
-              <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border border-primary/20">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-6 w-6 text-primary" />
-                  <div className="flex-1">
-                    <h4 className="font-bold">מומלץ בדיקת DPO אנושי</h4>
-                    <p className="text-sm text-gray-600">{uploadResult.dpo_review_reason || 'המסמך דורש בדיקה מעמיקה'}</p>
-                  </div>
-                  <Link href="/dashboard?tab=doc-review"><Button size="sm">הזמנת בדיקה - ₪350</Button></Link>
-                </div>
-              </div>
-            )}
-            <Button variant="outline" className="w-full" onClick={() => setUploadResult(null)}>סגור תוצאות</Button>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader><CardTitle>היסטוריית שאלות</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          {qaHistory.length === 0 && <p className="text-center text-gray-500 py-8">עדיין לא נשאלו שאלות</p>}
-          {qaHistory.map((qa: any) => (
-            <div key={qa.id} className="border rounded-lg p-4">
-              <div className="flex items-start gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center"><User className="h-4 w-4 text-gray-600" /></div>
-                <div className="flex-1">
-                  <p className="font-medium">{qa.question}</p>
-                  <p className="text-xs text-gray-500">{new Date(qa.created_at).toLocaleDateString('he-IL')}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 bg-blue-50 rounded-lg p-3 mr-11">
-                <Bot className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-sm">{qa.answer}</p>
-                  {(qa.confidence_score < 0.7 || qa.escalated) && (
-                    <div className="mt-3 pt-3 border-t border-blue-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-amber-600"><AlertTriangle className="h-4 w-4" /><span className="text-sm">התשובה עשויה להיות לא מלאה</span></div>
-                        <Button size="sm" variant="outline" onClick={() => setShowEscalateModal(qa)} className="text-primary border-primary hover:bg-primary/10"><MessageSquare className="h-4 w-4 ml-1" />פנה לממונה אנושי</Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-              {qa.confidence_score >= 0.7 && !qa.escalated && (
-                <div className="mr-11 mt-2">
-                  <button onClick={() => setShowEscalateModal(qa)} className="text-sm text-gray-500 hover:text-primary transition-colors">לא מרוצה מהתשובה? פנה לממונה אנושי →</button>
-                </div>
-              )}
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      {showEscalateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
-            <CardHeader className="flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" />פנייה לממונה אנושי</CardTitle>
-                <Button variant="ghost" size="icon" onClick={() => setShowEscalateModal(null)}><X className="h-5 w-5" /></Button>
-              </div>
-              <CardDescription>הממונה יקבל את השאלה המקורית ותשובת הבוט, ויחזיר תשובה מקצועית</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 flex-1 overflow-y-auto">
-              <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                <div><p className="text-xs text-gray-500 mb-1">השאלה המקורית:</p><p className="text-sm font-medium">{showEscalateModal.question}</p></div>
-                <div><p className="text-xs text-gray-500 mb-1">תשובת הבוט:</p><p className="text-sm max-h-32 overflow-y-auto">{showEscalateModal.answer}</p></div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">הערות נוספות (אופציונלי)</label>
-                <Textarea value={escalateMessage} onChange={(e) => setEscalateMessage(e.target.value)} placeholder="הוסיפו פרטים או הקשר שיעזרו לממונה לתת תשובה מדויקת יותר..." className="min-h-[80px]" />
-              </div>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3"><p className="text-sm text-blue-800">⏱️ זמן תגובה משוער: עד 24 שעות בימי עסקים</p></div>
-            </CardContent>
-            <div className="border-t p-4 flex justify-end gap-3 flex-shrink-0">
-              <Button variant="outline" onClick={() => setShowEscalateModal(null)}>ביטול</Button>
-              <Button onClick={() => handleEscalateToDPO(showEscalateModal, escalateMessage)} disabled={isEscalating}>
-                {isEscalating ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Send className="h-4 w-4 ml-2" />}שלח לממונה
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function DocumentReviewTab({ orgId, reviews, setReviews }: { orgId: string, reviews: any[], setReviews: (r: any[]) => void }) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
-  const [reviewType, setReviewType] = useState('contract')
-  const [selectedReview, setSelectedReview] = useState<any>(null)
-
-  useEffect(() => { if (orgId) loadReviews() }, [orgId])
-
-  const loadReviews = async () => {
-    setIsLoading(true)
+  const saveDocumentChanges = async () => {
+    if (!selectedDoc || !supabase) return
+    
+    setIsSaving(true)
     try {
-      const response = await fetch(`/api/document-review?orgId=${orgId}`)
-      const data = await response.json()
-      setReviews(data.reviews || [])
-    } catch (err) {
-      console.error('Error loading reviews:', err)
+      const { error } = await supabase
+        .from('documents')
+        .update({ content: editedContent, updated_at: new Date().toISOString() })
+        .eq('id', selectedDoc.id)
+      
+      if (error) throw error
+      
+      // Update local state
+      selectedDoc.content = editedContent
+      setIsEditing(false)
+      alert('המסמך נשמר בהצלחה!')
+    } catch (error) {
+      console.error('Error saving document:', error)
+      alert('שגיאה בשמירת המסמך')
     } finally {
-      setIsLoading(false)
+      setIsSaving(false)
     }
   }
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file || !orgId) return
-    setIsUploading(true)
-    try {
-      const formData = new FormData()
-      formData.append('action', 'upload_and_review')
-      formData.append('file', file)
-      formData.append('orgId', orgId)
-      formData.append('reviewType', reviewType)
-      const response = await fetch('/api/document-review', { method: 'POST', body: formData })
-      if (response.ok) loadReviews()
-    } catch (err) {
-      console.error('Upload error:', err)
-    } finally {
-      setIsUploading(false)
-    }
-  }
+  const filteredDocs = filter === 'all' ? documents : documents.filter(d => d.type === filter)
+  const docTypes = Array.from(new Set(documents.map(d => d.type)))
 
-  const requestDPOReview = async (reviewId: string, urgency: string = 'normal') => {
-    try {
-      const formData = new FormData()
-      formData.append('action', 'request_dpo_review')
-      formData.append('reviewId', reviewId)
-      formData.append('urgency', urgency)
-      await fetch('/api/document-review', { method: 'POST', body: formData })
-      loadReviews()
-    } catch (err) {
-      console.error('Error requesting DPO review:', err)
-    }
-  }
-
-  const getStatusBadge = (status: string) => {
-    const badges: Record<string, { label: string; className: string }> = {
-      uploaded: { label: 'הועלה', className: 'bg-gray-100 text-gray-800' },
-      ai_reviewed: { label: 'נבדק ע"י AI', className: 'bg-blue-100 text-blue-800' },
-      dpo_pending: { label: 'ממתין ל-DPO', className: 'bg-amber-100 text-amber-800' },
-      completed: { label: 'הושלם', className: 'bg-green-100 text-green-800' }
-    }
-    const badge = badges[status] || { label: status, className: 'bg-gray-100' }
-    return <Badge className={badge.className}>{badge.label}</Badge>
-  }
-
-  const getRiskColor = (score: number) => {
-    if (score >= 70) return 'text-red-600'
-    if (score >= 40) return 'text-amber-600'
-    return 'text-green-600'
-  }
-
-  const reviewTypes = [{ id: 'contract', label: 'חוזה' }, { id: 'policy', label: 'מדיניות' }, { id: 'consent_form', label: 'טופס הסכמה' }, { id: 'other', label: 'אחר' }]
-
-  const cleanSummary = (summary: string) => {
-    if (!summary) return ''
-    if (summary.includes('"summary"') || summary.startsWith('{')) {
-      try {
-        const parsed = JSON.parse(summary)
-        return parsed.summary || summary
-      } catch {
-        const match = summary.match(/"summary"\s*:\s*"([^"]+)"/)
-        return match ? match[1] : summary.replace(/[{}":\[\]]/g, ' ').trim()
-      }
-    }
-    return summary
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between"><h2 className="text-xl font-bold">בדיקת מסמכים</h2></div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Upload className="h-5 w-5 text-primary" />העלאת מסמך לבדיקה</CardTitle>
-          <CardDescription>העלו חוזה, מדיניות או טופס לבדיקת עמידה בדרישות פרטיות</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <select value={reviewType} onChange={(e) => setReviewType(e.target.value)} className="px-3 py-2 border rounded-lg">
-              {reviewTypes.map(type => <option key={type.id} value={type.id}>{type.label}</option>)}
-            </select>
-            <input type="file" id="doc-review-upload" className="hidden" accept=".pdf,.docx,.doc,.txt" onChange={handleUpload} />
-            <Button onClick={() => document.getElementById('doc-review-upload')?.click()} disabled={isUploading} className="flex-1 sm:flex-none">
-              {isUploading ? <Loader2 className="h-4 w-4 animate-spin ml-2" /> : <Upload className="h-4 w-4 ml-2" />}
-              {isUploading ? 'מעלה ובודק...' : 'בחירת קובץ'}
-            </Button>
-          </div>
-          <p className="text-sm text-gray-500 mt-2">נתמכים: PDF, Word, טקסט • הבדיקה כוללת סריקת AI אוטומטית</p>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-              <h3 className="font-bold text-lg">🔍 בדיקת DPO מקצועית</h3>
-              <p className="text-gray-600">קבלו בדיקה מעמיקה ע"י ממונה מוסמך עם תיקונים והמלצות</p>
-            </div>
-            <div className="text-left">
-              <p className="text-sm text-gray-500">החל מ-</p>
-              <p className="text-2xl font-bold text-primary">₪250</p>
-              <p className="text-xs text-gray-500">לפי סוג המסמך</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle>המסמכים שלי</CardTitle></CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
-          ) : reviews.length === 0 ? (
-            <div className="text-center py-8">
-              <FileSearch className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">עדיין לא הועלו מסמכים</p>
-              <p className="text-sm text-gray-400">העלו מסמך לקבלת בדיקת AI מיידית</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {reviews.map((review) => (
-                <div key={review.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${review.ai_risk_score >= 70 ? 'bg-red-100' : review.ai_risk_score >= 40 ? 'bg-amber-100' : 'bg-green-100'}`}>
-                        <FileText className={`h-5 w-5 ${getRiskColor(review.ai_risk_score || 50)}`} />
-                      </div>
-                      <div>
-                        <p className="font-medium">{review.original_filename}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {getStatusBadge(review.status)}
-                          {review.ai_risk_score && <span className={`text-sm ${getRiskColor(review.ai_risk_score)}`}>סיכון: {review.ai_risk_score}%</span>}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">{new Date(review.created_at).toLocaleDateString('he-IL')}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {review.status === 'ai_reviewed' && !review.dpo_review_requested && <Button size="sm" onClick={() => requestDPOReview(review.id)}>הזמנת בדיקת DPO</Button>}
-                      <Button size="sm" variant="outline" onClick={() => setSelectedReview(review)}><Eye className="h-4 w-4" /></Button>
-                    </div>
-                  </div>
-                  {review.ai_review_summary && <p className="text-sm text-gray-600 mt-2 mr-13">{cleanSummary(review.ai_review_summary).substring(0, 150)}...</p>}
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {selectedReview && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-auto flex flex-col">
-            <CardHeader className="border-b">
-              <div className="flex items-center justify-between">
-                <CardTitle>{selectedReview.original_filename}</CardTitle>
-                <Button variant="ghost" size="icon" onClick={() => setSelectedReview(null)}><X className="h-5 w-5" /></Button>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-auto p-6 space-y-4">
-              <div className="flex items-center gap-4">
-                {getStatusBadge(selectedReview.status)}
-                {selectedReview.ai_risk_score && <span className={`font-bold ${getRiskColor(selectedReview.ai_risk_score)}`}>ציון סיכון: {selectedReview.ai_risk_score}%</span>}
-              </div>
-              {selectedReview.ai_review_summary && <div><h4 className="font-medium mb-2">סיכום AI:</h4><p className="text-gray-700 bg-blue-50 p-3 rounded-lg">{cleanSummary(selectedReview.ai_review_summary)}</p></div>}
-              {selectedReview.ai_issues_found?.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2">בעיות שזוהו ({selectedReview.ai_issues_found.length}):</h4>
-                  <div className="space-y-2">
-                    {selectedReview.ai_issues_found.map((issue: any, i: number) => (
-                      <div key={i} className={`p-3 rounded-lg border-r-4 ${issue.severity === 'high' ? 'bg-red-50 border-red-500' : issue.severity === 'medium' ? 'bg-amber-50 border-amber-500' : 'bg-gray-50 border-gray-300'}`}>
-                        <p className="font-medium">{issue.issue}</p>
-                        {issue.suggestion && <p className="text-sm text-gray-600 mt-1">💡 {issue.suggestion}</p>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {selectedReview.dpo_notes && <div><h4 className="font-medium mb-2">הערות הממונה:</h4><p className="text-gray-700 bg-green-50 p-3 rounded-lg">{selectedReview.dpo_notes}</p></div>}
-              {selectedReview.status === 'ai_reviewed' && !selectedReview.dpo_review_requested && (
-                <div className="pt-4 border-t">
-                  <p className="text-sm text-gray-600 mb-3">רוצים בדיקה מקצועית? הממונה יעבור על המסמך ויחזיר גרסה מתוקנת</p>
-                  <div className="flex gap-3">
-                    <Button onClick={() => { requestDPOReview(selectedReview.id, 'normal'); setSelectedReview(null) }}>בדיקה רגילה - ₪350</Button>
-                    <Button variant="outline" onClick={() => { requestDPOReview(selectedReview.id, 'urgent'); setSelectedReview(null) }}>דחוף (24 שעות) - ₪525</Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function SettingsTab({ organization, user }: any) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">הגדרות</h2>
-        <Link href="/settings"><Button variant="outline">הגדרות מתקדמות</Button></Link>
+        <div>
+          <h1 className="text-2xl font-semibold text-stone-800">📁 מסמכים</h1>
+          <p className="text-stone-500 mt-1">כל המסמכים והמדיניות של הארגון</p>
+        </div>
+        <Link href="/chat">
+          <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            מסמך חדש
+          </button>
+        </Link>
       </div>
-      <Card>
-        <CardHeader><CardTitle>פרטי הארגון</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
-            <div><label className="text-sm text-gray-600">שם העסק</label><p className="font-medium">{organization?.name || '-'}</p></div>
-            <div><label className="text-sm text-gray-600">מספר ח.פ</label><p className="font-medium">{organization?.business_id || '-'}</p></div>
-            <div><label className="text-sm text-gray-600">חבילה</label><Badge>{organization?.tier === 'extended' ? 'מורחבת' : 'בסיסית'}</Badge></div>
-            <div><label className="text-sm text-gray-600">סטטוס</label><Badge variant={organization?.status === 'active' ? 'success' : 'warning'}>{organization?.status === 'active' ? 'פעיל' : 'בהקמה'}</Badge></div>
+
+      {/* Filters */}
+      {docTypes.length > 0 && (
+        <div className="flex gap-2 flex-wrap">
+          <button 
+            onClick={() => setFilter('all')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              filter === 'all' 
+                ? 'bg-indigo-500 text-white' 
+                : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
+            }`}
+          >
+            הכל ({documents.length})
+          </button>
+          {docTypes.map(type => (
+            <button 
+              key={type}
+              onClick={() => setFilter(type)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                filter === type 
+                  ? 'bg-indigo-500 text-white' 
+                  : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
+              }`}
+            >
+              {getDocTypeLabel(type)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {filteredDocs.length === 0 ? (
+        <div className="bg-white rounded-2xl p-12 shadow-sm border border-stone-200 text-center">
+          <div className="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-4">
+            <FileText className="h-8 w-8 text-stone-300" />
           </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader><CardTitle>פרטי משתמש</CardTitle></CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div><label className="text-sm text-gray-600">אימייל</label><p className="font-medium">{user?.email}</p></div>
-            <div><label className="text-sm text-gray-600">שם</label><p className="font-medium">{user?.user_metadata?.name || '-'}</p></div>
+          <h3 className="text-lg font-semibold text-stone-800 mb-2">אין מסמכים עדיין</h3>
+          <p className="text-stone-500 mb-4">התחילו ביצירת מדיניות פרטיות דרך הצ׳אט</p>
+          <Link href="/chat">
+            <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors">
+              <Bot className="h-4 w-4 inline ml-2" />
+              יצירת מסמך
+            </button>
+          </Link>
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 gap-4">
+          {filteredDocs.map(doc => (
+            <div 
+              key={doc.id} 
+              className="bg-white rounded-xl p-4 shadow-sm border border-stone-200 hover:border-stone-300 transition-colors"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <FileText className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-medium text-stone-800 truncate">{doc.title || doc.name || getDocTypeLabel(doc.type)}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusStyle(doc.status)}`}>
+                      {getStatusLabel(doc.status)}
+                    </span>
+                    <span className="text-xs text-stone-400">
+                      {new Date(doc.created_at).toLocaleDateString('he-IL')}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <button 
+                    onClick={() => openDoc(doc)}
+                    className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center hover:bg-stone-200 transition-colors" 
+                    title="צפייה"
+                  >
+                    <Eye className="h-4 w-4 text-stone-500" />
+                  </button>
+                  <button 
+                    onClick={() => downloadAsPdf(doc)}
+                    className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center hover:bg-stone-200 transition-colors" 
+                    title="הורד PDF"
+                  >
+                    <Download className="h-4 w-4 text-stone-500" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Document View Modal */}
+      {selectedDoc && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+            <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
+              <h3 className="font-bold text-lg">{selectedDoc.title || selectedDoc.name || getDocTypeLabel(selectedDoc.type)}</h3>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setIsEditing(!isEditing)}
+                  className={`p-2 rounded-full transition ${isEditing ? 'bg-blue-100 text-blue-700' : 'hover:bg-slate-100'}`}
+                  title={isEditing ? 'סיום עריכה' : 'עריכה'}
+                >
+                  <Edit3 className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => {
+                    setSelectedDoc(null)
+                    setIsEditing(false)
+                  }}
+                  className="p-2 hover:bg-slate-100 rounded-full transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4">
+              {isEditing ? (
+                <textarea
+                  value={editedContent}
+                  onChange={(e) => setEditedContent(e.target.value)}
+                  className="w-full h-full min-h-[300px] p-3 border border-slate-200 rounded-lg text-sm text-slate-700 font-sans leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  dir="rtl"
+                />
+              ) : (
+                <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed">
+                  {selectedDoc.content || 'אין תוכן למסמך זה'}
+                </pre>
+              )}
+            </div>
+            
+            <div className="p-4 border-t flex gap-2 flex-shrink-0">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(isEditing ? editedContent : selectedDoc.content || '')
+                }}
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
+              >
+                <Copy className="w-4 h-4" />
+                העתק
+              </button>
+              <button
+                onClick={() => downloadAsPdf(selectedDoc)}
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
+              >
+                <Download className="w-4 h-4" />
+                PDF
+              </button>
+              {isEditing && (
+                <button
+                  onClick={saveDocumentChanges}
+                  disabled={isSaving}
+                  className="flex-1 py-3 bg-indigo-500 hover:bg-indigo-600 disabled:bg-indigo-300 text-white rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
+                >
+                  {isSaving ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  שמור שינויים
+                </button>
+              )}
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   )
 }
 
+// ============================================
+// INCIDENTS TAB
+// ============================================
+function IncidentsTab({ incidents, orgId }: { incidents: any[], orgId: string }) {
+  const activeIncidents = incidents.filter(i => !['resolved', 'closed'].includes(i.status))
+  const closedIncidents = incidents.filter(i => ['resolved', 'closed'].includes(i.status))
+
+  const getStatusStyle = (status: string) => {
+    const styles: Record<string, string> = {
+      new: 'bg-rose-100 text-rose-700',
+      investigating: 'bg-amber-100 text-amber-700',
+      contained: 'bg-blue-100 text-blue-700',
+      resolved: 'bg-emerald-100 text-emerald-700',
+      closed: 'bg-stone-100 text-stone-700'
+    }
+    return styles[status] || 'bg-stone-100 text-stone-700'
+  }
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      new: 'חדש',
+      investigating: 'בבדיקה',
+      contained: 'נבלם',
+      resolved: 'טופל',
+      closed: 'סגור'
+    }
+    return labels[status] || status
+  }
+
+  const getTimeRemaining = (deadline: string) => {
+    const now = new Date()
+    const dl = new Date(deadline)
+    const diff = dl.getTime() - now.getTime()
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    
+    if (hours < 0) return { text: 'עבר הדדליין!', urgent: true }
+    if (hours < 24) return { text: `${hours} שעות`, urgent: true }
+    const days = Math.floor(hours / 24)
+    return { text: `${days} ימים`, urgent: false }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-stone-800">🚨 אירועי אבטחה</h1>
+          <p className="text-stone-500 mt-1">ניהול ותיעוד אירועי אבטחה ופרטיות</p>
+        </div>
+        <Link href="/chat">
+          <button className="px-4 py-2 bg-rose-500 text-white rounded-lg font-medium hover:bg-rose-600 transition-colors flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            דיווח אירוע חדש
+          </button>
+        </Link>
+      </div>
+
+      {/* Active Incidents */}
+      {activeIncidents.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+            <h2 className="font-semibold text-stone-800">אירועים פעילים ({activeIncidents.length})</h2>
+          </div>
+          <div className="space-y-3">
+            {activeIncidents.map(incident => {
+              const timeLeft = incident.authority_deadline ? getTimeRemaining(incident.authority_deadline) : null
+              return (
+                <div 
+                  key={incident.id} 
+                  className="bg-white rounded-xl p-4 shadow-sm border border-rose-100"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
+                      <AlertTriangle className="h-5 w-5 text-rose-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-medium text-stone-800">{incident.title}</h3>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusStyle(incident.status)}`}>
+                          {getStatusLabel(incident.status)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-stone-500">{incident.description?.slice(0, 100)}...</p>
+                      {timeLeft && (
+                        <p className={`text-sm mt-2 flex items-center gap-1 ${timeLeft.urgent ? 'text-rose-600 font-medium' : 'text-stone-500'}`}>
+                          <Clock className="h-4 w-4" />
+                          זמן לדיווח לרשות: {timeLeft.text}
+                        </p>
+                      )}
+                    </div>
+                    <Link href={`/chat?incident=${incident.id}`}>
+                      <button className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors">
+                        טיפול
+                      </button>
+                    </Link>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {incidents.length === 0 && (
+        <div className="bg-white rounded-2xl p-12 shadow-sm border border-stone-200 text-center">
+          <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+          </div>
+          <h3 className="text-lg font-semibold text-stone-800 mb-2">אין אירועי אבטחה</h3>
+          <p className="text-stone-500">לא דווחו אירועי אבטחה. המשיכו לשמור על הפרטיות! ✨</p>
+        </div>
+      )}
+
+      {/* Closed Incidents */}
+      {closedIncidents.length > 0 && (
+        <div>
+          <h2 className="font-semibold text-stone-500 mb-3">היסטוריה ({closedIncidents.length})</h2>
+          <div className="space-y-2">
+            {closedIncidents.slice(0, 5).map(incident => (
+              <div key={incident.id} className="bg-stone-50 rounded-lg p-3 border border-stone-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-stone-700">{incident.title}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusStyle(incident.status)}`}>
+                      {getStatusLabel(incident.status)}
+                    </span>
+                  </div>
+                  <span className="text-xs text-stone-400">
+                    {new Date(incident.created_at).toLocaleDateString('he-IL')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================
+// SETTINGS TAB
+// ============================================
+function SettingsTab({ organization, user }: { organization: any, user: any }) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold text-stone-800">⚙️ הגדרות</h1>
+        <p className="text-stone-500 mt-1">ניהול הארגון והחשבון</p>
+      </div>
+
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
+        <h2 className="font-semibold text-stone-800 mb-4">פרטי הארגון</h2>
+        <div className="grid sm:grid-cols-2 gap-6">
+          <div>
+            <label className="text-sm text-stone-500">שם העסק</label>
+            <p className="font-medium text-stone-800 mt-1">{organization?.name || '-'}</p>
+          </div>
+          <div>
+            <label className="text-sm text-stone-500">מספר ח.פ</label>
+            <p className="font-medium text-stone-800 mt-1">{organization?.business_id || '-'}</p>
+          </div>
+          <div>
+            <label className="text-sm text-stone-500">חבילה</label>
+            <p className="mt-1">
+              <span className="px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-700">
+                {organization?.tier === 'extended' ? 'מורחבת' : organization?.tier === 'enterprise' ? 'ארגונית' : 'בסיסית'}
+              </span>
+            </p>
+          </div>
+          <div>
+            <label className="text-sm text-stone-500">סטטוס</label>
+            <p className="mt-1">
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${organization?.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                {organization?.status === 'active' ? 'פעיל' : 'בהקמה'}
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
+        <h2 className="font-semibold text-stone-800 mb-4">פרטי משתמש</h2>
+        <div className="grid sm:grid-cols-2 gap-6">
+          <div>
+            <label className="text-sm text-stone-500">אימייל</label>
+            <p className="font-medium text-stone-800 mt-1">{user?.email}</p>
+          </div>
+          <div>
+            <label className="text-sm text-stone-500">שם</label>
+            <p className="font-medium text-stone-800 mt-1">{user?.user_metadata?.name || '-'}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="font-semibold text-stone-800">ניהול חבילה ותשלום</h2>
+            <p className="text-sm text-stone-500 mt-1">לשדרוג או שינוי חבילה</p>
+          </div>
+          <Link href="/subscribe">
+            <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors">
+              ניהול חבילה
+            </button>
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// EXPORT
+// ============================================
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}>
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-stone-50">
+        <div className="text-center">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-indigo-500 flex items-center justify-center">
+            <Shield className="h-7 w-7 text-white animate-pulse" />
+          </div>
+          <Loader2 className="h-5 w-5 animate-spin text-indigo-500 mx-auto" />
+        </div>
+      </div>
+    }>
       <DashboardContent />
     </Suspense>
   )
