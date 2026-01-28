@@ -86,30 +86,40 @@ function DashboardContent() {
     }
   }, [loading, session, router])
 
+  // Handle welcome flow - check once on mount
+  const [welcomeChecked, setWelcomeChecked] = useState(false)
+  
   useEffect(() => {
-    if (searchParams.get('welcome') === 'true') {
-      // Check if documents need to be generated
-      const savedAnswers = localStorage.getItem('dpo_onboarding_answers')
-      const savedOrgId = localStorage.getItem('dpo_onboarding_org_id')
-      const savedOrgName = localStorage.getItem('dpo_onboarding_org_name')
-      
-      if (savedAnswers && savedOrgId) {
-        try {
-          setOnboardingAnswers(JSON.parse(savedAnswers))
-          // Temporarily set org for doc generation if not loaded yet
-          if (!organization) {
-            setOrganization({ id: savedOrgId, name: savedOrgName || 'הארגון שלך' })
-          }
-          setShowDocGeneration(true)
-        } catch (e) {
-          setShowWelcome(true)
-        }
-      } else {
+    if (welcomeChecked) return
+    if (searchParams.get('welcome') !== 'true') return
+    
+    setWelcomeChecked(true)
+    window.history.replaceState({}, '', '/dashboard')
+    
+    // Check if documents need to be generated
+    const savedAnswers = localStorage.getItem('dpo_onboarding_answers')
+    const savedOrgId = localStorage.getItem('dpo_onboarding_org_id')
+    const savedOrgName = localStorage.getItem('dpo_onboarding_org_name')
+    
+    console.log('Welcome flow - checking localStorage:', { savedAnswers: !!savedAnswers, savedOrgId, savedOrgName })
+    
+    if (savedAnswers && savedOrgId) {
+      try {
+        const answers = JSON.parse(savedAnswers)
+        console.log('Parsed answers:', answers.length, 'items')
+        setOnboardingAnswers(answers)
+        setOrganization({ id: savedOrgId, name: savedOrgName || 'הארגון שלך' })
+        setShowDocGeneration(true)
+        console.log('Showing doc generation UI')
+      } catch (e) {
+        console.error('Error parsing answers:', e)
         setShowWelcome(true)
       }
-      window.history.replaceState({}, '', '/dashboard')
+    } else {
+      console.log('No saved answers, showing welcome')
+      setShowWelcome(true)
     }
-  }, [searchParams, organization])
+  }, [searchParams, welcomeChecked])
 
   useEffect(() => {
     if (user && supabase) {
