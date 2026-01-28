@@ -118,10 +118,14 @@ export default function AuthCallbackPage() {
 
           // New user - go to onboarding
           setStatus('מעביר להגדרות...');
+          // Small delay to ensure session is fully stored
+          await new Promise(resolve => setTimeout(resolve, 300));
           window.location.href = '/onboarding';
         } else {
           // Existing user - go to dashboard
           setStatus('מעביר ללוח הבקרה...');
+          // Small delay to ensure session is fully stored
+          await new Promise(resolve => setTimeout(resolve, 300));
           window.location.href = '/dashboard';
         }
       } catch (err) {
