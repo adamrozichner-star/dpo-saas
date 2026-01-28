@@ -193,14 +193,16 @@ export default function CalculatorPage() {
                   </ul>
                 </div>
 
-                {/* Penalty */}
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-                  <div className="flex items-center gap-2 mb-1">
-                    <AlertTriangle className="h-5 w-5 text-red-600" />
-                    <h4 className="font-semibold text-red-800">חשיפה פוטנציאלית לקנסות</h4>
+                {/* Penalty - Only show if DPO is required */}
+                {result?.required && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-center gap-2 mb-1">
+                      <AlertTriangle className="h-5 w-5 text-red-600" />
+                      <h4 className="font-semibold text-red-800">חשיפה פוטנציאלית לקנסות</h4>
+                    </div>
+                    <p className="text-3xl font-bold text-red-700">{result?.penaltyExposure}</p>
                   </div>
-                  <p className="text-3xl font-bold text-red-700">{result?.penaltyExposure}</p>
-                </div>
+                )}
               </CardContent>
             </Card>
 
