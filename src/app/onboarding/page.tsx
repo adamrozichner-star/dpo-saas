@@ -698,11 +698,17 @@ function OnboardingContent() {
               <div className="relative bg-gradient-to-br from-blue-600 to-indigo-700 p-8 flex items-center justify-center min-h-[400px]">
                 {/* Professional woman placeholder - using avatar.iran.liara.run for realistic placeholder */}
                 <div className="relative">
-                  <div className="w-48 h-48 md:w-56 md:h-56 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl">
+                  <div className="w-48 h-48 md:w-56 md:h-56 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl bg-gradient-to-br from-blue-400 to-indigo-500">
+                    {/* Professional woman image - using UI Faces */}
                     <img 
-                      src="https://avatar.iran.liara.run/public/job/lawyer/female" 
+                      src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop&crop=face"
                       alt="עו״ד דנה כהן"
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to initials if image fails
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-white text-5xl font-bold">ד״כ</div>';
+                      }}
                     />
                   </div>
                   {/* Verified badge */}
@@ -1018,7 +1024,7 @@ function OnboardingContent() {
             disabled={!canProceed()}
             className="h-12 px-8"
           >
-            {currentStep === totalSteps - 2 ? 'הכירו את הממונה' : 'הבא'}
+            {currentStep === totalSteps - 1 ? 'בחירת חבילה' : 'הבא'}
             <ArrowLeft className="mr-2 h-4 w-4" />
           </Button>
         </div>
