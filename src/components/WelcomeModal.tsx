@@ -82,7 +82,9 @@ export default function WelcomeModal({
   onClose,
   onStartTour
 }: WelcomeModalProps) {
+  // If we came from loading phase, we know 4 docs were created
   const [phase, setPhase] = useState<'loading' | 'complete'>(documentsCount > 0 ? 'complete' : 'loading')
+  const [actualDocsCount, setActualDocsCount] = useState(documentsCount || 4) // Default to 4 if coming from loading
   const [showConfetti, setShowConfetti] = useState(false)
   const [showFireworks, setShowFireworks] = useState(false)
   const [confettiPieces, setConfettiPieces] = useState<Array<{ id: number, delay: number, color: string, left: number, size: number }>>([])
@@ -118,6 +120,7 @@ export default function WelcomeModal({
     // After all docs complete, transition to celebration
     const completeTimer = setTimeout(() => {
       clearInterval(interval)
+      setActualDocsCount(4) // We generated 4 docs
       setPhase('complete')
     }, 3500)
 
@@ -299,7 +302,7 @@ export default function WelcomeModal({
               <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center mx-auto mb-2 shadow-md">
                 <FileText className="h-6 w-6 text-white" />
               </div>
-              <p className="text-3xl font-bold text-blue-700">{documentsCount}</p>
+              <p className="text-3xl font-bold text-blue-700">{actualDocsCount}</p>
               <p className="text-xs text-blue-600 font-medium">מסמכים נוצרו</p>
             </div>
           </div>
