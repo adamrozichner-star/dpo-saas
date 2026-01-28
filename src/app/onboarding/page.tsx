@@ -662,105 +662,117 @@ function OnboardingContent() {
     )
   }
 
-  // DPO Introduction Step
+  // DPO Introduction Step - Attractive single screen
   if (currentStep === totalSteps - 1) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4">
-        <div className="max-w-2xl mx-auto">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4" dir="rtl">
+        <div className="max-w-4xl w-full">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <Button variant="ghost" onClick={handleBack} className="gap-2">
+          <div className="flex items-center justify-between mb-6">
+            <Button variant="ghost" onClick={handleBack} className="gap-2 text-white/80 hover:text-white hover:bg-white/10">
               <ArrowRight className="h-4 w-4" />
               הקודם
             </Button>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/10 backdrop-blur-sm">
                 <Shield className="h-5 w-5 text-white" />
               </div>
-              <span className="font-bold" style={{color: '#1e40af'}}>MyDPO</span>
+              <span className="font-bold text-white">MyDPO</span>
             </div>
           </div>
 
-          {/* Progress */}
-          <div className="mb-8">
-            <div className="flex justify-between text-sm text-gray-600 mb-2">
-              <span>שלב אחרון!</span>
-              <span>100%</span>
+          {/* Main Card */}
+          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+            <div className="grid md:grid-cols-2">
+              {/* Image Side */}
+              <div className="relative bg-gradient-to-br from-blue-600 to-indigo-700 p-8 flex items-center justify-center min-h-[400px]">
+                {/* Professional woman placeholder - using avatar.iran.liara.run for realistic placeholder */}
+                <div className="relative">
+                  <div className="w-48 h-48 md:w-56 md:h-56 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl">
+                    <img 
+                      src="https://avatar.iran.liara.run/public/job/lawyer/female" 
+                      alt="עו״ד דנה כהן"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {/* Verified badge */}
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-1.5 shadow-lg">
+                    <CheckCircle2 className="h-4 w-4" />
+                    מוסמכת
+                  </div>
+                </div>
+                {/* Decorative elements */}
+                <div className="absolute top-6 right-6 w-20 h-20 bg-white/10 rounded-full blur-xl" />
+                <div className="absolute bottom-10 left-10 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
+              </div>
+
+              {/* Content Side */}
+              <div className="p-8 flex flex-col justify-center">
+                <Badge className="w-fit mb-3 bg-blue-100 text-blue-700 hover:bg-blue-100">הממונה שלכם</Badge>
+                <h1 className="text-3xl font-bold text-slate-900 mb-1">עו״ד דנה כהן</h1>
+                <p className="text-slate-600 mb-6">ממונה הגנת פרטיות מוסמכת | 12 שנות ניסיון</p>
+
+                {/* Contact Info - Compact */}
+                <div className="flex flex-wrap gap-3 mb-6">
+                  <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-lg">
+                    <Mail className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium">dpo@mydpo.co.il</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-lg">
+                    <FileCheck className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium">רישיון DPO-2025-001</span>
+                  </div>
+                </div>
+
+                {/* What DPO does - Compact grid */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6">
+                  <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2 text-sm">
+                    <Sparkles className="h-4 w-4 text-blue-600" />
+                    מה הממונה תעשה עבורכם?
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                      <span>פיקוח על עמידה בחוק</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                      <span>טיפול בפניות נושאי מידע</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                      <span>ייעוץ פרטיות ואבטחה</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                      <span>קשר עם הרשות להגנת הפרטיות</span>
+                    </div>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    {error}
+                  </div>
+                )}
+
+                {/* CTA Button */}
+                <Button 
+                  size="lg" 
+                  className="w-full h-14 text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
+                  onClick={handleNext}
+                >
+                  <Sparkles className="ml-2 h-5 w-5" />
+                  המשך לבחירת חבילה
+                </Button>
+                
+                <p className="text-center text-xs text-slate-500 mt-3">
+                  14 ימי ניסיון חינם • ביטול בכל עת
+                </p>
+              </div>
             </div>
-            <Progress value={100} className="h-2" />
           </div>
-
-          {/* DPO Card */}
-          <Card className="mb-6">
-            <CardHeader className="text-center pb-2">
-              <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <User className="h-12 w-12 text-primary" />
-              </div>
-              <Badge className="mx-auto mb-2">הממונה שלכם</Badge>
-              <CardTitle className="text-2xl">עו"ד דנה כהן</CardTitle>
-              <CardDescription>ממונה הגנת פרטיות מוסמכת</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <Mail className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm text-gray-600">אימייל</p>
-                    <p className="font-medium">dpo@dpo-pro.co.il</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <Phone className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm text-gray-600">טלפון</p>
-                    <p className="font-medium">03-555-1234</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                  <FileCheck className="h-5 w-5 text-primary" />
-                  <div>
-                    <p className="text-sm text-gray-600">מספר רישיון</p>
-                    <p className="font-medium">DPO-2025-001</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-semibold mb-2 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  מה הממונה יעשה עבורכם?
-                </h4>
-                <ul className="space-y-1 text-sm text-gray-700">
-                  <li>• פיקוח על עמידה בחוק הגנת הפרטיות</li>
-                  <li>• טיפול בפניות נושאי מידע</li>
-                  <li>• ייעוץ בנושאי פרטיות ואבטחה</li>
-                  <li>• קשר עם הרשות להגנת הפרטיות</li>
-                  <li>• מענה לשאלות שלכם ושל העובדים</li>
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
-              <AlertCircle className="h-5 w-5" />
-              {error}
-            </div>
-          )}
-
-          {/* Complete Button */}
-          <Button 
-            size="lg" 
-            className="w-full h-14 text-lg"
-            onClick={handleComplete}
-          >
-            <Sparkles className="ml-2 h-5 w-5" />
-            סיום והפקת מסמכים
-          </Button>
-
-          <p className="text-center text-sm text-gray-500 mt-4">
-            המסמכים יופקו אוטומטית ויהיו זמינים בלוח הבקרה
-          </p>
         </div>
       </div>
     )
