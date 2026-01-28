@@ -218,37 +218,46 @@ function OnboardingContent() {
         })
 
       setGenerationProgress(60)
-      setStatus('מייצרים מסמכים...')
+      setStatus('שומרים את ההגדרות...')
       
+      // Document generation will be handled by dashboard for better UX
+      // Skip API call here - dashboard will show progress animation
+      
+      setGenerationProgress(90)
+      setStatus('מכינים את לוח הבקרה...')
+
+      // DON'T clear answers - dashboard needs them for document generation
+      localStorage.removeItem('dpo_onboarding_step')
+      
+      // Save answers with org data for dashboard to use
+      localStorage.setItem('dpo_onboarding_answers', JSON.stringify(answers))
+      localStorage.setItem('dpo_onboarding_org_id', orgData.id)
+      localStorage.setItem('dpo_onboarding_org_name', businessName)
+
+      setGenerationProgress(100)
+      setStatus('הושלם! מעבירים ללוח הבקרה...')
+      
+      // Send welcome email with org details
       try {
-        const response = await fetch('/api/generate-documents', {
+        const orgName = answers.find(a => a.questionId === 'org_name')?.value || 'הארגון שלך'
+        await fetch('/api/email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            orgId: orgData.id,
-            orgName: businessName,
-            businessId: businessId,
-            answers: answers
+            template: 'welcome',
+            to: user?.email,
+            data: { 
+              name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'משתמש',
+              orgName: orgName
+            }
           })
         })
-        
-        if (response.ok) {
-          setGenerationProgress(90)
-          setStatus('מסמכים נוצרו בהצלחה!')
-        }
-      } catch (docError) {
-        console.log('Document generation skipped')
+      } catch (emailErr) {
+        console.log('Welcome email skipped:', emailErr)
       }
-
-      // Clear saved data
-      localStorage.removeItem('dpo_onboarding_answers')
-      localStorage.removeItem('dpo_onboarding_step')
-
-      setGenerationProgress(100)
-      setStatus('הושלם! מעבירים לעוזר הפרטיות שלך...')
       
       setTimeout(() => {
-        router.push('/chat?welcome=true')
+        router.push('/dashboard?welcome=true')
       }, 1500)
 
     } catch (err: any) {
@@ -367,10 +376,10 @@ function OnboardingContent() {
               
               <Button 
                 className="w-full h-12 bg-slate-700 hover:bg-slate-800"
-                onClick={() => window.location.href = 'mailto:enterprise@dpo-pro.co.il?subject=בקשת מידע - חבילה ארגונית'}
+                onClick={() => window.location.href = 'mailto:enterprise@mydpo.co.il?subject=בקשת מידע - חבילה ארגונית'}
               >
                 <Mail className="h-5 w-5 ml-2" />
-                enterprise@dpo-pro.co.il
+                enterprise@mydpo.co.il
               </Button>
               
               <Button 
@@ -631,7 +640,7 @@ function OnboardingContent() {
                   <Mail className="h-5 w-5 text-primary" />
                   <div>
                     <p className="text-sm text-gray-600">אימייל</p>
-                    <p className="font-medium">dpo@dpo-pro.co.il</p>
+                    <p className="font-medium">dpo@mydpo.co.il</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
