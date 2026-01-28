@@ -90,6 +90,12 @@ export default function AuthCallbackPage() {
         if (!existingUser) {
           setStatus('יוצר חשבון...');
           
+          // Clear any old onboarding data for fresh start
+          localStorage.removeItem('dpo_onboarding_answers');
+          localStorage.removeItem('dpo_onboarding_step');
+          localStorage.removeItem('dpo_onboarding_org_id');
+          localStorage.removeItem('dpo_onboarding_org_name');
+          
           const name = session.user.user_metadata?.full_name || 
                        session.user.user_metadata?.name ||
                        session.user.email?.split('@')[0] || 'משתמש';
