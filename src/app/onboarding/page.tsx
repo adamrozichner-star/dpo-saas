@@ -63,6 +63,7 @@ function OnboardingContent() {
   const [answers, setAnswers] = useState<OnboardingAnswer[]>([])
   const [selectedTier, setSelectedTier] = useState<'basic' | 'extended' | 'enterprise' | null>(null)
   const [showTierSelection, setShowTierSelection] = useState(false) // Start with questions, show pricing AFTER
+  const [showDpoIntro, setShowDpoIntro] = useState(false) // Show DPO intro after pricing
   const [showEnterpriseModal, setShowEnterpriseModal] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -70,8 +71,8 @@ function OnboardingContent() {
   const [generationProgress, setGenerationProgress] = useState(0)
   const [recommendedTier, setRecommendedTier] = useState<'basic' | 'extended' | 'enterprise'>('basic')
 
-  // Add step for DPO intro
-  const allSteps = [...onboardingSteps, { id: 6, title: 'הממונה שלכם', questions: [] }]
+  // Questions only - DPO intro is shown separately after pricing
+  const allSteps = onboardingSteps
   const totalSteps = allSteps.length
 
   useEffect(() => {
@@ -183,15 +184,24 @@ function OnboardingContent() {
 
   const handleNext = () => {
     if (currentStep < totalSteps - 1) {
+      // Still in questionnaire steps
       setCurrentStep(currentStep + 1)
       window.scrollTo({ top: 0, behavior: 'smooth' })
-    } else {
-      // Last step completed - show pricing with recommendation
+    } else if (!showTierSelection && !selectedTier) {
+      // Finished questionnaire - show pricing with recommendation
       const recommended = calculateRecommendedTier()
       setRecommendedTier(recommended)
       setShowTierSelection(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
+  }
+  
+  // When user selects a tier and continues
+  const handleTierContinue = () => {
+    if (!selectedTier) return
+    setShowTierSelection(false)
+    setShowDpoIntro(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleBack = () => {
@@ -642,13 +652,13 @@ function OnboardingContent() {
                 if (selectedTier === 'enterprise') {
                   setShowEnterpriseModal(true)
                 } else {
-                  setShowTierSelection(false)
+                  handleTierContinue()
                 }
               }}
               disabled={!selectedTier}
               className="h-14 px-8 text-lg"
             >
-              {selectedTier === 'enterprise' ? 'צרו קשר' : 'המשך להגדרת הארגון'}
+              {selectedTier === 'enterprise' ? 'צרו קשר' : 'הכירו את הממונה שלכם'}
               <ArrowLeft className="mr-2 h-5 w-5" />
             </Button>
           </div>
@@ -662,16 +672,16 @@ function OnboardingContent() {
     )
   }
 
-  // DPO Introduction Step - Attractive single screen
-  if (currentStep === totalSteps - 1) {
+  // DPO Introduction Step - Attractive single screen (shown AFTER pricing)
+  if (showDpoIntro) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4" dir="rtl">
         <div className="max-w-4xl w-full">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <Button variant="ghost" onClick={handleBack} className="gap-2 text-white/80 hover:text-white hover:bg-white/10">
+            <Button variant="ghost" onClick={() => { setShowDpoIntro(false); setShowTierSelection(true); }} className="gap-2 text-white/80 hover:text-white hover:bg-white/10">
               <ArrowRight className="h-4 w-4" />
-              הקודם
+              חזרה לבחירת חבילה
             </Button>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/10 backdrop-blur-sm">
@@ -760,15 +770,25 @@ function OnboardingContent() {
                 {/* CTA Button */}
                 <Button 
                   size="lg" 
-                  className="w-full h-14 text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg"
-                  onClick={handleNext}
+                  className="w-full h-14 text-lg bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 shadow-lg"
+                  onClick={handleComplete}
+                  disabled={isGenerating}
                 >
-                  <Sparkles className="ml-2 h-5 w-5" />
-                  המשך לבחירת חבילה
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                      {status || 'מכינים את המערכת...'}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="ml-2 h-5 w-5" />
+                      סיום והפקת מסמכים
+                    </>
+                  )}
                 </Button>
                 
                 <p className="text-center text-xs text-slate-500 mt-3">
-                  14 ימי ניסיון חינם • ביטול בכל עת
+                  המסמכים יופקו אוטומטית ויהיו זמינים בלוח הבקרה
                 </p>
               </div>
             </div>
