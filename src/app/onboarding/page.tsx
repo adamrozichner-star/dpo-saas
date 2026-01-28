@@ -62,12 +62,13 @@ function OnboardingContent() {
   const [currentStep, setCurrentStep] = useState(0)
   const [answers, setAnswers] = useState<OnboardingAnswer[]>([])
   const [selectedTier, setSelectedTier] = useState<'basic' | 'extended' | 'enterprise' | null>(null)
-  const [showTierSelection, setShowTierSelection] = useState(true)
+  const [showTierSelection, setShowTierSelection] = useState(false) // Start with questions, show pricing AFTER
   const [showEnterpriseModal, setShowEnterpriseModal] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string>('')
   const [generationProgress, setGenerationProgress] = useState(0)
+  const [recommendedTier, setRecommendedTier] = useState<'basic' | 'extended' | 'enterprise'>('basic')
 
   // Add step for DPO intro
   const allSteps = [...onboardingSteps, { id: 6, title: 'הממונה שלכם', questions: [] }]
@@ -85,9 +86,8 @@ function OnboardingContent() {
       setSelectedTier(tier)
       if (tier === 'enterprise') {
         setShowEnterpriseModal(true)
-      } else {
-        setShowTierSelection(false)
       }
+      // Don't skip to pricing - let user go through questions first
     }
   }, [searchParams])
 
@@ -148,12 +148,49 @@ function OnboardingContent() {
     })
   }
 
+  // Calculate recommended tier based on answers
+  const calculateRecommendedTier = (): 'basic' | 'extended' | 'enterprise' => {
+    const dataTypes = getAnswer('data_types') as string[] || []
+    const recordCount = getAnswer('record_count') as string || ''
+    const industry = getAnswer('industry') as string || ''
+    const thirdPartySharing = getAnswer('third_party_sharing') as boolean
+    const internationalTransfers = getAnswer('international_transfers') as boolean
+    
+    // Enterprise indicators
+    if (
+      recordCount === 'over_100k' ||
+      industry === 'healthcare' ||
+      industry === 'finance' ||
+      (dataTypes.includes('health') && dataTypes.includes('financial'))
+    ) {
+      return 'enterprise'
+    }
+    
+    // Extended indicators
+    if (
+      recordCount === '10k_to_100k' ||
+      dataTypes.includes('health') ||
+      dataTypes.includes('biometric') ||
+      thirdPartySharing ||
+      internationalTransfers ||
+      dataTypes.length >= 4
+    ) {
+      return 'extended'
+    }
+    
+    return 'basic'
+  }
+
   const handleNext = () => {
     if (currentStep < totalSteps - 1) {
       setCurrentStep(currentStep + 1)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } else {
-      handleComplete()
+      // Last step completed - show pricing with recommendation
+      const recommended = calculateRecommendedTier()
+      setRecommendedTier(recommended)
+      setShowTierSelection(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 
@@ -427,10 +464,13 @@ function OnboardingContent() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4">
         <div className="max-w-5xl mx-auto">
-          <Link href="/" className="inline-flex items-center gap-2 mb-8 text-gray-600 hover:text-gray-900">
+          <button 
+            onClick={() => setShowTierSelection(false)}
+            className="inline-flex items-center gap-2 mb-8 text-gray-600 hover:text-gray-900"
+          >
             <ArrowRight className="h-4 w-4" />
-            חזרה לדף הבית
-          </Link>
+            חזרה לשאלון
+          </button>
 
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 mb-4">
@@ -440,15 +480,24 @@ function OnboardingContent() {
               <span className="font-bold text-2xl" style={{color: '#1e40af'}}>MyDPO</span>
             </div>
             <h1 className="text-3xl font-bold mb-2">בחרו את החבילה שלכם</h1>
-            <p className="text-gray-600">התחילו עם 14 ימי ניסיון חינם</p>
+            <p className="text-gray-600 mb-4">בהתבסס על הפרטים שמילאתם, אנחנו ממליצים על:</p>
+            
+            {/* Trial Banner */}
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-3 rounded-full font-semibold shadow-lg">
+              <Sparkles className="h-5 w-5" />
+              14 ימי ניסיון חינם • ללא כרטיס אשראי • ביטול בכל עת
+            </div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
             {/* Basic Package */}
             <Card 
-              className={`cursor-pointer transition-all hover:shadow-lg ${selectedTier === 'basic' ? 'ring-2 ring-primary' : ''}`}
+              className={`cursor-pointer transition-all hover:shadow-lg relative ${selectedTier === 'basic' ? 'ring-2 ring-primary' : ''} ${recommendedTier === 'basic' ? 'border-2 border-emerald-500' : ''}`}
               onClick={() => setSelectedTier('basic')}
             >
+              {recommendedTier === 'basic' && (
+                <Badge className="absolute -top-3 right-4 bg-emerald-500">מומלץ עבורך</Badge>
+              )}
               <CardHeader>
                 <CardTitle>חבילה בסיסית</CardTitle>
                 <CardDescription>לעסקים קטנים ובינוניים</CardDescription>
@@ -489,11 +538,15 @@ function OnboardingContent() {
 
             {/* Extended Package */}
             <Card 
-              className={`cursor-pointer transition-all hover:shadow-lg border-2 ${selectedTier === 'extended' ? 'ring-2 ring-primary border-primary' : 'border-primary/50'}`}
+              className={`cursor-pointer transition-all hover:shadow-lg border-2 relative ${selectedTier === 'extended' ? 'ring-2 ring-primary border-primary' : 'border-primary/50'} ${recommendedTier === 'extended' ? 'border-emerald-500' : ''}`}
               onClick={() => setSelectedTier('extended')}
             >
+              {recommendedTier === 'extended' ? (
+                <Badge className="absolute -top-3 right-4 bg-emerald-500">מומלץ עבורך</Badge>
+              ) : (
+                <Badge className="absolute -top-3 right-4 bg-primary">הכי פופולרי</Badge>
+              )}
               <CardHeader>
-                <Badge className="w-fit mb-2 bg-primary">הכי פופולרי</Badge>
                 <CardTitle>חבילה מורחבת</CardTitle>
                 <CardDescription>לעסקים עם פעילות מורכבת</CardDescription>
                 <div className="pt-2">
@@ -533,9 +586,12 @@ function OnboardingContent() {
 
             {/* Enterprise Package */}
             <Card 
-              className={`cursor-pointer transition-all hover:shadow-lg bg-gradient-to-br from-slate-50 to-slate-100 ${selectedTier === 'enterprise' ? 'ring-2 ring-slate-500' : ''}`}
+              className={`cursor-pointer transition-all hover:shadow-lg bg-gradient-to-br from-slate-50 to-slate-100 relative ${selectedTier === 'enterprise' ? 'ring-2 ring-slate-500' : ''} ${recommendedTier === 'enterprise' ? 'border-2 border-emerald-500' : ''}`}
               onClick={handleEnterpriseSelect}
             >
+              {recommendedTier === 'enterprise' && (
+                <Badge className="absolute -top-3 right-4 bg-emerald-500">מומלץ עבורך</Badge>
+              )}
               <CardHeader>
                 <Badge className="w-fit mb-2 bg-slate-600">לארגונים</Badge>
                 <CardTitle className="flex items-center gap-2">
