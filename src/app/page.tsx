@@ -96,43 +96,29 @@ export default function HomePage() {
       </section>
 
       {/* Features - Clean White Section */}
-      <section className="py-16 px-6 bg-slate-50">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-8">
-            <FeatureCard
-              icon={<FileText className="h-6 w-6" />}
-              title="מסמכים מותאמים"
-              description="מדיניות פרטיות, נהלים ורישומים"
-            />
-            <FeatureCard
-              icon={<MessageSquare className="h-6 w-6" />}
-              title="צ'אט חכם"
-              description="מענה מיידי 24/7"
-            />
-            <FeatureCard
-              icon={<User className="h-6 w-6" />}
-              title="DPO מוסמך"
-              description="ממונה אנושי מוסמך לפי חוק"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Social Proof - Minimal */}
-      <section className="py-16 px-6 bg-gradient-to-b from-slate-50 to-slate-100">
-        <div className="max-w-4xl mx-auto">
-          <div className="grid grid-cols-3 gap-12 text-center">
-            <div>
-              <div className="text-4xl font-bold text-slate-900 mb-2">500+</div>
-              <div className="text-slate-600 font-medium">עסקים כבר עובדים איתנו</div>
+      <section className="py-20 px-6 bg-slate-50">
+        <div className="max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-10">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center mx-auto mb-4">
+                <FileText className="h-8 w-8 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">הקמה תוך 2 דקות</h3>
+              <p className="text-slate-600">מסמכים מותאמים אישית נוצרים אוטומטית</p>
             </div>
-            <div>
-              <div className="text-4xl font-bold text-slate-900 mb-2">15 דק׳</div>
-              <div className="text-slate-600 font-medium">הקמה מלאה של המערכת</div>
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                <User className="h-8 w-8 text-emerald-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">DPO מוסמך ב-90% הנחה</h3>
+              <p className="text-slate-600">ממונה אנושי מוסמך לפי חוק</p>
             </div>
-            <div>
-              <div className="text-4xl font-bold text-slate-900 mb-2">90%</div>
-              <div className="text-slate-600 font-medium">חיסכון מול DPO מסורתי</div>
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-2xl bg-purple-100 flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="h-8 w-8 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">צ׳אט חכם 24/7</h3>
+              <p className="text-slate-600">מענה מיידי לכל שאלה בנושאי פרטיות</p>
             </div>
           </div>
         </div>
@@ -142,8 +128,8 @@ export default function HomePage() {
       <section className="py-20 px-6 bg-white border-t border-slate-100">
         <div className="max-w-3xl mx-auto text-center">
           <p className="text-xl sm:text-2xl text-slate-700 mb-10 leading-relaxed">
-            "תוך שעה היה לנו DPO ממונה וכל המסמכים הנדרשים. 
-            חסכנו אלפי שקלים ובעיקר - שקט נפשי מול הרגולציה."
+            "תוך 5 דקות היה לנו DPO ממונה וכל המסמכים הנדרשים. 
+            חסכנו עשרות שעות של התעסקות עם בירוקרטיה ואלפי שקלים על יועצים."
           </p>
           <div className="flex items-center justify-center gap-3">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold">
