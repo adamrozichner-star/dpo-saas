@@ -103,14 +103,14 @@ export default function HomePage() {
               <div className="w-16 h-16 rounded-2xl bg-blue-100 flex items-center justify-center mx-auto mb-4">
                 <FileText className="h-8 w-8 text-blue-600" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">הקמה תוך 2 דקות</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">הקמה תוך פחות מ-5 דקות</h3>
               <p className="text-slate-600">מסמכים מותאמים אישית נוצרים אוטומטית</p>
             </div>
             <div className="text-center">
               <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mx-auto mb-4">
                 <User className="h-8 w-8 text-emerald-600" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">DPO מוסמך ב-90% הנחה</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">DPO מוסמך בעשירית המחיר</h3>
               <p className="text-slate-600">ממונה אנושי מוסמך לפי חוק</p>
             </div>
             <div className="text-center">
