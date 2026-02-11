@@ -128,11 +128,41 @@ export default function AuthCallbackPage() {
           await new Promise(resolve => setTimeout(resolve, 300));
           window.location.href = '/onboarding';
         } else {
-          // Existing user - go to dashboard
-          setStatus('מעביר ללוח הבקרה...');
-          // Small delay to ensure session is fully stored
+          // Existing user - check if they have an active subscription
+          setStatus('בודק מנוי...');
+          
+          // Get user's org_id
+          const { data: fullUser } = await supabase
+            .from('users')
+            .select('org_id')
+            .eq('auth_user_id', session.user.id)
+            .single();
+          
+          let hasSubscription = false;
+          if (fullUser?.org_id) {
+            const { data: sub } = await supabase
+              .from('subscriptions')
+              .select('id')
+              .eq('org_id', fullUser.org_id)
+              .in('status', ['active', 'past_due'])
+              .maybeSingle();
+            hasSubscription = !!sub;
+          }
+          
           await new Promise(resolve => setTimeout(resolve, 300));
-          window.location.href = '/dashboard';
+          
+          if (hasSubscription) {
+            setStatus('מעביר ללוח הבקרה...');
+            window.location.href = '/dashboard';
+          } else if (fullUser?.org_id) {
+            // Has org but no subscription — needs to pay
+            setStatus('מעביר לתשלום...');
+            window.location.href = '/payment-required';
+          } else {
+            // No org — needs onboarding
+            setStatus('מעביר להגדרות...');
+            window.location.href = '/onboarding';
+          }
         }
       } catch (err) {
         console.error('Callback error:', err);
