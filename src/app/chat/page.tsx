@@ -11,6 +11,7 @@ import {
   Menu, PanelLeftClose, PanelLeft, History, FolderOpen, Trash2, FileDown
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { useSubscriptionGate } from '@/lib/use-subscription-gate'
 
 interface Message {
   id: string
@@ -46,6 +47,7 @@ export default function ChatPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, supabase, loading: authLoading } = useAuth()
+  const { isAuthorized, isChecking } = useSubscriptionGate()
   
   // Default suggestions - show immediately
   const defaultSuggestions: Suggestion[] = [
@@ -1027,7 +1029,7 @@ ${summaryText}
   }, [urlPrompt, organization, isLoading, orgLoading])
 
   // Show loading screen while auth is loading
-  if (authLoading) {
+  if (authLoading || isChecking || !isAuthorized) {
     return (
       <div className="h-screen bg-slate-50 flex items-center justify-center" dir="rtl">
         <div className="text-center">
