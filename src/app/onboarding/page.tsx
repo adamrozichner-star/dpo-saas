@@ -314,7 +314,7 @@ function OnboardingContent() {
       }
       
       setTimeout(() => {
-        router.push('/dashboard?welcome=true')
+        router.push('/payment-required')
       }, 1500)
 
     } catch (err: any) {
