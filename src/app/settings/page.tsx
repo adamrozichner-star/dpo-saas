@@ -22,10 +22,12 @@ import {
   LogOut
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { useSubscriptionGate } from '@/lib/use-subscription-gate'
 
 export default function SettingsPage() {
   const router = useRouter()
   const { user, supabase, loading, signOut } = useAuth()
+  const { isAuthorized, isChecking } = useSubscriptionGate()
   
   const [activeSection, setActiveSection] = useState<'profile' | 'organization' | 'security' | 'billing' | 'notifications'>('profile')
   const [organization, setOrganization] = useState<any>(null)
@@ -180,7 +182,7 @@ export default function SettingsPage() {
     }
   }
 
-  if (loading) {
+  if (loading || isChecking || !isAuthorized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
