@@ -30,6 +30,7 @@ import {
   Save
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { useSubscriptionGate } from '@/lib/use-subscription-gate'
 import WelcomeModal from '@/components/WelcomeModal'
 
 // ============================================
@@ -63,6 +64,7 @@ function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, session, signOut, loading, supabase } = useAuth()
+  const { isAuthorized, isChecking } = useSubscriptionGate()
   
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'incidents' | 'settings'>('overview')
   const [organization, setOrganization] = useState<any>(null)
@@ -243,7 +245,7 @@ function DashboardContent() {
   const activeIncidentsCount = incidents.filter(i => !['resolved', 'closed'].includes(i.status)).length
   const urgentTasksCount = tasks.filter(t => t.priority === 'high').length
 
-  if (loading || isLoading) {
+  if (loading || isLoading || isChecking || !isAuthorized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-50">
         <div className="text-center">
