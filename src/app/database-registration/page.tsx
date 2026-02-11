@@ -13,6 +13,7 @@ import {
   Loader2, HelpCircle, Phone, Mail, Building2, User, ChevronDown, ChevronUp
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { useSubscriptionGate } from '@/lib/use-subscription-gate'
 
 // Registration steps data
 const REGISTRATION_STEPS = [
@@ -80,6 +81,7 @@ const REGISTRATION_STEPS = [
 export default function DatabaseRegistrationGuidePage() {
   const router = useRouter()
   const { user, session, loading, supabase } = useAuth()
+  const { isAuthorized, isChecking } = useSubscriptionGate()
   const [organization, setOrganization] = useState<any>(null)
   const [dbDocument, setDbDocument] = useState<any>(null)
   const [currentStep, setCurrentStep] = useState(1)
@@ -234,7 +236,7 @@ export default function DatabaseRegistrationGuidePage() {
     return (completedTasks.length / totalTasks) * 100
   }
 
-  if (loading || isLoading) {
+  if (loading || isLoading || isChecking || !isAuthorized) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
