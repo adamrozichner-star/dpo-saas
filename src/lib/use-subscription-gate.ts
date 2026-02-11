@@ -8,10 +8,9 @@ import { useAuth } from './auth-context'
  * Hook that gates access to protected pages.
  * Redirects to /payment-required if user has no active subscription.
  * 
- * Returns { isAuthorized, isChecking } so the page can show a loader while checking.
- * 
- * Whitelist: To manually authorize a user for testing/demos, 
- * add a row to the subscriptions table with status='active' for their org.
+ * To whitelist a user for testing/demos:
+ * INSERT INTO subscriptions (org_id, tier, monthly_price, status) 
+ * VALUES ('org-uuid', 'basic', 500, 'active');
  */
 export function useSubscriptionGate() {
   const router = useRouter()
@@ -23,7 +22,7 @@ export function useSubscriptionGate() {
     // Wait for auth to load
     if (loading) return
 
-    // Not logged in — auth-context or the page itself handles redirect to /login
+    // Not logged in — let the page's own auth check handle redirect to /login
     if (!session || !user) {
       setIsChecking(false)
       return
@@ -33,44 +32,57 @@ export function useSubscriptionGate() {
 
     const checkAccess = async () => {
       try {
-        // Get user's org
-        const { data: userData } = await supabase
+        // Step 1: Get user's org_id
+        const { data: userData, error: userError } = await supabase
           .from('users')
           .select('org_id')
           .eq('auth_user_id', user.id)
-          .single()
+          .maybeSingle()
 
-        if (!userData?.org_id) {
-          // No org yet — they're probably still onboarding, let them through
-          // (onboarding creates the org, then they'd need to pay)
-          setIsAuthorized(true)
-          setIsChecking(false)
+        // If we can't find the user record at all, block access
+        if (userError || !userData) {
+          console.log('[SubscriptionGate] No user record found, redirecting')
+          router.replace('/payment-required')
           return
         }
 
-        // Check for active subscription
-        const { data: sub } = await supabase
+        // No org yet — still in onboarding, redirect to onboarding
+        if (!userData.org_id) {
+          console.log('[SubscriptionGate] No org_id, redirecting to onboarding')
+          router.replace('/onboarding')
+          return
+        }
+
+        // Step 2: Check for active subscription
+        // Using maybeSingle() to avoid throwing on 0 results
+        const { data: sub, error: subError } = await supabase
           .from('subscriptions')
           .select('id, status')
           .eq('org_id', userData.org_id)
           .in('status', ['active', 'past_due'])
-          .limit(1)
-          .single()
+          .maybeSingle()
+
+        if (subError) {
+          console.log('[SubscriptionGate] Subscription query error:', subError.message)
+          // Could be RLS blocking — just block access
+          router.replace('/payment-required')
+          return
+        }
 
         if (sub) {
+          console.log('[SubscriptionGate] Active subscription found, authorized')
           setIsAuthorized(true)
+          setIsChecking(false)
         } else {
-          // No active subscription — redirect to payment gate
+          console.log('[SubscriptionGate] No active subscription, redirecting')
           router.replace('/payment-required')
           return
         }
       } catch (e) {
-        // No subscription found — redirect
+        console.error('[SubscriptionGate] Unexpected error:', e)
         router.replace('/payment-required')
         return
       }
-
-      setIsChecking(false)
     }
 
     checkAccess()
