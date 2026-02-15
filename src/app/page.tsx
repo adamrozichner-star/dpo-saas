@@ -325,26 +325,48 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer - Simple */}
+      {/* Footer - Professional */}
       <footer className="py-12 px-6 bg-slate-900">
         <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
-                <Shield className="h-4 w-4 text-white" />
+          <div className="grid md:grid-cols-3 gap-10 mb-10">
+            {/* Brand */}
+            <div className="text-right">
+              <div className="flex items-center gap-3 justify-end mb-4">
+                <span className="font-bold text-white text-lg">MyDPO</span>
+                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                  <Shield className="h-4 w-4 text-white" />
+                </div>
               </div>
-              <span className="font-bold text-white">MyDPO</span>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                שירות ממונה הגנת פרטיות חיצוני לעסקים. 
+                עמידה בתיקון 13 לחוק הגנת הפרטיות בביטחון ובמחיר הוגן.
+              </p>
             </div>
-            
-            <div className="flex flex-wrap justify-center gap-6 text-sm text-slate-400">
-              <Link href="/login" className="hover:text-white transition-colors">התחברות</Link>
-              <Link href="/dashboard" className="hover:text-white transition-colors">לוח בקרה</Link>
-              <Link href="/privacy" className="hover:text-white transition-colors">מדיניות פרטיות</Link>
-              <Link href="/terms" className="hover:text-white transition-colors">תנאי שימוש</Link>
+
+            {/* Links */}
+            <div className="text-right">
+              <h4 className="font-semibold text-white mb-4">קישורים</h4>
+              <div className="flex flex-col gap-2 text-sm text-slate-400">
+                <Link href="/calculator" className="hover:text-white transition-colors">בדיקת חובת DPO</Link>
+                <Link href="/login" className="hover:text-white transition-colors">התחברות</Link>
+                <Link href="/privacy" className="hover:text-white transition-colors">מדיניות פרטיות</Link>
+                <Link href="/terms" className="hover:text-white transition-colors">תנאי שימוש</Link>
+                <Link href="/contact" className="hover:text-white transition-colors">צרו קשר</Link>
+              </div>
+            </div>
+
+            {/* Contact */}
+            <div className="text-right">
+              <h4 className="font-semibold text-white mb-4">צרו קשר</h4>
+              <div className="flex flex-col gap-2 text-sm text-slate-400">
+                <span>דוא&quot;ל: support@mydpo.co.il</span>
+                <span>טלפון: 054-424-2427</span>
+                <span>אתר: mydpo.co.il</span>
+              </div>
             </div>
           </div>
           
-          <div className="border-t border-slate-800 mt-8 pt-8 text-sm text-slate-500 text-center">
+          <div className="border-t border-slate-800 pt-8 text-sm text-slate-500 text-center">
             © 2026 MyDPO. כל הזכויות שמורות.
           </div>
         </div>
