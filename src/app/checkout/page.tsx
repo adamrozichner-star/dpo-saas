@@ -83,7 +83,7 @@ export default function CheckoutPage() {
     }
   }, [searchParams]);
 
-  // Load user organization
+  // Load user organization (may not exist in payment-first flow)
   useEffect(() => {
     async function loadOrg() {
       if (!user || !supabase) return;
@@ -105,12 +105,13 @@ export default function CheckoutPage() {
           setTrialDaysLeft(Math.max(0, daysLeft));
         }
       }
+      // If no org, that's OK - payment-first flow will create it
     }
     loadOrg();
   }, [user, supabase]);
 
   const handleCheckout = async () => {
-    if (!user || !organization) {
+    if (!user) {
       router.push('/login?redirect=/checkout');
       return;
     }
@@ -118,15 +119,30 @@ export default function CheckoutPage() {
     setIsLoading(true);
     setError(null);
 
+    // Get quick assessment data from localStorage (payment-first flow)
+    let quickAssessment = null;
+    try {
+      const saved = localStorage.getItem('mydpo_quick_assessment');
+      if (saved) {
+        quickAssessment = JSON.parse(saved);
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+
     try {
       const response = await fetch('/api/cardcom/create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orgId: organization.id,
+          orgId: organization?.id,  // May be null in payment-first flow
           userId: user.id,
           userEmail: user.email,
           userName: user.user_metadata?.name || user.email?.split('@')[0],
+          // Pass quick assessment data for payment-first flow
+          companyName: quickAssessment?.companyName || organization?.name,
+          industry: quickAssessment?.industry,
+          companySize: quickAssessment?.companySize,
           plan: selectedPlan,
           isAnnual,
         }),
