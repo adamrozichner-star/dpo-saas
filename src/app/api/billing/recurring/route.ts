@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { chargeToken } from '@/lib/cardcom'
 
 export const dynamic = 'force-dynamic'
 
 // This endpoint should be called by a cron job (e.g., Vercel Cron)
-// Schedule: Run on the 1st of every month
+// Schedule: Run daily to process subscriptions expiring that day
+
+const PLANS = {
+  basic: { monthly: 500, name: 'חבילה בסיסית' },
+  extended: { monthly: 1200, name: 'חבילה מורחבת' },
+  enterprise: { monthly: 3500, name: 'חבילה ארגונית' },
+}
 
 export async function GET(request: NextRequest) {
   // Verify cron secret
@@ -16,7 +23,7 @@ export async function GET(request: NextRequest) {
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY
 
   if (!supabaseUrl || !supabaseKey) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 })
@@ -25,12 +32,16 @@ export async function GET(request: NextRequest) {
   const supabase = createClient(supabaseUrl, supabaseKey)
 
   try {
-    // Get all active subscriptions with tokens
-    const { data: subscriptions, error } = await supabase
-      .from('subscriptions')
-      .select('*, organizations(*)')
-      .eq('status', 'active')
-      .not('token', 'is', null)
+    // Get organizations with active monthly subscriptions expiring today
+    const today = new Date()
+    const todayStr = today.toISOString().split('T')[0]
+    
+    const { data: organizations, error } = await supabase
+      .from('organizations')
+      .select('*')
+      .eq('subscription_status', 'active')
+      .not('payment_token', 'is', null)
+      .lte('subscription_end_date', `${todayStr}T23:59:59Z`)
 
     if (error) throw error
 
@@ -38,42 +49,127 @@ export async function GET(request: NextRequest) {
       processed: 0,
       successful: 0,
       failed: 0,
+      skipped: 0,
       errors: [] as string[]
     }
 
-    // Process each subscription
-    for (const subscription of subscriptions || []) {
+    // Process each organization
+    for (const org of organizations || []) {
       results.processed++
 
+      // Skip annual subscriptions (they don't auto-renew via token)
+      if (!org.tier || !PLANS[org.tier as keyof typeof PLANS]) {
+        results.skipped++
+        continue
+      }
+
+      const plan = PLANS[org.tier as keyof typeof PLANS]
+      const amount = plan.monthly
+
       try {
-        // Charge the token
-        const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/tranzila`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'charge_token',
-            orgId: subscription.org_id,
-            subscriptionId: subscription.id
-          })
+        // Get user email for invoice
+        const { data: userData } = await supabase.auth.admin.getUserById(org.created_by)
+        const userEmail = userData?.user?.email
+
+        // Charge the saved token via Cardcom
+        const chargeResult = await chargeToken({
+          token: org.payment_token,
+          amount,
+          productName: `MyDPO - ${plan.name} (חודשי)`,
+          customerEmail: userEmail,
         })
 
-        const result = await response.json()
+        if (chargeResult.success) {
+          // Extend subscription by 1 month
+          const newEndDate = new Date(org.subscription_end_date)
+          newEndDate.setMonth(newEndDate.getMonth() + 1)
 
-        if (result.success) {
+          await supabase
+            .from('organizations')
+            .update({
+              subscription_end_date: newEndDate.toISOString(),
+              last_payment_date: new Date().toISOString(),
+              last_payment_amount: amount,
+              failed_payment_attempts: 0,
+            })
+            .eq('id', org.id)
+
+          // Log successful payment
+          await supabase.from('payment_transactions').insert({
+            id: `recurring_${org.id}_${Date.now()}`,
+            org_id: org.id,
+            user_id: org.created_by,
+            amount,
+            plan: org.tier,
+            is_annual: false,
+            status: 'completed',
+            provider: 'cardcom',
+            cardcom_transaction_id: chargeResult.transactionId,
+            created_at: new Date().toISOString(),
+            completed_at: new Date().toISOString(),
+          })
+
           results.successful++
-          console.log(`✓ Charged subscription ${subscription.id} for org ${subscription.org_id}`)
-        } else {
-          results.failed++
-          results.errors.push(`Subscription ${subscription.id}: ${result.error}`)
-          console.error(`✗ Failed to charge subscription ${subscription.id}:`, result.error)
+          console.log(`✓ Recurring charge successful: org=${org.id}, amount=${amount}`)
 
-          // Mark subscription as past_due after 3 failed attempts
-          // (You'd need to track failed_attempts in the database)
+          // Send receipt email
+          if (userEmail) {
+            try {
+              await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  to: userEmail,
+                  template: 'payment_success',
+                  data: {
+                    userName: org.name,
+                    plan: org.tier,
+                    amount,
+                    isAnnual: false,
+                    isRecurring: true,
+                  },
+                }),
+              })
+            } catch (e) {
+              console.error('Failed to send receipt email:', e)
+            }
+          }
+
+        } else {
+          // Payment failed
+          const failedAttempts = (org.failed_payment_attempts || 0) + 1
+          
+          await supabase
+            .from('organizations')
+            .update({
+              failed_payment_attempts: failedAttempts,
+              // Mark as past_due after 3 failed attempts
+              ...(failedAttempts >= 3 && { subscription_status: 'past_due' }),
+            })
+            .eq('id', org.id)
+
+          // Log failed payment
+          await supabase.from('payment_transactions').insert({
+            id: `recurring_${org.id}_${Date.now()}`,
+            org_id: org.id,
+            user_id: org.created_by,
+            amount,
+            plan: org.tier,
+            is_annual: false,
+            status: 'failed',
+            provider: 'cardcom',
+            error_message: chargeResult.error,
+            created_at: new Date().toISOString(),
+          })
+
+          results.failed++
+          results.errors.push(`Org ${org.id}: ${chargeResult.error}`)
+          console.error(`✗ Recurring charge failed: org=${org.id}, error=${chargeResult.error}`)
         }
       } catch (err: any) {
         results.failed++
-        results.errors.push(`Subscription ${subscription.id}: ${err.message}`)
-        console.error(`✗ Error processing subscription ${subscription.id}:`, err.message)
+        results.errors.push(`Org ${org.id}: ${err.message}`)
+        console.error(`✗ Error processing org ${org.id}:`, err.message)
       }
     }
 
