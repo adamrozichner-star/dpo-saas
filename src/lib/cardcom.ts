@@ -225,7 +225,7 @@ export async function verifyPayment(lowProfileCode: string): Promise<PaymentVeri
     } else {
       return {
         success: false,
-        dealResponse,
+        dealResponse: dealResponse || undefined,
         error: responseParams.get('DealResponseText') || responseParams.get('OperationResponse') || 'Payment failed',
         rawResponse,
       };
