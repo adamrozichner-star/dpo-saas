@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
       numOfPayments: 1, // Single payment (not installments)
       customFields: {
         transactionId,
-        orgId,
+        orgId: orgId!, // orgId is guaranteed to exist at this point
         userId,
         plan,
         isAnnual: isAnnual.toString(),
