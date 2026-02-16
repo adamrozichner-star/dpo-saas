@@ -119,7 +119,7 @@ export default function CheckoutPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/hyp/create-payment', {
+      const response = await fetch('/api/cardcom/create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -138,7 +138,7 @@ export default function CheckoutPage() {
         throw new Error(data.error || 'Failed to create payment');
       }
 
-      // Redirect to HYP payment page
+      // Redirect to Cardcom payment page
       window.location.href = data.paymentUrl;
     } catch (err: any) {
       console.error('Checkout error:', err);
