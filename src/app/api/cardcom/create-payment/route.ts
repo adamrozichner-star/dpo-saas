@@ -96,19 +96,23 @@ export async function POST(request: NextRequest) {
 
         // Save quick assessment data if provided
         if (companyName || industry || companySize) {
-          await supabase
-            .from('organization_profiles')
-            .insert({
-              org_id: orgId,
-              profile_data: {
-                quick_assessment: {
-                  companyName,
-                  industry,
-                  companySize,
-                  completedAt: new Date().toISOString()
+          try {
+            await supabase
+              .from('organization_profiles')
+              .insert({
+                org_id: orgId,
+                profile_data: {
+                  quick_assessment: {
+                    companyName,
+                    industry,
+                    companySize,
+                    completedAt: new Date().toISOString()
+                  }
                 }
-              }
-            }).catch(e => console.error('[Cardcom] Failed to save profile:', e));
+              });
+          } catch (e) {
+            console.error('[Cardcom] Failed to save profile:', e);
+          }
         }
 
         console.log('[Cardcom] Created new organization:', orgId);
