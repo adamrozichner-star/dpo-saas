@@ -134,9 +134,8 @@ function SubscribeContent() {
       return
     }
 
-    // Check if organization exists
-    if (!organization?.id) {
-      setError('לא נמצא ארגון. אנא השלם את תהליך ההרשמה תחילה.')
+    if (!user) {
+      router.push('/login?redirect=/subscribe')
       return
     }
 
@@ -144,16 +143,30 @@ function SubscribeContent() {
     setError(null)
     setIsProcessing(true)
 
+    // Get quick assessment data from localStorage (payment-first flow)
+    let quickAssessment = null;
+    try {
+      const saved = localStorage.getItem('mydpo_quick_assessment');
+      if (saved) {
+        quickAssessment = JSON.parse(saved);
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+
     try {
       const response = await fetch('/api/cardcom/create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           plan: planId,
-          orgId: organization.id,
+          orgId: organization?.id,  // May be null - API will create org
           userId: user?.id,
           userEmail: user?.email,
-          userName: organization.name || ''
+          userName: organization?.name || user?.user_metadata?.name || '',
+          companyName: quickAssessment?.companyName,
+          industry: quickAssessment?.industry,
+          companySize: quickAssessment?.companySize,
         })
       })
 
