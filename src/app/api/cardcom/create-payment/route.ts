@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     // Store pending transaction in database
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
     await supabase.from('payment_transactions').insert({
