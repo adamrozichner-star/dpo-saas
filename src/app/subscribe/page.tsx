@@ -139,22 +139,22 @@ function SubscribeContent() {
     setIsProcessing(true)
 
     try {
-      const response = await fetch('/api/tranzila', {
+      const response = await fetch('/api/cardcom/create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'create_checkout',
-          tier: planId,
+          plan: planId,
           orgId: organization?.id,
           userId: user?.id,
-          userEmail: user?.email
+          userEmail: user?.email,
+          userName: organization?.name || ''
         })
       })
 
       const data = await response.json()
       
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl
+      if (data.success && data.paymentUrl) {
+        window.location.href = data.paymentUrl
       } else {
         setError(data.error || 'שגיאה ביצירת התשלום')
         setIsProcessing(false)
@@ -281,7 +281,7 @@ function SubscribeContent() {
         )}
 
         <div className="mt-12 text-center text-gray-500 text-sm">
-          <p>🔒 תשלום מאובטח באמצעות Tranzila</p>
+          <p>🔒 תשלום מאובטח</p>
           <p>ניתן לבטל בכל עת • ללא התחייבות</p>
         </div>
 
