@@ -134,6 +134,12 @@ function SubscribeContent() {
       return
     }
 
+    // Check if organization exists
+    if (!organization?.id) {
+      setError('לא נמצא ארגון. אנא השלם את תהליך ההרשמה תחילה.')
+      return
+    }
+
     setSelectedPlan(planId)
     setError(null)
     setIsProcessing(true)
@@ -144,10 +150,10 @@ function SubscribeContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           plan: planId,
-          orgId: organization?.id,
+          orgId: organization.id,
           userId: user?.id,
           userEmail: user?.email,
-          userName: organization?.name || ''
+          userName: organization.name || ''
         })
       })
 
@@ -156,11 +162,16 @@ function SubscribeContent() {
       if (data.success && data.paymentUrl) {
         window.location.href = data.paymentUrl
       } else {
-        setError(data.error || 'שגיאה ביצירת התשלום')
+        // Better error messages
+        let errorMsg = data.error || 'שגיאה ביצירת התשלום'
+        if (errorMsg.includes('not configured') || errorMsg.includes('missing credentials')) {
+          errorMsg = 'מערכת התשלומים בתהליך הגדרה. נסה שוב בעוד מספר דקות.'
+        }
+        setError(errorMsg)
         setIsProcessing(false)
       }
     } catch (err) {
-      setError('שגיאה בחיבור לשרת')
+      setError('שגיאה בחיבור לשרת. נסה שוב.')
       setIsProcessing(false)
     }
   }
