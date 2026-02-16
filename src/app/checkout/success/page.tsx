@@ -11,7 +11,7 @@ function SuccessContent() {
   const transactionId = searchParams.get('txn');
 
   useEffect(() => {
-    // Give HYP webhook time to process
+    // Give Cardcom webhook time to process
     const timer = setTimeout(() => {
       setStatus('success');
     }, 2000);
