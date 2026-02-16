@@ -6,10 +6,13 @@ import { createPaymentPage } from '@/lib/cardcom';
 export const dynamic = 'force-dynamic';
 
 interface PaymentRequest {
-  orgId: string;
+  orgId?: string;  // Optional - may not exist yet in payment-first flow
   userId: string;
   userEmail: string;
   userName: string;
+  companyName?: string;  // From quick assessment
+  industry?: string;     // From quick assessment
+  companySize?: string;  // From quick assessment
   plan: 'basic' | 'extended' | 'enterprise';
   isAnnual?: boolean;
 }
@@ -24,10 +27,10 @@ const PLANS = {
 export async function POST(request: NextRequest) {
   try {
     const body: PaymentRequest = await request.json();
-    const { orgId, userId, userEmail, userName, plan, isAnnual = false } = body;
+    let { orgId, userId, userEmail, userName, companyName, industry, companySize, plan, isAnnual = false } = body;
 
     // Validate required fields
-    if (!orgId || !userId || !userEmail || !plan) {
+    if (!userId || !userEmail || !plan) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -38,6 +41,73 @@ export async function POST(request: NextRequest) {
     const planDetails = PLANS[plan];
     if (!planDetails) {
       return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+    }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    // PAYMENT-FIRST FLOW: Create organization if it doesn't exist
+    if (!orgId) {
+      // Check if user already has an org
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('org_id')
+        .eq('auth_user_id', userId)
+        .single();
+
+      if (existingUser?.org_id) {
+        orgId = existingUser.org_id;
+      } else {
+        // Create new organization
+        const { data: newOrg, error: orgError } = await supabase
+          .from('organizations')
+          .insert({
+            name: companyName || userName || 'עסק חדש',
+            tier: plan,
+            status: 'pending_payment',
+            subscription_status: 'pending',
+            created_by: userId,
+          })
+          .select()
+          .single();
+
+        if (orgError) {
+          console.error('[Cardcom] Failed to create organization:', orgError);
+          return NextResponse.json(
+            { error: 'Failed to create organization' },
+            { status: 500 }
+          );
+        }
+
+        orgId = newOrg.id;
+
+        // Link user to organization
+        await supabase
+          .from('users')
+          .update({ org_id: orgId })
+          .eq('auth_user_id', userId);
+
+        // Save quick assessment data
+        if (companyName || industry || companySize) {
+          await supabase
+            .from('organization_profiles')
+            .insert({
+              org_id: orgId,
+              profile_data: {
+                quick_assessment: {
+                  companyName,
+                  industry,
+                  companySize,
+                  completedAt: new Date().toISOString()
+                }
+              }
+            });
+        }
+
+        console.log('[Cardcom] Created new organization:', orgId);
+      }
     }
 
     // Calculate amount
@@ -56,7 +126,7 @@ export async function POST(request: NextRequest) {
       errorUrl: `${baseUrl}/payment/error?txn=${transactionId}`,
       indicatorUrl: `${baseUrl}/api/cardcom/webhook`,
       customerEmail: userEmail,
-      customerName: userName,
+      customerName: userName || companyName,
       createToken: true, // Save card for recurring monthly billing
       numOfPayments: 1, // Single payment (not installments)
       customFields: {
@@ -77,11 +147,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Store pending transaction in database
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
     await supabase.from('payment_transactions').insert({
       id: transactionId,
       org_id: orgId,
@@ -97,6 +162,7 @@ export async function POST(request: NextRequest) {
 
     console.log('[Cardcom] Payment page created:', {
       transactionId,
+      orgId,
       amount,
       plan,
       lowProfileCode: result.lowProfileCode,
@@ -106,6 +172,7 @@ export async function POST(request: NextRequest) {
       success: true,
       paymentUrl: result.url,
       transactionId,
+      orgId,
       lowProfileCode: result.lowProfileCode,
     });
 
