@@ -6,22 +6,22 @@ import { createPaymentPage } from '@/lib/cardcom';
 export const dynamic = 'force-dynamic';
 
 interface PaymentRequest {
-  orgId?: string;  // Optional - may not exist yet in payment-first flow
+  orgId?: string;
   userId: string;
   userEmail: string;
   userName: string;
-  companyName?: string;  // From quick assessment
-  industry?: string;     // From quick assessment
-  companySize?: string;  // From quick assessment
+  companyName?: string;
+  industry?: string;
+  companySize?: string;
   plan: 'basic' | 'extended' | 'enterprise';
   isAnnual?: boolean;
 }
 
-// Plan pricing - must match checkout page
+// Plan pricing
 const PLANS = {
-  basic: { monthly: 500, annual: 5000, name: 'חבילה בסיסית' },
-  extended: { monthly: 1200, annual: 12000, name: 'חבילה מורחבת' },
-  enterprise: { monthly: 3500, annual: 35000, name: 'חבילה ארגונית' },
+  basic: { monthly: 500, annual: 5000, name: 'חבילה בסיסית', tier: 'basic' as const },
+  extended: { monthly: 1200, annual: 12000, name: 'חבילה מורחבת', tier: 'extended' as const },
+  enterprise: { monthly: 3500, annual: 35000, name: 'חבילה ארגונית', tier: 'extended' as const }, // Maps to 'extended' in DB
 };
 
 export async function POST(request: NextRequest) {
@@ -29,12 +29,11 @@ export async function POST(request: NextRequest) {
     const body: PaymentRequest = await request.json();
     let { orgId, userId, userEmail, userName, companyName, industry, companySize, plan, isAnnual = false } = body;
 
+    console.log('[Cardcom] Payment request:', { userId, userEmail, plan, orgId: orgId || 'will create' });
+
     // Validate required fields
     if (!userId || !userEmail || !plan) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     // Validate plan
@@ -48,74 +47,78 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // PAYMENT-FIRST FLOW: Create organization if it doesn't exist
+    // PAYMENT-FIRST FLOW: Get or create organization
     if (!orgId) {
       // Check if user already has an org
-      const { data: existingUser } = await supabase
+      const { data: existingUser, error: userLookupError } = await supabase
         .from('users')
         .select('org_id')
         .eq('auth_user_id', userId)
-        .single();
+        .maybeSingle();
+
+      if (userLookupError) {
+        console.error('[Cardcom] User lookup error:', userLookupError);
+      }
 
       if (existingUser?.org_id) {
         orgId = existingUser.org_id;
+        console.log('[Cardcom] Found existing org:', orgId);
       } else {
-        // Create new organization with minimal required fields
+        // Create new organization
         const orgName = companyName || userName || 'עסק חדש';
+        // business_id: Use first 9 chars of timestamp to fit VARCHAR(20)
+        const businessId = `TMP${Date.now().toString().slice(-9)}`;
+        
         const { data: newOrg, error: orgError } = await supabase
           .from('organizations')
           .insert({
             name: orgName,
-            business_id: `P${Date.now().toString().slice(-10)}`, // Max 11 chars, fits VARCHAR(20)
-            tier: plan,
+            business_id: businessId,
+            tier: planDetails.tier, // Use mapped tier (basic or extended only)
             status: 'onboarding',
           })
-          .select()
+          .select('id')
           .single();
 
         if (orgError) {
-          console.error('[Cardcom] Failed to create organization:', orgError);
-          console.error('[Cardcom] Error details:', JSON.stringify(orgError));
+          console.error('[Cardcom] Org creation failed:', orgError);
           return NextResponse.json(
-            { error: 'Failed to create organization: ' + (orgError.message || 'Unknown error') },
+            { error: `Failed to create organization: ${orgError.message}` },
             { status: 500 }
           );
         }
 
         orgId = newOrg.id;
+        console.log('[Cardcom] Created org:', orgId);
 
         // Link user to organization
         const { error: linkError } = await supabase
           .from('users')
           .update({ org_id: orgId })
           .eq('auth_user_id', userId);
-        
+
         if (linkError) {
-          console.error('[Cardcom] Failed to link user to org:', linkError);
+          console.error('[Cardcom] User link error:', linkError);
         }
 
-        // Save quick assessment data if provided
-        if (companyName || industry || companySize) {
-          try {
-            await supabase
-              .from('organization_profiles')
-              .insert({
-                org_id: orgId,
-                profile_data: {
-                  quick_assessment: {
-                    companyName,
-                    industry,
-                    companySize,
-                    completedAt: new Date().toISOString()
-                  }
-                }
-              });
-          } catch (e) {
-            console.error('[Cardcom] Failed to save profile:', e);
+        // Save assessment data to organization_profiles (using actual columns)
+        if (industry || companySize) {
+          const { error: profileError } = await supabase
+            .from('organization_profiles')
+            .insert({
+              org_id: orgId,
+              business_type: industry || null,
+              employee_count: companySize === 'small' ? 5 : 
+                             companySize === 'medium' ? 30 : 
+                             companySize === 'large' ? 100 : 
+                             companySize === 'enterprise' ? 500 : null,
+            });
+
+          if (profileError) {
+            console.error('[Cardcom] Profile save error:', profileError);
+            // Non-fatal, continue
           }
         }
-
-        console.log('[Cardcom] Created new organization:', orgId);
       }
     }
 
@@ -123,24 +126,24 @@ export async function POST(request: NextRequest) {
     const amount = isAnnual ? planDetails.annual : planDetails.monthly;
     const productName = `MyDPO - ${planDetails.name} ${isAnnual ? '(שנתי)' : '(חודשי)'}`;
 
-    // Generate unique transaction ID
-    const transactionId = `mydpo_${orgId}_${Date.now()}`;
+    // Generate transaction ID (keep it short for DB)
+    const txnId = `txn_${Date.now()}`;
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mydpo.co.il';
 
     // Create Cardcom payment page
     const result = await createPaymentPage({
       amount,
       productName,
-      successUrl: `${baseUrl}/payment/success?txn=${transactionId}`,
-      errorUrl: `${baseUrl}/payment/error?txn=${transactionId}`,
+      successUrl: `${baseUrl}/payment/success?txn=${txnId}`,
+      errorUrl: `${baseUrl}/payment/error?txn=${txnId}`,
       indicatorUrl: `${baseUrl}/api/cardcom/webhook`,
       customerEmail: userEmail,
-      customerName: userName || companyName,
-      createToken: true, // Save card for recurring monthly billing
-      numOfPayments: 1, // Single payment (not installments)
+      customerName: userName || companyName || 'לקוח',
+      createToken: true,
+      numOfPayments: 1,
       customFields: {
-        transactionId,
-        orgId: orgId!, // orgId is guaranteed to exist at this point
+        transactionId: txnId,
+        orgId: orgId!,
         userId,
         plan,
         isAnnual: isAnnual.toString(),
@@ -148,47 +151,43 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
-      console.error('[Cardcom] Failed to create payment:', result.error);
+      console.error('[Cardcom] Payment page creation failed:', result.error);
       return NextResponse.json(
         { error: result.error || 'Failed to create payment page' },
         { status: 500 }
       );
     }
 
-    // Store pending transaction in database
-    await supabase.from('payment_transactions').insert({
-      id: transactionId,
+    // Store pending transaction (using columns that exist in schema)
+    const { error: txnError } = await supabase.from('payment_transactions').insert({
+      id: txnId,
       org_id: orgId,
-      user_id: userId,
+      user_id: userId, // This is auth user UUID
       amount,
-      plan,
+      plan: plan,
       is_annual: isAnnual,
       status: 'pending',
-      provider: 'cardcom',
-      lowprofile_code: result.lowProfileCode,
       created_at: new Date().toISOString(),
     });
 
-    console.log('[Cardcom] Payment page created:', {
-      transactionId,
-      orgId,
-      amount,
-      plan,
-      lowProfileCode: result.lowProfileCode,
-    });
+    if (txnError) {
+      console.error('[Cardcom] Transaction save error:', txnError);
+      // Non-fatal - payment page is already created
+    }
+
+    console.log('[Cardcom] Success:', { txnId, orgId, amount, url: result.url?.slice(0, 50) });
 
     return NextResponse.json({
       success: true,
       paymentUrl: result.url,
-      transactionId,
+      transactionId: txnId,
       orgId,
-      lowProfileCode: result.lowProfileCode,
     });
 
-  } catch (error) {
-    console.error('[Cardcom] Payment creation error:', error);
+  } catch (error: any) {
+    console.error('[Cardcom] Unexpected error:', error);
     return NextResponse.json(
-      { error: 'Failed to create payment' },
+      { error: error.message || 'Failed to create payment' },
       { status: 500 }
     );
   }
