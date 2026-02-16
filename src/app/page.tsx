@@ -73,19 +73,19 @@ export default function HomePage() {
             עמידה בתיקון 13 בביטחון ובמחיר הוגן
           </p>
           
-          <Link href="/onboarding">
+          <Link href="/register">
             <Button 
               size="lg" 
               className="text-lg px-8 py-6 h-auto rounded-xl font-semibold shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all"
               style={{ backgroundColor: '#10b981' }}
             >
-              התחל בחינם
+              התחל עכשיו
               <ArrowLeft className="h-5 w-5 mr-2" />
             </Button>
           </Link>
           
           <p className="text-blue-200/60 text-sm mt-6">
-            14 ימי ניסיון חינם • ללא התחייבות • ביטול בכל עת
+            החל מ-₪500/חודש • ביטול בכל עת
           </p>
         </div>
 
@@ -170,7 +170,7 @@ export default function HomePage() {
                 <PricingFeature>תמיכה בדוא"ל</PricingFeature>
                 <PricingFeature>זמן תגובה: 72 שעות</PricingFeature>
               </ul>
-              <Link href="/onboarding?tier=basic" className="block">
+              <Link href="/register?plan=basic" className="block">
                 <Button variant="outline" className="w-full py-5 rounded-xl">בחירת חבילה</Button>
               </Link>
             </div>
@@ -197,7 +197,7 @@ export default function HomePage() {
                 <PricingFeature>זמן תגובה: 24 שעות</PricingFeature>
                 <PricingFeature>עד 3 משתמשים</PricingFeature>
               </ul>
-              <Link href="/onboarding?tier=extended" className="block">
+              <Link href="/register?plan=extended" className="block">
                 <Button className="w-full py-5 rounded-xl" style={{ backgroundColor: '#10b981' }}>בחירת חבילה</Button>
               </Link>
             </div>
@@ -312,7 +312,7 @@ export default function HomePage() {
           <p className="text-blue-100/60 mb-10">
             אל תחכו לקנס - התחילו היום.
           </p>
-          <Link href="/onboarding">
+          <Link href="/register">
             <Button 
               size="lg" 
               className="text-lg px-8 py-6 h-auto rounded-xl font-semibold"
