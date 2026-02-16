@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
           .from('organizations')
           .insert({
             name: orgName,
-            business_id: `PENDING_${Date.now()}`, // Temporary - will be updated in onboarding
+            business_id: `P${Date.now().toString().slice(-10)}`, // Max 11 chars, fits VARCHAR(20)
             tier: plan,
             status: 'onboarding',
           })
