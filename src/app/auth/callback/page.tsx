@@ -122,11 +122,11 @@ export default function AuthCallbackPage() {
             })
           }).catch(e => console.error('Email error:', e));
 
-          // New user - go to onboarding
+          // New user - go to quick assessment (payment-first flow)
           setStatus('מעביר להגדרות...');
           // Small delay to ensure session is fully stored
           await new Promise(resolve => setTimeout(resolve, 300));
-          window.location.href = '/onboarding';
+          window.location.href = '/get-started';
         } else {
           // Existing user - check if they have an active subscription
           setStatus('בודק מנוי...');
@@ -157,11 +157,11 @@ export default function AuthCallbackPage() {
           } else if (fullUser?.org_id) {
             // Has org but no subscription — needs to pay
             setStatus('מעביר לתשלום...');
-            window.location.href = '/payment-required';
+            window.location.href = '/subscribe';
           } else {
-            // No org — needs onboarding
+            // No org — needs quick assessment first
             setStatus('מעביר להגדרות...');
-            window.location.href = '/onboarding';
+            window.location.href = '/get-started';
           }
         }
       } catch (err) {
