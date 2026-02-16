@@ -60,23 +60,24 @@ export async function POST(request: NextRequest) {
       if (existingUser?.org_id) {
         orgId = existingUser.org_id;
       } else {
-        // Create new organization
+        // Create new organization with minimal required fields
+        const orgName = companyName || userName || 'עסק חדש';
         const { data: newOrg, error: orgError } = await supabase
           .from('organizations')
           .insert({
-            name: companyName || userName || 'עסק חדש',
+            name: orgName,
+            business_id: `PENDING_${Date.now()}`, // Temporary - will be updated in onboarding
             tier: plan,
-            status: 'pending_payment',
-            subscription_status: 'pending',
-            created_by: userId,
+            status: 'onboarding',
           })
           .select()
           .single();
 
         if (orgError) {
           console.error('[Cardcom] Failed to create organization:', orgError);
+          console.error('[Cardcom] Error details:', JSON.stringify(orgError));
           return NextResponse.json(
-            { error: 'Failed to create organization' },
+            { error: 'Failed to create organization: ' + (orgError.message || 'Unknown error') },
             { status: 500 }
           );
         }
@@ -84,12 +85,16 @@ export async function POST(request: NextRequest) {
         orgId = newOrg.id;
 
         // Link user to organization
-        await supabase
+        const { error: linkError } = await supabase
           .from('users')
           .update({ org_id: orgId })
           .eq('auth_user_id', userId);
+        
+        if (linkError) {
+          console.error('[Cardcom] Failed to link user to org:', linkError);
+        }
 
-        // Save quick assessment data
+        // Save quick assessment data if provided
         if (companyName || industry || companySize) {
           await supabase
             .from('organization_profiles')
@@ -103,7 +108,7 @@ export async function POST(request: NextRequest) {
                   completedAt: new Date().toISOString()
                 }
               }
-            });
+            }).catch(e => console.error('[Cardcom] Failed to save profile:', e));
         }
 
         console.log('[Cardcom] Created new organization:', orgId);
