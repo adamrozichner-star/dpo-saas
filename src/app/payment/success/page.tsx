@@ -4,29 +4,63 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle, Loader2, Shield, ArrowLeft } from 'lucide-react';
+import { CheckCircle, Loader2, Shield, ArrowLeft, Sparkles } from 'lucide-react';
+import { createClient } from '@supabase/supabase-js';
 
 export default function PaymentSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const transactionId = searchParams.get('txn');
 
   useEffect(() => {
-    // Give webhook time to process the payment
-    const timer = setTimeout(() => {
+    const checkAndRedirect = async () => {
+      // Give webhook time to process
+      await new Promise(resolve => setTimeout(resolve, 2500));
       setStatus('success');
-    }, 2500);
 
-    // Auto-redirect to dashboard after 5 seconds
-    const redirectTimer = setTimeout(() => {
-      router.push('/dashboard');
-    }, 5000);
+      // Check if user needs to complete onboarding
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        
+        if (supabaseUrl && supabaseAnonKey) {
+          const supabase = createClient(supabaseUrl, supabaseAnonKey);
+          const { data: { session } } = await supabase.auth.getSession();
+          
+          if (session?.user) {
+            // Check if org has completed full onboarding
+            const { data: org } = await supabase
+              .from('organizations')
+              .select('id, status')
+              .eq('created_by', session.user.id)
+              .single();
 
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(redirectTimer);
+            // If org status is pending or new, needs onboarding
+            if (org && (org.status === 'pending_payment' || org.status === 'pending')) {
+              setNeedsOnboarding(true);
+              // Clear quick assessment data
+              localStorage.removeItem('mydpo_quick_assessment');
+              // Redirect to full onboarding after payment
+              setTimeout(() => {
+                router.push('/onboarding');
+              }, 4000);
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Check onboarding status error:', e);
+      }
+
+      // Default: redirect to dashboard
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 4000);
     };
+
+    checkAndRedirect();
   }, [router]);
 
   return (
@@ -56,28 +90,44 @@ export default function PaymentSuccessPage() {
             </div>
             
             <h1 className="text-2xl font-bold text-slate-800 mb-2">
-              התשלום התקבל בהצלחה!
+              התשלום התקבל בהצלחה! 🎉
             </h1>
             
             <p className="text-slate-600 mb-6">
-              תודה שבחרת ב-MyDPO. המנוי שלך פעיל כעת.
+              {needsOnboarding 
+                ? 'עכשיו נשלים את הגדרת הארגון ונייצר לך את המסמכים.'
+                : 'תודה שבחרת ב-MyDPO. המנוי שלך פעיל כעת.'
+              }
             </p>
             
             <div className="bg-emerald-50 rounded-lg p-4 mb-6">
               <p className="text-emerald-800 text-sm">
-                ✓ הממונה שלך מוכן לעבודה
+                ✓ התשלום אושר
                 <br />
-                ✓ אישור נשלח לכתובת המייל שלך
+                ✓ המנוי שלך פעיל
+                <br />
+                ✓ אישור נשלח למייל
               </p>
             </div>
 
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center justify-center gap-2 w-full bg-emerald-600 text-white py-3 px-6 rounded-xl font-medium hover:bg-emerald-700 transition-colors"
-            >
-              <span>המשך ללוח הבקרה</span>
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
+            {needsOnboarding ? (
+              <Link
+                href="/onboarding"
+                className="inline-flex items-center justify-center gap-2 w-full bg-emerald-600 text-white py-3 px-6 rounded-xl font-medium hover:bg-emerald-700 transition-colors"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>המשך להגדרת הארגון</span>
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+            ) : (
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center justify-center gap-2 w-full bg-emerald-600 text-white py-3 px-6 rounded-xl font-medium hover:bg-emerald-700 transition-colors"
+              >
+                <span>המשך ללוח הבקרה</span>
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+            )}
             
             <p className="text-sm text-slate-500 mt-4">
               מעביר אותך אוטומטית...
