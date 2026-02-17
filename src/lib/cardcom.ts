@@ -1,10 +1,18 @@
 // src/lib/cardcom.ts
-// Cardcom Payment Gateway Integration for MyDPO
+// Cardcom Payment Gateway — v11 JSON API Integration
+// Docs: https://cardcomapi.zendesk.com/hc/he/articles/25264402497426
 
-const CARDCOM_LOWPROFILE_URL = 'https://secure.cardcom.solutions/Interface/LowProfile.aspx';
-const CARDCOM_INDICATOR_URL = 'https://secure.cardcom.solutions/Interface/BillGoldGetLowProfileIndicator.aspx';
-const CARDCOM_CHARGE_TOKEN_URL = 'https://secure.cardcom.solutions/Interface/ChargeToken.aspx';
+// ============================================
+// ENDPOINTS
+// ============================================
+const CARDCOM_API_BASE = 'https://secure.cardcom.solutions/api/v11';
+const ENDPOINT_CREATE_LP = `${CARDCOM_API_BASE}/LowProfile/LowProfileClearing`;
+const ENDPOINT_GET_LP_RESULT = `${CARDCOM_API_BASE}/LowProfile/GetLowProfileIndicator`;
+const ENDPOINT_DO_TRANSACTION = `${CARDCOM_API_BASE}/Transactions/DoTransaction`;
 
+// ============================================
+// TYPES
+// ============================================
 export interface CardcomConfig {
   terminalNumber: string;
   apiName: string;
@@ -16,46 +24,59 @@ export interface CreatePaymentParams {
   productName: string;
   successUrl: string;
   errorUrl: string;
-  indicatorUrl: string;
+  webhookUrl: string;
   customerEmail?: string;
   customerName?: string;
-  customFields?: Record<string, string>;
-  createToken?: boolean;
-  numOfPayments?: number;
+  customerPhone?: string;
+  returnValue?: string;           // Custom data passed back in webhook
+  operation?: 'ChargeOnly' | 'ChargeAndCreateToken' | 'CreateTokenOnly';
+  maxPayments?: number;
+  language?: string;
+  coinId?: number;                // 1=ILS, 2=USD, 3=EUR
 }
 
 export interface LowProfileResponse {
   success: boolean;
   url?: string;
-  lowProfileCode?: string;
+  lowProfileId?: string;
   error?: string;
-  responseCode?: string;
+  responseCode?: number;
+  description?: string;
 }
 
 export interface PaymentVerification {
   success: boolean;
-  responseCode?: string;
-  dealResponse?: string;
-  transactionId?: string;
+  responseCode?: number;
+  description?: string;
+  transactionId?: number;
   approvalNumber?: string;
   token?: string;
+  tokenExpiry?: string;
   cardMask?: string;
-  cardExpiry?: string;
   cardBrand?: string;
-  invoiceNumber?: string;
+  cardOwnerName?: string;
+  cardOwnerEmail?: string;
+  invoiceNumber?: number;
   amount?: number;
+  returnValue?: string;
+  numOfPayments?: number;
   error?: string;
-  rawResponse?: Record<string, string>;
+  rawResponse?: any;
 }
 
 export interface ChargeTokenParams {
   token: string;
+  tokenExpiry: string;            // MMYY format e.g. "1227"
   amount: number;
   productName: string;
   customerEmail?: string;
   numOfPayments?: number;
+  approvalNumber?: string;
 }
 
+// ============================================
+// CONFIG
+// ============================================
 function getConfig(): CardcomConfig {
   return {
     terminalNumber: process.env.CARDCOM_TERMINAL_NUMBER || '',
@@ -64,252 +85,255 @@ function getConfig(): CardcomConfig {
   };
 }
 
-/**
- * Create a LowProfile payment page
- * Returns URL to redirect user to Cardcom's secure payment page
- */
+function validateConfig(config: CardcomConfig): string | null {
+  if (!config.terminalNumber) return 'Missing CARDCOM_TERMINAL_NUMBER';
+  if (!config.apiName) return 'Missing CARDCOM_API_NAME';
+  if (!config.apiPassword) return 'Missing CARDCOM_API_PASSWORD';
+  return null;
+}
+
+// ============================================
+// STEP 1: Create LowProfile payment page
+// ============================================
 export async function createPaymentPage(params: CreatePaymentParams): Promise<LowProfileResponse> {
   const config = getConfig();
-  
-  if (!config.terminalNumber || !config.apiName || !config.apiPassword) {
-    return {
-      success: false,
-      error: 'Cardcom not configured - missing credentials',
-    };
+  const configError = validateConfig(config);
+
+  if (configError) {
+    return { success: false, error: `Cardcom not configured: ${configError}` };
   }
 
   try {
-    const requestParams = new URLSearchParams({
-      // Required credentials
-      TerminalNumber: config.terminalNumber,
+    // Build the v11 JSON request body
+    const requestBody: any = {
+      TerminalNumber: parseInt(config.terminalNumber, 10),
       ApiName: config.apiName,
       ApiPassword: config.apiPassword,
-      
-      // Payment details
-      SumToBill: params.amount.toString(),
-      CoinID: '1', // 1 = ILS
-      Language: 'he',
-      ProductName: params.productName,
-      
-      // URLs
+      Amount: params.amount,
       SuccessRedirectUrl: params.successUrl,
-      ErrorRedirectUrl: params.errorUrl,
-      IndicatorUrl: params.indicatorUrl,
-      
-      // Operation type:
-      // 1 = Charge only
-      // 2 = Charge + Create token (for recurring)
-      // 3 = Create token only (no charge)
-      Operation: params.createToken ? '2' : '1',
-      
-      // Number of payments (installments)
-      MaxNumOfPayments: (params.numOfPayments || 1).toString(),
-      
-      // Encoding
-      codepage: '65001', // UTF-8
-      
-      // UI settings
-      ShowInvoiceHead: 'false',
-      CancelType: '2', // Show cancel button
-      HideCardOwnerName: 'false',
-      
-      // Customer info
-      ...(params.customerEmail && { InvoiceHead_Email: params.customerEmail }),
-      ...(params.customerName && { InvoiceHead_CustName: params.customerName }),
-      
-      // Custom fields (passed back in indicator)
-      ...(params.customFields && { ReturnValue: JSON.stringify(params.customFields) }),
-    });
+      FailedRedirectUrl: params.errorUrl,
+      WebHookUrl: params.webhookUrl,
+      Operation: params.operation || 'ChargeAndCreateToken',
+      Language: params.language || 'he',
+      ProductName: params.productName,
+      ISOCoinId: params.coinId || 1,  // 1 = ILS
+      MaxNumOfPayments: params.maxPayments || 1,
+    };
 
-    console.log('[Cardcom] Creating payment page:', {
+    // Optional: ReturnValue for custom data in webhook
+    if (params.returnValue) {
+      requestBody.ReturnValue = params.returnValue;
+    }
+
+    // Optional: Customer info for invoice
+    if (params.customerEmail || params.customerName || params.customerPhone) {
+      requestBody.InvoiceHead = {};
+      if (params.customerEmail) requestBody.InvoiceHead.CustMobilPhone = params.customerPhone;
+      if (params.customerEmail) requestBody.InvoiceHead.CustAddressLine1 = '';
+      if (params.customerEmail) requestBody.InvoiceHead.Email = params.customerEmail;
+      if (params.customerName) requestBody.InvoiceHead.CustName = params.customerName;
+    }
+
+    console.log('[Cardcom v11] Creating payment page:', {
       terminal: config.terminalNumber,
       amount: params.amount,
+      operation: requestBody.Operation,
       product: params.productName,
     });
 
-    const response = await fetch(CARDCOM_LOWPROFILE_URL, {
+    const response = await fetch(ENDPOINT_CREATE_LP, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: requestParams.toString(),
+      body: JSON.stringify(requestBody),
     });
 
-    const responseText = await response.text();
-    console.log('[Cardcom] LowProfile response:', responseText);
-
-    // Parse response (format: ResponseCode=0&LowProfileCode=xxx&url=xxx)
-    const responseParams = new URLSearchParams(responseText);
-    const responseCode = responseParams.get('ResponseCode');
+    const data = await response.json();
     
-    if (responseCode === '0') {
+    console.log('[Cardcom v11] LowProfile response:', {
+      ResponseCode: data.ResponseCode,
+      Description: data.Description,
+      LowProfileId: data.LowProfileId,
+      Url: data.Url?.slice(0, 80),
+    });
+
+    // ResponseCode 0 = success
+    if (data.ResponseCode === 0) {
       return {
         success: true,
-        url: responseParams.get('url') || '',
-        lowProfileCode: responseParams.get('LowProfileCode') || '',
-        responseCode,
+        url: data.Url,
+        lowProfileId: data.LowProfileId,
+        responseCode: data.ResponseCode,
+        description: data.Description,
       };
     } else {
       return {
         success: false,
-        error: responseParams.get('Description') || `Error code: ${responseCode}`,
-        responseCode: responseCode || undefined,
+        error: data.Description || `Cardcom error code: ${data.ResponseCode}`,
+        responseCode: data.ResponseCode,
+        description: data.Description,
       };
     }
   } catch (error) {
-    console.error('[Cardcom] createPaymentPage error:', error);
+    console.error('[Cardcom v11] createPaymentPage error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Network error',
+      error: error instanceof Error ? error.message : 'Network error connecting to Cardcom',
     };
   }
 }
 
-/**
- * Verify payment status using LowProfileCode
- * Call after receiving indicator/webhook from Cardcom
- */
-export async function verifyPayment(lowProfileCode: string): Promise<PaymentVerification> {
+// ============================================
+// STEP 2: Get payment result (webhook/verify)
+// ============================================
+export async function verifyPayment(lowProfileId: string): Promise<PaymentVerification> {
   const config = getConfig();
-  
-  if (!config.terminalNumber || !config.apiName) {
-    return {
-      success: false,
-      error: 'Cardcom not configured',
-    };
+  const configError = validateConfig(config);
+
+  if (configError) {
+    return { success: false, error: `Cardcom not configured: ${configError}` };
   }
 
   try {
-    const params = new URLSearchParams({
-      terminalnumber: config.terminalNumber,
-      username: config.apiName,
-      lowprofilecode: lowProfileCode,
+    const requestBody = {
+      TerminalNumber: parseInt(config.terminalNumber, 10),
+      ApiName: config.apiName,
+      LowProfileId: lowProfileId,
+    };
+
+    console.log('[Cardcom v11] Verifying payment:', lowProfileId);
+
+    const response = await fetch(ENDPOINT_GET_LP_RESULT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
     });
 
-    const url = `${CARDCOM_INDICATOR_URL}?${params.toString()}`;
-    console.log('[Cardcom] Verifying payment:', lowProfileCode);
+    const data = await response.json();
 
-    const response = await fetch(url);
-    const responseText = await response.text();
-    console.log('[Cardcom] Verification response:', responseText);
-
-    // Parse response
-    const responseParams = new URLSearchParams(responseText);
-    const dealResponse = responseParams.get('DealResponse');
-    
-    // Convert to object for rawResponse
-    const rawResponse: Record<string, string> = {};
-    responseParams.forEach((value, key) => {
-      rawResponse[key] = value;
+    console.log('[Cardcom v11] Verification response:', {
+      ResponseCode: data.ResponseCode,
+      Description: data.Description,
+      TranzactionId: data.TranzactionId,
+      Operation: data.Operation,
+      ReturnValue: data.ReturnValue,
+      TokenInfo: data.TokenInfo ? 'present' : 'none',
     });
 
-    // DealResponse 0 = success
-    if (dealResponse === '0') {
+    // ResponseCode 0 = success
+    if (data.ResponseCode === 0) {
       return {
         success: true,
-        responseCode: responseParams.get('ResponseCode') || undefined,
-        dealResponse,
-        transactionId: responseParams.get('InternalDealNumber') || undefined,
-        approvalNumber: responseParams.get('ApprovalNumber') || undefined,
-        token: responseParams.get('Token') || undefined,
-        cardMask: responseParams.get('CardMask') || responseParams.get('Last4CardDigits') || undefined,
-        cardExpiry: formatCardExpiry(
-          responseParams.get('CardValidityMonth'),
-          responseParams.get('CardValidityYear')
-        ),
-        cardBrand: responseParams.get('CardBrand') || undefined,
-        invoiceNumber: responseParams.get('InvoiceNumber') || undefined,
-        amount: parseFloat(responseParams.get('SumToBill') || '0') || undefined,
-        rawResponse,
+        responseCode: data.ResponseCode,
+        description: data.Description,
+        transactionId: data.TranzactionId,
+        approvalNumber: data.UIValues?.ApprovalNumber || undefined,
+        token: data.TokenInfo?.Token || undefined,
+        tokenExpiry: data.TokenInfo?.TokenExDate || undefined,
+        cardMask: data.UIValues?.Last4CardDigits 
+          ? `xxxx-${data.UIValues.Last4CardDigits}` 
+          : undefined,
+        cardBrand: data.UIValues?.CardBrand || undefined,
+        cardOwnerName: data.UIValues?.CardOwnerName || undefined,
+        cardOwnerEmail: data.UIValues?.CardOwnerEmail || undefined,
+        invoiceNumber: data.DocumentInfo?.DocumentNumber || undefined,
+        numOfPayments: data.UIValues?.NumOfPayments || undefined,
+        returnValue: data.ReturnValue || undefined,
+        amount: data.Amount || undefined,
+        rawResponse: data,
       };
     } else {
       return {
         success: false,
-        dealResponse: dealResponse || undefined,
-        error: responseParams.get('DealResponseText') || responseParams.get('OperationResponse') || 'Payment failed',
-        rawResponse,
+        responseCode: data.ResponseCode,
+        description: data.Description,
+        error: data.Description || `Payment verification failed (code ${data.ResponseCode})`,
+        returnValue: data.ReturnValue || undefined,
+        rawResponse: data,
       };
     }
   } catch (error) {
-    console.error('[Cardcom] verifyPayment error:', error);
+    console.error('[Cardcom v11] verifyPayment error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Verification failed',
+      error: error instanceof Error ? error.message : 'Verification network error',
     };
   }
 }
 
-/**
- * Charge a saved token (for recurring monthly payments)
- */
+// ============================================
+// STEP 3: Charge a saved token (recurring)
+// ============================================
 export async function chargeToken(params: ChargeTokenParams): Promise<PaymentVerification> {
   const config = getConfig();
-  
-  if (!config.terminalNumber || !config.apiName) {
-    return {
-      success: false,
-      error: 'Cardcom not configured',
-    };
+  const configError = validateConfig(config);
+
+  if (configError) {
+    return { success: false, error: `Cardcom not configured: ${configError}` };
   }
 
   try {
-    const requestParams = new URLSearchParams({
-      TerminalNumber: config.terminalNumber,
-      UserName: config.apiName,
-      TokenToCharge: params.token,
-      SumToBill: params.amount.toString(),
-      CoinID: '1', // ILS
-      Language: 'he',
+    const requestBody: any = {
+      TerminalNumber: parseInt(config.terminalNumber, 10),
+      ApiName: config.apiName,
+      ApiPassword: config.apiPassword,
+      Amount: params.amount,
+      Token: params.token,
+      TokenExDate: params.tokenExpiry,
+      ApprovalNumber: params.approvalNumber || '',
       ProductName: params.productName,
-      NumOfPayments: (params.numOfPayments || 1).toString(),
-      ...(params.customerEmail && { InvoiceHead_Email: params.customerEmail }),
-    });
+      ISOCoinId: 1,  // ILS
+      NumOfPayments: params.numOfPayments || 1,
+    };
 
-    console.log('[Cardcom] Charging token:', {
+    if (params.customerEmail) {
+      requestBody.InvoiceHead = { Email: params.customerEmail };
+    }
+
+    console.log('[Cardcom v11] Charging token:', {
       amount: params.amount,
       product: params.productName,
     });
 
-    const response = await fetch(CARDCOM_CHARGE_TOKEN_URL, {
+    const response = await fetch(ENDPOINT_DO_TRANSACTION, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'Content-Type': 'application/json',
       },
-      body: requestParams.toString(),
+      body: JSON.stringify(requestBody),
     });
 
-    const responseText = await response.text();
-    console.log('[Cardcom] ChargeToken response:', responseText);
+    const data = await response.json();
 
-    const responseParams = new URLSearchParams(responseText);
-    const responseCode = responseParams.get('ResponseCode');
-    
-    if (responseCode === '0') {
+    console.log('[Cardcom v11] ChargeToken response:', {
+      ResponseCode: data.ResponseCode,
+      Description: data.Description,
+      TranzactionId: data.TranzactionId,
+    });
+
+    if (data.ResponseCode === 0) {
       return {
         success: true,
-        responseCode,
-        transactionId: responseParams.get('InternalDealNumber') || undefined,
-        approvalNumber: responseParams.get('ApprovalNumber') || undefined,
-        invoiceNumber: responseParams.get('InvoiceNumber') || undefined,
+        responseCode: data.ResponseCode,
+        transactionId: data.TranzactionId,
+        approvalNumber: data.ApprovalNumber,
+        invoiceNumber: data.DocumentInfo?.DocumentNumber,
       };
     } else {
       return {
         success: false,
-        responseCode: responseCode || undefined,
-        error: responseParams.get('Description') || responseParams.get('OperationResponse') || 'Charge failed',
+        responseCode: data.ResponseCode,
+        error: data.Description || `Charge failed (code ${data.ResponseCode})`,
       };
     }
   } catch (error) {
-    console.error('[Cardcom] chargeToken error:', error);
+    console.error('[Cardcom v11] chargeToken error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Charge failed',
+      error: error instanceof Error ? error.message : 'Charge network error',
     };
   }
-}
-
-// Helper to format card expiry
-function formatCardExpiry(month: string | null, year: string | null): string | undefined {
-  if (!month || !year) return undefined;
-  return `${month.padStart(2, '0')}/${year.slice(-2)}`;
 }
