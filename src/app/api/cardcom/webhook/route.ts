@@ -5,6 +5,20 @@ import { verifyPayment } from '@/lib/cardcom';
 
 export const dynamic = 'force-dynamic';
 
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
+// Plan to subscription details mapping
+const PLAN_DETAILS: Record<string, { monthly_price: number; dpo_minutes_quota: number }> = {
+  basic: { monthly_price: 500, dpo_minutes_quota: 0 },
+  extended: { monthly_price: 1200, dpo_minutes_quota: 30 },
+  enterprise: { monthly_price: 3500, dpo_minutes_quota: 120 },
+};
+
 // Cardcom sends indicator via GET request
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -34,32 +48,90 @@ export async function GET(request: NextRequest) {
     let customData: any = {};
     if (returnValue) {
       try {
-        customData = JSON.parse(returnValue);
+        customData = JSON.parse(decodeURIComponent(returnValue));
       } catch (e) {
-        console.warn('[Cardcom Webhook] Failed to parse ReturnValue:', e);
+        try {
+          customData = JSON.parse(returnValue);
+        } catch (e2) {
+          console.warn('[Cardcom Webhook] Failed to parse ReturnValue:', e2);
+        }
       }
     }
 
     // Verify payment with Cardcom API
     const verification = await verifyPayment(lowProfileCode);
     
-    console.log('[Cardcom Webhook] Verification result:', verification);
+    console.log('[Cardcom Webhook] Verification result:', {
+      success: verification.success,
+      dealResponse: verification.dealResponse,
+      token: verification.token ? '***' : 'none',
+      error: verification.error,
+    });
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = getSupabase();
 
-    // Find the pending payment by lowprofile_code
-    const { data: payment, error: findError } = await supabase
+    // Find the pending payment - try multiple strategies
+    let payment: any = null;
+
+    // Strategy 1: Find by lowprofile_code
+    const result1 = await supabase
       .from('payment_transactions')
       .select('*')
       .eq('lowprofile_code', lowProfileCode)
-      .single();
+      .eq('status', 'pending')
+      .maybeSingle();
 
-    if (findError || !payment) {
-      console.error('[Cardcom Webhook] Payment not found:', lowProfileCode);
-      // Still return 200 to Cardcom
+    if (result1.data) {
+      payment = result1.data;
+      console.log('[Cardcom Webhook] Found payment by lowprofile_code:', payment.id);
+    }
+
+    // Strategy 2: Find by transaction ID from ReturnValue
+    if (!payment && customData?.transactionId) {
+      const result2 = await supabase
+        .from('payment_transactions')
+        .select('*')
+        .eq('id', customData.transactionId)
+        .maybeSingle();
+
+      if (result2.data) {
+        payment = result2.data;
+        console.log('[Cardcom Webhook] Found payment by transactionId:', payment.id);
+        
+        // Backfill lowprofile_code
+        await supabase
+          .from('payment_transactions')
+          .update({ lowprofile_code: lowProfileCode })
+          .eq('id', payment.id);
+      }
+    }
+
+    // Strategy 3: Find most recent pending for this org
+    if (!payment && customData?.orgId) {
+      const result3 = await supabase
+        .from('payment_transactions')
+        .select('*')
+        .eq('org_id', customData.orgId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (result3.data) {
+        payment = result3.data;
+        console.log('[Cardcom Webhook] Found payment by orgId fallback:', payment.id);
+        
+        // Backfill lowprofile_code
+        await supabase
+          .from('payment_transactions')
+          .update({ lowprofile_code: lowProfileCode })
+          .eq('id', payment.id);
+      }
+    }
+
+    if (!payment) {
+      console.error('[Cardcom Webhook] Payment not found for lowprofile:', lowProfileCode, 'customData:', customData);
+      // Still return 200 to Cardcom so it doesn't retry
       return NextResponse.json({ 
         success: false, 
         error: 'Payment not found',
@@ -69,7 +141,7 @@ export async function GET(request: NextRequest) {
 
     // Already processed?
     if (payment.status === 'completed') {
-      console.log('[Cardcom Webhook] Payment already processed:', lowProfileCode);
+      console.log('[Cardcom Webhook] Payment already processed:', payment.id);
       return NextResponse.json({ 
         success: true, 
         message: 'Already processed',
@@ -78,23 +150,26 @@ export async function GET(request: NextRequest) {
     }
 
     if (verification.success) {
-      // Update payment record with success
+      // ===== PAYMENT SUCCESS =====
+
+      // 1. Update payment_transactions record
       await supabase
         .from('payment_transactions')
         .update({
           status: 'completed',
-          cardcom_transaction_id: verification.transactionId,
-          cardcom_approval_number: verification.approvalNumber,
-          card_token: verification.token,
-          card_mask: verification.cardMask,
-          card_expiry: verification.cardExpiry,
-          card_brand: verification.cardBrand,
-          invoice_number: verification.invoiceNumber,
+          lowprofile_code: lowProfileCode,
+          cardcom_transaction_id: verification.transactionId || null,
+          cardcom_approval_number: verification.approvalNumber || null,
+          card_token: verification.token || null,
+          card_mask: verification.cardMask || null,
+          card_expiry: verification.cardExpiry || null,
+          card_brand: verification.cardBrand || null,
+          invoice_number: verification.invoiceNumber || null,
           completed_at: new Date().toISOString(),
         })
         .eq('id', payment.id);
 
-      // Calculate subscription dates
+      // 2. Calculate subscription dates
       const now = new Date();
       const subscriptionEnd = new Date(now);
       if (payment.is_annual) {
@@ -103,34 +178,80 @@ export async function GET(request: NextRequest) {
         subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
       }
 
-      // Update organization subscription status
+      // Map plan to DB tier (enum only supports 'basic' | 'extended')
+      const dbTier = payment.plan === 'enterprise' ? 'extended' : payment.plan;
+
+      // 3. Update organization
       await supabase
         .from('organizations')
         .update({
           subscription_status: 'active',
-          tier: payment.plan,
+          tier: dbTier,
+          status: 'active',
           subscription_start_date: now.toISOString(),
           subscription_end_date: subscriptionEnd.toISOString(),
           last_payment_date: now.toISOString(),
           last_payment_amount: payment.amount,
-          // Store token for recurring billing
-          payment_token: verification.token,
-          payment_card_mask: verification.cardMask,
+          payment_token: verification.token || null,
+          payment_card_mask: verification.cardMask || null,
         })
         .eq('id', payment.org_id);
 
-      // Send confirmation email
+      // 4. CRITICAL: Create/update subscriptions record
+      //    The subscription gate hook checks THIS table
+      const planDetails = PLAN_DETAILS[payment.plan] || PLAN_DETAILS.basic;
+      
+      const { data: existingSub } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('org_id', payment.org_id)
+        .maybeSingle();
+
+      if (existingSub) {
+        await supabase
+          .from('subscriptions')
+          .update({
+            tier: dbTier,
+            monthly_price: planDetails.monthly_price,
+            dpo_minutes_quota: planDetails.dpo_minutes_quota,
+            dpo_minutes_used: 0,
+            billing_cycle_start: now.toISOString().split('T')[0],
+            status: 'active',
+            updated_at: now.toISOString(),
+          })
+          .eq('id', existingSub.id);
+        
+        console.log('[Cardcom Webhook] Updated existing subscription:', existingSub.id);
+      } else {
+        const { error: subInsertError } = await supabase
+          .from('subscriptions')
+          .insert({
+            org_id: payment.org_id,
+            tier: dbTier,
+            monthly_price: planDetails.monthly_price,
+            dpo_minutes_quota: planDetails.dpo_minutes_quota,
+            dpo_minutes_used: 0,
+            billing_cycle_start: now.toISOString().split('T')[0],
+            status: 'active',
+          });
+        
+        if (subInsertError) {
+          console.error('[Cardcom Webhook] Failed to create subscription record:', subInsertError);
+        } else {
+          console.log('[Cardcom Webhook] Created new subscription record for org:', payment.org_id);
+        }
+      }
+
+      // 5. Send confirmation email (non-blocking)
       try {
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mydpo.co.il';
         
-        // Get org name
         const { data: org } = await supabase
           .from('organizations')
           .select('name')
           .eq('id', payment.org_id)
           .single();
         
-        // Get user email from auth
         const { data: userData } = await supabase.auth.admin.getUserById(payment.user_id);
         const userEmail = userData?.user?.email;
 
@@ -165,13 +286,14 @@ export async function GET(request: NextRequest) {
       });
 
     } else {
-      // Payment failed
+      // ===== PAYMENT FAILED =====
       await supabase
         .from('payment_transactions')
         .update({
           status: 'failed',
-          error_message: verification.error,
-          cardcom_response: verification.dealResponse,
+          lowprofile_code: lowProfileCode,
+          error_message: verification.error || null,
+          cardcom_response: verification.dealResponse || null,
           completed_at: new Date().toISOString(),
         })
         .eq('id', payment.id);
