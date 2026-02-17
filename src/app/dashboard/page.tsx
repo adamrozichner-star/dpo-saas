@@ -31,6 +31,8 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useSubscriptionGate } from '@/lib/use-subscription-gate'
+import { DPO_CONFIG } from '@/lib/dpo-config'
+import { useToast } from '@/components/Toast'
 import WelcomeModal from '@/components/WelcomeModal'
 
 // ============================================
@@ -502,6 +504,20 @@ function OverviewTab({
 
   const scoreInfo = getScoreInfo()
 
+  // Compliance breakdown
+  const docTypes = documents.map(d => d.type)
+  const scoreBreakdown = [
+    { label: 'מדיניות פרטיות', done: docTypes.includes('privacy_policy'), points: 15, action: 'privacy_policy' },
+    { label: 'נוהל אבטחת מידע', done: docTypes.includes('security_policy') || docTypes.includes('security_procedures'), points: 15, action: 'security_policy' },
+    { label: 'כתב מינוי DPO', done: docTypes.includes('dpo_appointment'), points: 10, action: 'dpo_appointment' },
+    { label: 'רישום מאגרי מידע', done: docTypes.includes('database_registration') || docTypes.includes('database_definition'), points: 10, action: 'database_registration' },
+    { label: 'מפת עיבוד (ROPA)', done: docTypes.includes('ropa'), points: 10, action: 'ropa' },
+    { label: 'טופס הסכמה', done: docTypes.includes('consent_form'), points: 10, action: 'consent_form' },
+    { label: 'אין אירועי אבטחה פתוחים', done: incidents.filter(i => !['resolved', 'closed'].includes(i.status)).length === 0, points: 15, action: null },
+  ]
+  const maxScore = scoreBreakdown.reduce((s, item) => s + item.points, 15) // 15 base
+  const earnedScore = 15 + scoreBreakdown.filter(i => i.done).reduce((s, item) => s + item.points, 0)
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -514,7 +530,7 @@ function OverviewTab({
 
       {/* Top Cards */}
       <div className="grid md:grid-cols-2 gap-4">
-        {/* Score Card */}
+        {/* Score Card — with breakdown */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm font-medium text-stone-500">ציון ציות</p>
@@ -522,9 +538,37 @@ function OverviewTab({
               {scoreInfo.label}
             </span>
           </div>
-          <div className="flex items-baseline gap-1">
+          <div className="flex items-baseline gap-1 mb-4">
             <span className="text-5xl font-bold text-stone-800">{complianceScore}</span>
             <span className="text-stone-400 text-lg">/100</span>
+          </div>
+          {/* Progress bar */}
+          <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden mb-4">
+            <div 
+              className={`h-full rounded-full transition-all duration-500 ${
+                complianceScore >= 70 ? 'bg-emerald-500' : complianceScore >= 40 ? 'bg-amber-500' : 'bg-rose-500'
+              }`}
+              style={{ width: `${complianceScore}%` }}
+            />
+          </div>
+          {/* Breakdown items */}
+          <div className="space-y-2">
+            {scoreBreakdown.map((item, i) => (
+              <div key={i} className="flex items-center gap-2 text-sm">
+                {item.done ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                ) : (
+                  <div className="w-4 h-4 rounded-full border-2 border-stone-300 flex-shrink-0" />
+                )}
+                <span className={item.done ? 'text-stone-500 line-through' : 'text-stone-700'}>{item.label}</span>
+                <span className="text-xs text-stone-400 mr-auto">{item.points} נק׳</span>
+                {!item.done && item.action && (
+                  <Link href={`/chat?task=${item.action}&prompt=${encodeURIComponent(`אנא צור עבורי ${item.label} מלא ומוכן לשימוש עבור הארגון שלי`)}`}>
+                    <span className="text-xs text-indigo-600 hover:text-indigo-700 font-medium cursor-pointer">צור עכשיו →</span>
+                  </Link>
+                )}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -543,7 +587,7 @@ function OverviewTab({
               <User className="h-6 w-6 text-indigo-500" />
             </div>
             <div className="flex-1">
-              <p className="font-semibold text-stone-800">עו"ד דנה כהן</p>
+              <p className="font-semibold text-stone-800">{DPO_CONFIG.name}</p>
               <p className="text-sm text-stone-500">ממונה הגנת פרטיות</p>
             </div>
             <Link href="/chat">
@@ -741,6 +785,7 @@ function TasksTab({ tasks }: { tasks: Task[] }) {
 // DOCUMENTS TAB
 // ============================================
 function DocumentsTab({ documents, organization, supabase }: { documents: Document[], organization: any, supabase: any }) {
+  const { toast } = useToast()
   const [filter, setFilter] = useState<string>('all')
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -803,7 +848,7 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
       }
     } catch (error) {
       console.error('PDF download error:', error)
-      alert('שגיאה בהורדת המסמך')
+      toast('שגיאה בהורדת המסמך', 'error')
     }
   }
 
@@ -828,10 +873,10 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
       // Update local state
       selectedDoc.content = editedContent
       setIsEditing(false)
-      alert('המסמך נשמר בהצלחה!')
+      toast('המסמך נשמר בהצלחה!')
     } catch (error) {
       console.error('Error saving document:', error)
-      alert('שגיאה בשמירת המסמך')
+      toast('שגיאה בשמירת המסמך', 'error')
     } finally {
       setIsSaving(false)
     }
