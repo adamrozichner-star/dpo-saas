@@ -66,7 +66,7 @@ function DashboardContent() {
   const { user, session, signOut, loading, supabase } = useAuth()
   const { isAuthorized, isChecking } = useSubscriptionGate()
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'incidents' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'incidents' | 'messages' | 'settings'>('overview')
   const [organization, setOrganization] = useState<any>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [incidents, setIncidents] = useState<any[]>([])
@@ -76,6 +76,8 @@ function DashboardContent() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [complianceScore, setComplianceScore] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
+  const [unreadMessages, setUnreadMessages] = useState(0)
+  const [messageThreads, setMessageThreads] = useState<any[]>([])
 
   useEffect(() => {
     if (!loading && !session) {
@@ -139,6 +141,19 @@ function DashboardContent() {
         
         const generatedTasks = generateTasks(docs || [], incidentData || [], dsarData || [], org)
         setTasks(generatedTasks)
+
+        // Load message threads (DPO-User messaging)
+        try {
+          const msgRes = await fetch(`/api/messages?orgId=${org.id}`)
+          const msgData = await msgRes.json()
+          if (msgData.threads) {
+            setMessageThreads(msgData.threads)
+            const unread = msgData.threads.reduce((sum: number, t: any) => sum + (t.unreadCount || 0), 0)
+            setUnreadMessages(unread)
+          }
+        } catch (e) {
+          console.log('Messages loading skipped')
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error)
@@ -322,6 +337,13 @@ function DashboardContent() {
               badge={activeIncidentsCount > 0 ? activeIncidentsCount : undefined}
             />
             <NavButton 
+              icon={<MessageSquare className="h-5 w-5" />} 
+              label="הודעות מהממונה" 
+              active={activeTab === 'messages'} 
+              onClick={() => { setActiveTab('messages'); setMobileMenuOpen(false) }}
+              badge={unreadMessages > 0 ? unreadMessages : undefined}
+            />
+            <NavButton 
               icon={<Settings className="h-5 w-5" />} 
               label="הגדרות" 
               active={activeTab === 'settings'} 
@@ -385,6 +407,7 @@ function DashboardContent() {
               tasks={tasks}
               documents={documents}
               incidents={incidents}
+              unreadMessages={unreadMessages}
               onNavigate={setActiveTab}
             />
           )}
@@ -396,6 +419,13 @@ function DashboardContent() {
           )}
           {activeTab === 'incidents' && (
             <IncidentsTab incidents={incidents} orgId={organization?.id} />
+          )}
+          {activeTab === 'messages' && (
+            <MessagesTab 
+              threads={messageThreads} 
+              orgId={organization?.id}
+              onRefresh={loadAllData}
+            />
           )}
           {activeTab === 'settings' && (
             <SettingsTab organization={organization} user={user} />
@@ -451,6 +481,7 @@ function OverviewTab({
   tasks, 
   documents, 
   incidents,
+  unreadMessages,
   onNavigate 
 }: { 
   organization: any
@@ -458,6 +489,7 @@ function OverviewTab({
   tasks: Task[]
   documents: Document[]
   incidents: any[]
+  unreadMessages: number
   onNavigate: (tab: any) => void
 }) {
   const hasSubscription = organization?.subscription_status === 'active'
@@ -497,8 +529,15 @@ function OverviewTab({
         </div>
 
         {/* DPO Card */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
-          <p className="text-sm font-medium text-stone-500 mb-4">הממונה שלכם</p>
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200 cursor-pointer hover:border-indigo-200 transition-colors" onClick={() => onNavigate('messages')}>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-medium text-stone-500">הממונה שלכם</p>
+            {unreadMessages > 0 && (
+              <span className="bg-indigo-500 text-white text-xs font-bold px-2.5 py-1 rounded-full animate-pulse">
+                {unreadMessages} הודעות חדשות
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
               <User className="h-6 w-6 text-indigo-500" />
@@ -1118,6 +1157,322 @@ function IncidentsTab({ incidents, orgId }: { incidents: any[], orgId: string })
               </div>
             ))}
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================
+// MESSAGES TAB (DPO ↔ User Communication)
+// ============================================
+function MessagesTab({ threads, orgId, onRefresh }: { threads: any[], orgId: string, onRefresh: () => void }) {
+  const [selectedThread, setSelectedThread] = useState<any>(null)
+  const [threadMessages, setThreadMessages] = useState<any[]>([])
+  const [replyText, setReplyText] = useState('')
+  const [isSending, setIsSending] = useState(false)
+  const [isLoadingThread, setIsLoadingThread] = useState(false)
+  const [showNewMessage, setShowNewMessage] = useState(false)
+  const [newSubject, setNewSubject] = useState('')
+  const [newContent, setNewContent] = useState('')
+
+  const openThread = async (thread: any) => {
+    setSelectedThread(thread)
+    setIsLoadingThread(true)
+    setReplyText('')
+
+    try {
+      const res = await fetch(`/api/messages?threadId=${thread.id}`)
+      const data = await res.json()
+      setThreadMessages(data.messages || [])
+
+      // Mark as read
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'mark_read', threadId: thread.id, senderType: 'user' })
+      })
+    } catch (e) {
+      console.error('Failed to load thread:', e)
+    } finally {
+      setIsLoadingThread(false)
+    }
+  }
+
+  const sendReply = async () => {
+    if (!replyText.trim() || !selectedThread || isSending) return
+    setIsSending(true)
+
+    try {
+      await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'send_message',
+          threadId: selectedThread.id,
+          content: replyText,
+          senderType: 'user',
+          senderName: 'לקוח'
+        })
+      })
+
+      setReplyText('')
+      await openThread(selectedThread) // Reload messages
+      onRefresh() // Refresh badge counts
+    } catch (e) {
+      console.error('Failed to send reply:', e)
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const createNewThread = async () => {
+    if (!newSubject.trim() || !newContent.trim() || isSending) return
+    setIsSending(true)
+
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create_thread',
+          orgId,
+          subject: newSubject,
+          content: newContent,
+          senderType: 'user',
+          senderName: 'לקוח',
+          priority: 'normal'
+        })
+      })
+
+      const data = await res.json()
+      setShowNewMessage(false)
+      setNewSubject('')
+      setNewContent('')
+      onRefresh() // Refresh everything
+      
+      // Open the new thread
+      if (data.thread) {
+        openThread(data.thread)
+      }
+    } catch (e) {
+      console.error('Failed to create thread:', e)
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const getStatusStyle = (status: string) => {
+    if (status === 'resolved') return 'bg-emerald-100 text-emerald-700'
+    if (status === 'open') return 'bg-blue-100 text-blue-700'
+    return 'bg-stone-100 text-stone-700'
+  }
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = { open: 'פתוח', resolved: 'נענה', closed: 'סגור' }
+    return labels[status] || status
+  }
+
+  // Thread detail view
+  if (selectedThread) {
+    return (
+      <div className="space-y-4">
+        <button 
+          onClick={() => { setSelectedThread(null); onRefresh() }}
+          className="flex items-center gap-2 text-stone-500 hover:text-stone-700 transition-colors"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          חזרה להודעות
+        </button>
+
+        <div className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
+          {/* Thread header */}
+          <div className="p-4 border-b bg-stone-50">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-stone-800">{selectedThread.subject}</h2>
+              <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusStyle(selectedThread.status)}`}>
+                {getStatusLabel(selectedThread.status)}
+              </span>
+            </div>
+            <p className="text-xs text-stone-400 mt-1">
+              {new Date(selectedThread.created_at).toLocaleDateString('he-IL', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+          </div>
+
+          {/* Messages */}
+          <div className="p-4 space-y-4 max-h-[50vh] overflow-y-auto">
+            {isLoadingThread ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-indigo-500" />
+              </div>
+            ) : (
+              threadMessages.map((msg: any) => (
+                <div key={msg.id} className={`flex ${msg.sender_type === 'user' ? 'justify-start' : 'justify-end'}`}>
+                  <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
+                    msg.sender_type === 'dpo' 
+                      ? 'bg-indigo-50 border border-indigo-100' 
+                      : msg.sender_type === 'system'
+                      ? 'bg-amber-50 border border-amber-100'
+                      : 'bg-stone-100'
+                  }`}>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={`text-xs font-medium ${
+                        msg.sender_type === 'dpo' ? 'text-indigo-600' : msg.sender_type === 'system' ? 'text-amber-600' : 'text-stone-500'
+                      }`}>
+                        {msg.sender_type === 'dpo' ? '🛡️ ממונה הגנת פרטיות' : msg.sender_type === 'system' ? '🤖 מערכת' : '👤 אתה'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-stone-700 whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                    <p className="text-xs text-stone-400 mt-2">
+                      {new Date(msg.created_at).toLocaleString('he-IL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Reply input */}
+          {selectedThread.status !== 'closed' && (
+            <div className="p-4 border-t bg-stone-50">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="כתוב תגובה..."
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendReply() }}}
+                  className="flex-1 px-4 py-2.5 bg-white border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                />
+                <button
+                  onClick={sendReply}
+                  disabled={!replyText.trim() || isSending}
+                  className="px-4 py-2.5 bg-indigo-500 text-white rounded-xl text-sm font-medium hover:bg-indigo-600 disabled:bg-stone-300 transition-colors flex items-center gap-2"
+                >
+                  {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                  שלח
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Thread list view
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-stone-800">💬 הודעות מהממונה</h1>
+          <p className="text-stone-500 mt-1">תקשורת ישירה עם ממונה הגנת הפרטיות שלכם</p>
+        </div>
+        <button 
+          onClick={() => setShowNewMessage(true)}
+          className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors flex items-center gap-2"
+        >
+          <Plus className="h-4 w-4" />
+          הודעה חדשה
+        </button>
+      </div>
+
+      {/* New Message Form */}
+      {showNewMessage && (
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-indigo-200">
+          <h3 className="font-semibold text-stone-800 mb-4">שליחת הודעה לממונה</h3>
+          <div className="space-y-3">
+            <input
+              type="text"
+              placeholder="נושא ההודעה"
+              value={newSubject}
+              onChange={(e) => setNewSubject(e.target.value)}
+              className="w-full px-4 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <textarea
+              placeholder="תוכן ההודעה..."
+              value={newContent}
+              onChange={(e) => setNewContent(e.target.value)}
+              rows={4}
+              className="w-full px-4 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            />
+            <div className="flex gap-2 justify-end">
+              <button 
+                onClick={() => { setShowNewMessage(false); setNewSubject(''); setNewContent('') }}
+                className="px-4 py-2 text-stone-500 hover:bg-stone-100 rounded-lg text-sm transition-colors"
+              >
+                ביטול
+              </button>
+              <button 
+                onClick={createNewThread}
+                disabled={!newSubject.trim() || !newContent.trim() || isSending}
+                className="px-4 py-2 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 disabled:bg-stone-300 transition-colors"
+              >
+                {isSending ? 'שולח...' : 'שלח לממונה'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Thread List */}
+      {threads.length === 0 && !showNewMessage ? (
+        <div className="bg-white rounded-2xl p-12 shadow-sm border border-stone-200 text-center">
+          <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center mx-auto mb-4">
+            <MessageSquare className="h-8 w-8 text-indigo-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-stone-800 mb-2">אין הודעות עדיין</h3>
+          <p className="text-stone-500 mb-4">ניתן לשלוח הודעה ישירה לממונה הגנת הפרטיות שלכם</p>
+          <button
+            onClick={() => setShowNewMessage(true)}
+            className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors"
+          >
+            שלח הודעה ראשונה
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {threads.map((thread: any) => (
+            <div 
+              key={thread.id}
+              onClick={() => openThread(thread)}
+              className={`bg-white rounded-xl p-4 shadow-sm border cursor-pointer transition-colors hover:border-indigo-200 ${
+                thread.unreadCount > 0 ? 'border-indigo-200 bg-indigo-50/30' : 'border-stone-200'
+              }`}
+            >
+              <div className="flex items-start gap-4">
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  thread.unreadCount > 0 ? 'bg-indigo-100' : 'bg-stone-100'
+                }`}>
+                  <MessageSquare className={`h-5 w-5 ${thread.unreadCount > 0 ? 'text-indigo-600' : 'text-stone-400'}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className={`font-medium truncate ${thread.unreadCount > 0 ? 'text-stone-900' : 'text-stone-700'}`}>
+                      {thread.subject}
+                    </h3>
+                    {thread.unreadCount > 0 && (
+                      <span className="bg-indigo-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                        {thread.unreadCount}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-stone-500 truncate">
+                    {thread.lastMessage?.content?.slice(0, 80) || 'אין הודעות'}
+                  </p>
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusStyle(thread.status)}`}>
+                      {getStatusLabel(thread.status)}
+                    </span>
+                    <span className="text-xs text-stone-400">
+                      {new Date(thread.last_message_at || thread.created_at).toLocaleDateString('he-IL')}
+                    </span>
+                  </div>
+                </div>
+                <ChevronLeft className="h-5 w-5 text-stone-300 flex-shrink-0" />
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
