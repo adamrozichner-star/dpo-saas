@@ -88,21 +88,31 @@ export default function CheckoutPage() {
     async function loadOrg() {
       if (!user || !supabase) return;
       
-      const { data } = await supabase
-        .from('organizations')
-        .select('*')
-        .eq('created_by', user.id)
-        .single();
+      // First get user record to find org_id
+      const { data: userData } = await supabase
+        .from('users')
+        .select('org_id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
       
-      if (data) {
-        setOrganization(data);
+      if (userData?.org_id) {
+        // Then get the organization
+        const { data: orgData } = await supabase
+          .from('organizations')
+          .select('*')
+          .eq('id', userData.org_id)
+          .single();
         
-        // Calculate trial days left
-        if (data.trial_end_date) {
-          const endDate = new Date(data.trial_end_date);
-          const now = new Date();
-          const daysLeft = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-          setTrialDaysLeft(Math.max(0, daysLeft));
+        if (orgData) {
+          setOrganization(orgData);
+          
+          // Calculate trial days left
+          if (orgData.trial_end_date) {
+            const endDate = new Date(orgData.trial_end_date);
+            const now = new Date();
+            const daysLeft = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            setTrialDaysLeft(Math.max(0, daysLeft));
+          }
         }
       }
       // If no org, that's OK - payment-first flow will create it
