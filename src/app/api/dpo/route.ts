@@ -646,13 +646,25 @@ export async function POST(request: NextRequest) {
 
       // Handle ESCALATION resolution
       if (item.type === 'escalation' && item.related_thread_id && response) {
-        // Add DPO response as message
+        // Add DPO response as message thread
         await supabase.from('messages').insert({
           thread_id: item.related_thread_id,
           sender_type: 'dpo',
           sender_name: 'ממונה הגנת הפרטיות',
           content: response
         })
+
+        // Also inject into chat_messages so user sees it in their chat view
+        try {
+          await supabase.from('chat_messages').insert({
+            org_id: item.org_id,
+            role: 'assistant',
+            content: `🛡️ תשובה מממונה הגנת הפרטיות:\n\n${response}\n\n---\nהודעה זו נשלחה על ידי הממונה האנושי שלכם. ניתן להשיב דרך לשונית "הודעות מהממונה" בלוח הבקרה.`,
+            intent: 'dpo_response',
+          })
+        } catch (e) {
+          console.log('Could not inject DPO response into chat_messages:', e)
+        }
 
         // Update thread status
         await supabase
