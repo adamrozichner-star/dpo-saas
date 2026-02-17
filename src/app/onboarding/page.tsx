@@ -29,6 +29,7 @@ import {
   X
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { DPO_CONFIG } from '@/lib/dpo-config'
 import { onboardingSteps } from '@/lib/mock-data'
 import { OnboardingQuestion, OnboardingAnswer } from '@/types'
 
@@ -702,7 +703,7 @@ function OnboardingContent() {
                     {/* Professional woman image - using UI Faces */}
                     <img 
                       src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop&crop=face"
-                      alt="עו״ד דנה כהן"
+                      alt={DPO_CONFIG.name}
                       className="w-full h-full object-cover"
                       onError={(e) => {
                         // Fallback to initials if image fails
@@ -725,18 +726,18 @@ function OnboardingContent() {
               {/* Content Side */}
               <div className="p-8 flex flex-col justify-center">
                 <Badge className="w-fit mb-3 bg-blue-100 text-blue-700 hover:bg-blue-100">הממונה שלכם</Badge>
-                <h1 className="text-3xl font-bold text-slate-900 mb-1">עו״ד דנה כהן</h1>
+                <h1 className="text-3xl font-bold text-slate-900 mb-1">{DPO_CONFIG.name}</h1>
                 <p className="text-slate-600 mb-6">ממונה הגנת פרטיות מוסמכת | 12 שנות ניסיון</p>
 
                 {/* Contact Info - Compact */}
                 <div className="flex flex-wrap gap-3 mb-6">
                   <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-lg">
                     <Mail className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium">dpo@mydpo.co.il</span>
+                    <span className="text-sm font-medium">{DPO_CONFIG.email}</span>
                   </div>
                   <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-lg">
                     <FileCheck className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium">רישיון DPO-2025-001</span>
+                    <span className="text-sm font-medium">רישיון {DPO_CONFIG.licenseNumber}</span>
                   </div>
                 </div>
 
