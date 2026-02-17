@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Heebo } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/lib/auth-context'
+import { ToastProvider } from '@/components/Toast'
 
 const heebo = Heebo({
   subsets: ['hebrew', 'latin'],
@@ -22,7 +23,9 @@ export default function RootLayout({
     <html lang="he" dir="rtl" className={heebo.variable}>
       <body className="min-h-screen bg-background font-sans antialiased">
         <AuthProvider>
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>
