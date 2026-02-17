@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { useToast } from '@/components/Toast'
 import {
   Shield,
   AlertTriangle,
@@ -141,6 +142,7 @@ const riskConfig = {
 
 export default function DPODashboard() {
   const router = useRouter()
+  const { toast } = useToast()
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [queueItems, setQueueItems] = useState<QueueItem[]>([])
   const [organizations, setOrganizations] = useState<Organization[]>([])
@@ -173,10 +175,15 @@ export default function DPODashboard() {
   const [ropaStats, setRopaStats] = useState({ total: 0, critical: 0, high: 0, requires_ppa: 0 })
   const [selectedRopaOrg, setSelectedRopaOrg] = useState<any>(null)
 
-  // Check DPO auth
+  // Check DPO auth via session token
   useEffect(() => {
-    const dpoAuth = localStorage.getItem('dpo_authenticated')
-    if (dpoAuth !== 'true') {
+    const token = sessionStorage.getItem('dpo_session_token')
+    const expires = sessionStorage.getItem('dpo_session_expires')
+    
+    if (!token || !expires || new Date(expires) < new Date()) {
+      // Clear expired session
+      sessionStorage.removeItem('dpo_session_token')
+      sessionStorage.removeItem('dpo_session_expires')
       router.push('/dpo/login')
     } else {
       loadDashboard()
@@ -361,7 +368,7 @@ export default function DPODashboard() {
         const emailMsg = data.email_sent 
           ? '✅ הפנייה טופלה והתשובה נשלחה במייל'
           : '✅ הפנייה טופלה (לא נשלח מייל)'
-        alert(emailMsg)
+        toast(emailMsg)
       }
 
       // Refresh
@@ -369,7 +376,7 @@ export default function DPODashboard() {
       loadDashboard()
     } catch (error) {
       console.error('Failed to resolve:', error)
-      alert('שגיאה בטיפול בפנייה')
+      toast('שגיאה בטיפול בפנייה', 'error')
     }
     setResolving(false)
   }
@@ -377,7 +384,7 @@ export default function DPODashboard() {
   const bulkApprove = async () => {
     const highConfidenceItems = queueItems.filter(i => (i.ai_confidence || 0) >= 0.85 && i.ai_draft_response)
     if (highConfidenceItems.length === 0) {
-      alert('אין פריטים עם ביטחון AI גבוה מספיק')
+      toast('אין פריטים עם ביטחון AI גבוה מספיק', 'info')
       return
     }
 
@@ -395,7 +402,7 @@ export default function DPODashboard() {
         })
       })
       const data = await res.json()
-      alert(`✅ אושרו ${data.approved} פריטים\n📧 נשלחו ${data.emails_sent || 0} מיילים`)
+      toast(`אושרו ${data.approved} פריטים | נשלחו ${data.emails_sent || 0} מיילים`)
       loadDashboard()
     } catch (error) {
       console.error('Bulk approve failed:', error)
@@ -442,7 +449,7 @@ export default function DPODashboard() {
           referenceNumber
         })
       })
-      alert('✅ דיווח לרשות נרשם בהצלחה')
+      toast('דיווח לרשות נרשם בהצלחה')
       loadIncidents()
       loadIncidentDetails(selectedIncident.id)
     } catch (error) {
@@ -467,7 +474,7 @@ export default function DPODashboard() {
           recipientCount: count
         })
       })
-      alert('✅ הודעה לנפגעים נרשמה בהצלחה')
+      toast('הודעה לנפגעים נרשמה בהצלחה')
       loadIncidents()
       loadIncidentDetails(selectedIncident.id)
     } catch (error) {
