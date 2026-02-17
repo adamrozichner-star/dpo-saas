@@ -67,9 +67,16 @@ export async function GET(request: NextRequest) {
       const amount = plan.monthly
 
       try {
-        // Get user email for invoice
-        const { data: userData } = await supabase.auth.admin.getUserById(org.created_by)
-        const userEmail = userData?.user?.email
+        // Get user associated with this org
+        const { data: orgUser } = await supabase
+          .from('users')
+          .select('auth_user_id, email')
+          .eq('org_id', org.id)
+          .limit(1)
+          .single()
+        
+        const userEmail = orgUser?.email
+        const userId = orgUser?.auth_user_id
 
         // Charge the saved token via Cardcom
         const chargeResult = await chargeToken({
@@ -98,13 +105,11 @@ export async function GET(request: NextRequest) {
           await supabase.from('payment_transactions').insert({
             id: `recurring_${org.id}_${Date.now()}`,
             org_id: org.id,
-            user_id: org.created_by,
+            user_id: userId,
             amount,
             plan: org.tier,
             is_annual: false,
             status: 'completed',
-            provider: 'cardcom',
-            cardcom_transaction_id: chargeResult.transactionId,
             created_at: new Date().toISOString(),
             completed_at: new Date().toISOString(),
           })
@@ -152,13 +157,12 @@ export async function GET(request: NextRequest) {
           await supabase.from('payment_transactions').insert({
             id: `recurring_${org.id}_${Date.now()}`,
             org_id: org.id,
-            user_id: org.created_by,
+            user_id: userId,
             amount,
             plan: org.tier,
             is_annual: false,
             status: 'failed',
-            provider: 'cardcom',
-            error_message: chargeResult.error,
+            error_text: chargeResult.error,
             created_at: new Date().toISOString(),
           })
 
