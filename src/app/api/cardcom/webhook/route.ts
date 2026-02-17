@@ -123,13 +123,14 @@ export async function GET(request: NextRequest) {
       try {
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mydpo.co.il';
         
-        // Get user email from organization or payment
+        // Get org name
         const { data: org } = await supabase
           .from('organizations')
-          .select('name, created_by')
+          .select('name')
           .eq('id', payment.org_id)
           .single();
         
+        // Get user email from auth
         const { data: userData } = await supabase.auth.admin.getUserById(payment.user_id);
         const userEmail = userData?.user?.email;
 
