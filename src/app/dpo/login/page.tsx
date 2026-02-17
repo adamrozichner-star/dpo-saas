@@ -18,15 +18,28 @@ export default function DPOLoginPage() {
     setLoading(true)
     setError('')
 
-    // Check against env variable (set in Vercel)
-    const dpoPassword = process.env.NEXT_PUBLIC_DPO_PASSWORD || 'dpo2025'
+    try {
+      // Server-side password verification — no client-side secrets
+      const res = await fetch('/api/dpo-auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      })
 
-    if (password === dpoPassword) {
-      localStorage.setItem('dpo_authenticated', 'true')
-      router.push('/dpo')
-    } else {
-      setError('סיסמה שגויה')
+      const data = await res.json()
+
+      if (res.ok && data.success) {
+        // Store session token (not raw password)
+        sessionStorage.setItem('dpo_session_token', data.token)
+        sessionStorage.setItem('dpo_session_expires', data.expiresAt)
+        router.push('/dpo')
+      } else {
+        setError(data.error === 'Invalid password' ? 'סיסמה שגויה' : 'שגיאת מערכת, נסה שוב')
+      }
+    } catch (err) {
+      setError('שגיאת תקשורת, נסה שוב')
     }
+
     setLoading(false)
   }
 
