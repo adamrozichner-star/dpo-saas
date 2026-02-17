@@ -97,7 +97,7 @@ export default function ChatPage() {
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   
   // Sidebar state
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false) // Closed by default, visible on lg via CSS
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
   
@@ -368,7 +368,6 @@ export default function ChatPage() {
     const messageText = text || input.trim()
     if (!messageText || isLoading) return
     
-    // If still loading organization, show message
     if (orgLoading) {
       setMessages(prev => [...prev, {
         id: `loading-${Date.now()}`,
@@ -379,7 +378,6 @@ export default function ChatPage() {
       return
     }
     
-    // If no organization loaded, show error
     if (!organization) {
       setMessages(prev => [...prev, {
         id: `error-${Date.now()}`,
@@ -405,63 +403,122 @@ export default function ChatPage() {
     }
     setMessages(prev => [...prev, tempUserMsg])
 
-    try {
-      // Create conversation ID if not exists
-      const convId = currentConversationId || `conv-${Date.now()}`
-      if (!currentConversationId) {
-        setCurrentConversationId(convId)
-      }
+    // Create conversation ID if not exists
+    const convId = currentConversationId || `conv-${Date.now()}`
+    if (!currentConversationId) {
+      setCurrentConversationId(convId)
+    }
 
-      const response = await fetch('/api/chat', {
+    // Create a placeholder for the streaming assistant message
+    const streamMsgId = `stream-${Date.now()}`
+    setMessages(prev => [...prev, {
+      id: streamMsgId,
+      role: 'assistant',
+      content: '',
+      created_at: new Date().toISOString()
+    }])
+
+    try {
+      const response = await fetch('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'send_message',
           orgId: organization.id,
           message: messageText,
           conversationId: convId
         })
       })
 
-      const data = await response.json()
-
-      if (data.error) {
-        throw new Error(data.error)
+      if (!response.ok || !response.body) {
+        throw new Error('Stream failed')
       }
 
-      // Replace temp message with real ones
-      setMessages(prev => [
-        ...prev.filter(m => m.id !== tempUserMsg.id),
-        data.userMessage,
-        data.assistantMessage
-      ])
+      setIsTyping(false) // Stop typing dots, we're now showing real text
 
-      // Update conversation ID if returned
-      if (data.conversationId) {
-        setCurrentConversationId(data.conversationId)
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let fullText = ''
+      let streamIntent = ''
+      let streamQuickActions = null as any
+      let streamGeneratedDoc = null as any
+      let streamConvId = convId
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        
+        // Parse SSE events from buffer
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || '' // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue
+          
+          try {
+            const data = JSON.parse(line.slice(6))
+            
+            if (data.type === 'meta') {
+              streamIntent = data.intent
+              streamConvId = data.conversationId || convId
+            } else if (data.type === 'text') {
+              fullText += data.text
+              // Update the streaming message in place
+              setMessages(prev => prev.map(m => 
+                m.id === streamMsgId ? { ...m, content: fullText } : m
+              ))
+            } else if (data.type === 'done') {
+              streamQuickActions = data.quickActions
+              streamGeneratedDoc = data.generatedDocument
+              streamConvId = data.conversationId || convId
+
+              // Update message with final ID
+              setMessages(prev => prev.map(m => 
+                m.id === streamMsgId ? { 
+                  ...m, 
+                  id: data.assistantMsgId || streamMsgId,
+                  intent: data.intent,
+                  metadata: data.generatedDocument ? { generated_document: data.generatedDocument } : undefined
+                } : m
+              ))
+            } else if (data.type === 'error') {
+              throw new Error(data.error)
+            }
+          } catch (e) {
+            // Skip malformed SSE lines
+          }
+        }
       }
 
-      // Reload conversations list to show new chat
+      // Update conversation ID
+      if (streamConvId) {
+        setCurrentConversationId(streamConvId)
+      }
+
+      // Reload conversations list
       loadConversations()
 
       // Handle quick actions
-      if (data.quickActions) {
-        setActiveQuickAction(data.quickActions)
+      if (streamQuickActions) {
+        setActiveQuickAction(streamQuickActions)
       }
 
       // Handle generated document
-      if (data.generatedDocument) {
-        setCurrentDocument(data.generatedDocument)
-        setShowDocModal(true)  // Auto-open modal when document is generated
+      if (streamGeneratedDoc) {
+        setCurrentDocument(streamGeneratedDoc)
+        setShowDocModal(true)
       }
 
-      // Update suggestions dynamically based on intent
-      updateSuggestionsForIntent(data.intent, messageText)
+      // Update suggestions
+      updateSuggestionsForIntent(streamIntent, messageText)
 
     } catch (error) {
       console.error('Failed to send message:', error)
+      // Remove the empty stream message and show error
       setMessages(prev => [
-        ...prev,
+        ...prev.filter(m => m.id !== streamMsgId),
         {
           id: `error-${Date.now()}`,
           role: 'assistant',
@@ -1043,7 +1100,14 @@ ${summaryText}
   return (
     <div className="h-screen bg-slate-50 flex" dir="rtl">
       {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-72' : 'w-0'} bg-slate-900 text-white flex-shrink-0 transition-all duration-300 overflow-hidden flex flex-col`}>
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/30 z-40 lg:hidden" 
+          onClick={() => setSidebarOpen(false)} 
+        />
+      )}
+      <aside className={`${sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'} fixed lg:static inset-y-0 right-0 z-50 w-72 bg-slate-900 text-white flex-shrink-0 transition-transform duration-300 flex flex-col`}>
         {/* Sidebar Header */}
         <div className="p-4 border-b border-slate-700">
           <div className="flex items-center justify-between mb-4">
@@ -1331,14 +1395,17 @@ ${summaryText}
             </div>
           )}
 
-          {/* Typing Indicator */}
+          {/* Typing Indicator - shows while waiting for stream to start */}
           {isTyping && (
             <div className="flex justify-end">
               <div className="bg-white rounded-2xl rounded-bl-md shadow-sm px-5 py-3 border border-slate-100">
-                <div className="flex gap-1.5">
-                  <div className="w-2.5 h-2.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2.5 h-2.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2.5 h-2.5 bg-slate-300 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                  <span className="text-xs text-slate-400">חושב...</span>
                 </div>
               </div>
             </div>
@@ -1391,8 +1458,8 @@ ${summaryText}
 
       {/* Suggestions */}
       <div className="bg-white/80 backdrop-blur border-t border-slate-200 flex-shrink-0">
-        <div className="flex flex-wrap justify-center gap-2 p-3 max-w-4xl mx-auto md:flex-wrap md:overflow-visible overflow-x-auto">
-          {suggestions.map((s, i) => (
+        <div className="flex gap-2 p-3 max-w-4xl mx-auto overflow-x-auto scrollbar-hide md:flex-wrap md:justify-center">
+          {suggestions.slice(0, 6).map((s, i) => (
             <button 
               key={i}
               onClick={() => sendMessage(s.text)}
@@ -1498,8 +1565,8 @@ ${summaryText}
 
       {/* Document Modal */}
       {showDocModal && currentDocument && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 sm:p-4">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-2xl max-h-[90vh] sm:max-h-[80vh] flex flex-col overflow-hidden">
             <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
               <h3 className="font-bold text-lg">מסמך שנוצר</h3>
               <div className="flex items-center gap-2">
