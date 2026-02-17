@@ -81,6 +81,7 @@ export async function GET(request: NextRequest) {
         // Charge the saved token via Cardcom
         const chargeResult = await chargeToken({
           token: org.payment_token,
+          tokenExpiry: org.payment_token_expiry || '', // MMYY format
           amount,
           productName: `MyDPO - ${plan.name} (חודשי)`,
           customerEmail: userEmail,
