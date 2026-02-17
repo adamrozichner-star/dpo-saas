@@ -46,15 +46,14 @@ export function useSubscriptionGate() {
           return
         }
 
-        // No org yet — still in onboarding, redirect to onboarding
+        // No org yet — still in onboarding, redirect to get-started
         if (!userData.org_id) {
-          console.log('[SubscriptionGate] No org_id, redirecting to onboarding')
-          router.replace('/onboarding')
+          console.log('[SubscriptionGate] No org_id, redirecting to get-started')
+          router.replace('/get-started')
           return
         }
 
-        // Step 2: Check for active subscription
-        // Using maybeSingle() to avoid throwing on 0 results
+        // Step 2: Check for active subscription (primary check)
         const { data: sub, error: subError } = await supabase
           .from('subscriptions')
           .select('id, status')
@@ -62,22 +61,31 @@ export function useSubscriptionGate() {
           .in('status', ['active', 'past_due'])
           .maybeSingle()
 
-        if (subError) {
-          console.log('[SubscriptionGate] Subscription query error:', subError.message)
-          // Could be RLS blocking — just block access
-          router.replace('/payment-required')
-          return
-        }
-
         if (sub) {
           console.log('[SubscriptionGate] Active subscription found, authorized')
           setIsAuthorized(true)
           setIsChecking(false)
-        } else {
-          console.log('[SubscriptionGate] No active subscription, redirecting')
-          router.replace('/payment-required')
           return
         }
+
+        // Step 2b: Fallback — check organizations.subscription_status
+        // This covers the case where webhook updated org but subscription insert failed
+        const { data: org } = await supabase
+          .from('organizations')
+          .select('subscription_status')
+          .eq('id', userData.org_id)
+          .single()
+
+        if (org?.subscription_status === 'active') {
+          console.log('[SubscriptionGate] Org subscription_status is active (fallback), authorized')
+          setIsAuthorized(true)
+          setIsChecking(false)
+          return
+        }
+
+        console.log('[SubscriptionGate] No active subscription, redirecting')
+        router.replace('/payment-required')
+        return
       } catch (e) {
         console.error('[SubscriptionGate] Unexpected error:', e)
         router.replace('/payment-required')
