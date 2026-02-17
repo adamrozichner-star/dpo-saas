@@ -30,23 +30,32 @@ export default function PaymentSuccessPage() {
           const { data: { session } } = await supabase.auth.getSession();
           
           if (session?.user) {
-            // Check if org has completed full onboarding
-            const { data: org } = await supabase
-              .from('organizations')
-              .select('id, status')
-              .eq('created_by', session.user.id)
-              .single();
+            // First get user's org_id from users table
+            const { data: userData } = await supabase
+              .from('users')
+              .select('org_id')
+              .eq('auth_user_id', session.user.id)
+              .maybeSingle();
+            
+            if (userData?.org_id) {
+              // Then check org status
+              const { data: org } = await supabase
+                .from('organizations')
+                .select('id, status')
+                .eq('id', userData.org_id)
+                .single();
 
-            // If org status is pending or new, needs onboarding
-            if (org && (org.status === 'pending_payment' || org.status === 'pending')) {
-              setNeedsOnboarding(true);
-              // Clear quick assessment data
-              localStorage.removeItem('mydpo_quick_assessment');
-              // Redirect to full onboarding after payment
-              setTimeout(() => {
-                router.push('/onboarding');
-              }, 4000);
-              return;
+              // If org status is onboarding, needs full onboarding
+              if (org && org.status === 'onboarding') {
+                setNeedsOnboarding(true);
+                // Clear quick assessment data
+                localStorage.removeItem('mydpo_quick_assessment');
+                // Redirect to full onboarding after payment
+                setTimeout(() => {
+                  router.push('/onboarding');
+                }, 4000);
+                return;
+              }
             }
           }
         }
