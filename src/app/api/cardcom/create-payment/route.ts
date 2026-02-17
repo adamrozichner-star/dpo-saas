@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Store pending transaction (using columns that exist in schema)
+    // Store pending transaction WITH lowprofile_code so webhook can find it
     const { error: txnError } = await supabase.from('payment_transactions').insert({
       id: txnId,
       org_id: orgId,
@@ -167,6 +167,7 @@ export async function POST(request: NextRequest) {
       plan: plan,
       is_annual: isAnnual,
       status: 'pending',
+      lowprofile_code: result.lowProfileCode || null,
       created_at: new Date().toISOString(),
     });
 
@@ -175,7 +176,7 @@ export async function POST(request: NextRequest) {
       // Non-fatal - payment page is already created
     }
 
-    console.log('[Cardcom] Success:', { txnId, orgId, amount, url: result.url?.slice(0, 50) });
+    console.log('[Cardcom] Success:', { txnId, orgId, amount, lowProfileCode: result.lowProfileCode, url: result.url?.slice(0, 50) });
 
     return NextResponse.json({
       success: true,
