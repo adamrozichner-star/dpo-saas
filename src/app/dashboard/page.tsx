@@ -1238,12 +1238,12 @@ function MessagesTab({ threads, orgId, onRefresh }: { threads: any[], orgId: str
     setReplyText('')
 
     try {
-      const res = await authFetch(`/api/messages?threadId=${thread.id}`)
+      const res = await Fetch(`/api/messages?threadId=${thread.id}`)
       const data = await res.json()
       setThreadMessages(data.messages || [])
 
       // Mark as read
-      await authFetch('/api/messages', {
+      await Fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'mark_read', threadId: thread.id, senderType: 'user' })
@@ -1260,7 +1260,7 @@ function MessagesTab({ threads, orgId, onRefresh }: { threads: any[], orgId: str
     setIsSending(true)
 
     try {
-      await authFetch('/api/messages', {
+      await Fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1287,7 +1287,7 @@ function MessagesTab({ threads, orgId, onRefresh }: { threads: any[], orgId: str
     setIsSending(true)
 
     try {
-      const res = await authFetch('/api/messages', {
+      const res = await Fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
