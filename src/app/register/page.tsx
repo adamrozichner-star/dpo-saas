@@ -74,7 +74,7 @@ export default function RegisterPage() {
         setSuccess(true)
         // Redirect to quick assessment (payment-first flow)
         setTimeout(() => {
-          router.push('/get-started')
+          router.push('/onboarding')
         }, 2000)
       }
     } catch (err) {
