@@ -126,7 +126,7 @@ export default function AuthCallbackPage() {
           setStatus('מעביר להגדרות...');
           // Small delay to ensure session is fully stored
           await new Promise(resolve => setTimeout(resolve, 300));
-          window.location.href = '/get-started';
+          window.location.href = '/payment-required';
         } else {
           // Existing user - check if they have an active subscription
           setStatus('בודק מנוי...');
@@ -153,7 +153,7 @@ export default function AuthCallbackPage() {
           
           if (hasSubscription) {
             setStatus('מעביר ללוח הבקרה...');
-            window.location.href = '/dashboard';
+            window.location.href = '/payment-required';
           } else if (fullUser?.org_id) {
             // Has org but no subscription — needs to pay
             setStatus('מעביר לתשלום...');
@@ -161,7 +161,7 @@ export default function AuthCallbackPage() {
           } else {
             // No org — needs quick assessment first
             setStatus('מעביר להגדרות...');
-            window.location.href = '/get-started';
+            window.location.href = '/payment-required';
           }
         }
       } catch (err) {
