@@ -299,7 +299,7 @@ function OnboardingContent() {
       setGenStatus('הכל מוכן! מעבירים ללוח הבקרה...')
 
       setTimeout(() => {
-        router.push('/payment-required')
+        router.push('/dashboard')
       }, 1500)
 
     } catch (err: any) {
