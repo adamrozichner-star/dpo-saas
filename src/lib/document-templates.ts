@@ -51,6 +51,8 @@ export const businessTypeLabels: Record<string, string> = {
   education: 'חינוך והדרכה',
   services: 'שירותים מקצועיים',
   manufacturing: 'ייצור ותעשייה',
+  food: 'מזון ומסעדנות',
+  realestate: 'נדל"ן',
   other: 'אחר'
 }
 
