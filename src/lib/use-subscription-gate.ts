@@ -49,7 +49,7 @@ export function useSubscriptionGate() {
         // No org yet — still in onboarding, redirect to onboarding
         if (!userData.org_id) {
           console.log('[SubscriptionGate] No org_id, redirecting to onboarding')
-          router.replace('/onboarding')
+          router.replace('/payment-required')
           return
         }
 
