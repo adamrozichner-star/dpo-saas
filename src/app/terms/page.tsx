@@ -103,7 +103,7 @@ export default function TermsPage() {
             <h2 className="text-xl font-bold mb-4">12. יצירת קשר</h2>
             <p className="text-gray-700 leading-relaxed">לשאלות בנוגע לתנאי השימוש ניתן לפנות אלינו:</p>
             <p className="text-gray-700 mt-2">דוא&quot;ל: <a href="mailto:support@mydpo.co.il" className="text-emerald-600 hover:underline">support@mydpo.co.il</a></p>
-            <p className="text-gray-700">טלפון: 054-424-2427</p>
+            <p className="text-gray-700">טלפון: 03-555-1234</p>
           </section>
           <section>
             <h2 className="text-xl font-bold mb-4">13. דין וסמכות שיפוט</h2>
