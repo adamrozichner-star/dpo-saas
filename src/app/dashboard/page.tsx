@@ -839,7 +839,7 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
   const downloadAsPdf = async (doc: Document) => {
     try {
       const content = isEditing ? editedContent : doc.content
-      const response = await authFetch('/api/generate-pdf', {
+      const response = await fetch('/api/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
