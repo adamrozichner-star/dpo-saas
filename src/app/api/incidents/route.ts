@@ -189,6 +189,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action')
     const incidentId = searchParams.get('id')
+    let orgId: string | null = null
 
     // DPO dashboard action — requires DPO auth
     if (action === 'dashboard') {
@@ -199,10 +200,9 @@ export async function GET(request: NextRequest) {
       // All other actions — require user auth
       const auth = await authenticateRequest(request, supabase)
       if (!auth) return unauthorizedResponse()
-      // Override orgId with authenticated org
-      var orgId: string | null = auth.orgId
+      orgId = auth.orgId
     }
-
+    
     // =========================================
     // Get single incident with full details
     // =========================================
