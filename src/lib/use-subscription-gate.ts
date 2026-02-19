@@ -46,10 +46,10 @@ export function useSubscriptionGate() {
           return
         }
 
-        // No org yet — still in onboarding, redirect to get-started
+        // No org yet — still in onboarding, redirect to onboarding
         if (!userData.org_id) {
-          console.log('[SubscriptionGate] No org_id, redirecting to get-started')
-          router.replace('/get-started')
+          console.log('[SubscriptionGate] No org_id, redirecting to onboarding')
+          router.replace('/onboarding')
           return
         }
 
