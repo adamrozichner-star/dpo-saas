@@ -320,6 +320,21 @@ ${additionalMessage}` : ''}
         link: `/dpo/messages/${thread.id}`
       })
 
+      // Also create dpo_queue entry so it shows in DPO dashboard
+      try {
+        await supabase.from('dpo_queue').insert({
+          org_id: orgId,
+          type: 'escalation',
+          priority: priority === 'urgent' ? 'high' : 'medium',
+          status: 'pending',
+          title: `הודעה חדשה: ${subject}`,
+          description: content.substring(0, 500),
+          related_thread_id: thread.id
+        })
+      } catch (e) {
+        console.log('Could not create dpo_queue entry:', e)
+      }
+
       return NextResponse.json({ thread, message })
 
     } else if (action === 'send_message') {
@@ -369,6 +384,23 @@ ${additionalMessage}` : ''}
           body: thread.subject,
           link: `/messages/${threadId}`
         })
+
+        // If user sent this, create dpo_queue entry so DPO sees it
+        if (senderType !== 'dpo') {
+          try {
+            await supabase.from('dpo_queue').insert({
+              org_id: thread.org_id,
+              type: 'escalation',
+              priority: 'medium',
+              status: 'pending',
+              title: `תגובה חדשה: ${thread.subject}`,
+              description: content.substring(0, 500),
+              related_thread_id: threadId
+            })
+          } catch (e) {
+            console.log('Could not create dpo_queue entry for reply:', e)
+          }
+        }
       }
 
       return NextResponse.json({ message })
