@@ -7,11 +7,11 @@ export const dynamic = 'force-dynamic'
 // Runs daily - sends reminders at 3 days, 1 day, and 0 days before trial ends
 
 export async function GET(request: NextRequest) {
-  // Verify cron secret (optional but recommended)
+  // Verify cron secret — fail closed if not set
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

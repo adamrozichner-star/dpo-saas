@@ -14,11 +14,11 @@ const PLANS = {
 }
 
 export async function GET(request: NextRequest) {
-  // Verify cron secret
+  // Verify cron secret — fail closed if not set
   const authHeader = request.headers.get('authorization')
   const cronSecret = process.env.CRON_SECRET
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
         // Charge the saved token via Cardcom
         const chargeResult = await chargeToken({
           token: org.payment_token,
-          tokenExpiry: org.payment_token_expiry || '1299',        
+          tokenExpiry: org.payment_token_expiry || '', // MMYY format
           amount,
           productName: `MyDPO - ${plan.name} (חודשי)`,
           customerEmail: userEmail,

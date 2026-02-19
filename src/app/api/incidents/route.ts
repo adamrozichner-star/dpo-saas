@@ -1,3 +1,4 @@
+import { authenticateRequest, unauthorizedResponse } from '@/lib/api-auth'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
@@ -187,8 +188,20 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action')
-    const orgId = searchParams.get('orgId')
     const incidentId = searchParams.get('id')
+
+    // DPO dashboard action — requires DPO auth
+    if (action === 'dashboard') {
+      const { authenticateDpo } = await import('@/lib/api-auth')
+      const isDpo = await authenticateDpo(request, supabase)
+      if (!isDpo) return NextResponse.json({ error: 'DPO auth required' }, { status: 401 })
+    } else {
+      // All other actions — require user auth
+      const auth = await authenticateRequest(request, supabase)
+      if (!auth) return unauthorizedResponse()
+      // Override orgId with authenticated org
+      var orgId: string | null = auth.orgId
+    }
 
     // =========================================
     // Get single incident with full details
@@ -304,6 +317,12 @@ export async function GET(request: NextRequest) {
 // =============================================
 export async function POST(request: NextRequest) {
   try {
+    // --- AUTH CHECK (user or DPO) ---
+    const auth = await authenticateRequest(request, supabase)
+    const { authenticateDpo } = await import('@/lib/api-auth')
+    const isDpo = await authenticateDpo(request, supabase)
+    if (!auth && !isDpo) return unauthorizedResponse()
+    
     const body = await request.json()
     const { action } = body
 

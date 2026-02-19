@@ -4,7 +4,8 @@ import { createClient } from '@supabase/supabase-js'
 export const dynamic = 'force-dynamic'
 
 // Simple password protection for DPO admin
-const DPO_PASSWORD = process.env.NEXT_PUBLIC_DPO_PASSWORD || 'dpo-admin-2025'
+// NEVER use NEXT_PUBLIC_ prefix — password must be server-side only
+const DPO_PASSWORD = process.env.DPO_PASSWORD
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,8 +20,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { action, password } = body
 
-    // Verify password
-    if (password !== DPO_PASSWORD) {
+    // Verify password — fail closed if not configured
+    if (!DPO_PASSWORD || password !== DPO_PASSWORD) {
+      await new Promise(resolve => setTimeout(resolve, 1000)) // Anti-brute-force
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 

@@ -190,11 +190,20 @@ export default function DPODashboard() {
     }
   }, [])
 
+  // Authenticated fetch — attaches DPO token to every request
+  const dpoFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    const token = sessionStorage.getItem('dpo_session_token')
+    const headers = new Headers(options.headers)
+    if (token) headers.set('x-dpo-token', token)
+    if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+    return fetch(url, { ...options, headers })
+  }
+
   const loadDashboard = async () => {
     setLoading(true)
     try {
       // Load stats
-      const statsRes = await fetch('/api/dpo?action=stats')
+      const statsRes = await dpoFetch('/api/dpo?action=stats')
       const statsData = await statsRes.json()
       setStats(statsData)
 
@@ -226,14 +235,14 @@ export default function DPODashboard() {
   }
 
   const loadOrganizations = async () => {
-    const res = await fetch('/api/dpo?action=organizations')
+    const res = await dpoFetch('/api/dpo?action=organizations')
     const data = await res.json()
     setOrganizations(data.organizations || [])
   }
 
   const loadIncidents = async () => {
     try {
-      const response = await fetch('/api/incidents?action=dashboard')
+      const response = await dpoFetch('/api/incidents?action=dashboard')
       const data = await response.json()
       setIncidents(data.incidents || [])
       setIncidentStats(data.stats || { total: 0, overdue: 0, critical: 0, urgent: 0, notified: 0 })
@@ -244,7 +253,7 @@ export default function DPODashboard() {
 
   const loadIncidentDetails = async (id: string) => {
     try {
-      const response = await fetch(`/api/incidents?action=get&id=${id}`)
+      const response = await dpoFetch(`/api/incidents?action=get&id=${id}`)
       const data = await response.json()
       setIncidentDetails(data)
     } catch (error) {
@@ -254,7 +263,7 @@ export default function DPODashboard() {
 
   const loadRopa = async () => {
     try {
-      const response = await fetch('/api/ropa?action=dashboard')
+      const response = await dpoFetch('/api/ropa?action=dashboard')
       const data = await response.json()
       setRopaOrgs(data.organizations || [])
       
@@ -299,7 +308,7 @@ export default function DPODashboard() {
     setStartTime(Date.now())
 
     // Load full context
-    const res = await fetch(`/api/dpo?action=queue_item&id=${item.id}`)
+    const res = await dpoFetch(`/api/dpo?action=queue_item&id=${item.id}`)
     const data = await res.json()
     setItemContext(data)
 
@@ -313,7 +322,7 @@ export default function DPODashboard() {
     setSelectedOrg(org)
     setOrgDetail(null)
     
-    const res = await fetch(`/api/dpo?action=org_detail&org_id=${org.id}`)
+    const res = await dpoFetch(`/api/dpo?action=org_detail&org_id=${org.id}`)
     const data = await res.json()
     setOrgDetail(data)
   }
@@ -321,14 +330,14 @@ export default function DPODashboard() {
   const analyzeItem = async (itemId: string) => {
     setAnalyzing(true)
     try {
-      await fetch('/api/dpo', {
+      await dpoFetch('/api/dpo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'ai_analyze', itemId })
       })
 
       // Reload item
-      const res = await fetch(`/api/dpo?action=queue_item&id=${itemId}`)
+      const res = await dpoFetch(`/api/dpo?action=queue_item&id=${itemId}`)
       const data = await res.json()
       if (data.item) {
         setSelectedItem(data.item)
@@ -347,7 +356,7 @@ export default function DPODashboard() {
     const timeSpent = startTime ? Math.round((Date.now() - startTime) / 1000) : 0
 
     try {
-      const res = await fetch('/api/dpo', {
+      const res = await dpoFetch('/api/dpo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -391,7 +400,7 @@ export default function DPODashboard() {
     if (!confirm(`לאשר ${highConfidenceItems.length} פריטים עם ביטחון AI > 85%?\nתשובות יישלחו במייל ללקוחות.`)) return
 
     try {
-      const res = await fetch('/api/dpo', {
+      const res = await dpoFetch('/api/dpo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -415,7 +424,7 @@ export default function DPODashboard() {
     setIsSubmitting(true)
 
     try {
-      await fetch('/api/incidents', {
+      await dpoFetch('/api/incidents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -439,7 +448,7 @@ export default function DPODashboard() {
     setIsSubmitting(true)
 
     try {
-      await fetch('/api/incidents', {
+      await dpoFetch('/api/incidents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -464,7 +473,7 @@ export default function DPODashboard() {
     setIsSubmitting(true)
 
     try {
-      await fetch('/api/incidents', {
+      await dpoFetch('/api/incidents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -487,7 +496,7 @@ export default function DPODashboard() {
   const analyzeIncident = async (incidentId: string) => {
     setIsSubmitting(true)
     try {
-      await fetch('/api/incidents', {
+      await dpoFetch('/api/incidents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'analyze', incidentId })

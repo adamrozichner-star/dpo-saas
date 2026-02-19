@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
+import { authenticateRequest, unauthorizedResponse, forbiddenResponse, verifyOrgAccess } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -180,12 +181,12 @@ function detectIntent(message: string): string {
 // ===========================================
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const orgId = searchParams.get('orgId')
+    // --- AUTH CHECK ---
+    const auth = await authenticateRequest(request, supabase)
+    if (!auth) return unauthorizedResponse()
     
-    if (!orgId) {
-      return NextResponse.json({ error: 'Missing orgId' }, { status: 400 })
-    }
+    const { searchParams } = new URL(request.url)
+    const orgId = auth.orgId // Always use authenticated org, ignore client param
     
     // Get chat messages - handle table not existing
     let messages: any[] = []
@@ -239,6 +240,10 @@ export async function GET(request: NextRequest) {
 // ===========================================
 export async function POST(request: NextRequest) {
   try {
+    // --- AUTH CHECK ---
+    const auth = await authenticateRequest(request, supabase)
+    if (!auth) return unauthorizedResponse()
+    
     const body = await request.json()
     const { action } = body
     
@@ -246,9 +251,10 @@ export async function POST(request: NextRequest) {
     // SEND MESSAGE & GET AI RESPONSE
     // ===========================================
     if (action === 'send_message') {
-      const { orgId, message, attachments, conversationId } = body
+      const { message, attachments, conversationId } = body
+      const orgId = auth.orgId // Use authenticated orgId
       
-      if (!orgId || !message) {
+      if (!message) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
       }
       
@@ -506,7 +512,8 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
     // CREATE INCIDENT
     // ===========================================
     if (action === 'create_incident') {
-      const { orgId, description, chatContext } = body
+      const { description, chatContext } = body
+      const orgId = auth.orgId
       
       const now = new Date()
       const deadline = new Date(now.getTime() + 72 * 60 * 60 * 1000)
@@ -560,7 +567,8 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
     // ESCALATE TO HUMAN DPO
     // ===========================================
     if (action === 'escalate') {
-      const { orgId, context } = body
+      const { context } = body
+      const orgId = auth.orgId
       
       try {
         const { data: escalation, error } = await supabase
@@ -606,7 +614,8 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
     // SAVE DOCUMENT
     // ===========================================
     if (action === 'save_document') {
-      const { orgId, title, content, documentType } = body
+      const { title, content, documentType } = body
+      const orgId = auth.orgId
       
       // Map document types to valid enum values
       const typeMapping: Record<string, string> = {
@@ -651,7 +660,8 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
     // REQUEST PROFESSIONAL REVIEW (UPSELL)
     // ===========================================
     if (action === 'request_review') {
-      const { orgId, documentId, documentType, notes } = body
+      const { documentId, documentType, notes } = body
+      const orgId = auth.orgId
       
       const { data: request, error } = await supabase
         .from('dpo_queue')
@@ -676,7 +686,7 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
     // GET SMART SUGGESTIONS
     // ===========================================
     if (action === 'get_suggestions') {
-      const { orgId } = body
+      const orgId = auth.orgId
       
       // Check what's missing
       const { data: org } = await supabase

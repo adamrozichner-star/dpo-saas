@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { Resend } from 'resend'
+import { authenticateDpo, unauthorizedResponse } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60 // Allow up to 60 seconds for AI analysis
@@ -292,6 +293,10 @@ ${contextText || 'אין הקשר נוסף'}
 // =========================================
 export async function GET(request: NextRequest) {
   try {
+    // --- DPO AUTH CHECK ---
+    const isDpo = await authenticateDpo(request, supabase)
+    if (!isDpo) return unauthorizedResponse('DPO authentication required')
+    
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action')
 
@@ -590,6 +595,10 @@ export async function GET(request: NextRequest) {
 // =========================================
 export async function POST(request: NextRequest) {
   try {
+    // --- DPO AUTH CHECK ---
+    const isDpo = await authenticateDpo(request, supabase)
+    if (!isDpo) return unauthorizedResponse('DPO authentication required')
+    
     const body = await request.json()
     const { action } = body
 

@@ -1,3 +1,4 @@
+import { authenticateRequest, unauthorizedResponse } from "@/lib/api-auth"
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 

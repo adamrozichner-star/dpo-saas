@@ -66,6 +66,17 @@ function DashboardContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, session, signOut, loading, supabase } = useAuth()
+
+  // Authenticated fetch — attaches Supabase JWT to API calls
+  const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    const headers = new Headers(options.headers)
+    if (supabase) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) headers.set('Authorization', `Bearer ${session.access_token}`)
+    }
+    if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+    return fetch(url, { ...options, headers })
+  }
   const { isAuthorized, isChecking } = useSubscriptionGate()
   
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'incidents' | 'messages' | 'settings'>('overview')
@@ -146,7 +157,7 @@ function DashboardContent() {
 
         // Load message threads (DPO-User messaging)
         try {
-          const msgRes = await fetch(`/api/messages?orgId=${org.id}`)
+          const msgRes = await authFetch(`/api/messages?orgId=${org.id}`)
           const msgData = await msgRes.json()
           if (msgData.threads) {
             setMessageThreads(msgData.threads)
@@ -828,7 +839,7 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
   const downloadAsPdf = async (doc: Document) => {
     try {
       const content = isEditing ? editedContent : doc.content
-      const response = await fetch('/api/generate-pdf', {
+      const response = await authFetch('/api/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1227,12 +1238,12 @@ function MessagesTab({ threads, orgId, onRefresh }: { threads: any[], orgId: str
     setReplyText('')
 
     try {
-      const res = await fetch(`/api/messages?threadId=${thread.id}`)
+      const res = await authFetch(`/api/messages?threadId=${thread.id}`)
       const data = await res.json()
       setThreadMessages(data.messages || [])
 
       // Mark as read
-      await fetch('/api/messages', {
+      await authFetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'mark_read', threadId: thread.id, senderType: 'user' })
@@ -1249,7 +1260,7 @@ function MessagesTab({ threads, orgId, onRefresh }: { threads: any[], orgId: str
     setIsSending(true)
 
     try {
-      await fetch('/api/messages', {
+      await authFetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1276,7 +1287,7 @@ function MessagesTab({ threads, orgId, onRefresh }: { threads: any[], orgId: str
     setIsSending(true)
 
     try {
-      const res = await fetch('/api/messages', {
+      const res = await authFetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

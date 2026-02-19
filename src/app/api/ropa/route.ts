@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authenticateRequest, authenticateDpo, unauthorizedResponse } from '@/lib/api-auth'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -164,9 +165,14 @@ async function analyzeProcessingActivity(activity: any): Promise<any> {
 // =============================================
 export async function GET(request: NextRequest) {
   try {
+    // --- AUTH CHECK (user or DPO) ---
+    const auth = await authenticateRequest(request, supabase)
+    const isDpo = await authenticateDpo(request, supabase)
+    if (!auth && !isDpo) return unauthorizedResponse()
+    
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action')
-    const orgId = searchParams.get('orgId')
+    const orgId = auth ? auth.orgId : searchParams.get('orgId')
     const activityId = searchParams.get('id')
 
     // Get single activity
@@ -287,6 +293,11 @@ export async function GET(request: NextRequest) {
 // =============================================
 export async function POST(request: NextRequest) {
   try {
+    // --- AUTH CHECK (user or DPO) ---
+    const auth = await authenticateRequest(request, supabase)
+    const isDpo = await authenticateDpo(request, supabase)
+    if (!auth && !isDpo) return unauthorizedResponse()
+    
     const body = await request.json()
     const { action } = body
 

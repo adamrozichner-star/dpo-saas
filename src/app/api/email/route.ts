@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import { escapeHtml } from '@/lib/api-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -110,6 +111,21 @@ const emailTemplates = {
 
 export async function POST(request: NextRequest) {
   try {
+    // --- AUTH CHECK ---
+    // Email can be triggered by:
+    // 1. Other server-side API routes (via internal call with x-internal-key)
+    // 2. Authenticated users (via Supabase JWT)
+    const internalKey = request.headers.get('x-internal-key')
+    const expectedKey = process.env.SUPABASE_SERVICE_ROLE_KEY // Reuse as internal secret
+    const authHeader = request.headers.get('authorization')
+    
+    const isInternalCall = internalKey && expectedKey && internalKey === expectedKey
+    const hasUserAuth = authHeader?.startsWith('Bearer ')
+    
+    if (!isInternalCall && !hasUserAuth) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    
     const body = await request.json()
     
     // Support both old format (type) and new format (template)
@@ -125,7 +141,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid template' }, { status: 400 })
     }
 
-    const email = templateFn(data)
+    // Sanitize all string values in data to prevent XSS in emails
+    const sanitizedData: any = {}
+    for (const [key, val] of Object.entries(data)) {
+      sanitizedData[key] = typeof val === 'string' ? escapeHtml(val) : val
+    }
+
+    const email = templateFn(sanitizedData)
 
     // Try to send with Resend if configured
     if (resend) {

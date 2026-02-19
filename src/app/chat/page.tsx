@@ -49,6 +49,17 @@ export default function ChatPage() {
   const { user, supabase, loading: authLoading } = useAuth()
   const { isAuthorized, isChecking } = useSubscriptionGate()
   
+  // Authenticated fetch — attaches Supabase JWT to API calls
+  const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    const headers = new Headers(options.headers)
+    if (supabase) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) headers.set('Authorization', `Bearer ${session.access_token}`)
+    }
+    if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+    return fetch(url, { ...options, headers })
+  }
+  
   // Default suggestions - show immediately
   const defaultSuggestions: Suggestion[] = [
     { icon: '📄', text: 'צריך מדיניות פרטיות' },
@@ -197,7 +208,7 @@ export default function ChatPage() {
 
   const loadChatHistory = async (orgId: string) => {
     try {
-      const response = await fetch(`/api/chat?orgId=${orgId}`)
+      const response = await authFetch(`/api/chat?orgId=${orgId}`)
       const data = await response.json()
       
       if (data.error) {
@@ -257,7 +268,7 @@ export default function ChatPage() {
     ]
     
     try {
-      const response = await fetch('/api/chat', {
+      const response = await authFetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'get_suggestions', orgId })
@@ -419,7 +430,7 @@ export default function ChatPage() {
     }])
 
     try {
-      const response = await fetch('/api/chat/stream', {
+      const response = await authFetch('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -611,7 +622,7 @@ export default function ChatPage() {
       const context = messages.slice(-3).map(m => m.content).join('\n')
       
       try {
-        const response = await fetch('/api/chat', {
+        const response = await authFetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -671,7 +682,7 @@ export default function ChatPage() {
       const context = messages.slice(-5).map(m => `${m.role}: ${m.content}`).join('\n')
       
       try {
-        const response = await fetch('/api/chat', {
+        const response = await authFetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -725,7 +736,7 @@ export default function ChatPage() {
     setIsGeneratingDoc(true)
     
     try {
-      const response = await fetch('/api/chat', {
+      const response = await authFetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -767,7 +778,7 @@ export default function ChatPage() {
     }])
     
     try {
-      const response = await fetch('/api/chat', {
+      const response = await authFetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -835,7 +846,7 @@ export default function ChatPage() {
         const pdfFormData = new FormData()
         pdfFormData.append('file', file)
         
-        const pdfResponse = await fetch('/api/parse-pdf', {
+        const pdfResponse = await authFetch('/api/parse-pdf', {
           method: 'POST',
           body: pdfFormData
         })
@@ -1022,7 +1033,7 @@ ${summaryText}
   const downloadAsPdf = async (content: string, title: string) => {
     try {
       // Create form and submit to get printable HTML
-      const response = await fetch('/api/generate-pdf', {
+      const response = await authFetch('/api/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

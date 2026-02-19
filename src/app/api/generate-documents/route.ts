@@ -1,3 +1,4 @@
+import { authenticateRequest, unauthorizedResponse } from "@/lib/api-auth"
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { 
@@ -15,6 +16,9 @@ export async function POST(request: NextRequest) {
   console.log('Generate documents API called')
   
   try {
+    // --- AUTH CHECK ---
+    const auth = await authenticateRequest(request)
+    if (!auth) return unauthorizedResponse()
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 

@@ -1,3 +1,4 @@
+import { authenticateRequest, authenticateDpo, unauthorizedResponse } from "@/lib/api-auth"
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
@@ -14,8 +15,14 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
+    
+    // --- AUTH CHECK (user or DPO) ---
+    const auth = await authenticateRequest(request, supabase)
+    const isDpo = await authenticateDpo(request, supabase)
+    if (!auth && !isDpo) return unauthorizedResponse()
+    
     const { searchParams } = new URL(request.url)
-    const orgId = searchParams.get('orgId')
+    const orgId = auth ? auth.orgId : searchParams.get('orgId') // DPO can specify orgId, users can't
     const threadId = searchParams.get('threadId')
 
     if (threadId) {
@@ -93,8 +100,15 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
+    
+    // --- AUTH CHECK (user or DPO) ---
+    const auth = await authenticateRequest(request, supabase)
+    const isDpo = await authenticateDpo(request, supabase)
+    if (!auth && !isDpo) return unauthorizedResponse()
+    
     const body = await request.json()
-    const { action, orgId, threadId, subject, content, senderType, senderName, senderId, priority } = body
+    const { action, threadId, subject, content, senderType, senderName, senderId, priority } = body
+    const orgId = auth ? auth.orgId : body.orgId // DPO can specify orgId, users use their own
 
     // =========================================
     // Create Escalation from Q&A

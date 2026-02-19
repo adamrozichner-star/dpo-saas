@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
+import { authenticateRequest, unauthorizedResponse } from '@/lib/api-auth'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -88,9 +89,14 @@ function getDocTitle(type: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const { orgId, message, conversationId } = await request.json()
+    // --- AUTH CHECK ---
+    const auth = await authenticateRequest(request, supabase)
+    if (!auth) return unauthorizedResponse()
+    
+    const { message, conversationId } = await request.json()
+    const orgId = auth.orgId // Use authenticated orgId
 
-    if (!orgId || !message) {
+    if (!message) {
       return new Response(JSON.stringify({ error: 'Missing fields' }), { status: 400 })
     }
 
