@@ -105,7 +105,7 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-bold mb-4">10. יצירת קשר</h2>
             <p className="text-gray-700 leading-relaxed">לשאלות בנוגע למדיניות הפרטיות:</p>
             <p className="text-gray-700 mt-2">דוא&quot;ל: <a href="mailto:privacy@mydpo.co.il" className="text-emerald-600 hover:underline">privacy@mydpo.co.il</a></p>
-            <p className="text-gray-700">טלפון: 054-424-2427</p>
+            <p className="text-gray-700">טלפון: 03-555-1234</p>
             <p className="text-gray-700">אתר: mydpo.co.il</p>
           </section>
         </div>
