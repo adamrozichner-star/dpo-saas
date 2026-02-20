@@ -181,28 +181,50 @@ function OnboardingContent() {
     setGenStatus('יוצרים את הארגון שלכם...')
 
     try {
-      // 1. Create organization
+      // 1. Check if user already has an org (from payment flow)
       setGenProgress(15)
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
-        .insert({
-          name: form.business_name,
-          business_id: form.business_id,
-          tier: 'basic', // Updated after payment
-          status: 'active'
-        })
-        .select()
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('org_id')
+        .eq('auth_user_id', user.id)
         .single()
 
-      if (orgError) throw new Error('שגיאה ביצירת הארגון: ' + orgError.message)
+      let orgId = existingUser?.org_id
 
-      // 2. Link user to org
+      if (orgId) {
+        // Update existing org with onboarding data
+        await supabase
+          .from('organizations')
+          .update({
+            name: form.business_name,
+            business_id: form.business_id,
+          })
+          .eq('id', orgId)
+      } else {
+        // No org yet — create one
+        const { data: orgData, error: orgError } = await supabase
+          .from('organizations')
+          .insert({
+            name: form.business_name,
+            business_id: form.business_id,
+            tier: 'basic',
+            status: 'active'
+          })
+          .select()
+          .single()
+
+        if (orgError) throw new Error('שגיאה ביצירת הארגון: ' + orgError.message)
+        orgId = orgData.id
+
+        // Link user to new org
+        await supabase
+          .from('users')
+          .update({ org_id: orgId })
+          .eq('auth_user_id', user.id)
+      }
+
       setGenProgress(25)
       setGenStatus('מעדכנים את פרטי המשתמש...')
-      await supabase
-        .from('users')
-        .update({ org_id: orgData.id })
-        .eq('auth_user_id', user.id)
 
       // 3. Save business profile
       setGenProgress(35)
@@ -217,7 +239,7 @@ function OnboardingContent() {
       await supabase
         .from('organization_profiles')
         .insert({
-          org_id: orgData.id,
+          org_id: orgId,
           profile_data: { 
             answers, 
             form,
@@ -255,7 +277,7 @@ function OnboardingContent() {
           method: 'POST',
           headers: authHeaders,
           body: JSON.stringify({
-            orgId: orgData.id,
+            orgId: orgId,
             orgName: form.business_name,
             businessId: form.business_id,
             answers
