@@ -57,7 +57,7 @@ const DPO_SYSTEM_PROMPT = `אתה עוזר דיגיטלי מומחה בהגנת 
 function detectIntent(message: string): string {
   const msg = message.toLowerCase()
   if (/דליפ|פריצ|האק|וירוס|כופר|פישינג|נגנב|אבד|נפרץ|אירוע|בטעות שלחתי|גישה לא מורשית|דלף|breach|leak/.test(msg)) return 'incident'
-  if (/מדיניות פרטיות|privacy policy|תקנון|נוהל|טופס (הסכמה|consent)|מסמך|צור לי|צור עבור|תכין לי|צריך מסמך|תייצר|הסכם עיבוד|dpa|כתב מינוי|אנא צור/.test(msg)) return 'document'
+  if (/צור לי|צור עבור|תכין לי|צריך מסמך|תייצר|אנא צור|תכתוב לי|הכן לי|ייצר לי/.test(msg)) return 'document'
   if (/בקשת מידע|עובד.*(רוצה|מבקש|שאל)|לקוח.*(רוצה|מבקש)|למחוק.*מידע|זכות.*(עיון|מחיקה|תיקון)|dsar/.test(msg)) return 'dsar'
   if (/סטטוס|מה המצב|איפה אני|ציון|ציות|מה חסר/.test(msg)) return 'status'
   if (/לדבר עם|להעביר ל|ממונה אנושי|בן אדם|עזרה אישית|מסובך/.test(msg)) return 'escalate'
