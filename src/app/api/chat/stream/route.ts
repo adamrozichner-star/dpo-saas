@@ -49,8 +49,8 @@ const DPO_SYSTEM_PROMPT = `אתה עוזר דיגיטלי מומחה בהגנת 
 אם המשתמש מזכיר דליפה, פריצה, האקר, וירוס, כופר, פישינג, אובדן מחשב, מייל בטעות, גישה לא מורשית - זהה כאירוע אבטחה! הסבר על 72 שעות לדיווח.
 
 📄 יצירת מסמכים:
-כשמבקשים ממך ליצור מסמך - צור את המסמך המלא עצמו, מוכן לשימוש. לא הסבר על מה צריך להיות בו!
-בסוף מסמך הוסף: [DOCUMENT_GENERATED]
+כשמבקשים ממך ליצור מסמך - צור את המסמך המלא עצמו, מוכן לשימוש.
+עטוף את המסמך בין [DOC_START] ל-[DOC_END]. לפני [DOC_START] אפשר לכתוב משפט קצר, ואחרי [DOC_END] אפשר לכתוב הערה קצרה.
 
 🎨 סגנון: חם ונגיש, מקצועי אבל לא יבש. פסקאות קצרות. הצעה לפעולה בסוף כל תשובה.`
 
@@ -247,9 +247,15 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
 
           // Check for generated document
           let generatedDoc = null
-          if (fullText.includes('[DOCUMENT_GENERATED]')) {
-            fullText = fullText.replace('[DOCUMENT_GENERATED]', '').trim()
-            generatedDoc = { type: detectDocType(message), content: fullText, name: getDocTitle(detectDocType(message)) }
+          const docStartIdx = fullText.indexOf('[DOC_START]')
+          const docEndIdx = fullText.indexOf('[DOC_END]')
+          
+          if (docStartIdx !== -1 && docEndIdx !== -1 && docEndIdx > docStartIdx) {
+            const docContent = fullText.substring(docStartIdx + '[DOC_START]'.length, docEndIdx).trim()
+            generatedDoc = { type: detectDocType(message), content: docContent, name: getDocTitle(detectDocType(message)) }
+          } else if (fullText.includes('[DOCUMENT_GENERATED]')) {
+            const cleanedText = fullText.replace('[DOCUMENT_GENERATED]', '').trim()
+            generatedDoc = { type: detectDocType(message), content: cleanedText, name: getDocTitle(detectDocType(message)) }
           } else if (intent === 'document' && fullText.length > 800) {
             const indicators = [/\d+\.\s+[א-ת]/m, /\d+\.\d+\.?\s+[א-ת]/m, /גרסה/i, /מדיניות/, /נוהל/, /תחולה/, /הגדרות/, /אחריות/, /מטרה/, /בקרה/]
             const matchCount = indicators.filter(r => r.test(fullText)).length
