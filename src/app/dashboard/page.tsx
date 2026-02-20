@@ -152,6 +152,13 @@ function DashboardContent() {
         const score = calculateScore(docs || [], incidentData || [])
         setComplianceScore(score)
         
+        // Sync score to DB so chat can read it
+        try {
+          await supabase
+            .from('organizations')
+            .update({ compliance_score: score })
+            .eq('id', org.id)
+        } catch (e) { /* ignore */ }
         const generatedTasks = generateTasks(docs || [], incidentData || [], dsarData || [], org)
         setTasks(generatedTasks)
 
