@@ -114,12 +114,57 @@ export async function POST(request: NextRequest) {
       if (data) userMsgId = data.id
     } catch (e) { /* table may not exist */ }
 
-    // Get org context
+   // Get org context
     const { data: org } = await supabase
       .from('organizations')
-      .select('name, industry, employee_count, compliance_score')
+      .select('name, business_id, tier')
       .eq('id', orgId)
       .single()
+
+    // Get full business profile from onboarding
+    let profileContext = ''
+    try {
+      const { data: profile } = await supabase
+        .from('organization_profiles')
+        .select('profile_data')
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (profile?.profile_data?.form) {
+        const f = profile.profile_data.form
+        const softwareLabels: Record<string, string> = {
+          priority: 'Priority', monday: 'Monday', salesforce: 'Salesforce',
+          hubspot: 'HubSpot', google_workspace: 'Google Workspace',
+          microsoft_365: 'Microsoft 365', shopify: 'Shopify',
+          woocommerce: 'WooCommerce', wix: 'Wix', elementor: 'WordPress/Elementor',
+          crm_other: 'CRM אחר', erp_other: 'ERP אחר', payroll: 'מערכת שכר',
+          accounting: 'הנה"ח', other: 'אחר'
+        }
+        const industryLabels: Record<string, string> = {
+          retail: 'קמעונאות', technology: 'טכנולוגיה', healthcare: 'בריאות',
+          finance: 'פיננסים', education: 'חינוך', services: 'שירותים',
+          manufacturing: 'תעשייה', food: 'מזון', realestate: 'נדל"ן', other: 'אחר'
+        }
+
+        profileContext = `
+- תחום: ${industryLabels[f.industry] || f.industry || 'לא צוין'}
+- מספר עובדים: ${f.employee_count || 'לא ידוע'}
+- ח.פ: ${f.business_id || org?.business_id || ''}
+- אתר: ${f.website_url || 'לא צוין'}
+- מערכות תוכנה: ${(f.software || []).map((s: string) => softwareLabels[s] || s).join(', ') || 'לא צוין'}
+- אפליקציה: ${f.has_app === true ? 'כן' : f.has_app === false ? 'לא' : 'לא צוין'}
+- סוג לקוחות: ${(f.customer_type || []).map((t: string) => t === 'b2b' ? 'עסקים' : t === 'b2c' ? 'צרכנים פרטיים' : t).join(', ') || 'לא צוין'}
+- עבודה עם קטינים: ${f.works_with_minors === true ? 'כן' : f.works_with_minors === false ? 'לא' : 'לא ידוע'}
+- מידע רפואי: ${f.has_health_data === true ? 'כן' : f.has_health_data === false ? 'לא' : 'לא ידוע'}
+- איסוף אמצעי תשלום: ${f.collects_payments === true ? 'כן' : f.collects_payments === false ? 'לא' : 'לא ידוע'}
+- איש קשר: ${f.contact_name || ''} ${f.contact_role ? '(' + f.contact_role + ')' : ''}`
+      }
+    } catch (e) { /* no profile */ }
+
+    // Get DPO config
+    const dpoName = 'עו"ד דנה כהן' // TODO: pull from dpos table
 
     // Get recent history
     let conversationHistory: { role: 'user' | 'assistant', content: string }[] = []
@@ -141,14 +186,15 @@ export async function POST(request: NextRequest) {
 
 📊 מידע על הארגון:
 - שם: ${org?.name || 'לא ידוע'}
-- תחום: ${org?.industry || 'לא צוין'}
-- מספר עובדים: ${org?.employee_count || 'לא ידוע'}
-- ציון ציות: ${org?.compliance_score || 0}%
+${profileContext || '- תחום: לא צוין\n- מספר עובדים: לא ידוע'}
+- ממונה הגנת פרטיות: ${dpoName}
+
+חשוב מאוד: כשאתה יוצר מסמך, השתמש בפרטים האמיתיים של הארגון שלעיל. אל תשתמש ב-[שם הארגון] או בסוגריים מרובעים - השתמש בשם האמיתי ובפרטים האמיתיים.
 
 ${intent === 'incident' ? '\n⚠️ זוהה אירוע אבטחה פוטנציאלי! וודא שהמשתמש מבין את הדחיפות (72 שעות).\n' : ''}
-${intent === 'document' ? '\n📄 המשתמש מבקש מסמך - צור את המסמך המלא עצמו! השתמש ב-[DOCUMENT_GENERATED] בסוף.\n' : ''}
+${intent === 'document' ? '\n📄 המשתמש מבקש מסמך - צור את המסמך המלא עצמו עם הפרטים האמיתיים של הארגון! השתמש ב-[DOCUMENT_GENERATED] בסוף.\n' : ''}
 ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה אנושי.\n' : ''}`
-
+    
     const maxTokens = intent === 'document' ? 4000 : 1500
 
     // Create streaming response
