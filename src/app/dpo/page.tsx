@@ -586,62 +586,95 @@ export default function DPODashboard() {
               {/* ---- ITEM PANEL (escalations, reviews, dsr, etc) ---- */}
               {panelType === 'item' && selectedItem && (
                 <div className="panel-content">
-                  {/* Org context */}
+                  {/* Meta strip */}
+                  <div className="meta-strip">
+                    <div className="meta-chip">{selectedItem.organizations?.name}</div>
+                    <div className="meta-chip">{timeAgo(selectedItem.created_at)}</div>
+                    {selectedItem.priority && <div className="meta-chip" style={{ color: selectedItem.priority === 'critical' ? 'var(--red)' : selectedItem.priority === 'high' ? 'var(--amber)' : 'var(--secondary)' }}>
+                      {selectedItem.priority === 'critical' ? '🔴' : selectedItem.priority === 'high' ? '🟠' : '🟡'} {selectedItem.priority}
+                    </div>}
+                    {selectedItem.deadline_at && <div className="meta-chip" style={{ color: 'var(--red)', fontWeight: 700 }}>{deadlineText(selectedItem.deadline_at)}</div>}
+                  </div>
+
+                  {/* Org context — compact */}
                   {orgDetail && (
-                    <div className="context-box">
-                      <div className="context-title">📊 פרטי הארגון</div>
-                      <div className="context-row"><span>שם:</span> <strong>{orgDetail.organization?.name}</strong></div>
-                      <div className="context-row"><span>תחום:</span> {orgDetail.onboarding_context?.industry || orgDetail.organization?.industry || '—'}</div>
-                      <div className="context-row"><span>עובדים:</span> {orgDetail.onboarding_context?.employee_count || orgDetail.organization?.employee_count || '—'}</div>
-                      <div className="context-row"><span>ציון ציות:</span> <strong>{orgDetail.organization?.compliance_score || 0}</strong></div>
-                      <div className="context-row"><span>מסמכים:</span> {orgDetail.documents?.length || 0}</div>
-                      {orgDetail.onboarding_context?.software && (
-                        <div className="context-row"><span>תוכנות:</span> {Array.isArray(orgDetail.onboarding_context.software) ? orgDetail.onboarding_context.software.join(', ') : '—'}</div>
-                      )}
-                    </div>
+                    <details className="details-box">
+                      <summary className="details-summary">📊 פרטי ארגון — {orgDetail.organization?.name}</summary>
+                      <div className="details-content">
+                        <div className="context-grid">
+                          <div className="context-cell"><span>תחום</span>{orgDetail.onboarding_context?.industry || '—'}</div>
+                          <div className="context-cell"><span>עובדים</span>{orgDetail.onboarding_context?.employee_count || '—'}</div>
+                          <div className="context-cell"><span>ציון</span><strong>{orgDetail.organization?.compliance_score || 0}</strong></div>
+                          <div className="context-cell"><span>מסמכים</span>{orgDetail.documents?.length || 0}</div>
+                        </div>
+                        {orgDetail.onboarding_context?.software && (
+                          <div style={{ fontSize: 12, color: 'var(--secondary)', marginTop: 6 }}>
+                            תוכנות: {Array.isArray(orgDetail.onboarding_context.software) ? orgDetail.onboarding_context.software.join(', ') : '—'}
+                          </div>
+                        )}
+                      </div>
+                    </details>
                   )}
 
-                  {/* Description */}
-                  {selectedItem.description && (
+                  {/* Chat thread — if escalation from chat */}
+                  {itemContext?.messages && itemContext.messages.length > 0 && (
                     <div className="panel-section">
-                      <div className="panel-section-title">תיאור הפנייה</div>
-                      <p className="panel-text">{selectedItem.description}</p>
+                      <div className="panel-section-title">💬 שיחה מהצ׳אט</div>
+                      <div className="chat-thread">
+                        {itemContext.messages.slice(-6).map((msg: any, i: number) => (
+                          <div key={i} className={`chat-bubble ${msg.role === 'user' ? 'bubble-user' : 'bubble-assistant'}`}>
+                            <div className="bubble-role">{msg.role === 'user' ? '👤 לקוח' : '🤖 AI'}</div>
+                            <div className="bubble-text">{typeof msg.content === 'string' ? msg.content.slice(0, 300) : ''}{msg.content?.length > 300 ? '...' : ''}</div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
 
-                  {/* AI Analysis */}
+                  {/* Description — only if no chat thread */}
+                  {selectedItem.description && !(itemContext?.messages?.length > 0) && (
+                    <div className="panel-section">
+                      <div className="panel-section-title">תיאור</div>
+                      <p className="panel-text">{selectedItem.description.slice(0, 400)}{selectedItem.description.length > 400 ? '...' : ''}</p>
+                    </div>
+                  )}
+
+                  {/* AI Analysis — truncated */}
                   {selectedItem.ai_summary && (
-                    <div className="ai-block" style={{ marginBottom: 16 }}>
-                      <div className="ai-label">✦ ניתוח AI {selectedItem.ai_confidence ? `(${Math.round(selectedItem.ai_confidence * 100)}%)` : ''}</div>
-                      <div className="ai-text">{selectedItem.ai_summary}</div>
+                    <div className="ai-block" style={{ marginBottom: 0 }}>
+                      <div className="ai-label">✦ ניתוח AI {selectedItem.ai_confidence ? `(${Math.round(selectedItem.ai_confidence * 100)}% ביטחון)` : ''}</div>
+                      <div className="ai-text">{selectedItem.ai_summary.slice(0, 300)}{selectedItem.ai_summary.length > 300 ? '...' : ''}</div>
                     </div>
                   )}
 
                   {selectedItem.ai_recommendation && (
-                    <div className="ai-block" style={{ marginBottom: 16, borderRightColor: 'var(--green)' }}>
+                    <div className="ai-block" style={{ borderRightColor: 'var(--green)' }}>
                       <div className="ai-label" style={{ color: 'var(--green)' }}>✦ המלצה</div>
-                      <div className="ai-text">{selectedItem.ai_recommendation}</div>
+                      <div className="ai-text">{selectedItem.ai_recommendation.slice(0, 300)}{selectedItem.ai_recommendation.length > 300 ? '...' : ''}</div>
                     </div>
                   )}
 
                   {/* Editable response */}
-                  <div className="panel-section">
-                    <div className="panel-section-title">תשובה</div>
+                  <div className="panel-section" style={{ marginTop: 8 }}>
+                    <div className="panel-section-title">✏️ תשובה ללקוח</div>
                     {isEditing ? (
                       <textarea
                         className="edit-area"
                         value={editedResponse}
                         onChange={e => setEditedResponse(e.target.value)}
                         rows={6}
+                        autoFocus
                       />
                     ) : (
                       <div className="draft-box" onClick={() => { setIsEditing(true); setEditedResponse(selectedItem.ai_draft_response || '') }}>
-                        {selectedItem.ai_draft_response || 'אין טיוטה — לחץ לכתוב תשובה'}
+                        {selectedItem.ai_draft_response 
+                          ? selectedItem.ai_draft_response.slice(0, 400) + (selectedItem.ai_draft_response.length > 400 ? '...' : '')
+                          : 'אין טיוטה — לחץ לכתוב תשובה'}
                       </div>
                     )}
                   </div>
 
-                  {/* Actions */}
+                  {/* Actions — sticky feel */}
                   <div className="panel-actions">
                     {isEditing ? (
                       <>
@@ -1006,6 +1039,29 @@ const styles = `
   /* Doc rows */
   .doc-row { display:flex; justify-content:space-between; padding:8px 12px; border-radius:6px; font-size:13px; background:var(--bg); margin-bottom:4px; }
   .doc-status { font-size:11px; font-weight:600; }
+
+  /* Meta strip */
+  .meta-strip { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:4px; }
+  .meta-chip { font-size:11px; padding:3px 10px; border-radius:6px; background:var(--bg); color:var(--secondary); font-weight:500; }
+
+  /* Details/accordion */
+  .details-box { border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .details-summary { padding:10px 14px; font-size:12px; font-weight:600; color:var(--secondary); cursor:pointer; background:var(--bg); list-style:none; }
+  .details-summary::-webkit-details-marker { display:none; }
+  .details-summary::before { content:'◂ '; }
+  details[open] .details-summary::before { content:'▾ '; }
+  .details-content { padding:10px 14px; border-top:1px solid var(--border); }
+  .context-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .context-cell { font-size:12px; padding:4px 0; }
+  .context-cell span { display:block; font-size:10px; color:var(--secondary); text-transform:uppercase; letter-spacing:0.5px; }
+
+  /* Chat thread */
+  .chat-thread { display:flex; flex-direction:column; gap:6px; max-height:280px; overflow-y:auto; padding:4px; }
+  .chat-bubble { padding:10px 12px; border-radius:10px; font-size:13px; line-height:1.5; }
+  .bubble-user { background:var(--blue-soft); border-right:3px solid var(--blue); }
+  .bubble-assistant { background:var(--bg); border-right:3px solid var(--border); }
+  .bubble-role { font-size:10px; font-weight:700; color:var(--secondary); margin-bottom:3px; }
+  .bubble-text { color:var(--text); word-break:break-word; }
 
   /* History rows */
   .history-row { padding:6px 0; border-bottom:1px solid var(--border); }
