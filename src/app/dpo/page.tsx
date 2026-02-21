@@ -128,6 +128,29 @@ function deadlineText(deadlineStr: string | null): string | null {
   return `דד-ליין: ${hours}h`
 }
 
+// Detect if text is a raw chat dump and parse it
+function parseRawChat(text: string): { isChatDump: boolean; messages: { role: string; content: string }[]; summary: string } {
+  if (!text) return { isChatDump: false, messages: [], summary: '' }
+  
+  // Detect "assistant: ... user: ..." pattern
+  if (text.includes('assistant:') && text.includes('user:')) {
+    const lines = text.split('\n').filter(l => l.trim())
+    const messages = lines.map(line => {
+      if (line.startsWith('user:')) return { role: 'user', content: line.replace('user:', '').trim() }
+      if (line.startsWith('assistant:')) return { role: 'assistant', content: line.replace('assistant:', '').trim() }
+      return null
+    }).filter(Boolean) as { role: string; content: string }[]
+    
+    // Extract last user message as summary
+    const lastUser = messages.filter(m => m.role === 'user').pop()
+    const summary = lastUser ? lastUser.content.substring(0, 200) : text.substring(0, 200)
+    
+    return { isChatDump: true, messages: messages.slice(-4), summary }
+  }
+  
+  return { isChatDump: false, messages: [], summary: text.substring(0, 300) }
+}
+
 // =============================================
 // MAIN COMPONENT
 // =============================================
@@ -475,12 +498,15 @@ export default function DPODashboard() {
                           {item.organizations?.name} · {timeAgo(item.created_at)}
                           {deadline && <> · <strong style={{ color: 'var(--red)' }}>{deadline}</strong></>}
                         </div>
-                        {item.ai_summary && (
-                          <div className="ai-block">
-                            <div className="ai-label">✦ {item.ai_draft_response ? 'טיוטה מוכנה' : 'ניתוח AI'}</div>
-                            <div className="ai-text">{item.ai_summary}</div>
-                          </div>
-                        )}
+                        {item.ai_summary && (() => {
+                          const parsed = parseRawChat(item.ai_summary)
+                          return (
+                            <div className="ai-block">
+                              <div className="ai-label">✦ {parsed.isChatDump ? 'שיחה מהצ׳אט' : item.ai_draft_response ? 'טיוטה מוכנה' : 'ניתוח AI'}</div>
+                              <div className="ai-text">{parsed.summary}</div>
+                            </div>
+                          )
+                        })()}
                       </div>
                     </div>
                   )
@@ -639,13 +665,31 @@ export default function DPODashboard() {
                     </div>
                   )}
 
-                  {/* AI Analysis — truncated */}
-                  {selectedItem.ai_summary && (
-                    <div className="ai-block" style={{ marginBottom: 0 }}>
-                      <div className="ai-label">✦ ניתוח AI {selectedItem.ai_confidence ? `(${Math.round(selectedItem.ai_confidence * 100)}% ביטחון)` : ''}</div>
-                      <div className="ai-text">{selectedItem.ai_summary.slice(0, 300)}{selectedItem.ai_summary.length > 300 ? '...' : ''}</div>
-                    </div>
-                  )}
+                  {/* AI Analysis — handles raw chat dumps gracefully */}
+                  {selectedItem.ai_summary && (() => {
+                    const parsed = parseRawChat(selectedItem.ai_summary)
+                    if (parsed.isChatDump) {
+                      return (
+                        <div className="panel-section">
+                          <div className="panel-section-title">💬 שיחה מהצ׳אט</div>
+                          <div className="chat-thread">
+                            {parsed.messages.map((msg, i) => (
+                              <div key={i} className={`chat-bubble ${msg.role === 'user' ? 'bubble-user' : 'bubble-assistant'}`}>
+                                <div className="bubble-role">{msg.role === 'user' ? '👤 לקוח' : '🤖 AI'}</div>
+                                <div className="bubble-text">{msg.content.slice(0, 250)}{msg.content.length > 250 ? '...' : ''}</div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )
+                    }
+                    return (
+                      <div className="ai-block" style={{ marginBottom: 0 }}>
+                        <div className="ai-label">✦ ניתוח AI {selectedItem.ai_confidence ? `(${Math.round(selectedItem.ai_confidence * 100)}% ביטחון)` : ''}</div>
+                        <div className="ai-text">{parsed.summary}{selectedItem.ai_summary.length > 300 ? '...' : ''}</div>
+                      </div>
+                    )
+                  })()}
 
                   {selectedItem.ai_recommendation && (
                     <div className="ai-block" style={{ borderRightColor: 'var(--green)' }}>
