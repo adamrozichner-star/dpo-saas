@@ -571,6 +571,19 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
       const orgId = auth.orgId
       
       try {
+        // Extract a clean summary from raw chat context
+        let cleanDescription = 'הלקוח ביקש להעביר לממונה אנושי'
+        let lastUserMessage = ''
+        if (context) {
+          // context is "role: content\nrole: content" — extract last user message
+          const lines = context.split('\n')
+          const userLines = lines.filter((l: string) => l.startsWith('user:'))
+          if (userLines.length > 0) {
+            lastUserMessage = userLines[userLines.length - 1].replace('user:', '').trim()
+            cleanDescription = lastUserMessage.substring(0, 300)
+          }
+        }
+
         const { data: escalation, error } = await supabase
           .from('dpo_queue')
           .insert({
@@ -578,9 +591,9 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
             type: 'escalation',
             priority: 'medium',
             status: 'pending',
-            title: 'פנייה מהצ\'אט - בקשה לשיחה עם ממונה',
-            description: context || 'הלקוח ביקש להעביר לממונה אנושי',
-            ai_summary: context
+            title: lastUserMessage ? `פנייה מהצ'אט - ${lastUserMessage.substring(0, 80)}` : 'פנייה מהצ\'אט - בקשה לשיחה עם ממונה',
+            description: cleanDescription,
+            ai_summary: null
           })
           .select()
           .single()
