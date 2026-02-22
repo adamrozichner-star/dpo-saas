@@ -140,7 +140,7 @@ async function sendResponseEmail(
   try {
     // Use resend.dev for testing until dpo-pro.co.il is verified
     const { data, error } = await resend.emails.send({
-      from: 'DPO-Pro <onboarding@resend.dev>',
+      from: process.env.FROM_EMAIL || 'MyDPO <onboarding@resend.dev>',
       to: [to],
       subject: subject,
       html: html
@@ -819,7 +819,18 @@ export async function POST(request: NextRequest) {
               .eq('id', item.org_id)
               .single()
             
-            const email = orgData?.contact_email || orgData?.owner_email
+            // Try: 1) org contact email, 2) org owner email, 3) user's auth email
+            let email = orgData?.contact_email || orgData?.owner_email
+            if (!email) {
+              const { data: userData } = await supabase
+                .from('users')
+                .select('email')
+                .eq('org_id', item.org_id)
+                .limit(1)
+                .single()
+              email = userData?.email
+            }
+
             if (email) {
               const docList = updatedDocs?.map(d => d.title || d.type).join(', ') || 'מסמכים'
               const emailHtml = `
