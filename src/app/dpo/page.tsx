@@ -551,6 +551,30 @@ export default function DPODashboard() {
                   </div>
                 )}
 
+                {/* Document review — show actual documents for review-type items */}
+                {selectedItem.type === 'review' && itemContext?.documents?.length > 0 && (
+                  <div className="d-section">
+                    <div className="d-title">📄 מסמכים לסקירה ({itemContext.documents.filter((d: any) => d.status === 'pending_review').length} ממתינים)</div>
+                    {itemContext.documents.map((doc: any) => (
+                      <details key={doc.id} className="doc-review-item" style={{ marginBottom: 6 }}>
+                        <summary className="doc-review-summary">
+                          <span>{doc.title || doc.name || doc.type}</span>
+                          <span className="doc-review-status" style={{
+                            color: doc.status === 'active' ? 'var(--green)' : doc.status === 'pending_review' ? 'var(--blue)' : 'var(--amber)',
+                            fontSize: 11, fontWeight: 600
+                          }}>
+                            {doc.status === 'active' ? '✓ אושר' : doc.status === 'pending_review' ? '⏳ ממתין' : doc.status}
+                          </span>
+                        </summary>
+                        <div className="doc-review-content">
+                          {(doc.content || '').slice(0, 1000)}
+                          {doc.content?.length > 1000 ? '...' : ''}
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                )}
+
                 {/* Incident detail — if type is incident */}
                 {selectedItem.type === 'incident' && (() => {
                   const inc = incidents.find(i => i.org_id === selectedItem.org_id && i.status !== 'resolved')
@@ -815,6 +839,12 @@ body{font-family:'Heebo',-apple-system,sans-serif;background:var(--bg);color:var
 
 /* Doc/History rows */
 .doc-row{display:flex;justify-content:space-between;padding:8px 12px;border-radius:6px;font-size:12px;background:var(--white);margin-bottom:3px;border:1px solid var(--border)}
+.doc-review-item{background:var(--white);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.doc-review-summary{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;cursor:pointer;font-size:13px;font-weight:600;list-style:none}
+.doc-review-summary::-webkit-details-marker{display:none}
+.doc-review-summary::before{content:'▶';font-size:9px;color:var(--sub);margin-left:8px;transition:transform .2s}
+details[open] .doc-review-summary::before{transform:rotate(90deg)}
+.doc-review-content{padding:12px 14px;border-top:1px solid var(--border);font-size:12px;line-height:1.7;max-height:300px;overflow-y:auto;white-space:pre-wrap;background:var(--surface);color:var(--sub)}
 .hist-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px}
 .hist-row:last-child{border-bottom:none}
 .hist-row span:last-child{color:var(--sub);font-size:11px}
