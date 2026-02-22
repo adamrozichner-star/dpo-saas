@@ -436,11 +436,15 @@ export async function GET(request: NextRequest) {
       }
 
       // Get org documents (all statuses — DPO needs to see pending_review too)
-      const { data: documents } = await supabase
+      const { data: documents, error: docErr } = await supabase
         .from('documents')
-        .select('id, name, title, type, status, content, created_at')
+        .select('id, title, type, status, content, created_at')
         .eq('org_id', item.org_id)
         .order('created_at', { ascending: false })
+      
+      if (docErr) {
+        console.error('Error fetching documents:', docErr)
+      }
 
       // Get org compliance score
       const { data: compliance } = await supabase
