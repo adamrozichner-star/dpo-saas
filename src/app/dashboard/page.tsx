@@ -367,7 +367,7 @@ function DashboardContent() {
               label="משימות" 
               active={activeTab === 'tasks'} 
               onClick={() => { setActiveTab('tasks'); setMobileMenuOpen(false) }}
-              badge={urgentTasksCount > 0 ? urgentTasksCount : undefined}
+              badge={tasks.length > 0 ? tasks.length : undefined}
             />
             <NavButton 
               icon={<FolderOpen className="h-5 w-5" />} 
