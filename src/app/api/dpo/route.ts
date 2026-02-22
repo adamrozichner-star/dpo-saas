@@ -1055,6 +1055,152 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true })
     }
 
+    // =========================================
+    // Approve individual document
+    // =========================================
+    if (action === 'approve_document') {
+      const { documentId, notes } = body
+      if (!documentId) {
+        return NextResponse.json({ error: 'Missing documentId' }, { status: 400 })
+      }
+
+      const { error } = await supabase
+        .from('documents')
+        .update({ 
+          status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId)
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      // Log time
+      const { data: doc } = await supabase
+        .from('documents')
+        .select('org_id, title, type')
+        .eq('id', documentId)
+        .single()
+
+      if (doc) {
+        await supabase.from('dpo_time_log').insert({
+          org_id: doc.org_id,
+          action: 'document_review',
+          description: `אישור מסמך: ${doc.title || doc.type}`,
+          duration_seconds: 60
+        }).catch(() => {})
+      }
+
+      return NextResponse.json({ success: true })
+    }
+
+    // =========================================
+    // Edit document content (DPO edits)
+    // =========================================
+    if (action === 'edit_document') {
+      const { documentId, content, notes } = body
+      if (!documentId || !content) {
+        return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+      }
+
+      const { error } = await supabase
+        .from('documents')
+        .update({
+          content,
+          status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId)
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ success: true })
+    }
+
+    // =========================================
+    // Request document regeneration with feedback
+    // =========================================
+    if (action === 'regenerate_document') {
+      const { documentId, feedback } = body
+      if (!documentId) {
+        return NextResponse.json({ error: 'Missing documentId' }, { status: 400 })
+      }
+
+      const { data: doc } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('id', documentId)
+        .single()
+
+      if (!doc) {
+        return NextResponse.json({ error: 'Document not found' }, { status: 404 })
+      }
+
+      // Get org context for regeneration
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', doc.org_id)
+        .single()
+
+      const { data: onboarding } = await supabase
+        .from('onboarding_responses')
+        .select('*')
+        .eq('org_id', doc.org_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      // Use AI to regenerate
+      const Anthropic = (await import('@anthropic-ai/sdk')).default
+      const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+      const message = await client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: `אתה ממונה הגנת פרטיות. יש לשכתב את המסמך הבא עבור הארגון.
+
+ארגון: ${org?.name || 'לא ידוע'}
+תחום: ${onboarding?.industry || 'לא ידוע'}
+עובדים: ${onboarding?.employee_count || 'לא ידוע'}
+
+סוג מסמך: ${doc.type}
+כותרת: ${doc.title}
+
+הערות הממונה לשיפור:
+${feedback || 'יש לשפר את המסמך'}
+
+המסמך הנוכחי:
+${doc.content?.substring(0, 3000)}
+
+אנא כתוב גרסה משופרת של המסמך בעברית. כתוב רק את המסמך עצמו, ללא הסברים.`
+        }]
+      })
+
+      const newContent = message.content[0].type === 'text' ? message.content[0].text : ''
+
+      // Update document with new content
+      const { error } = await supabase
+        .from('documents')
+        .update({
+          content: newContent,
+          status: 'pending_review',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId)
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ success: true, content: newContent })
+    }
+
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 
   } catch (error) {
