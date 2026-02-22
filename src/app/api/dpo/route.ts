@@ -435,12 +435,12 @@ export async function GET(request: NextRequest) {
         dsr = dsrData
       }
 
-      // Get org documents
+      // Get org documents (all statuses — DPO needs to see pending_review too)
       const { data: documents } = await supabase
         .from('documents')
-        .select('id, name, type, status')
+        .select('id, name, title, type, status, content, created_at')
         .eq('org_id', item.org_id)
-        .eq('status', 'active')
+        .order('created_at', { ascending: false })
 
       // Get org compliance score
       const { data: compliance } = await supabase
@@ -786,6 +786,53 @@ export async function POST(request: NextRequest) {
               `עדכון בקשת נושא מידע - ${orgName}`,
               emailHtml
             )
+          }
+        }
+      }
+
+      // Handle DOCUMENT REVIEW resolution — activate pending docs
+      if (item.type === 'review') {
+        const { data: updatedDocs, error: docErr } = await supabase
+          .from('documents')
+          .update({ 
+            status: 'active',
+            updated_at: new Date().toISOString()
+          })
+          .eq('org_id', item.org_id)
+          .eq('status', 'pending_review')
+          .select('id, title, type')
+
+        if (!docErr && updatedDocs?.length) {
+          console.log(`✅ Activated ${updatedDocs.length} docs for org ${item.org_id}`)
+        }
+
+        // Send email to client: your documents have been reviewed and approved
+        if (sendEmail) {
+          try {
+            const { data: orgData } = await supabase
+              .from('organizations')
+              .select('contact_email, owner_email, name')
+              .eq('id', item.org_id)
+              .single()
+            
+            const email = orgData?.contact_email || orgData?.owner_email
+            if (email) {
+              const docList = updatedDocs?.map(d => d.title || d.type).join(', ') || 'מסמכים'
+              const emailHtml = `
+                <div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px">
+                  <h2 style="color:#059669">✅ המסמכים שלכם אושרו</h2>
+                  <p>שלום,</p>
+                  <p>ממונה הגנת הפרטיות סקר ואישר את המסמכים הבאים:</p>
+                  <p style="background:#f0fdf4;padding:12px;border-radius:8px;font-weight:600">${docList}</p>
+                  ${response ? `<p>הערות הממונה: ${response}</p>` : ''}
+                  <p>המסמכים זמינים בלוח הבקרה שלכם.</p>
+                  <a href="https://mydpo.co.il/dashboard" style="display:inline-block;padding:10px 24px;background:#4f46e5;color:white;border-radius:8px;text-decoration:none;margin-top:8px">צפייה במסמכים</a>
+                </div>
+              `
+              emailSent = await sendResponseEmail(email, `מסמכים אושרו - ${orgData?.name || ''}`, emailHtml)
+            }
+          } catch (e) {
+            console.log('Could not send doc approval email:', e)
           }
         }
       }
