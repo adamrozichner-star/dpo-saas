@@ -173,14 +173,16 @@ export default function DPODashboard() {
   const loadDashboard = async () => {
     setLoading(true)
     try {
-      const [sR, qR, oR] = await Promise.all([
+      const [sR, qPendingR, qInProgressR, qResolvedR, oR] = await Promise.all([
         dpoFetch('/api/dpo?action=stats'),
-        dpoFetch('/api/dpo?action=queue'),
+        dpoFetch('/api/dpo?action=queue&status=pending'),
+        dpoFetch('/api/dpo?action=queue&status=in_progress'),
+        dpoFetch('/api/dpo?action=queue&status=resolved&limit=20'),
         dpoFetch('/api/dpo?action=organizations'),
       ])
-      const [sD, qD, oD] = await Promise.all([sR.json(), qR.json(), oR.json()])
+      const [sD, qPD, qIPD, qRD, oD] = await Promise.all([sR.json(), qPendingR.json(), qInProgressR.json(), qResolvedR.json(), oR.json()])
       setStats(sD)
-      setQueueItems(qD.items || [])
+      setQueueItems([...(qPD.items || []), ...(qIPD.items || []), ...(qRD.items || [])])
       setOrganizations(oD.organizations || [])
       try {
         const iR = await dpoFetch('/api/incidents?action=dashboard')
