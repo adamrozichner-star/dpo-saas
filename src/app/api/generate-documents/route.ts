@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       title: doc.title,
       content: doc.content,
       version: 1,
-      status: doc.type === 'dpo_appointment' ? 'pending_signature' : 'active',
+      status: doc.type === 'dpo_appointment' ? 'pending_signature' : 'pending_review',
       generated_by: 'system'
     }))
 
@@ -107,6 +107,23 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Saved', savedDocs?.length, 'documents')
+
+    // Create DPO queue item for document review
+    try {
+      const orgName = savedDocs?.[0]?.org_id ? orgId : 'ארגון חדש'
+      await supabase.from('dpo_queue').insert({
+        org_id: orgId,
+        type: 'review',
+        priority: 'medium',
+        status: 'pending',
+        title: `סקירת מסמכים — ארגון חדש (${savedDocs?.length || 0} מסמכים)`,
+        description: `מסמכים שנוצרו אוטומטית דורשים אישור ממונה: ${documents.map(d => d.title).join(', ')}`,
+        ai_summary: `נוצרו ${savedDocs?.length || 0} מסמכים אוטומטית עבור ארגון חדש. יש לסקור ולאשר.`,
+        ai_draft_response: 'מסמכים נסקרו ואושרו.'
+      })
+    } catch (e) {
+      console.log('Could not create DPO review queue item:', e)
+    }
 
     // Update organization with compliance score and status
     const { error: orgError } = await supabase
