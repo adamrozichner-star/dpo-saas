@@ -142,10 +142,13 @@ export default function DPODashboard() {
 
   const loadItemContext = async (id: string) => {
     setLoadingContext(true)
+    setItemContext(null)
     try {
       const r = await dpoFetch(`/api/dpo?action=queue_item&id=${id}`)
-      setItemContext(await r.json())
-    } catch {}
+      const data = await r.json()
+      console.log('Queue item context:', { id, docs: data.documents?.length, keys: Object.keys(data) })
+      setItemContext(data)
+    } catch (e) { console.error('loadItemContext error:', e) }
     setLoadingContext(false)
   }
 
@@ -232,8 +235,12 @@ export default function DPODashboard() {
   // =============================================
   const pending = queue.filter(i => i.status === 'pending' || i.status === 'in_progress')
   const resolved = queue.filter(i => i.status === 'resolved')
-  const monthlyH = stats ? (stats.monthly_time_minutes / 60).toFixed(1) : '0'
-  const quotaPct = stats ? Math.min(100, Math.round((stats.monthly_time_minutes / 60 / MONTHLY_QUOTA_HOURS) * 100)) : 0
+  const orgCount = stats?.active_orgs || orgs.length || 0
+  const resolvedThisMonth = stats?.resolved_this_month || 0
+  const avgTimeSec = stats?.avg_time_seconds || 0
+  const estMinutes = resolvedThisMonth > 0 ? Math.round((resolvedThisMonth * avgTimeSec) / 60) : 0
+  const monthlyH = (estMinutes / 60).toFixed(1)
+  const quotaPct = estMinutes > 0 ? Math.min(100, Math.round((estMinutes / 60 / MONTHLY_QUOTA_HOURS) * 100)) : 0
 
   // =============================================
   // RENDER
@@ -274,15 +281,15 @@ export default function DPODashboard() {
           <>
             {/* KPI strip */}
             <div style={S.kpiStrip}>
-              <div style={S.kpi}><span style={{ ...S.kpiNum, color: '#4f46e5' }}>{orgs.length}</span><span style={S.kpiLabel}>ארגונים</span></div>
+              <div style={S.kpi}><span style={{ ...S.kpiNum, color: '#4f46e5' }}>{stats?.active_orgs || orgs.length}</span><span style={S.kpiLabel}>ארגונים</span></div>
               <div style={S.kpiSep} />
               <div style={S.kpi}><span style={{ ...S.kpiNum, color: '#ef4444' }}>{pending.length}</span><span style={S.kpiLabel}>ממתין</span></div>
               <div style={S.kpiSep} />
-              <div style={S.kpi}><span style={{ ...S.kpiNum, color: '#22c55e' }}>{stats?.total_resolved_this_month || 0}</span><span style={S.kpiLabel}>טופלו החודש</span></div>
+              <div style={S.kpi}><span style={{ ...S.kpiNum, color: '#22c55e' }}>{stats?.resolved_this_month || 0}</span><span style={S.kpiLabel}>טופלו החודש</span></div>
               <div style={S.kpiSep} />
               <div style={S.kpi}>
                 <span style={{ ...S.kpiNum, color: '#4f46e5' }}>{monthlyH}h</span>
-                <span style={S.kpiLabel}>שעון DPO ({quotaPct}%)</span>
+                <span style={S.kpiLabel}>שעון DPO</span>
                 <div style={S.kpiBar}><div style={{ ...S.kpiFill, width: `${quotaPct}%` }} /></div>
               </div>
             </div>
@@ -356,17 +363,25 @@ export default function DPODashboard() {
                               })()}
 
                               {/* ============= DOCUMENT REVIEW ============= */}
-                              {item.type === 'review' && itemContext?.documents?.length > 0 && (
+                              {item.type === 'review' && (
                                 <div style={S.subsection}>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={S.subTitle}>📄 מסמכים ({itemContext.documents.filter((d: OrgDoc) => d.status === 'pending_review').length} ממתינים לאישור)</div>
-                                    {itemContext.documents.filter((d: OrgDoc) => d.status === 'pending_review').length > 1 && (
-                                      <button style={S.btnSmallGreen} disabled={docAction} onClick={() => approveAllDocs(itemContext.documents)}>
-                                        ✓ אשר הכל
-                                      </button>
-                                    )}
-                                  </div>
-                                  {itemContext.documents.map((doc: OrgDoc) => (
+                                  {(() => {
+                                    const docs = itemContext?.documents || []
+                                    const pendingDocs = docs.filter((d: OrgDoc) => d.status === 'pending_review')
+                                    if (docs.length === 0) {
+                                      return <div style={{ padding: 12, background: '#fffbeb', borderRadius: 8, fontSize: 13 }}>⚠️ לא נמצאו מסמכים. ייתכן שטרם נוצרו או שקרתה שגיאה.</div>
+                                    }
+                                    return (
+                                      <>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                          <div style={S.subTitle}>📄 מסמכים ({pendingDocs.length} ממתינים לאישור)</div>
+                                          {pendingDocs.length > 1 && (
+                                            <button style={S.btnSmallGreen} disabled={docAction} onClick={() => approveAllDocs(docs)}>
+                                              ✓ אשר הכל
+                                            </button>
+                                          )}
+                                        </div>
+                                  {docs.map((doc: OrgDoc) => (
                                     <div key={doc.id} style={S.docCard}>
                                       <div style={S.docHeader}>
                                         <div>
@@ -446,6 +461,9 @@ export default function DPODashboard() {
                                       )}
                                     </div>
                                   ))}
+                                      </>
+                                    )
+                                  })()}
                                 </div>
                               )}
 
