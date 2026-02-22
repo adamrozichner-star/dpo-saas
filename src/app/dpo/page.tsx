@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/Toast'
 
 // =============================================
-// CONFIG
+// CONFIG — Change DPO name here
 // =============================================
 const DPO_NAME = 'עו"ד דנה כהן'
-const DPO_INITIALS = 'דכ'
 const MONTHLY_QUOTA_HOURS = 12
 
 // =============================================
@@ -23,41 +22,20 @@ interface QueueItem {
 }
 
 interface OrgDoc {
-  id: string; name: string; title: string; type: string; status: string
+  id: string; title: string; type: string; status: string
   content: string; created_at: string
 }
 
 // =============================================
 // HELPERS
 // =============================================
-const TYPE_MAP: Record<string, { label: string; emoji: string }> = {
-  incident: { label: 'אירוע אבטחה', emoji: '🚨' },
-  escalation: { label: 'שאלה מסולמת', emoji: '💬' },
-  review: { label: 'סקירת מסמכים', emoji: '📄' },
-  dsr: { label: 'בקשת מידע', emoji: '📋' },
-  onboarding: { label: 'אונבורדינג', emoji: '🏢' },
-  document_expiry: { label: 'פג תוקף', emoji: '⏰' },
-}
-
-function timeAgo(d: string): string {
-  if (!d) return ''
-  const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000)
-  if (m < 60) return `לפני ${m} דק׳`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `לפני ${h} שעות`
-  const days = Math.floor(h / 24)
-  if (days === 1) return 'אתמול'
-  return `לפני ${days} ימים`
-}
-
-function parseChat(text: string): { isChat: boolean; msgs: { role: string; text: string }[] } {
-  if (!text || (!text.includes('assistant:') || !text.includes('user:'))) return { isChat: false, msgs: [] }
-  const msgs = text.split('\n').filter(l => l.trim()).map(l => {
-    if (l.startsWith('user:')) return { role: 'user', text: l.replace('user:', '').trim() }
-    if (l.startsWith('assistant:')) return { role: 'assistant', text: l.replace('assistant:', '').trim() }
-    return null
-  }).filter(Boolean) as { role: string; text: string }[]
-  return { isChat: true, msgs: msgs.slice(-4) }
+const TYPE_MAP: Record<string, { label: string; emoji: string; accent: string }> = {
+  incident: { label: 'אירוע אבטחה', emoji: '🚨', accent: '#ef4444' },
+  escalation: { label: 'שאלה מסולמת', emoji: '💬', accent: '#f59e0b' },
+  review: { label: 'סקירת מסמכים', emoji: '📄', accent: '#4f46e5' },
+  dsr: { label: 'בקשת מידע', emoji: '📋', accent: '#8b5cf6' },
+  onboarding: { label: 'אונבורדינג', emoji: '🏢', accent: '#22c55e' },
+  document_expiry: { label: 'פג תוקף', emoji: '⏰', accent: '#f59e0b' },
 }
 
 const DOC_LABELS: Record<string, string> = {
@@ -67,8 +45,30 @@ const DOC_LABELS: Record<string, string> = {
   procedure: 'נוהל', custom: 'מסמך מותאם'
 }
 
+function timeAgo(d: string): string {
+  if (!d) return ''
+  const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000)
+  if (m < 1) return 'עכשיו'
+  if (m < 60) return `לפני ${m} דק׳`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `לפני ${h} שע׳`
+  const days = Math.floor(h / 24)
+  if (days === 1) return 'אתמול'
+  return `לפני ${days} ימים`
+}
+
+function parseChat(text: string): { isChat: boolean; msgs: { role: string; text: string }[] } {
+  if (!text || !text.includes('assistant:') || !text.includes('user:')) return { isChat: false, msgs: [] }
+  const msgs = text.split('\n').filter(l => l.trim()).map(l => {
+    if (l.startsWith('user:')) return { role: 'user', text: l.replace('user:', '').trim() }
+    if (l.startsWith('assistant:')) return { role: 'assistant', text: l.replace('assistant:', '').trim() }
+    return null
+  }).filter(Boolean) as { role: string; text: string }[]
+  return { isChat: true, msgs: msgs.slice(-4) }
+}
+
 // =============================================
-// MAIN COMPONENT
+// COMPONENT
 // =============================================
 export default function DPODashboard() {
   const router = useRouter()
@@ -79,23 +79,23 @@ export default function DPODashboard() {
   const [queue, setQueue] = useState<QueueItem[]>([])
   const [orgs, setOrgs] = useState<any[]>([])
 
-  // Detail state
+  // Expand / detail
   const [expandedItem, setExpandedItem] = useState<string | null>(null)
   const [itemContext, setItemContext] = useState<any>(null)
-  const [loadingContext, setLoadingContext] = useState(false)
+  const [loadingCtx, setLoadingCtx] = useState(false)
 
-  // Document review state
+  // Doc review
   const [expandedDoc, setExpandedDoc] = useState<string | null>(null)
   const [editingDoc, setEditingDoc] = useState<string | null>(null)
   const [editContent, setEditContent] = useState('')
+  const [regenId, setRegenId] = useState<string | null>(null)
   const [regenFeedback, setRegenFeedback] = useState('')
-  const [showRegenInput, setShowRegenInput] = useState<string | null>(null)
-  const [docAction, setDocAction] = useState(false)
+  const [docBusy, setDocBusy] = useState(false)
 
-  // Resolve state
+  // Resolve
   const [resolving, setResolving] = useState(false)
   const [editedResponse, setEditedResponse] = useState('')
-  const [editingResponse, setEditingResponse] = useState(false)
+  const [editingResp, setEditingResp] = useState(false)
 
   // View
   const [tab, setTab] = useState<'inbox' | 'orgs'>('inbox')
@@ -103,53 +103,48 @@ export default function DPODashboard() {
   const [selectedOrg, setSelectedOrg] = useState<any>(null)
 
   // =============================================
-  // AUTH & DATA
+  // AUTH & FETCH
   // =============================================
   const dpoFetch = async (url: string, opts: RequestInit = {}) => {
     const token = sessionStorage.getItem('dpo_session_token')
-    const headers = new Headers(opts.headers)
-    if (token) headers.set('x-dpo-token', token)
-    if (opts.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
-    return fetch(url, { ...opts, headers })
+    const h = new Headers(opts.headers)
+    if (token) h.set('x-dpo-token', token)
+    if (opts.body && !h.has('Content-Type')) h.set('Content-Type', 'application/json')
+    return fetch(url, { ...opts, headers: h })
   }
 
   useEffect(() => {
-    const token = sessionStorage.getItem('dpo_session_token')
-    const expires = sessionStorage.getItem('dpo_session_expires')
-    if (!token || !expires || new Date(expires) < new Date()) {
-      router.push('/dpo/login')
-    } else {
-      loadAll()
-    }
+    const t = sessionStorage.getItem('dpo_session_token')
+    const e = sessionStorage.getItem('dpo_session_expires')
+    if (!t || !e || new Date(e) < new Date()) { router.push('/dpo/login'); return }
+    loadAll()
   }, [])
 
   const loadAll = async () => {
     setLoading(true)
     try {
-      const [sR, pR, rR, oR] = await Promise.all([
+      const [sR, pR, ipR, rR, oR] = await Promise.all([
         dpoFetch('/api/dpo?action=stats'),
         dpoFetch('/api/dpo?action=queue&status=pending'),
+        dpoFetch('/api/dpo?action=queue&status=in_progress'),
         dpoFetch('/api/dpo?action=queue&status=resolved&limit=25'),
         dpoFetch('/api/dpo?action=organizations'),
       ])
-      const [sD, pD, rD, oD] = await Promise.all([sR.json(), pR.json(), rR.json(), oR.json()])
+      const [sD, pD, ipD, rD, oD] = await Promise.all([sR.json(), pR.json(), ipR.json(), rR.json(), oR.json()])
       setStats(sD)
-      setQueue([...(pD.items || []), ...(rD.items || [])])
+      setQueue([...(pD.items || []), ...(ipD.items || []), ...(rD.items || [])])
       setOrgs(oD.organizations || [])
     } catch (e) { console.error(e) }
     setLoading(false)
   }
 
-  const loadItemContext = async (id: string) => {
-    setLoadingContext(true)
-    setItemContext(null)
+  const loadCtx = async (id: string) => {
+    setLoadingCtx(true); setItemContext(null)
     try {
       const r = await dpoFetch(`/api/dpo?action=queue_item&id=${id}`)
-      const data = await r.json()
-      console.log('Queue item context:', { id, docs: data.documents?.length, keys: Object.keys(data) })
-      setItemContext(data)
-    } catch (e) { console.error('loadItemContext error:', e) }
-    setLoadingContext(false)
+      setItemContext(await r.json())
+    } catch (e) { console.error(e) }
+    setLoadingCtx(false)
   }
 
   const loadOrgDetail = async (orgId: string) => {
@@ -165,550 +160,500 @@ export default function DPODashboard() {
   const resolveItem = async (item: QueueItem, type: 'approved_ai' | 'edited') => {
     setResolving(true)
     try {
-      const r = await dpoFetch('/api/dpo', {
-        method: 'POST',
-        body: JSON.stringify({ action: 'resolve', itemId: item.id, resolutionType: type, response: editedResponse, timeSpentSeconds: 60, sendEmail: true })
-      })
+      const r = await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'resolve', itemId: item.id, resolutionType: type, response: editedResponse, timeSpentSeconds: 60, sendEmail: true }) })
       const d = await r.json()
-      if (d.success) {
-        toast(d.email_sent ? '✅ טופל ונשלח במייל' : '✅ טופל')
-        setExpandedItem(null)
-        loadAll()
-      }
+      if (d.success) { toast(d.email_sent ? '✅ טופל ונשלח במייל' : '✅ טופל'); setExpandedItem(null); loadAll() }
+      else toast(d.error || 'שגיאה', 'error')
     } catch { toast('שגיאה', 'error') }
     setResolving(false)
   }
 
   const approveDoc = async (docId: string) => {
-    setDocAction(true)
-    try {
-      const r = await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'approve_document', documentId: docId }) })
-      if ((await r.json()).success) {
-        toast('✅ מסמך אושר')
-        if (expandedItem) loadItemContext(expandedItem)
-      }
-    } catch { toast('שגיאה', 'error') }
-    setDocAction(false)
+    setDocBusy(true)
+    try { await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'approve_document', documentId: docId }) }); toast('✅ אושר'); if (expandedItem) loadCtx(expandedItem) }
+    catch { toast('שגיאה', 'error') }
+    setDocBusy(false)
   }
 
   const editDoc = async (docId: string) => {
-    setDocAction(true)
-    try {
-      const r = await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'edit_document', documentId: docId, content: editContent }) })
-      if ((await r.json()).success) {
-        toast('✅ מסמך עודכן ואושר')
-        setEditingDoc(null)
-        if (expandedItem) loadItemContext(expandedItem)
-      }
-    } catch { toast('שגיאה', 'error') }
-    setDocAction(false)
+    setDocBusy(true)
+    try { await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'edit_document', documentId: docId, content: editContent }) }); toast('✅ עודכן ואושר'); setEditingDoc(null); if (expandedItem) loadCtx(expandedItem) }
+    catch { toast('שגיאה', 'error') }
+    setDocBusy(false)
   }
 
   const regenDoc = async (docId: string) => {
-    setDocAction(true)
-    try {
-      const r = await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'regenerate_document', documentId: docId, feedback: regenFeedback }) })
-      const d = await r.json()
-      if (d.success) {
-        toast('✅ מסמך נוצר מחדש — בדוק שוב')
-        setShowRegenInput(null)
-        setRegenFeedback('')
-        if (expandedItem) loadItemContext(expandedItem)
-      }
-    } catch { toast('שגיאה', 'error') }
-    setDocAction(false)
+    setDocBusy(true)
+    try { const r = await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'regenerate_document', documentId: docId, feedback: regenFeedback }) }); if ((await r.json()).success) { toast('✅ נוצר מחדש'); setRegenId(null); setRegenFeedback(''); if (expandedItem) loadCtx(expandedItem) } }
+    catch { toast('שגיאה', 'error') }
+    setDocBusy(false)
   }
 
   const approveAllDocs = async (docs: OrgDoc[]) => {
-    setDocAction(true)
-    const pending = docs.filter(d => d.status === 'pending_review')
-    for (const doc of pending) {
-      await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'approve_document', documentId: doc.id }) })
+    setDocBusy(true)
+    for (const d of docs.filter(d => d.status === 'pending_review')) {
+      await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'approve_document', documentId: d.id }) })
     }
-    toast(`✅ ${pending.length} מסמכים אושרו`)
-    if (expandedItem) loadItemContext(expandedItem)
-    setDocAction(false)
+    toast('✅ כל המסמכים אושרו'); if (expandedItem) loadCtx(expandedItem)
+    setDocBusy(false)
   }
 
   // =============================================
   // DERIVED
   // =============================================
   const pending = queue.filter(i => i.status === 'pending' || i.status === 'in_progress')
-  const resolved = queue.filter(i => i.status === 'resolved').sort((a, b) => 
-    new Date(b.resolved_at || b.created_at).getTime() - new Date(a.resolved_at || a.created_at).getTime()
-  )
-  const orgCount = stats?.active_orgs || orgs.length || 0
-  const resolvedThisMonth = stats?.resolved_this_month || 0
-  const avgTimeSec = stats?.avg_time_seconds || 0
-  const estMinutes = resolvedThisMonth > 0 ? Math.round((resolvedThisMonth * avgTimeSec) / 60) : 0
-  const monthlyH = (estMinutes / 60).toFixed(1)
-  const quotaPct = estMinutes > 0 ? Math.min(100, Math.round((estMinutes / 60 / MONTHLY_QUOTA_HOURS) * 100)) : 0
+  const resolved = queue.filter(i => i.status === 'resolved').sort((a, b) => new Date(b.resolved_at || b.created_at).getTime() - new Date(a.resolved_at || a.created_at).getTime())
+  const mH = stats ? (stats.monthly_time_minutes / 60).toFixed(1) : '0'
+  const qPct = stats ? Math.min(100, Math.round((stats.monthly_time_minutes / 60 / MONTHLY_QUOTA_HOURS) * 100)) : 0
 
   // =============================================
-  // RENDER
+  // RENDER HELPERS
+  // =============================================
+  const renderDocReview = (docs: OrgDoc[]) => {
+    const pendingDocs = docs.filter(d => d.status === 'pending_review')
+    if (docs.length === 0) return <div className="dpo-warn">⚠️ לא נמצאו מסמכים</div>
+    return (
+      <>
+        <div className="dpo-doc-header">
+          <span className="dpo-sub">📄 מסמכים ({pendingDocs.length} ממתינים)</span>
+          {pendingDocs.length > 1 && <button className="dpo-btn-sm dpo-btn-green" disabled={docBusy} onClick={() => approveAllDocs(docs)}>✓ אשר הכל</button>}
+        </div>
+        {docs.map(doc => (
+          <div key={doc.id} className="dpo-doc">
+            <div className="dpo-doc-top">
+              <div className="dpo-doc-info">
+                <span className="dpo-doc-name">{doc.title || DOC_LABELS[doc.type] || doc.type}</span>
+                <span className={`dpo-doc-badge ${doc.status === 'active' ? 'active' : 'pending'}`}>
+                  {doc.status === 'active' ? '✓ אושר' : '⏳ ממתין'}
+                </span>
+              </div>
+              {doc.status === 'pending_review' && (
+                <div className="dpo-doc-actions">
+                  <button className="dpo-btn-sm dpo-btn-green" disabled={docBusy} onClick={() => approveDoc(doc.id)}>✓ אשר</button>
+                  <button className="dpo-btn-sm" onClick={() => { setEditingDoc(doc.id); setEditContent(doc.content || ''); setExpandedDoc(doc.id) }}>✏️ ערוך</button>
+                  <button className="dpo-btn-sm" onClick={() => { setRegenId(regenId === doc.id ? null : doc.id); setRegenFeedback('') }}>🔄</button>
+                </div>
+              )}
+            </div>
+
+            {regenId === doc.id && (
+              <div className="dpo-regen">
+                <textarea className="dpo-regen-input" placeholder="הערות ליצירה מחדש..." value={regenFeedback} onChange={e => setRegenFeedback(e.target.value)} rows={2} />
+                <div className="dpo-regen-btns">
+                  <button className="dpo-btn-primary" disabled={docBusy || !regenFeedback.trim()} onClick={() => regenDoc(doc.id)}>{docBusy ? '...' : '🔄 צור מחדש'}</button>
+                  <button className="dpo-btn-sm" onClick={() => setRegenId(null)}>ביטול</button>
+                </div>
+              </div>
+            )}
+
+            {expandedDoc === doc.id ? (
+              <div className="dpo-doc-expanded">
+                {editingDoc === doc.id ? (
+                  <>
+                    <textarea className="dpo-doc-editor" value={editContent} onChange={e => setEditContent(e.target.value)} rows={12} />
+                    <div className="dpo-doc-edit-btns">
+                      <button className="dpo-btn-primary" disabled={docBusy} onClick={() => editDoc(doc.id)}>{docBusy ? '...' : '💾 שמור ואשר'}</button>
+                      <button className="dpo-btn-sm" onClick={() => { setEditingDoc(null); setExpandedDoc(null) }}>ביטול</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="dpo-doc-text">{doc.content}</div>
+                    <button className="dpo-btn-sm" style={{ marginTop: 8 }} onClick={() => setExpandedDoc(null)}>סגור ▲</button>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="dpo-doc-preview" onClick={() => { setExpandedDoc(doc.id); setEditingDoc(null) }}>
+                {(doc.content || '').slice(0, 120)}... <span className="dpo-link">קרא עוד ▼</span>
+              </div>
+            )}
+          </div>
+        ))}
+      </>
+    )
+  }
+
+  // =============================================
+  // LOADING
   // =============================================
   if (loading) return (
-    <div style={S.loadingScreen}><div style={S.spinner} /><p style={{ color: '#71717a', marginTop: 12 }}>טוען...</p></div>
+    <div className="dpo-loading"><div className="dpo-spinner" /><p>טוען...</p></div>
   )
 
   return (
-    <div style={S.page} dir="rtl">
-      {/* TOP BAR */}
-      <div style={S.topBar}>
-        <div style={S.topLeft}>
-          <div style={S.logo}>MyDPO</div>
-          <span style={S.topSep}>|</span>
-          <span style={S.topName}>{DPO_NAME}</span>
-        </div>
-        <div style={S.topRight}>
-          <button style={tab === 'inbox' ? S.tabActive : S.tabBtn} onClick={() => setTab('inbox')}>
-            תיבת דואר {pending.length > 0 && <span style={S.badge}>{pending.length}</span>}
-          </button>
-          <button style={tab === 'orgs' ? S.tabActive : S.tabBtn} onClick={() => setTab('orgs')}>
-            ארגונים ({orgs.length})
-          </button>
-          <button style={S.tabBtn} onClick={loadAll}>🔄</button>
-          <span style={S.timeChip}>⏱ {monthlyH}h / {MONTHLY_QUOTA_HOURS}h</span>
-          <button style={S.logoutBtn} onClick={() => {
-            sessionStorage.removeItem('dpo_session_token')
-            sessionStorage.removeItem('dpo_session_expires')
-            router.push('/dpo/login')
-          }}>יציאה</button>
-        </div>
-      </div>
+    <>
+      <style>{CSS}</style>
+      <div className="dpo-page" dir="rtl">
+        {/* NAV */}
+        <nav className="dpo-nav">
+          <div className="dpo-nav-right">
+            <span className="dpo-logo">MyDPO</span>
+            <span className="dpo-nav-sep">|</span>
+            <span className="dpo-nav-name">{DPO_NAME}</span>
+          </div>
+          <div className="dpo-nav-left">
+            <button className={tab === 'inbox' ? 'dpo-tab active' : 'dpo-tab'} onClick={() => setTab('inbox')}>
+              תיבת דואר {pending.length > 0 && <span className="dpo-badge">{pending.length}</span>}
+            </button>
+            <button className={tab === 'orgs' ? 'dpo-tab active' : 'dpo-tab'} onClick={() => setTab('orgs')}>
+              ארגונים ({orgs.length})
+            </button>
+            <button className="dpo-tab" onClick={loadAll}>🔄</button>
+            <span className="dpo-time-pill">⏱ {mH}h / {MONTHLY_QUOTA_HOURS}h</span>
+            <button className="dpo-logout" onClick={() => { sessionStorage.removeItem('dpo_session_token'); sessionStorage.removeItem('dpo_session_expires'); router.push('/dpo/login') }}>יציאה</button>
+          </div>
+        </nav>
 
-      <div style={S.content}>
-        {/* ============= INBOX TAB ============= */}
-        {tab === 'inbox' && (
-          <>
-            {/* KPI strip */}
-            <div style={S.kpiStrip}>
-              <div style={S.kpi}><span style={{ ...S.kpiNum, color: '#4f46e5' }}>{stats?.active_orgs || orgs.length}</span><span style={S.kpiLabel}>ארגונים</span></div>
-              <div style={S.kpiSep} />
-              <div style={S.kpi}><span style={{ ...S.kpiNum, color: '#ef4444' }}>{pending.length}</span><span style={S.kpiLabel}>ממתין</span></div>
-              <div style={S.kpiSep} />
-              <div style={S.kpi}><span style={{ ...S.kpiNum, color: '#22c55e' }}>{stats?.resolved_this_month || 0}</span><span style={S.kpiLabel}>טופלו החודש</span></div>
-              <div style={S.kpiSep} />
-              <div style={S.kpi}>
-                <span style={{ ...S.kpiNum, color: '#4f46e5' }}>{monthlyH}h</span>
-                <span style={S.kpiLabel}>שעון DPO</span>
-                <div style={S.kpiBar}><div style={{ ...S.kpiFill, width: `${quotaPct}%` }} /></div>
+        <main className="dpo-main">
+          {tab === 'inbox' && (
+            <>
+              {/* KPIs */}
+              <div className="dpo-kpis">
+                <div className="dpo-kpi"><div className="dpo-kpi-num" style={{ color: '#4f46e5' }}>{orgs.length}</div><div className="dpo-kpi-label">ארגונים</div></div>
+                <div className="dpo-kpi"><div className="dpo-kpi-num" style={{ color: '#ef4444' }}>{pending.length}</div><div className="dpo-kpi-label">ממתין</div></div>
+                <div className="dpo-kpi"><div className="dpo-kpi-num" style={{ color: '#22c55e' }}>{stats?.total_resolved_this_month || 0}</div><div className="dpo-kpi-label">טופלו</div></div>
+                <div className="dpo-kpi">
+                  <div className="dpo-kpi-num" style={{ color: '#4f46e5' }}>{mH}h</div>
+                  <div className="dpo-kpi-label">שעון DPO</div>
+                  <div className="dpo-kpi-bar"><div className="dpo-kpi-fill" style={{ width: `${qPct}%` }} /></div>
+                </div>
               </div>
-            </div>
 
-            {/* Pending items */}
-            {pending.length > 0 && (
-              <div style={S.section}>
-                <div style={S.sectionTitle}>🔴 דורש טיפול ({pending.length})</div>
-                {pending.map(item => {
-                  const cfg = TYPE_MAP[item.type] || { label: item.type, emoji: '📌' }
-                  const isExpanded = expandedItem === item.id
-                  return (
-                    <div key={item.id} style={S.card}>
-                      {/* Card header — always visible */}
-                      <div style={S.cardHeader} onClick={() => {
-                        if (isExpanded) { setExpandedItem(null); return }
-                        setExpandedItem(item.id)
-                        setEditedResponse(item.ai_draft_response || '')
-                        setEditingResponse(false)
-                        loadItemContext(item.id)
-                      }}>
-                        <div>
-                          <span style={S.cardTag}>{cfg.emoji} {cfg.label}</span>
-                          <div style={S.cardTitle}>{item.title}</div>
-                          <div style={S.cardMeta}>{item.organizations?.name} · {timeAgo(item.created_at)}</div>
+              {/* Pending */}
+              {pending.length > 0 && (
+                <section className="dpo-section">
+                  <h2 className="dpo-section-title">🔴 דורש טיפול ({pending.length})</h2>
+                  {pending.map(item => {
+                    const cfg = TYPE_MAP[item.type] || { label: item.type, emoji: '📌', accent: '#71717a' }
+                    const open = expandedItem === item.id
+                    return (
+                      <div key={item.id} className={`dpo-card ${open ? 'open' : ''}`}>
+                        <div className="dpo-card-head" onClick={() => {
+                          if (open) { setExpandedItem(null); return }
+                          setExpandedItem(item.id); setEditedResponse(item.ai_draft_response || ''); setEditingResp(false); loadCtx(item.id)
+                        }}>
+                          <div className="dpo-card-info">
+                            <span className="dpo-card-tag" style={{ color: cfg.accent }}>{cfg.emoji} {cfg.label}</span>
+                            <div className="dpo-card-title">{item.title}</div>
+                            <div className="dpo-card-meta">{item.organizations?.name} · {timeAgo(item.created_at)}</div>
+                          </div>
+                          <span className="dpo-card-chevron">{open ? '▲' : '▼'}</span>
                         </div>
-                        <span style={{ fontSize: 18, color: '#a1a1aa' }}>{isExpanded ? '▲' : '▼'}</span>
-                      </div>
 
-                      {/* Expanded detail */}
-                      {isExpanded && (
-                        <div style={S.cardBody}>
-                          {loadingContext ? <div style={S.spinner} /> : (
-                            <>
-                              {/* Org context */}
-                              {itemContext && (
-                                <div style={S.chipRow}>
-                                  <span style={S.chip}>ציון: {itemContext.item?.organizations?.compliance_score || '—'}</span>
-                                  <span style={S.chip}>מסמכים: {itemContext.documents?.length || 0}</span>
-                                </div>
-                              )}
+                        {open && (
+                          <div className="dpo-card-body">
+                            {loadingCtx ? <div className="dpo-spinner" style={{ margin: '20px auto' }} /> : (
+                              <>
+                                {/* Org chips */}
+                                {itemContext && (
+                                  <div className="dpo-chips">
+                                    <span className="dpo-chip">ציון: {itemContext.item?.organizations?.compliance_score || '—'}</span>
+                                    <span className="dpo-chip">מסמכים: {itemContext.documents?.length || 0}</span>
+                                  </div>
+                                )}
 
-                              {/* Chat messages */}
-                              {itemContext?.messages?.length > 0 && (
-                                <div style={S.subsection}>
-                                  <div style={S.subTitle}>💬 שיחה</div>
-                                  {itemContext.messages.slice(-4).map((m: any, i: number) => (
-                                    <div key={i} style={m.role === 'user' ? S.bubbleUser : S.bubbleAi}>
-                                      <div style={S.bubbleRole}>{m.role === 'user' ? '👤 לקוח' : '🤖 AI'}</div>
-                                      {(m.content || '').slice(0, 200)}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* AI summary (handle raw chat dumps) */}
-                              {item.ai_summary && !itemContext?.messages?.length && (() => {
-                                const p = parseChat(item.ai_summary)
-                                if (p.isChat) return (
-                                  <div style={S.subsection}>
-                                    <div style={S.subTitle}>💬 שיחה</div>
-                                    {p.msgs.map((m, i) => (
-                                      <div key={i} style={m.role === 'user' ? S.bubbleUser : S.bubbleAi}>
-                                        <div style={S.bubbleRole}>{m.role === 'user' ? '👤 לקוח' : '🤖 AI'}</div>
-                                        {m.text.slice(0, 200)}
+                                {/* Chat messages */}
+                                {itemContext?.messages?.length > 0 && (
+                                  <div className="dpo-bubbles">
+                                    <span className="dpo-sub">💬 שיחה</span>
+                                    {itemContext.messages.slice(-4).map((m: any, i: number) => (
+                                      <div key={i} className={`dpo-bubble ${m.role === 'user' ? 'user' : 'ai'}`}>
+                                        <div className="dpo-bubble-role">{m.role === 'user' ? '👤 לקוח' : '🤖 AI'}</div>
+                                        {(m.content || '').slice(0, 200)}
                                       </div>
                                     ))}
                                   </div>
-                                )
-                                return <div style={S.aiBox}><div style={S.aiLabel}>✦ ניתוח AI</div>{item.ai_summary.slice(0, 300)}</div>
-                              })()}
+                                )}
 
-                              {/* ============= DOCUMENT REVIEW ============= */}
-                              {item.type === 'review' && (
-                                <div style={S.subsection}>
-                                  {(() => {
-                                    const docs = itemContext?.documents || []
-                                    const pendingDocs = docs.filter((d: OrgDoc) => d.status === 'pending_review')
-                                    if (docs.length === 0) {
-                                      return <div style={{ padding: 12, background: '#fffbeb', borderRadius: 8, fontSize: 13 }}>⚠️ לא נמצאו מסמכים. ייתכן שטרם נוצרו או שקרתה שגיאה.</div>
-                                    }
-                                    return (
-                                      <>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                          <div style={S.subTitle}>📄 מסמכים ({pendingDocs.length} ממתינים לאישור)</div>
-                                          {pendingDocs.length > 1 && (
-                                            <button style={S.btnSmallGreen} disabled={docAction} onClick={() => approveAllDocs(docs)}>
-                                              ✓ אשר הכל
-                                            </button>
-                                          )}
-                                        </div>
-                                  {docs.map((doc: OrgDoc) => (
-                                    <div key={doc.id} style={S.docCard}>
-                                      <div style={S.docHeader}>
-                                        <div>
-                                          <span style={S.docName}>{doc.title || DOC_LABELS[doc.type] || doc.type}</span>
-                                          <span style={{
-                                            ...S.docStatus,
-                                            color: doc.status === 'active' ? '#22c55e' : '#4f46e5',
-                                            background: doc.status === 'active' ? '#f0fdf4' : '#eef2ff'
-                                          }}>
-                                            {doc.status === 'active' ? '✓ אושר' : '⏳ ממתין'}
-                                          </span>
-                                        </div>
-                                        {doc.status === 'pending_review' && (
-                                          <div style={{ display: 'flex', gap: 4 }}>
-                                            <button style={S.btnSmallGreen} disabled={docAction} onClick={() => approveDoc(doc.id)}>✓ אשר</button>
-                                            <button style={S.btnSmall} onClick={() => {
-                                              setEditingDoc(doc.id)
-                                              setEditContent(doc.content || '')
-                                              setExpandedDoc(doc.id)
-                                            }}>✏️ ערוך</button>
-                                            <button style={S.btnSmall} onClick={() => {
-                                              setShowRegenInput(showRegenInput === doc.id ? null : doc.id)
-                                              setRegenFeedback('')
-                                            }}>🔄 צור מחדש</button>
-                                          </div>
-                                        )}
+                                {/* AI summary fallback */}
+                                {item.ai_summary && !itemContext?.messages?.length && (() => {
+                                  const p = parseChat(item.ai_summary)
+                                  if (p.isChat) return (
+                                    <div className="dpo-bubbles">
+                                      <span className="dpo-sub">💬 שיחה</span>
+                                      {p.msgs.map((m, i) => (
+                                        <div key={i} className={`dpo-bubble ${m.role === 'user' ? 'user' : 'ai'}`}><div className="dpo-bubble-role">{m.role === 'user' ? '👤' : '🤖'}</div>{m.text.slice(0, 200)}</div>
+                                      ))}
+                                    </div>
+                                  )
+                                  return <div className="dpo-ai-box"><span className="dpo-ai-label">✦ ניתוח AI</span>{item.ai_summary.slice(0, 300)}</div>
+                                })()}
+
+                                {/* Doc review */}
+                                {item.type === 'review' && renderDocReview(itemContext?.documents || [])}
+
+                                {/* Response draft (non-review) */}
+                                {item.type !== 'review' && (
+                                  <div style={{ marginTop: 14 }}>
+                                    <span className="dpo-sub">✏️ תשובה</span>
+                                    {editingResp ? (
+                                      <textarea className="dpo-textarea" value={editedResponse} onChange={e => setEditedResponse(e.target.value)} rows={4} autoFocus />
+                                    ) : (
+                                      <div className="dpo-draft" onClick={() => setEditingResp(true)}>
+                                        {item.ai_draft_response?.slice(0, 300) || 'לחץ לכתוב תשובה...'}
                                       </div>
+                                    )}
+                                  </div>
+                                )}
 
-                                      {/* Regen feedback input */}
-                                      {showRegenInput === doc.id && (
-                                        <div style={S.regenBox}>
-                                          <textarea
-                                            style={S.regenInput}
-                                            placeholder="הערות ליצירה מחדש... (לדוגמה: להוסיף סעיף על רשומות רפואיות)"
-                                            value={regenFeedback}
-                                            onChange={e => setRegenFeedback(e.target.value)}
-                                            rows={2}
-                                          />
-                                          <div style={{ display: 'flex', gap: 6 }}>
-                                            <button style={S.btnPrimary} disabled={docAction || !regenFeedback.trim()} onClick={() => regenDoc(doc.id)}>
-                                              {docAction ? '...' : '🔄 צור מחדש'}
-                                            </button>
-                                            <button style={S.btnSmall} onClick={() => setShowRegenInput(null)}>ביטול</button>
-                                          </div>
-                                        </div>
-                                      )}
-
-                                      {/* Doc content preview / edit */}
-                                      {expandedDoc === doc.id ? (
-                                        <div style={S.docContent}>
-                                          {editingDoc === doc.id ? (
-                                            <>
-                                              <textarea
-                                                style={S.docEditor}
-                                                value={editContent}
-                                                onChange={e => setEditContent(e.target.value)}
-                                                rows={15}
-                                              />
-                                              <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                                                <button style={S.btnPrimary} disabled={docAction} onClick={() => editDoc(doc.id)}>
-                                                  {docAction ? '...' : '💾 שמור ואשר'}
-                                                </button>
-                                                <button style={S.btnSmall} onClick={() => { setEditingDoc(null); setExpandedDoc(null) }}>ביטול</button>
-                                              </div>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <div style={S.docText}>{doc.content}</div>
-                                              <button style={{ ...S.btnSmall, marginTop: 6 }} onClick={() => setExpandedDoc(null)}>סגור ▲</button>
-                                            </>
-                                          )}
-                                        </div>
-                                      ) : (
-                                        <div style={S.docPreview} onClick={() => { setExpandedDoc(doc.id); setEditingDoc(null) }}>
-                                          {(doc.content || '').slice(0, 150)}... <span style={{ color: '#4f46e5', fontWeight: 600 }}>קרא עוד ▼</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  ))}
-                                      </>
-                                    )
-                                  })()}
-                                </div>
-                              )}
-
-                              {/* Draft response (for non-review items) */}
-                              {item.type !== 'review' && (
-                                <div style={S.subsection}>
-                                  <div style={S.subTitle}>✏️ תשובה ללקוח</div>
-                                  {editingResponse ? (
-                                    <textarea style={S.textarea} value={editedResponse} onChange={e => setEditedResponse(e.target.value)} rows={4} autoFocus />
+                                {/* Actions */}
+                                <div className="dpo-actions">
+                                  {item.type === 'review' ? (
+                                    <button className="dpo-btn-primary" disabled={resolving} onClick={() => resolveItem(item, 'approved_ai')}>{resolving ? '...' : '✓ סיים סקירה ועדכן לקוח'}</button>
+                                  ) : editingResp ? (
+                                    <>
+                                      <button className="dpo-btn-primary" disabled={resolving} onClick={() => resolveItem(item, 'edited')}>{resolving ? '...' : '✓ שלח'}</button>
+                                      <button className="dpo-btn-secondary" onClick={() => setEditingResp(false)}>ביטול</button>
+                                    </>
                                   ) : (
-                                    <div style={S.draftBox} onClick={() => setEditingResponse(true)}>
-                                      <div style={S.draftLabel}>לחץ לערוך</div>
-                                      {item.ai_draft_response?.slice(0, 300) || 'אין טיוטה — לחץ לכתוב'}
-                                    </div>
+                                    <>
+                                      <button className="dpo-btn-primary" disabled={resolving} onClick={() => resolveItem(item, 'approved_ai')}>{resolving ? '...' : '✓ אשר ושלח'}</button>
+                                      <button className="dpo-btn-secondary" onClick={() => setEditingResp(true)}>✏️ ערוך</button>
+                                    </>
                                   )}
                                 </div>
-                              )}
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </section>
+              )}
 
-                              {/* Action buttons */}
-                              <div style={S.actionBar}>
-                                {item.type === 'review' ? (
-                                  <button style={S.btnPrimary} disabled={resolving} onClick={() => resolveItem(item, 'approved_ai')}>
-                                    {resolving ? '...' : '✓ סיים סקירה ועדכן לקוח'}
-                                  </button>
-                                ) : editingResponse ? (
-                                  <>
-                                    <button style={S.btnPrimary} disabled={resolving} onClick={() => resolveItem(item, 'edited')}>{resolving ? '...' : '✓ שלח ערוכה'}</button>
-                                    <button style={S.btnSecondary} onClick={() => setEditingResponse(false)}>ביטול</button>
-                                  </>
-                                ) : (
-                                  <>
-                                    <button style={S.btnPrimary} disabled={resolving} onClick={() => resolveItem(item, 'approved_ai')}>{resolving ? '...' : '✓ אשר ושלח'}</button>
-                                    <button style={S.btnSecondary} onClick={() => setEditingResponse(true)}>✏️ ערוך</button>
-                                  </>
-                                )}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )}
+              {pending.length === 0 && (
+                <div className="dpo-empty">
+                  <div style={{ fontSize: 40 }}>✅</div>
+                  <div className="dpo-empty-title">אין פריטים ממתינים</div>
+                  <div className="dpo-empty-sub">הכל מטופל</div>
+                </div>
+              )}
+
+              {resolved.length > 0 && (
+                <section className="dpo-section">
+                  <h2 className="dpo-section-title">✅ הושלם לאחרונה ({resolved.length})</h2>
+                  {resolved.slice(0, 10).map(item => (
+                    <div key={item.id} className="dpo-done-row">
+                      <span style={{ color: '#22c55e', fontWeight: 700 }}>✓</span>
+                      <span className="dpo-done-title">{item.title}</span>
+                      <span className="dpo-done-meta">{item.organizations?.name} · {timeAgo(item.resolved_at || item.created_at)}</span>
+                    </div>
+                  ))}
+                </section>
+              )}
+            </>
+          )}
+
+          {/* ORGS TAB */}
+          {tab === 'orgs' && (
+            <section className="dpo-section">
+              <input className="dpo-search" placeholder="🔍 חיפוש ארגון..." value={orgSearch} onChange={e => setOrgSearch(e.target.value)} />
+              <div className="dpo-org-list">
+                {orgs.filter(o => !orgSearch || o.name.toLowerCase().includes(orgSearch.toLowerCase())).map(org => {
+                  const s = org.compliance_score || 0
+                  const sc = s >= 70 ? '#22c55e' : s >= 40 ? '#f59e0b' : '#ef4444'
+                  return (
+                    <div key={org.id} className="dpo-org-row" onClick={() => loadOrgDetail(org.id)}>
+                      <div className="dpo-org-name">{org.name}</div>
+                      <span className="dpo-org-tier">{org.tier === 'extended' ? 'מורחבת' : 'בסיסית'}</span>
+                      <span className="dpo-org-score" style={{ color: sc, background: sc + '15' }}>{s}</span>
+                      <span className="dpo-org-status">{org.pending_count > 0 ? `${org.pending_count} ממתינים` : '✓'}</span>
                     </div>
                   )
                 })}
               </div>
-            )}
 
-            {/* Empty state */}
-            {pending.length === 0 && (
-              <div style={S.emptyBox}>
-                <div style={{ fontSize: 40 }}>✅</div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#22c55e' }}>אין פריטים ממתינים</div>
-                <div style={{ fontSize: 13, color: '#71717a' }}>הכל מטופל</div>
-              </div>
-            )}
-
-            {/* Resolved */}
-            {resolved.length > 0 && (
-              <div style={S.section}>
-                <div style={S.sectionTitle}>✅ הושלם לאחרונה ({resolved.length})</div>
-                {resolved.slice(0, 8).map(item => (
-                  <div key={item.id} style={S.doneRow}>
-                    <span style={{ color: '#22c55e', fontWeight: 700 }}>✓</span>
-                    <span style={{ flex: 1 }}>{item.title}</span>
-                    <span style={{ color: '#a1a1aa', fontSize: 12 }}>{item.organizations?.name} · {timeAgo(item.resolved_at || item.created_at)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* ============= ORGS TAB ============= */}
-        {tab === 'orgs' && (
-          <div style={S.section}>
-            <input style={S.search} placeholder="🔍 חיפוש ארגון..." value={orgSearch} onChange={e => setOrgSearch(e.target.value)} />
-            <table style={S.table}>
-              <thead>
-                <tr>
-                  <th style={S.th}>ארגון</th>
-                  <th style={S.th}>חבילה</th>
-                  <th style={S.th}>ציון</th>
-                  <th style={S.th}>סטטוס</th>
-                  <th style={S.th}>הצטרף</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orgs
-                  .filter(o => !orgSearch || o.name.toLowerCase().includes(orgSearch.toLowerCase()))
-                  .map(org => {
-                    const score = org.compliance_score || 0
-                    const sc = score >= 70 ? '#22c55e' : score >= 40 ? '#f59e0b' : '#ef4444'
-                    return (
-                      <tr key={org.id} style={S.tr} onClick={() => loadOrgDetail(org.id)}>
-                        <td style={{ ...S.td, fontWeight: 600 }}>{org.name}</td>
-                        <td style={S.td}>{org.tier === 'extended' ? 'מורחבת' : 'בסיסית'}</td>
-                        <td style={S.td}><span style={{ ...S.scorePill, color: sc, background: sc + '15' }}>{score}</span></td>
-                        <td style={S.td}>{org.pending_count > 0 ? `${org.pending_count} ממתינים` : '✓ תקין'}</td>
-                        <td style={{ ...S.td, color: '#a1a1aa' }}>{timeAgo(org.created_at)}</td>
-                      </tr>
-                    )
-                  })}
-              </tbody>
-            </table>
-
-            {/* Org detail modal */}
-            {selectedOrg && (
-              <div style={S.modal} onClick={() => setSelectedOrg(null)}>
-                <div style={S.modalContent} onClick={e => e.stopPropagation()}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                    <h3 style={{ fontSize: 18, fontWeight: 700 }}>{selectedOrg.organization?.name}</h3>
-                    <button style={S.btnSmall} onClick={() => setSelectedOrg(null)}>✕</button>
-                  </div>
-                  <div style={S.chipRow}>
-                    <span style={S.chip}>ציון: {selectedOrg.organization?.compliance_score || 0}</span>
-                    <span style={S.chip}>מסמכים: {selectedOrg.documents?.length || 0}</span>
-                    <span style={S.chip}>שעות: {Math.round(selectedOrg.time_this_month_minutes || 0)} דק׳</span>
-                  </div>
-                  {selectedOrg.documents?.length > 0 && (
-                    <div style={{ marginTop: 12 }}>
-                      <div style={S.subTitle}>📄 מסמכים</div>
-                      {selectedOrg.documents.map((d: any) => (
-                        <div key={d.id} style={S.doneRow}>
-                          <span>{d.title || d.name || d.type}</span>
-                          <span style={{ color: d.status === 'active' ? '#22c55e' : '#4f46e5', fontSize: 11, fontWeight: 600 }}>
-                            {d.status === 'active' ? 'פעיל' : d.status === 'pending_review' ? 'ממתין לאישור' : d.status}
-                          </span>
-                        </div>
-                      ))}
+              {selectedOrg && (
+                <div className="dpo-modal-overlay" onClick={() => setSelectedOrg(null)}>
+                  <div className="dpo-modal" onClick={e => e.stopPropagation()}>
+                    <div className="dpo-modal-head">
+                      <h3>{selectedOrg.organization?.name}</h3>
+                      <button className="dpo-btn-sm" onClick={() => setSelectedOrg(null)}>✕</button>
                     </div>
-                  )}
+                    <div className="dpo-chips">
+                      <span className="dpo-chip">ציון: {selectedOrg.organization?.compliance_score || 0}</span>
+                      <span className="dpo-chip">מסמכים: {selectedOrg.documents?.length || 0}</span>
+                      <span className="dpo-chip">שעות: {Math.round(selectedOrg.time_this_month_minutes || 0)} דק׳</span>
+                    </div>
+                    {selectedOrg.documents?.map((d: any) => (
+                      <div key={d.id} className="dpo-done-row">
+                        <span>{d.title || d.type}</span>
+                        <span style={{ color: d.status === 'active' ? '#22c55e' : '#4f46e5', fontSize: 11, fontWeight: 600 }}>
+                          {d.status === 'active' ? 'פעיל' : d.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </section>
+          )}
+        </main>
       </div>
-    </div>
+    </>
   )
 }
 
 // =============================================
-// INLINE STYLES (Notion-inspired, clean)
+// CSS
 // =============================================
-const S: Record<string, React.CSSProperties> = {
-  page: { fontFamily: "'Heebo', -apple-system, sans-serif", background: '#fff', minHeight: '100vh', color: '#18181b' },
-  loadingScreen: { height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' },
-  spinner: { width: 24, height: 24, border: '3px solid #e4e4e7', borderTopColor: '#4f46e5', borderRadius: '50%', animation: 'spin .7s linear infinite' },
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
 
-  // Top bar
-  topBar: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 32px', borderBottom: '1px solid #e4e4e7', position: 'sticky' as const, top: 0, background: '#fff', zIndex: 10 },
-  topLeft: { display: 'flex', alignItems: 'center', gap: 12 },
-  logo: { fontSize: 17, fontWeight: 800, color: '#18181b' },
-  topSep: { color: '#d4d4d8' },
-  topName: { fontSize: 13, color: '#71717a' },
-  topRight: { display: 'flex', alignItems: 'center', gap: 8 },
-  tabBtn: { padding: '6px 14px', borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: 'pointer', border: 'none', background: 'none', color: '#71717a', fontFamily: 'inherit' },
-  tabActive: { padding: '6px 14px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: '#18181b', color: '#fff', fontFamily: 'inherit' },
-  badge: { fontSize: 10, background: '#ef4444', color: '#fff', padding: '1px 6px', borderRadius: 10, marginRight: 4, fontFamily: 'inherit' },
-  timeChip: { fontSize: 12, color: '#4f46e5', background: '#eef2ff', padding: '4px 10px', borderRadius: 20, fontWeight: 600 },
-  logoutBtn: { padding: '4px 10px', borderRadius: 6, fontSize: 12, border: '1px solid #e4e4e7', background: 'none', cursor: 'pointer', color: '#71717a', fontFamily: 'inherit' },
+.dpo-page{font-family:'Heebo',sans-serif;background:#fafafa;min-height:100vh;color:#18181b}
 
-  // Content
-  content: { maxWidth: 900, margin: '0 auto', padding: '24px 20px 60px' },
+/* NAV */
+.dpo-nav{display:flex;align-items:center;justify-content:space-between;padding:8px 24px;border-bottom:1px solid #e4e4e7;background:#fff;position:sticky;top:0;z-index:10;gap:8px;flex-wrap:wrap}
+.dpo-nav-right{display:flex;align-items:center;gap:10px}
+.dpo-logo{font-size:16px;font-weight:800;color:#18181b}
+.dpo-nav-sep{color:#d4d4d8}
+.dpo-nav-name{font-size:13px;color:#71717a}
+.dpo-nav-left{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dpo-tab{padding:5px 12px;border-radius:6px;font-size:13px;font-weight:500;border:none;background:none;color:#71717a;cursor:pointer;font-family:inherit;transition:all .15s}
+.dpo-tab:hover{background:#f4f4f5}
+.dpo-tab.active{background:#18181b;color:#fff}
+.dpo-badge{font-size:10px;background:#ef4444;color:#fff;padding:1px 6px;border-radius:10px;margin-right:4px}
+.dpo-time-pill{font-size:11px;color:#4f46e5;background:#eef2ff;padding:3px 10px;border-radius:16px;font-weight:600}
+.dpo-logout{padding:3px 8px;border-radius:4px;font-size:11px;border:1px solid #e4e4e7;background:none;cursor:pointer;color:#71717a;font-family:inherit}
 
-  // KPI
-  kpiStrip: { display: 'flex', gap: 20, marginBottom: 28, paddingBottom: 20, borderBottom: '1px solid #e4e4e7' },
-  kpi: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 2 },
-  kpiNum: { fontSize: 22, fontWeight: 900 },
-  kpiLabel: { fontSize: 11, color: '#71717a' },
-  kpiSep: { width: 1, background: '#e4e4e7' },
-  kpiBar: { width: 60, height: 4, borderRadius: 2, background: '#e4e4e7', marginTop: 4 },
-  kpiFill: { height: '100%', borderRadius: 2, background: '#4f46e5' },
+/* MAIN */
+.dpo-main{max-width:860px;margin:0 auto;padding:20px 16px 60px}
 
-  // Section
-  section: { marginBottom: 28 },
-  sectionTitle: { fontSize: 14, fontWeight: 700, color: '#71717a', marginBottom: 12 },
+/* KPIs */
+.dpo-kpis{display:flex;gap:16px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #e4e4e7;overflow-x:auto}
+.dpo-kpi{text-align:center;flex:1;min-width:70px}
+.dpo-kpi-num{font-size:22px;font-weight:900;line-height:1.1}
+.dpo-kpi-label{font-size:11px;color:#71717a;margin-top:2px}
+.dpo-kpi-bar{width:56px;height:3px;border-radius:2px;background:#e4e4e7;margin:4px auto 0}
+.dpo-kpi-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#4f46e5,#818cf8)}
 
-  // Card
-  card: { background: '#fafafa', borderRadius: 12, border: '1px solid #e4e4e7', marginBottom: 8, overflow: 'hidden' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', cursor: 'pointer' },
-  cardTag: { fontSize: 11, fontWeight: 600, color: '#f59e0b', marginBottom: 4, display: 'inline-block' },
-  cardTitle: { fontSize: 16, fontWeight: 700 },
-  cardMeta: { fontSize: 12, color: '#71717a', marginTop: 2 },
-  cardBody: { padding: '0 20px 20px', borderTop: '1px solid #e4e4e7' },
+/* Section */
+.dpo-section{margin-bottom:24px}
+.dpo-section-title{font-size:14px;font-weight:700;color:#71717a;margin-bottom:10px}
 
-  // Chips
-  chipRow: { display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 12, marginTop: 12 },
-  chip: { padding: '4px 10px', borderRadius: 6, background: '#f4f4f5', border: '1px solid #e4e4e7', fontSize: 12 },
+/* Card */
+.dpo-card{background:#fff;border-radius:10px;border:1px solid #e4e4e7;margin-bottom:8px;overflow:hidden;transition:box-shadow .15s}
+.dpo-card.open{box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.dpo-card-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;cursor:pointer}
+.dpo-card-info{flex:1;min-width:0}
+.dpo-card-tag{font-size:11px;font-weight:600;display:inline-block;margin-bottom:3px}
+.dpo-card-title{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dpo-card-meta{font-size:12px;color:#71717a;margin-top:1px}
+.dpo-card-chevron{font-size:14px;color:#a1a1aa;flex-shrink:0}
+.dpo-card-body{padding:0 18px 18px;border-top:1px solid #f4f4f5}
 
-  // Subsection
-  subsection: { marginTop: 14 },
-  subTitle: { fontSize: 12, fontWeight: 700, color: '#a1a1aa', textTransform: 'uppercase' as const, letterSpacing: 0.5, marginBottom: 6 },
+/* Chips */
+.dpo-chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.dpo-chip{padding:4px 10px;border-radius:6px;background:#f4f4f5;border:1px solid #e4e4e7;font-size:12px}
 
-  // Bubbles
-  bubbleUser: { padding: '8px 12px', borderRadius: 10, background: '#eef2ff', fontSize: 13, marginBottom: 4, maxWidth: '80%', marginLeft: 'auto' },
-  bubbleAi: { padding: '8px 12px', borderRadius: 10, background: '#f4f4f5', fontSize: 13, marginBottom: 4, maxWidth: '80%' },
-  bubbleRole: { fontSize: 10, fontWeight: 700, color: '#71717a', marginBottom: 2 },
+/* Bubbles */
+.dpo-bubbles{margin-top:10px}
+.dpo-bubble{padding:8px 12px;border-radius:10px;font-size:13px;margin-bottom:4px;max-width:85%;line-height:1.5}
+.dpo-bubble.user{background:#eef2ff;margin-left:auto}
+.dpo-bubble.ai{background:#f4f4f5}
+.dpo-bubble-role{font-size:10px;font-weight:700;color:#71717a;margin-bottom:1px}
+.dpo-sub{font-size:11px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:6px;margin-top:14px}
 
-  // AI box
-  aiBox: { padding: '10px 14px', borderRadius: 8, background: '#eef2ff', borderRight: '3px solid #4f46e5', fontSize: 13, lineHeight: '1.6', marginTop: 8 },
-  aiLabel: { fontSize: 10, fontWeight: 700, color: '#4f46e5', marginBottom: 3 },
+/* AI box */
+.dpo-ai-box{padding:10px 14px;border-radius:8px;background:#eef2ff;border-right:3px solid #4f46e5;font-size:13px;line-height:1.6;margin-top:10px}
+.dpo-ai-label{font-size:10px;font-weight:700;color:#4f46e5;display:block;margin-bottom:2px}
 
-  // Draft
-  draftBox: { padding: 12, border: '1.5px dashed #e4e4e7', borderRadius: 8, fontSize: 13, cursor: 'pointer', lineHeight: '1.6', background: '#fff' },
-  draftLabel: { fontSize: 10, fontWeight: 700, color: '#4f46e5', marginBottom: 4 },
-  textarea: { width: '100%', minHeight: 80, padding: 12, border: '1.5px solid #4f46e5', borderRadius: 8, fontFamily: 'inherit', fontSize: 13, resize: 'vertical' as const, direction: 'rtl' as const },
+/* Draft */
+.dpo-draft{padding:10px 14px;border:1.5px dashed #e4e4e7;border-radius:8px;font-size:13px;cursor:pointer;line-height:1.6;background:#fff;color:#71717a;margin-top:6px;transition:border-color .15s}
+.dpo-draft:hover{border-color:#4f46e5}
+.dpo-textarea{width:100%;min-height:80px;padding:10px 14px;border:1.5px solid #4f46e5;border-radius:8px;font-family:inherit;font-size:13px;resize:vertical;direction:rtl;margin-top:6px}
+.dpo-textarea:focus{outline:none}
 
-  // Doc review
-  docCard: { background: '#fff', border: '1px solid #e4e4e7', borderRadius: 8, padding: 12, marginBottom: 6 },
-  docHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  docName: { fontSize: 13, fontWeight: 600, marginLeft: 8 },
-  docStatus: { fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, marginRight: 6 },
-  docPreview: { fontSize: 12, color: '#71717a', lineHeight: '1.5', cursor: 'pointer', padding: '6px 0' },
-  docContent: { marginTop: 8 },
-  docText: { fontSize: 12, lineHeight: '1.7', color: '#3f3f46', whiteSpace: 'pre-wrap' as const, maxHeight: 400, overflowY: 'auto' as const, padding: 10, background: '#fafafa', borderRadius: 6, border: '1px solid #e4e4e7' },
-  docEditor: { width: '100%', minHeight: 300, padding: 12, border: '1.5px solid #4f46e5', borderRadius: 8, fontFamily: 'inherit', fontSize: 12, lineHeight: '1.7', resize: 'vertical' as const, direction: 'rtl' as const },
-  regenBox: { padding: 10, background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, marginTop: 6 },
-  regenInput: { width: '100%', padding: 8, border: '1px solid #fde68a', borderRadius: 6, fontFamily: 'inherit', fontSize: 12, resize: 'none' as const, direction: 'rtl' as const, marginBottom: 6 },
+/* Document review */
+.dpo-doc-header{display:flex;justify-content:space-between;align-items:center;margin-top:14px;margin-bottom:8px}
+.dpo-doc{background:#fff;border:1px solid #e4e4e7;border-radius:8px;padding:10px 14px;margin-bottom:6px}
+.dpo-doc-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+.dpo-doc-info{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dpo-doc-name{font-size:13px;font-weight:600}
+.dpo-doc-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px}
+.dpo-doc-badge.active{color:#22c55e;background:#f0fdf4}
+.dpo-doc-badge.pending{color:#4f46e5;background:#eef2ff}
+.dpo-doc-actions{display:flex;gap:4px}
+.dpo-doc-preview{font-size:12px;color:#71717a;line-height:1.5;cursor:pointer;padding:6px 0}
+.dpo-link{color:#4f46e5;font-weight:600}
+.dpo-doc-expanded{margin-top:8px}
+.dpo-doc-text{font-size:12px;line-height:1.7;color:#3f3f46;white-space:pre-wrap;max-height:350px;overflow-y:auto;padding:10px;background:#fafafa;border-radius:6px;border:1px solid #e4e4e7}
+.dpo-doc-editor{width:100%;min-height:250px;padding:10px;border:1.5px solid #4f46e5;border-radius:8px;font-family:inherit;font-size:12px;line-height:1.7;resize:vertical;direction:rtl}
+.dpo-doc-editor:focus{outline:none}
+.dpo-doc-edit-btns{display:flex;gap:6px;margin-top:8px}
+.dpo-regen{padding:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;margin-top:6px}
+.dpo-regen-input{width:100%;padding:8px;border:1px solid #fde68a;border-radius:6px;font-family:inherit;font-size:12px;resize:none;direction:rtl;margin-bottom:6px}
+.dpo-regen-input:focus{outline:none;border-color:#f59e0b}
+.dpo-regen-btns{display:flex;gap:6px}
+.dpo-warn{padding:12px;background:#fffbeb;border-radius:8px;font-size:13px;text-align:center;margin-top:10px}
 
-  // Buttons
-  actionBar: { display: 'flex', gap: 8, marginTop: 14, paddingTop: 14, borderTop: '1px solid #e4e4e7' },
-  btnPrimary: { padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: '#4f46e5', color: '#fff', fontFamily: 'inherit' },
-  btnSecondary: { padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid #e4e4e7', background: '#fff', color: '#71717a', fontFamily: 'inherit' },
-  btnSmall: { padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1px solid #e4e4e7', background: '#fff', color: '#71717a', fontFamily: 'inherit' },
-  btnSmallGreen: { padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none', background: '#22c55e', color: '#fff', fontFamily: 'inherit' },
+/* Buttons */
+.dpo-actions{display:flex;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid #f4f4f5}
+.dpo-btn-primary{padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;border:none;background:#4f46e5;color:#fff;cursor:pointer;font-family:inherit;transition:background .15s}
+.dpo-btn-primary:hover{background:#4338ca}
+.dpo-btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.dpo-btn-secondary{padding:8px 20px;border-radius:8px;font-size:13px;font-weight:600;border:1px solid #e4e4e7;background:#fff;color:#71717a;cursor:pointer;font-family:inherit}
+.dpo-btn-sm{padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;border:1px solid #e4e4e7;background:#fff;color:#71717a;cursor:pointer;font-family:inherit}
+.dpo-btn-sm:hover{background:#f4f4f5}
+.dpo-btn-green{border-color:#22c55e;color:#22c55e;background:#f0fdf4}
+.dpo-btn-green:hover{background:#dcfce7}
+.dpo-btn-sm.dpo-btn-green{border-color:#22c55e;color:#fff;background:#22c55e}
+.dpo-btn-sm.dpo-btn-green:hover{background:#16a34a}
 
-  // Done rows
-  doneRow: { display: 'flex', alignItems: 'center', gap: 8, padding: '8px 0', borderBottom: '1px solid #f4f4f5', fontSize: 13 },
+/* Done rows */
+.dpo-done-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f4f4f5;font-size:13px}
+.dpo-done-title{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dpo-done-meta{color:#a1a1aa;font-size:11px;flex-shrink:0}
 
-  // Empty
-  emptyBox: { textAlign: 'center' as const, padding: 48, background: '#fafafa', borderRadius: 12, border: '1px solid #e4e4e7', marginBottom: 28 },
+/* Empty */
+.dpo-empty{text-align:center;padding:40px 20px;background:#fff;border-radius:12px;border:1px solid #e4e4e7;margin-bottom:24px}
+.dpo-empty-title{font-size:16px;font-weight:700;color:#22c55e;margin-top:8px}
+.dpo-empty-sub{font-size:13px;color:#71717a}
 
-  // Search
-  search: { width: '100%', padding: '10px 14px', border: '1px solid #e4e4e7', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', marginBottom: 12 },
+/* Search */
+.dpo-search{width:100%;padding:10px 14px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:12px;background:#fff}
+.dpo-search:focus{outline:none;border-color:#4f46e5}
 
-  // Table
-  table: { width: '100%', borderCollapse: 'collapse' as const },
-  th: { textAlign: 'right' as const, fontSize: 11, fontWeight: 700, color: '#a1a1aa', padding: '8px 12px', borderBottom: '2px solid #e4e4e7' },
-  tr: { cursor: 'pointer' },
-  td: { padding: '10px 12px', borderBottom: '1px solid #f4f4f5', fontSize: 13 },
-  scorePill: { padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 700 },
+/* Org list */
+.dpo-org-list{display:flex;flex-direction:column;gap:4px}
+.dpo-org-row{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#fff;border:1px solid #e4e4e7;border-radius:8px;cursor:pointer;transition:border-color .15s}
+.dpo-org-row:hover{border-color:#4f46e5}
+.dpo-org-name{flex:1;font-size:14px;font-weight:600}
+.dpo-org-tier{font-size:11px;color:#71717a;background:#f4f4f5;padding:2px 8px;border-radius:4px}
+.dpo-org-score{font-size:12px;font-weight:800;padding:2px 8px;border-radius:4px}
+.dpo-org-status{font-size:11px;color:#71717a}
 
-  // Modal
-  modal: { position: 'fixed' as const, inset: 0, background: 'rgba(0,0,0,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
-  modalContent: { background: '#fff', borderRadius: 12, padding: 24, maxWidth: 600, width: '90%', maxHeight: '80vh', overflowY: 'auto' as const },
+/* Modal */
+.dpo-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
+.dpo-modal{background:#fff;border-radius:12px;padding:20px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto}
+.dpo-modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.dpo-modal-head h3{font-size:18px;font-weight:700}
+
+/* Spinner */
+.dpo-loading{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#71717a}
+.dpo-spinner{width:24px;height:24px;border:3px solid #e4e4e7;border-top-color:#4f46e5;border-radius:50%;animation:dspin .7s linear infinite}
+@keyframes dspin{to{transform:rotate(360deg)}}
+
+/* MOBILE */
+@media(max-width:640px){
+  .dpo-nav{padding:8px 12px;gap:6px}
+  .dpo-nav-name{display:none}
+  .dpo-nav-sep{display:none}
+  .dpo-nav-left{width:100%;justify-content:space-between}
+  .dpo-time-pill{display:none}
+  .dpo-main{padding:12px 10px 40px}
+  .dpo-kpis{gap:8px;flex-wrap:wrap}
+  .dpo-kpi-num{font-size:18px}
+  .dpo-card-head{padding:12px 14px}
+  .dpo-card-body{padding:0 14px 14px}
+  .dpo-card-title{font-size:14px}
+  .dpo-doc-top{flex-direction:column;align-items:flex-start}
+  .dpo-doc-actions{width:100%;justify-content:flex-end}
+  .dpo-org-row{flex-wrap:wrap;gap:6px}
+  .dpo-done-row{flex-wrap:wrap}
+  .dpo-done-meta{width:100%;text-align:left}
 }
+`
