@@ -796,7 +796,8 @@ export async function POST(request: NextRequest) {
 
       // Handle DOCUMENT REVIEW resolution — activate pending docs
       if (item.type === 'review') {
-        const { data: updatedDocs, error: docErr } = await supabase
+        // Activate any remaining pending_review docs
+        await supabase
           .from('documents')
           .update({ 
             status: 'active',
@@ -804,10 +805,16 @@ export async function POST(request: NextRequest) {
           })
           .eq('org_id', item.org_id)
           .eq('status', 'pending_review')
-          .select('id, title, type')
 
-        if (!docErr && updatedDocs?.length) {
-          console.log(`✅ Activated ${updatedDocs.length} docs for org ${item.org_id}`)
+        // Get ALL org docs for the email (including already-approved ones)
+        const { data: allOrgDocs } = await supabase
+          .from('documents')
+          .select('id, title, type')
+          .eq('org_id', item.org_id)
+          .eq('status', 'active')
+
+        if (allOrgDocs?.length) {
+          console.log(`✅ Org ${item.org_id} has ${allOrgDocs.length} active docs`)
         }
 
         // Send email to client: your documents have been reviewed and approved
@@ -832,7 +839,7 @@ export async function POST(request: NextRequest) {
             }
 
             if (email) {
-              const docList = updatedDocs?.map(d => d.title || d.type).join(', ') || 'מסמכים'
+              const docList = allOrgDocs?.map(d => d.title || d.type).join('، ') || 'מסמכים'
               const emailHtml = `
                 <div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px">
                   <h2 style="color:#059669">✅ המסמכים שלכם אושרו</h2>
