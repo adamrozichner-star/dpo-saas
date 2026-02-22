@@ -1084,12 +1084,14 @@ export async function POST(request: NextRequest) {
         .single()
 
       if (doc) {
-        await supabase.from('dpo_time_log').insert({
-          org_id: doc.org_id,
-          action: 'document_review',
-          description: `אישור מסמך: ${doc.title || doc.type}`,
-          duration_seconds: 60
-        }).catch(() => {})
+        try {
+          await supabase.from('dpo_time_log').insert({
+            org_id: doc.org_id,
+            action: 'document_review',
+            description: `אישור מסמך: ${doc.title || doc.type}`,
+            duration_seconds: 60
+          })
+        } catch (e) { /* ignore */ }
       }
 
       return NextResponse.json({ success: true })
