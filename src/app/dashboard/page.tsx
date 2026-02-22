@@ -837,6 +837,16 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
   const [isSaving, setIsSaving] = useState(false)
   const isPaid = organization?.subscription_status === 'active'
 
+  const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    const headers = new Headers(options.headers)
+    if (supabase) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) headers.set('Authorization', `Bearer ${session.access_token}`)
+    }
+    if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+    return fetch(url, { ...options, headers })
+  }
+
   const getDocTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       privacy_policy: 'מדיניות פרטיות',
