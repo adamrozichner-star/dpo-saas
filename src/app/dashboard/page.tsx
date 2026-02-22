@@ -152,13 +152,6 @@ function DashboardContent() {
         const score = calculateScore(docs || [], incidentData || [])
         setComplianceScore(score)
         
-        // Sync score to DB so chat can read it
-        try {
-          await supabase
-            .from('organizations')
-            .update({ compliance_score: score })
-            .eq('id', org.id)
-        } catch (e) { /* ignore */ }
         const generatedTasks = generateTasks(docs || [], incidentData || [], dsarData || [], org)
         setTasks(generatedTasks)
 
@@ -183,15 +176,24 @@ function DashboardContent() {
   }
 
   const calculateScore = (docs: any[], incidents: any[]) => {
-    let score = 25
+    // Base: 15 points just for being onboarded
+    let score = 15
     const docTypes = docs.map(d => d.type)
+    // Privacy policy: 15
     if (docTypes.includes('privacy_policy')) score += 15
+    // Security policy: 15
     if (docTypes.includes('security_policy') || docTypes.includes('security_procedures')) score += 15
+    // DPO appointment: 10
     if (docTypes.includes('dpo_appointment')) score += 10
+    // Database registration: 10
     if (docTypes.includes('database_registration') || docTypes.includes('database_definition')) score += 10
-    if (docs.length >= 5) score += 10
+    // ROPA: 10
+    if (docTypes.includes('ropa')) score += 10
+    // Consent form: 10
+    if (docTypes.includes('consent_form')) score += 10
+    // No open incidents: 15
     const openIncidents = incidents.filter(i => !['resolved', 'closed'].includes(i.status))
-    score -= openIncidents.length * 5
+    if (openIncidents.length === 0) score += 15
     return Math.max(0, Math.min(100, score))
   }
 
@@ -232,6 +234,30 @@ function DashboardContent() {
         priority: 'medium',
         action: 'התחל',
         actionPath: '/chat?task=dpo_appointment&prompt=' + encodeURIComponent('אנא צור עבורי כתב מינוי רשמי לממונה הגנת פרטיות (DPO) מוכן לחתימה')
+      })
+    }
+
+    if (!docTypes.includes('ropa')) {
+      tasks.push({
+        id: 'missing-ropa',
+        type: 'missing_doc',
+        title: 'יצירת מפת עיבוד (ROPA)',
+        description: 'מפת עיבוד נתונים היא דרישה מרכזית בתיקון 13',
+        priority: 'medium',
+        action: 'צור עכשיו',
+        actionPath: '/chat?task=ropa&prompt=' + encodeURIComponent('אנא צור עבורי מפת עיבוד נתונים (ROPA) מלאה עבור הארגון שלי')
+      })
+    }
+
+    if (!docTypes.includes('consent_form')) {
+      tasks.push({
+        id: 'missing-consent',
+        type: 'missing_doc',
+        title: 'יצירת טופס הסכמה',
+        description: 'טופס הסכמה נדרש לאיסוף מידע אישי',
+        priority: 'medium',
+        action: 'צור עכשיו',
+        actionPath: '/chat?task=consent_form&prompt=' + encodeURIComponent('אנא צור עבורי טופס הסכמה לאיסוף מידע אישי מלקוחות')
       })
     }
 
@@ -846,7 +872,7 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
   const downloadAsPdf = async (doc: Document) => {
     try {
       const content = isEditing ? editedContent : doc.content
-      const response = await fetch('/api/generate-pdf', {
+      const response = await authFetch('/api/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1245,12 +1271,12 @@ function MessagesTab({ threads, orgId, onRefresh }: { threads: any[], orgId: str
     setReplyText('')
 
     try {
-      const res = await fetch(`/api/messages?threadId=${thread.id}`)
+      const res = await authFetch(`/api/messages?threadId=${thread.id}`)
       const data = await res.json()
       setThreadMessages(data.messages || [])
 
       // Mark as read
-      await fetch('/api/messages', {
+      await authFetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'mark_read', threadId: thread.id, senderType: 'user' })
@@ -1267,7 +1293,7 @@ function MessagesTab({ threads, orgId, onRefresh }: { threads: any[], orgId: str
     setIsSending(true)
 
     try {
-      await fetch('/api/messages', {
+      await authFetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1294,7 +1320,7 @@ function MessagesTab({ threads, orgId, onRefresh }: { threads: any[], orgId: str
     setIsSending(true)
 
     try {
-      const res = await fetch('/api/messages', {
+      const res = await authFetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
