@@ -129,7 +129,7 @@ export default function DPODashboard() {
       const [sR, pR, rR, oR] = await Promise.all([
         dpoFetch('/api/dpo?action=stats'),
         dpoFetch('/api/dpo?action=queue&status=pending'),
-        dpoFetch('/api/dpo?action=queue&status=resolved&limit=15'),
+        dpoFetch('/api/dpo?action=queue&status=resolved&limit=25'),
         dpoFetch('/api/dpo?action=organizations'),
       ])
       const [sD, pD, rD, oD] = await Promise.all([sR.json(), pR.json(), rR.json(), oR.json()])
@@ -234,7 +234,9 @@ export default function DPODashboard() {
   // DERIVED
   // =============================================
   const pending = queue.filter(i => i.status === 'pending' || i.status === 'in_progress')
-  const resolved = queue.filter(i => i.status === 'resolved')
+  const resolved = queue.filter(i => i.status === 'resolved').sort((a, b) => 
+    new Date(b.resolved_at || b.created_at).getTime() - new Date(a.resolved_at || a.created_at).getTime()
+  )
   const orgCount = stats?.active_orgs || orgs.length || 0
   const resolvedThisMonth = stats?.resolved_this_month || 0
   const avgTimeSec = stats?.avg_time_seconds || 0
