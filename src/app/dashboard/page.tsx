@@ -471,6 +471,7 @@ function DashboardContent() {
               threads={messageThreads} 
               orgId={organization?.id}
               onRefresh={loadAllData}
+              supabase={supabase}
             />
           )}
           {activeTab === 'settings' && (
@@ -1265,11 +1266,21 @@ function IncidentsTab({ incidents, orgId }: { incidents: any[], orgId: string })
 // ============================================
 // MESSAGES TAB (DPO ↔ User Communication)
 // ============================================
-function MessagesTab({ threads, orgId, onRefresh }: { threads: any[], orgId: string, onRefresh: () => void }) {
+function MessagesTab({ threads, orgId, onRefresh, supabase }: { threads: any[], orgId: string, onRefresh: () => void, supabase: any }) {
   const [selectedThread, setSelectedThread] = useState<any>(null)
   const [threadMessages, setThreadMessages] = useState<any[]>([])
   const [replyText, setReplyText] = useState('')
   const [isSending, setIsSending] = useState(false)
+
+  const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+    const headers = new Headers(options.headers)
+    if (supabase) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) headers.set('Authorization', `Bearer ${session.access_token}`)
+    }
+    if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+    return fetch(url, { ...options, headers })
+  }
   const [isLoadingThread, setIsLoadingThread] = useState(false)
   const [showNewMessage, setShowNewMessage] = useState(false)
   const [newSubject, setNewSubject] = useState('')
