@@ -637,11 +637,11 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
         'security_procedure': 'security_policy',
         'database_registration': 'database_registration',
         'database_definition': 'database_registration',
-        'consent_form': 'custom',
+        'consent_form': 'consent_form',
         'dpa': 'custom',
         'employee_policy': 'procedure',
         'retention_policy': 'procedure',
-        'ropa': 'procedure',
+        'ropa': 'ropa',
         'general': 'custom'
       }
       
