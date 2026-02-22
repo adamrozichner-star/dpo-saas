@@ -870,13 +870,15 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
     const styles: Record<string, string> = {
       active: 'bg-emerald-100 text-emerald-700',
       draft: 'bg-stone-100 text-stone-700',
-      pending: 'bg-amber-100 text-amber-700'
+      pending: 'bg-amber-100 text-amber-700',
+      pending_review: 'bg-indigo-100 text-indigo-700',
+      pending_signature: 'bg-purple-100 text-purple-700'
     }
     return styles[status] || 'bg-stone-100 text-stone-700'
   }
 
   const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = { active: 'פעיל', draft: 'טיוטה', pending: 'ממתין' }
+    const labels: Record<string, string> = { active: 'פעיל', draft: 'טיוטה', pending: 'ממתין', pending_review: 'ממתין לאישור ממונה', pending_signature: 'ממתין לחתימה' }
     return labels[status] || status
   }
 
