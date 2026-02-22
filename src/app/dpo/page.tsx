@@ -203,8 +203,12 @@ export default function DPODashboard() {
   // =============================================
   const pending = queue.filter(i => i.status === 'pending' || i.status === 'in_progress')
   const resolved = queue.filter(i => i.status === 'resolved').sort((a, b) => new Date(b.resolved_at || b.created_at).getTime() - new Date(a.resolved_at || a.created_at).getTime())
-  const mH = stats ? (stats.monthly_time_minutes / 60).toFixed(1) : '0'
-  const qPct = stats ? Math.min(100, Math.round((stats.monthly_time_minutes / 60 / MONTHLY_QUOTA_HOURS) * 100)) : 0
+  // Stats — handle field name differences from API
+  const resolvedCount = stats?.resolved_this_month || stats?.total_resolved_this_month || 0
+  const avgTimeSec = stats?.avg_time_seconds || 0
+  const totalMinutes = (resolvedCount * avgTimeSec) / 60
+  const mH = totalMinutes > 0 ? (totalMinutes / 60).toFixed(1) : '0'
+  const qPct = totalMinutes > 0 ? Math.min(100, Math.round((totalMinutes / 60 / MONTHLY_QUOTA_HOURS) * 100)) : 0
 
   // =============================================
   // RENDER HELPERS
@@ -312,7 +316,7 @@ export default function DPODashboard() {
               <div className="dpo-kpis">
                 <div className="dpo-kpi"><div className="dpo-kpi-num" style={{ color: '#4f46e5' }}>{orgs.length}</div><div className="dpo-kpi-label">ארגונים</div></div>
                 <div className="dpo-kpi"><div className="dpo-kpi-num" style={{ color: '#ef4444' }}>{pending.length}</div><div className="dpo-kpi-label">ממתין</div></div>
-                <div className="dpo-kpi"><div className="dpo-kpi-num" style={{ color: '#22c55e' }}>{stats?.total_resolved_this_month || 0}</div><div className="dpo-kpi-label">טופלו</div></div>
+                <div className="dpo-kpi"><div className="dpo-kpi-num" style={{ color: '#22c55e' }}>{resolvedCount}</div><div className="dpo-kpi-label">טופלו</div></div>
                 <div className="dpo-kpi">
                   <div className="dpo-kpi-num" style={{ color: '#4f46e5' }}>{mH}h</div>
                   <div className="dpo-kpi-label">שעון DPO</div>
@@ -434,13 +438,84 @@ export default function DPODashboard() {
               {resolved.length > 0 && (
                 <section className="dpo-section">
                   <h2 className="dpo-section-title">✅ הושלם לאחרונה ({resolved.length})</h2>
-                  {resolved.slice(0, 10).map(item => (
-                    <div key={item.id} className="dpo-done-row">
-                      <span style={{ color: '#22c55e', fontWeight: 700 }}>✓</span>
-                      <span className="dpo-done-title">{item.title}</span>
-                      <span className="dpo-done-meta">{item.organizations?.name} · {timeAgo(item.resolved_at || item.created_at)}</span>
-                    </div>
-                  ))}
+                  {resolved.slice(0, 12).map(item => {
+                    const cfg = TYPE_MAP[item.type] || { label: item.type, emoji: '📌', accent: '#71717a' }
+                    const isOpen = expandedItem === `done-${item.id}`
+                    return (
+                      <div key={item.id} className={`dpo-card ${isOpen ? 'open' : ''}`} style={{ opacity: isOpen ? 1 : 0.85 }}>
+                        <div className="dpo-card-head" onClick={() => {
+                          if (isOpen) { setExpandedItem(null); return }
+                          setExpandedItem(`done-${item.id}`); loadCtx(item.id)
+                        }}>
+                          <div className="dpo-card-info">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ color: '#22c55e', fontWeight: 700 }}>✓</span>
+                              <span className="dpo-card-title" style={{ fontSize: 14 }}>{item.title}</span>
+                            </div>
+                            <div className="dpo-card-meta">{item.organizations?.name} · {timeAgo(item.resolved_at || item.created_at)} · <span style={{ color: cfg.accent }}>{cfg.label}</span></div>
+                          </div>
+                          <span className="dpo-card-chevron">{isOpen ? '▲' : '▼'}</span>
+                        </div>
+                        {isOpen && (
+                          <div className="dpo-card-body">
+                            {loadingCtx ? <div className="dpo-spinner" style={{ margin: '20px auto' }} /> : (
+                              <>
+                                {/* Resolution details */}
+                                <div className="dpo-chips">
+                                  <span className="dpo-chip">🕐 {item.resolved_at ? new Date(item.resolved_at).toLocaleDateString('he-IL') : '—'}</span>
+                                  <span className="dpo-chip">{cfg.emoji} {cfg.label}</span>
+                                </div>
+
+                                {/* Original AI analysis */}
+                                {item.ai_summary && (
+                                  <div className="dpo-ai-box">
+                                    <span className="dpo-ai-label">✦ ניתוח AI מקורי</span>
+                                    {item.ai_summary.slice(0, 300)}
+                                  </div>
+                                )}
+
+                                {/* Chat history if escalation */}
+                                {itemContext?.messages?.length > 0 && (
+                                  <div className="dpo-bubbles">
+                                    <span className="dpo-sub">💬 שיחה</span>
+                                    {itemContext.messages.slice(-4).map((m: any, i: number) => (
+                                      <div key={i} className={`dpo-bubble ${m.role === 'user' ? 'user' : 'ai'}`}>
+                                        <div className="dpo-bubble-role">{m.role === 'user' ? '👤 לקוח' : '🤖 AI'}</div>
+                                        {(m.content || '').slice(0, 200)}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* DPO response */}
+                                {item.ai_draft_response && (
+                                  <div style={{ marginTop: 12 }}>
+                                    <span className="dpo-sub">📝 תשובת הממונה</span>
+                                    <div style={{ padding: '10px 14px', background: '#f0fdf4', borderRight: '3px solid #22c55e', borderRadius: 8, fontSize: 13, lineHeight: 1.6 }}>
+                                      {item.ai_draft_response}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Docs (for review type) */}
+                                {item.type === 'review' && itemContext?.documents?.length > 0 && (
+                                  <div style={{ marginTop: 12 }}>
+                                    <span className="dpo-sub">📄 מסמכים שאושרו</span>
+                                    {itemContext.documents.filter((d: OrgDoc) => d.status === 'active').map((doc: OrgDoc) => (
+                                      <div key={doc.id} className="dpo-done-row">
+                                        <span style={{ color: '#22c55e' }}>✓</span>
+                                        <span>{doc.title || DOC_LABELS[doc.type] || doc.type}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </section>
               )}
             </>
@@ -477,14 +552,39 @@ export default function DPODashboard() {
                       <span className="dpo-chip">מסמכים: {selectedOrg.documents?.length || 0}</span>
                       <span className="dpo-chip">שעות: {Math.round(selectedOrg.time_this_month_minutes || 0)} דק׳</span>
                     </div>
-                    {selectedOrg.documents?.map((d: any) => (
-                      <div key={d.id} className="dpo-done-row">
-                        <span>{d.title || d.type}</span>
-                        <span style={{ color: d.status === 'active' ? '#22c55e' : '#4f46e5', fontSize: 11, fontWeight: 600 }}>
-                          {d.status === 'active' ? 'פעיל' : d.status}
-                        </span>
+                    {selectedOrg.documents?.length > 0 && (
+                      <div style={{ marginTop: 12 }}>
+                        <span className="dpo-sub">📄 מסמכים</span>
+                        {selectedOrg.documents.map((d: any) => (
+                          <div key={d.id} className="dpo-done-row">
+                            <span style={{ color: d.status === 'active' ? '#22c55e' : '#4f46e5' }}>
+                              {d.status === 'active' ? '✓' : '⏳'}
+                            </span>
+                            <span className="dpo-done-title">{d.title || d.type}</span>
+                            <span className="dpo-done-meta">
+                              {d.status === 'active' ? 'פעיל' : d.status === 'pending_review' ? 'ממתין' : d.status}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
+                    {selectedOrg.queue_history?.length > 0 && (
+                      <div style={{ marginTop: 16 }}>
+                        <span className="dpo-sub">📋 היסטוריית פעילות</span>
+                        {selectedOrg.queue_history.map((q: any) => {
+                          const c = TYPE_MAP[q.type] || { emoji: '📌', label: q.type, accent: '#71717a' }
+                          return (
+                            <div key={q.id} className="dpo-done-row">
+                              <span style={{ color: q.status === 'resolved' ? '#22c55e' : '#f59e0b' }}>
+                                {q.status === 'resolved' ? '✓' : '●'}
+                              </span>
+                              <span className="dpo-done-title">{c.emoji} {q.title}</span>
+                              <span className="dpo-done-meta">{timeAgo(q.resolved_at || q.created_at)}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
