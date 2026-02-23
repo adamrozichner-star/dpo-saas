@@ -45,6 +45,18 @@ export default function LoginPage() {
     setIsLoading(true)
     setError('')
 
+    // Client-side validation
+    if (!email.includes('@') || !email.includes('.')) {
+      setError('כתובת אימייל לא תקינה')
+      setIsLoading(false)
+      return
+    }
+    if (password.length < 6) {
+      setError('הסיסמה חייבת להכיל לפחות 6 תווים')
+      setIsLoading(false)
+      return
+    }
+
     try {
       const { error } = await signIn(email, password)
       if (error) {
