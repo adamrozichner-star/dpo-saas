@@ -24,6 +24,7 @@ import {
   Plus,
   Eye,
   Download,
+  Lock,
   X,
   Copy,
   Edit3,
@@ -99,7 +100,7 @@ function DashboardContent() {
   }, [loading, session, router])
 
   useEffect(() => {
-    if (searchParams.get('welcome') === 'true') {
+    if (searchParams.get('welcome') === 'true' || searchParams.get('payment') === 'success') {
       setShowWelcome(true)
       window.history.replaceState({}, '', '/dashboard')
     }
@@ -151,6 +152,11 @@ function DashboardContent() {
 
         const score = calculateScore(docs || [], incidentData || [])
         setComplianceScore(score)
+        
+        // Sync score to DB so other pages (chat) read the same value
+        try {
+          await supabase.from('organizations').update({ compliance_score: score }).eq('id', org.id)
+        } catch {}
         
         const generatedTasks = generateTasks(docs || [], incidentData || [], dsarData || [], org)
         setTasks(generatedTasks)
@@ -336,7 +342,7 @@ function DashboardContent() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-5">
-            <Link href="/" className="flex items-center gap-3">
+            <Link href="/dashboard" className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center">
                 <Shield className="h-5 w-5 text-white" />
               </div>
@@ -373,7 +379,8 @@ function DashboardContent() {
               icon={<FolderOpen className="h-5 w-5" />} 
               label="מסמכים" 
               active={activeTab === 'documents'} 
-              onClick={() => { setActiveTab('documents'); setMobileMenuOpen(false) }} 
+              onClick={() => { setActiveTab('documents'); setMobileMenuOpen(false) }}
+              badge={documents.filter(d => d.status === 'pending_review').length > 0 ? documents.filter(d => d.status === 'pending_review').length : undefined}
             />
             <NavButton 
               icon={<AlertTriangle className="h-5 w-5" />} 
@@ -384,7 +391,7 @@ function DashboardContent() {
             />
             <NavButton 
               icon={<MessageSquare className="h-5 w-5" />} 
-              label="הודעות מהממונה" 
+              label="שיח עם ממונה" 
               active={activeTab === 'messages'} 
               onClick={() => { setActiveTab('messages'); setMobileMenuOpen(false) }}
               badge={unreadMessages > 0 ? unreadMessages : undefined}
@@ -573,6 +580,32 @@ function OverviewTab({
         <p className="text-stone-500 mt-1">הנה סקירה של מצב הציות שלכם</p>
       </div>
 
+      {/* Next Step Banner — most important task at very top */}
+      {tasks.length > 0 && (() => {
+        const t = tasks[0]
+        return (
+          <div className="bg-gradient-to-l from-indigo-50 to-white rounded-2xl p-5 border border-indigo-200 shadow-sm">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-lg font-bold">→</span>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs text-indigo-600 font-semibold mb-0.5">הצעד הבא שלכם</p>
+                  <p className="font-semibold text-stone-800">{t.title}</p>
+                  <p className="text-sm text-stone-500 truncate">{t.description}</p>
+                </div>
+              </div>
+              <Link href={t.actionPath || '/chat'}>
+                <button className="px-5 py-2.5 bg-indigo-500 text-white rounded-xl text-sm font-semibold hover:bg-indigo-600 transition-colors whitespace-nowrap shadow-sm">
+                  {t.action} →
+                </button>
+              </Link>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Top Cards */}
       <div className="grid md:grid-cols-2 gap-4">
         {/* Score Card — with breakdown */}
@@ -647,8 +680,8 @@ function OverviewTab({
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-stone-200 flex items-center gap-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => onNavigate('documents')}>
-          <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-            <FileText className="h-5 w-5 text-blue-600" />
+          <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+            <FileText className="h-5 w-5 text-indigo-600" />
           </div>
           <div>
             <p className="text-2xl font-bold text-stone-800">{documents.length}</p>
@@ -939,8 +972,17 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
     }
   }
 
-  const filteredDocs = filter === 'all' ? documents : documents.filter(d => d.type === filter)
+  const filteredDocs = (() => {
+    let docs = documents
+    if (filter === 'pending_review') docs = docs.filter(d => d.status === 'pending_review')
+    else if (filter === 'active') docs = docs.filter(d => d.status === 'active')
+    else if (filter === 'pending_signature') docs = docs.filter(d => d.status === 'pending_signature')
+    else if (filter !== 'all') docs = docs.filter(d => d.type === filter)
+    return docs
+  })()
   const docTypes = Array.from(new Set(documents.map(d => d.type)))
+  const pendingReviewCount = documents.filter(d => d.status === 'pending_review').length
+  const activeCount = documents.filter(d => d.status === 'active').length
 
   return (
     <div className="space-y-6">
@@ -957,19 +999,47 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
         </Link>
       </div>
 
-      {/* Filters */}
-      {docTypes.length > 0 && (
-        <div className="flex gap-2 flex-wrap">
+      {/* Status Filters */}
+      <div className="flex gap-2 flex-wrap">
+        <button 
+          onClick={() => setFilter('all')}
+          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+            filter === 'all' 
+              ? 'bg-indigo-500 text-white' 
+              : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
+          }`}
+        >
+          הכל ({documents.length})
+        </button>
+        {activeCount > 0 && (
           <button 
-            onClick={() => setFilter('all')}
+            onClick={() => setFilter('active')}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              filter === 'all' 
-                ? 'bg-indigo-500 text-white' 
+              filter === 'active' 
+                ? 'bg-emerald-500 text-white' 
                 : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
             }`}
           >
-            הכל ({documents.length})
+            ✓ פעיל ({activeCount})
           </button>
+        )}
+        {pendingReviewCount > 0 && (
+          <button 
+            onClick={() => setFilter('pending_review')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              filter === 'pending_review' 
+                ? 'bg-indigo-500 text-white' 
+                : 'bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-50'
+            }`}
+          >
+            ⏳ ממתין לאישור ({pendingReviewCount})
+          </button>
+        )}
+      </div>
+
+      {/* Type Filters */}
+      {docTypes.length > 1 && (
+        <div className="flex gap-2 flex-wrap">
           {docTypes.map(type => (
             <button 
               key={type}
@@ -983,6 +1053,21 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
               {getDocTypeLabel(type)}
             </button>
           ))}
+        </div>
+      )}
+
+      {/* Paywall banner for unpaid users */}
+      {!isPaid && documents.length > 0 && (
+        <div className="bg-gradient-to-l from-indigo-50 to-amber-50 rounded-xl p-4 border border-indigo-200 flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <p className="font-semibold text-stone-800">🔒 המסמכים שלכם מוכנים!</p>
+            <p className="text-sm text-stone-500">שלמו כדי לצפות, להוריד ולהשתמש במסמכים</p>
+          </div>
+          <Link href="/payment-required">
+            <button className="px-5 py-2.5 bg-indigo-500 text-white rounded-xl text-sm font-semibold hover:bg-indigo-600 transition shadow-sm">
+              שלם ופתח מסמכים →
+            </button>
+          </Link>
         </div>
       )}
 
@@ -1008,13 +1093,21 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
               className="bg-white rounded-xl p-4 shadow-sm border border-stone-200 hover:border-stone-300 transition-colors"
             >
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                  <FileText className="h-5 w-5 text-blue-600" />
+                <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                  <FileText className="h-5 w-5 text-indigo-600" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-stone-800 truncate">{doc.title || doc.name || getDocTypeLabel(doc.type)}</h3>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusStyle(doc.status)}`}>
+                    <span 
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusStyle(doc.status)} cursor-help`}
+                      title={
+                        doc.status === 'pending_review' ? 'הממונה צריך לסקור ולאשר את המסמך' :
+                        doc.status === 'active' ? 'המסמך אושר ופעיל — ניתן להוריד ולהשתמש' :
+                        doc.status === 'pending_signature' ? 'נדרשת חתימה של הממונה על המסמך' :
+                        doc.status === 'draft' ? 'טיוטה — המסמך עדיין בעריכה' : ''
+                      }
+                    >
                       {getStatusLabel(doc.status)}
                     </span>
                     <span className="text-xs text-stone-400">
@@ -1023,20 +1116,34 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
                   </div>
                 </div>
                 <div className="flex gap-1">
-                  <button 
-                    onClick={() => openDoc(doc)}
-                    className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center hover:bg-stone-200 transition-colors" 
-                    title="צפייה"
-                  >
-                    <Eye className="h-4 w-4 text-stone-500" />
-                  </button>
-                  <button 
-                    onClick={() => downloadAsPdf(doc)}
-                    className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center hover:bg-stone-200 transition-colors" 
-                    title="הורד PDF"
-                  >
-                    <Download className="h-4 w-4 text-stone-500" />
-                  </button>
+                  {isPaid ? (
+                    <>
+                      <button 
+                        onClick={() => openDoc(doc)}
+                        className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center hover:bg-stone-200 transition-colors" 
+                        title="צפייה"
+                      >
+                        <Eye className="h-4 w-4 text-stone-500" />
+                      </button>
+                      <button 
+                        onClick={() => downloadAsPdf(doc)}
+                        className="w-8 h-8 rounded-lg bg-stone-100 flex items-center justify-center hover:bg-stone-200 transition-colors" 
+                        title="הורד PDF"
+                      >
+                        <Download className="h-4 w-4 text-stone-500" />
+                      </button>
+                    </>
+                  ) : (
+                    <Link href="/payment-required">
+                      <button 
+                        className="px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-medium hover:bg-indigo-100 transition-colors flex items-center gap-1"
+                        title="שלם כדי לצפות ולהוריד מסמכים"
+                      >
+                        <Lock className="h-3 w-3" />
+                        שלם לצפייה
+                      </button>
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
@@ -1053,7 +1160,7 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
               <div className="flex items-center gap-2">
                 <button 
                   onClick={() => setIsEditing(!isEditing)}
-                  className={`p-2 rounded-full transition ${isEditing ? 'bg-blue-100 text-blue-700' : 'hover:bg-slate-100'}`}
+                  className={`p-2 rounded-full transition ${isEditing ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-stone-100'}`}
                   title={isEditing ? 'סיום עריכה' : 'עריכה'}
                 >
                   <Edit3 className="w-5 h-5" />
@@ -1063,7 +1170,7 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
                     setSelectedDoc(null)
                     setIsEditing(false)
                   }}
-                  className="p-2 hover:bg-slate-100 rounded-full transition"
+                  className="p-2 hover:bg-stone-100 rounded-full transition"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1075,11 +1182,11 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
                 <textarea
                   value={editedContent}
                   onChange={(e) => setEditedContent(e.target.value)}
-                  className="w-full h-full min-h-[300px] p-3 border border-slate-200 rounded-lg text-sm text-slate-700 font-sans leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full h-full min-h-[300px] p-3 border border-stone-200 rounded-lg text-sm text-stone-700 font-sans leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   dir="rtl"
                 />
               ) : (
-                <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed">
+                <pre className="whitespace-pre-wrap text-sm text-stone-700 font-sans leading-relaxed">
                   {selectedDoc.content || 'אין תוכן למסמך זה'}
                 </pre>
               )}
@@ -1090,14 +1197,14 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
                 onClick={() => {
                   navigator.clipboard.writeText(isEditing ? editedContent : selectedDoc.content || '')
                 }}
-                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
+                className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
               >
                 <Copy className="w-4 h-4" />
                 העתק
               </button>
               <button
                 onClick={() => downloadAsPdf(selectedDoc)}
-                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
+                className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
               >
                 <Download className="w-4 h-4" />
                 PDF
@@ -1135,7 +1242,7 @@ function IncidentsTab({ incidents, orgId }: { incidents: any[], orgId: string })
     const styles: Record<string, string> = {
       new: 'bg-rose-100 text-rose-700',
       investigating: 'bg-amber-100 text-amber-700',
-      contained: 'bg-blue-100 text-blue-700',
+      contained: 'bg-indigo-100 text-indigo-700',
       resolved: 'bg-emerald-100 text-emerald-700',
       closed: 'bg-stone-100 text-stone-700'
     }
@@ -1376,7 +1483,7 @@ function MessagesTab({ threads, orgId, onRefresh, supabase }: { threads: any[], 
 
   const getStatusStyle = (status: string) => {
     if (status === 'resolved') return 'bg-emerald-100 text-emerald-700'
-    if (status === 'open') return 'bg-blue-100 text-blue-700'
+    if (status === 'open') return 'bg-indigo-100 text-indigo-700'
     return 'bg-stone-100 text-stone-700'
   }
 
@@ -1477,7 +1584,7 @@ function MessagesTab({ threads, orgId, onRefresh, supabase }: { threads: any[], 
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-stone-800">💬 הודעות מהממונה</h1>
+          <h1 className="text-2xl font-semibold text-stone-800">💬 שיח עם ממונה</h1>
           <p className="text-stone-500 mt-1">תקשורת ישירה עם ממונה הגנת הפרטיות שלכם</p>
         </div>
         <button 
@@ -1628,6 +1735,29 @@ function SettingsTab({ organization, user }: { organization: any, user: any }) {
                 {organization?.status === 'active' ? 'פעיל' : 'בהקמה'}
               </span>
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* DPO Info */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
+        <h2 className="font-semibold text-stone-800 mb-4">ממונה הגנת הפרטיות</h2>
+        <div className="grid sm:grid-cols-2 gap-6">
+          <div>
+            <label className="text-sm text-stone-500">שם הממונה</label>
+            <p className="font-medium text-stone-800 mt-1">{DPO_CONFIG.name}</p>
+          </div>
+          <div>
+            <label className="text-sm text-stone-500">מספר רישיון</label>
+            <p className="font-medium text-stone-800 mt-1">{DPO_CONFIG.licenseNumber}</p>
+          </div>
+          <div>
+            <label className="text-sm text-stone-500">דוא״ל ממונה</label>
+            <p className="font-medium text-stone-800 mt-1">{DPO_CONFIG.email}</p>
+          </div>
+          <div>
+            <label className="text-sm text-stone-500">חברה</label>
+            <p className="font-medium text-stone-800 mt-1">{DPO_CONFIG.company.name}</p>
           </div>
         </div>
       </div>
