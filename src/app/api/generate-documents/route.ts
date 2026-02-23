@@ -86,6 +86,23 @@ export async function POST(request: NextRequest) {
 
     // Save documents to database
     console.log('Saving documents to database...')
+    
+    // Prevent duplicates — delete any existing docs for this org first
+    const { data: existingDocs } = await supabase
+      .from('documents')
+      .select('id, type')
+      .eq('org_id', orgId)
+      .eq('generated_by', 'system')
+    
+    if (existingDocs && existingDocs.length > 0) {
+      console.log(`Found ${existingDocs.length} existing system-generated docs — replacing`)
+      await supabase
+        .from('documents')
+        .delete()
+        .eq('org_id', orgId)
+        .eq('generated_by', 'system')
+    }
+
     const documentRecords = documents.map(doc => ({
       org_id: orgId,
       type: doc.type,
@@ -108,9 +125,15 @@ export async function POST(request: NextRequest) {
 
     console.log('Saved', savedDocs?.length, 'documents')
 
-    // Create DPO queue item for document review
+    // Create DPO queue item for document review (prevent duplicates)
     try {
-      const orgName = savedDocs?.[0]?.org_id ? orgId : 'ארגון חדש'
+      // Remove any existing pending review items for this org
+      await supabase.from('dpo_queue')
+        .delete()
+        .eq('org_id', orgId)
+        .eq('type', 'review')
+        .eq('status', 'pending')
+      
       await supabase.from('dpo_queue').insert({
         org_id: orgId,
         type: 'review',
