@@ -58,6 +58,7 @@ interface Document {
   status: string
   created_at: string
   content?: string
+  version?: number
 }
 
 // ============================================
@@ -80,7 +81,7 @@ function DashboardContent() {
   }
   const { isAuthorized, isChecking } = useSubscriptionGate()
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'incidents' | 'messages' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'incidents' | 'messages' | 'reminders' | 'settings'>('overview')
   const [organization, setOrganization] = useState<any>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [incidents, setIncidents] = useState<any[]>([])
@@ -462,6 +463,12 @@ function DashboardContent() {
               badge={unreadMessages > 0 ? unreadMessages : undefined}
             />
             <NavButton 
+              icon={<Clock className="h-5 w-5" />} 
+              label="תזכורות" 
+              active={activeTab === 'reminders'} 
+              onClick={() => { setActiveTab('reminders'); setMobileMenuOpen(false) }} 
+            />
+            <NavButton 
               icon={<Settings className="h-5 w-5" />} 
               label="הגדרות" 
               active={activeTab === 'settings'} 
@@ -544,7 +551,11 @@ function DashboardContent() {
               orgId={organization?.id}
               onRefresh={loadAllData}
               supabase={supabase}
+              tier={organization?.tier}
             />
+          )}
+          {activeTab === 'reminders' && (
+            <RemindersTab orgProfile={orgProfile} documents={documents} />
           )}
           {activeTab === 'settings' && (
             <SettingsTab organization={organization} user={user} orgProfile={orgProfile} supabase={supabase} />
@@ -1213,6 +1224,11 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
                     <span className="text-xs text-stone-400">
                       {new Date(doc.created_at).toLocaleDateString('he-IL')}
                     </span>
+                    {doc.version && (
+                      <span className="text-xs text-stone-400 flex items-center gap-0.5">
+                        {doc.status === 'active' ? '🔒' : ''} v{doc.version}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-1">
@@ -1496,11 +1512,20 @@ function IncidentsTab({ incidents, orgId }: { incidents: any[], orgId: string })
 // ============================================
 // MESSAGES TAB (DPO ↔ User Communication)
 // ============================================
-function MessagesTab({ threads, orgId, onRefresh, supabase }: { threads: any[], orgId: string, onRefresh: () => void, supabase: any }) {
+function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: any[], orgId: string, onRefresh: () => void, supabase: any, tier?: string }) {
   const [selectedThread, setSelectedThread] = useState<any>(null)
   const [threadMessages, setThreadMessages] = useState<any[]>([])
   const [replyText, setReplyText] = useState('')
   const [isSending, setIsSending] = useState(false)
+  
+  // Credit counter — basic: 2/quarter, extended: 6/quarter
+  const maxCredits = tier === 'extended' ? 6 : tier === 'enterprise' ? 12 : 2
+  const usedCredits = threads.filter(t => {
+    const d = new Date(t.created_at || t.createdAt)
+    const now = new Date()
+    const qStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
+    return d >= qStart
+  }).length
 
   const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
     const headers = new Headers(options.headers)
@@ -1706,7 +1731,7 @@ function MessagesTab({ threads, orgId, onRefresh, supabase }: { threads: any[], 
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-stone-800">💬 שיח עם ממונה</h1>
-          <p className="text-stone-500 mt-1">תקשורת ישירה עם ממונה הגנת הפרטיות שלכם</p>
+          <p className="text-stone-500 mt-1">תקשורת ישירה עם עו״ד דנה כהן — ממונה הגנת הפרטיות שלכם</p>
         </div>
         <button 
           onClick={() => setShowNewMessage(true)}
@@ -1715,6 +1740,20 @@ function MessagesTab({ threads, orgId, onRefresh, supabase }: { threads: any[], 
           <Plus className="h-4 w-4" />
           הודעה חדשה
         </button>
+      </div>
+
+      {/* Credit counter */}
+      <div className="flex items-center gap-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+        <div className="flex-1">
+          <p className="text-sm font-medium text-indigo-800">פניות לממונה ברבעון זה</p>
+          <p className="text-xs text-indigo-500 mt-0.5">{tier === 'extended' ? 'חבילה מורחבת' : 'חבילה בסיסית'} · עד {maxCredits} פניות ברבעון</p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {Array.from({ length: maxCredits }).map((_, i) => (
+            <div key={i} className={`w-3 h-3 rounded-full ${i < usedCredits ? 'bg-indigo-500' : 'bg-indigo-200'}`} />
+          ))}
+          <span className="text-sm font-semibold text-indigo-700 mr-1">{usedCredits}/{maxCredits}</span>
+        </div>
       </div>
 
       {/* New Message Form */}
@@ -1822,6 +1861,138 @@ function MessagesTab({ threads, orgId, onRefresh, supabase }: { threads: any[], 
 // ============================================
 // SETTINGS TAB
 // ============================================
+// ============================================
+// REMINDERS TAB
+// ============================================
+function RemindersTab({ orgProfile, documents }: { orgProfile: any, documents: any[] }) {
+  const answers = orgProfile?.answers || []
+  const hasEmployees = (() => {
+    const emp = answers.find((a: any) => a.questionId === 'employee_count')
+    return emp && emp.value !== '1-10'
+  })()
+  const activeDocs = documents.filter(d => d.status === 'active')
+
+  const reminders = [
+    {
+      id: 'annual-review',
+      emoji: '📅',
+      title: 'סקירה שנתית — עדכון מסמכים',
+      description: 'תיקון 13 דורש סקירה תקופתית של מדיניות הפרטיות ונהלי אבטחה. בדקו שהמסמכים עדכניים ומשקפים את המצב בפועל.',
+      frequency: 'פעם בשנה',
+      category: 'רגולציה'
+    },
+    {
+      id: 'employee-training',
+      emoji: '🎓',
+      title: 'הדרכת עובדים — פרטיות ואבטחת מידע',
+      description: 'יש לקיים הדרכה תקופתית לכל עובד שנחשף למידע אישי. תעדו את ההדרכה ושמרו חתימות.',
+      frequency: hasEmployees ? 'פעם בשנה' : 'לא רלוונטי',
+      category: 'הדרכה',
+      hidden: !hasEmployees
+    },
+    {
+      id: 'supplier-review',
+      emoji: '🔗',
+      title: 'בדיקת ספקים ומעבדי מידע',
+      description: 'ודאו שלכל ספק שמעבד מידע אישי עבורכם יש הסכם עיבוד נתונים (DPA) חתום ותקף.',
+      frequency: 'פעם ב-6 חודשים',
+      category: 'ספקים'
+    },
+    {
+      id: 'database-registration',
+      emoji: '🗄️',
+      title: 'עדכון רישום מאגרי מידע',
+      description: 'ודאו שמאגרי המידע רשומים ומעודכנים ברשם מאגרי המידע. כל שינוי באופי העיבוד מחייב עדכון.',
+      frequency: 'בעת שינוי',
+      category: 'רגולציה'
+    },
+    {
+      id: 'data-retention',
+      emoji: '🗑️',
+      title: 'מחיקת מידע עודף',
+      description: 'בדקו אם יש מידע שאינו נדרש עוד ומחקו אותו בהתאם למדיניות השמירה. כולל קורות חיים ישנים, לידים לא פעילים, ולקוחות לא פעילים.',
+      frequency: 'פעם ברבעון',
+      category: 'תחזוקה'
+    },
+    {
+      id: 'privacy-policy-website',
+      emoji: '🌐',
+      title: 'בדיקת מדיניות פרטיות באתר',
+      description: 'ודאו שמדיניות הפרטיות באתר עדכנית, נגישה, וכוללת את כל המידע הנדרש לפי תיקון 13.',
+      frequency: 'פעם ברבעון',
+      category: 'רגולציה'
+    },
+    {
+      id: 'incident-drill',
+      emoji: '🚨',
+      title: 'תרגיל אירוע אבטחה',
+      description: 'בצעו תרגיל פנימי לבדיקת נוהל תגובה לאירוע אבטחה. ודאו שכל הגורמים יודעים מה תפקידם.',
+      frequency: 'פעם בשנה',
+      category: 'אבטחה'
+    },
+    {
+      id: 'consent-audit',
+      emoji: '✅',
+      title: 'בדיקת תקינות הסכמות',
+      description: 'ודאו שכל איסוף מידע אישי מלווה בהסכמה מתועדת, ושטפסי ההסכמה עדכניים.',
+      frequency: 'פעם ב-6 חודשים',
+      category: 'רגולציה'
+    },
+  ].filter(r => !r.hidden)
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold text-stone-800">⏰ תזכורות והנחיות</h1>
+        <p className="text-stone-500 mt-1">פעולות תקופתיות לשמירה על ציות מלא לתיקון 13</p>
+      </div>
+
+      {/* Quick status */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white rounded-xl p-3 border border-stone-200 text-center">
+          <p className="text-2xl font-bold text-indigo-600">{activeDocs.length}</p>
+          <p className="text-xs text-stone-500 mt-0.5">מסמכים פעילים</p>
+        </div>
+        <div className="bg-white rounded-xl p-3 border border-stone-200 text-center">
+          <p className="text-2xl font-bold text-emerald-600">{reminders.length}</p>
+          <p className="text-xs text-stone-500 mt-0.5">פעולות תקופתיות</p>
+        </div>
+        <div className="bg-white rounded-xl p-3 border border-stone-200 text-center">
+          <p className="text-2xl font-bold text-amber-600">4</p>
+          <p className="text-xs text-stone-500 mt-0.5">ברבעון הקרוב</p>
+        </div>
+        <div className="bg-white rounded-xl p-3 border border-stone-200 text-center">
+          <p className="text-2xl font-bold text-stone-400">—</p>
+          <p className="text-xs text-stone-500 mt-0.5">סקירה שנתית</p>
+        </div>
+      </div>
+
+      {/* Reminder cards */}
+      <div className="space-y-3">
+        {reminders.map(r => (
+          <div key={r.id} className="bg-white rounded-xl p-4 border border-stone-200 hover:border-stone-300 transition-colors">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">{r.emoji}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-medium text-stone-800">{r.title}</h3>
+                  <span className="px-2 py-0.5 bg-stone-100 text-stone-500 rounded-full text-xs">{r.frequency}</span>
+                  <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-full text-xs">{r.category}</span>
+                </div>
+                <p className="text-sm text-stone-500 mt-1 leading-relaxed">{r.description}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-indigo-50 rounded-xl p-4 border border-indigo-100 text-center">
+        <p className="text-sm text-indigo-700">💡 תזכורות אוטומטיות יישלחו במייל לפי לוח הזמנים — בקרוב</p>
+      </div>
+    </div>
+  )
+}
+
 function SettingsTab({ organization, user, orgProfile, supabase }: { organization: any, user: any, orgProfile: any, supabase: any }) {
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -2022,6 +2193,80 @@ function SettingsTab({ organization, user, orgProfile, supabase }: { organizatio
           </Link>
         </div>
       </div>
+
+      {/* Audit Log */}
+      <AuditLogSection orgId={organization?.id} supabase={supabase} />
+    </div>
+  )
+}
+
+// Audit Log sub-component
+function AuditLogSection({ orgId, supabase }: { orgId: string, supabase: any }) {
+  const [logs, setLogs] = useState<any[]>([])
+  const [loading, setLoading] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+
+  const loadLogs = async () => {
+    if (!orgId || !supabase) return
+    setLoading(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch(`/api/audit?org_id=${orgId}&limit=20`, {
+        headers: { 'Authorization': `Bearer ${session?.access_token}` }
+      })
+      const data = await res.json()
+      setLogs(data.logs || [])
+    } catch {}
+    setLoading(false)
+  }
+
+  useEffect(() => { if (expanded && logs.length === 0) loadLogs() }, [expanded])
+
+  const EVENT_LABELS: Record<string, string> = {
+    document_generated: '📄 מסמכים נוצרו',
+    document_approved: '✅ מסמך אושר',
+    document_edited: '✏️ מסמך נערך',
+    login: '🔐 התחברות',
+    escalation: '📞 העברה לממונה',
+    incident_created: '🚨 אירוע אבטחה',
+    incident_resolved: '✅ אירוע נסגר',
+    payment: '💳 תשלום',
+    subscription_created: '💳 מנוי נוצר',
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
+      <button 
+        onClick={() => setExpanded(!expanded)}
+        className="w-full p-6 flex items-center justify-between text-right hover:bg-stone-50 transition"
+      >
+        <div>
+          <h2 className="font-semibold text-stone-800">📋 יומן פעילות (Audit Log)</h2>
+          <p className="text-sm text-stone-500 mt-1">תיעוד כל הפעולות במערכת</p>
+        </div>
+        <span className="text-stone-400 text-lg">{expanded ? '▲' : '▼'}</span>
+      </button>
+      {expanded && (
+        <div className="border-t border-stone-100 p-4">
+          {loading ? (
+            <p className="text-center text-stone-400 py-4">טוען...</p>
+          ) : logs.length === 0 ? (
+            <p className="text-center text-stone-400 py-4">אין רשומות פעילות</p>
+          ) : (
+            <div className="space-y-1.5 max-h-80 overflow-y-auto">
+              {logs.map((log: any) => (
+                <div key={log.id} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-stone-50 text-sm">
+                  <span className="flex-shrink-0">{EVENT_LABELS[log.event_type]?.slice(0, 2) || '📌'}</span>
+                  <span className="flex-1 text-stone-700">{EVENT_LABELS[log.event_type]?.slice(2) || log.event_type}</span>
+                  <span className="text-xs text-stone-400 flex-shrink-0">
+                    {new Date(log.created_at).toLocaleDateString('he-IL')} {new Date(log.created_at).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
