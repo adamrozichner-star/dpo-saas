@@ -41,7 +41,7 @@ import WelcomeModal from '@/components/WelcomeModal'
 // ============================================
 interface Task {
   id: string
-  type: 'missing_doc' | 'dsar' | 'review' | 'incident' | 'periodic'
+  type: 'missing_doc' | 'dsar' | 'review' | 'incident' | 'periodic' | 'info' | 'action'
   title: string
   description: string
   priority: 'high' | 'medium' | 'low'
