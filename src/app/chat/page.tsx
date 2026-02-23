@@ -186,7 +186,7 @@ export default function ChatPage() {
             {
               id: 'welcome-1',
               role: 'assistant',
-              content: `שלום! 👋 אני הממונה הדיגיטלי שלך ב-${userData.organizations.name}.\n\nסיימתי לנתח את הפרטים שמילאת ואני מכין לך את המסמכים הנדרשים.\n\nבמה אפשר לעזור?`,
+              content: `שלום! 👋 אני העוזר החכם של MyDPO ב-${userData.organizations.name}.\n\nאני כאן כדי לעזור לך עם מסמכים, שאלות פרטיות, ודיווחי אבטחה.\nלהעברה ישירה לממונה — לחץ ״העבר לדנה״ למטה.\n\nבמה אפשר לעזור?`,
               created_at: new Date().toISOString()
             }
           ])
@@ -1099,17 +1099,17 @@ ${summaryText}
   // Show loading screen while auth is loading
   if (authLoading || isChecking || !isAuthorized) {
     return (
-      <div className="h-screen bg-slate-50 flex items-center justify-center" dir="rtl">
+      <div className="h-screen bg-stone-50 flex items-center justify-center" dir="rtl">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-blue-700 animate-spin mx-auto mb-4" />
-          <p className="text-slate-600">טוען...</p>
+          <Loader2 className="w-12 h-12 text-indigo-700 animate-spin mx-auto mb-4" />
+          <p className="text-stone-600">טוען...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="h-screen bg-slate-50 flex" dir="rtl">
+    <div className="h-screen bg-stone-50 flex" dir="rtl">
       {/* Sidebar */}
       {/* Mobile overlay */}
       {sidebarOpen && (
@@ -1118,29 +1118,28 @@ ${summaryText}
           onClick={() => setSidebarOpen(false)} 
         />
       )}
-      <aside className={`${sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'} fixed lg:static inset-y-0 right-0 z-50 w-72 bg-slate-900 text-white flex-shrink-0 transition-transform duration-300 flex flex-col`}>
+      <aside className={`${sidebarOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'} fixed lg:static inset-y-0 right-0 z-50 w-72 bg-stone-50 border-l border-stone-200 flex-shrink-0 transition-transform duration-300 flex flex-col`}>
         {/* Sidebar Header */}
-        <div className="p-4 border-b border-slate-700">
+        <div className="p-4 border-b border-stone-200">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+              <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
                 <Shield className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-lg">MyDPO</span>
+              <span className="font-bold text-lg text-stone-800">MyDPO</span>
             </div>
             <button 
               onClick={() => setSidebarOpen(false)}
-              className="p-1.5 hover:bg-slate-700 rounded-lg transition"
+              className="p-1.5 hover:bg-stone-200 rounded-lg transition"
             >
-              <PanelLeftClose className="w-5 h-5 text-slate-400" />
+              <PanelLeftClose className="w-5 h-5 text-stone-400" />
             </button>
           </div>
           
           {/* New Chat Button */}
           <button 
             onClick={startNewChat}
-            className="w-full text-white py-2.5 px-4 rounded-xl font-medium transition flex items-center justify-center gap-2"
-            style={{backgroundColor: '#10b981'}}
+            className="w-full py-2.5 px-4 rounded-xl font-medium transition flex items-center justify-center gap-2 bg-teal-500 hover:bg-teal-600 text-white"
           >
             <Plus className="w-5 h-5" />
             שיחה חדשה
@@ -1149,13 +1148,13 @@ ${summaryText}
         
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto p-3">
-          <div className="text-xs text-slate-500 font-medium px-2 mb-2 flex items-center gap-1.5">
+          <div className="text-xs text-stone-500 font-medium px-2 mb-2 flex items-center gap-1.5">
             <History className="w-3.5 h-3.5" />
             שיחות אחרונות
           </div>
           
           {conversations.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 text-sm">
+            <div className="text-center py-8 text-stone-400 text-sm">
               <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-50" />
               <p>אין שיחות קודמות</p>
             </div>
@@ -1167,15 +1166,15 @@ ${summaryText}
                   onClick={() => loadConversation(conv.id)}
                   className={`w-full text-right p-3 rounded-xl transition group ${
                     currentConversationId === conv.id 
-                      ? 'bg-slate-700 text-white' 
-                      : 'hover:bg-slate-800 text-slate-300'
+                      ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' 
+                      : 'hover:bg-stone-100 text-stone-600'
                   }`}
                 >
                   <div className="flex items-start gap-2">
                     <MessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0 opacity-60" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{conv.title}</p>
-                      <p className="text-xs text-slate-500 truncate mt-0.5">{conv.preview}</p>
+                      <p className="text-xs text-stone-400 truncate mt-0.5">{conv.preview}</p>
                     </div>
                   </div>
                 </button>
@@ -1185,24 +1184,24 @@ ${summaryText}
         </div>
         
         {/* Sidebar Footer */}
-        <div className="p-3 border-t border-slate-700">
+        <div className="p-3 border-t border-stone-200">
           <Link 
             href="/dashboard"
-            className="flex items-center gap-3 p-3 hover:bg-slate-800 rounded-xl transition text-slate-300"
+            className="flex items-center gap-3 p-3 hover:bg-stone-100 rounded-xl transition text-stone-600"
           >
             <BarChart3 className="w-5 h-5" />
             <span className="text-sm">לוח בקרה</span>
           </Link>
           <Link 
             href="/dashboard?tab=documents"
-            className="flex items-center gap-3 p-3 hover:bg-slate-800 rounded-xl transition text-slate-300"
+            className="flex items-center gap-3 p-3 hover:bg-stone-100 rounded-xl transition text-stone-600"
           >
             <FolderOpen className="w-5 h-5" />
             <span className="text-sm">מסמכים</span>
           </Link>
           <Link 
-            href="/settings"
-            className="flex items-center gap-3 p-3 hover:bg-slate-800 rounded-xl transition text-slate-300"
+            href="/dashboard"
+            className="flex items-center gap-3 p-3 hover:bg-stone-100 rounded-xl transition text-stone-600"
           >
             <Settings className="w-5 h-5" />
             <span className="text-sm">הגדרות</span>
@@ -1239,7 +1238,7 @@ ${summaryText}
             
             <div className="flex-1">
               <h1 className="font-bold text-lg">הממונה שלך</h1>
-              <p className="text-sm text-blue-200 flex items-center gap-1.5">
+              <p className="text-sm text-indigo-200 flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3" />
                 {orgLoading ? 'טוען...' : (organization?.name || 'לא נמצא ארגון')}
               </p>
@@ -1247,7 +1246,7 @@ ${summaryText}
             
             <div className={`bg-gradient-to-b ${getScoreBg(complianceScore)} backdrop-blur rounded-xl px-3 py-2 text-center border border-white/10`}>
               <p className={`text-2xl font-bold ${getScoreColor(complianceScore)}`}>{complianceScore}%</p>
-              <p className="text-xs text-blue-200">ציות</p>
+              <p className="text-xs text-indigo-200">ציות</p>
             </div>
           </div>
           
@@ -1268,7 +1267,7 @@ ${summaryText}
 
       {/* Chat Area */}
       <div 
-        className={`flex-1 overflow-y-auto transition-all ${dragOver ? 'bg-blue-100 scale-[0.99]' : ''}`}
+        className={`flex-1 overflow-y-auto transition-all ${dragOver ? 'bg-indigo-100 scale-[0.99]' : ''}`}
         style={{ 
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236366f1' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }}
@@ -1278,13 +1277,13 @@ ${summaryText}
       >
         {/* Drag Overlay */}
         {dragOver && (
-          <div className="fixed inset-0 bg-blue-800/20 backdrop-blur-sm flex items-center justify-center z-20 pointer-events-none">
+          <div className="fixed inset-0 bg-indigo-600/20 backdrop-blur-sm flex items-center justify-center z-20 pointer-events-none">
             <div className="bg-white rounded-3xl p-10 shadow-2xl text-center">
-              <div className="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Upload className="w-10 h-10 text-blue-700" />
+              <div className="w-20 h-20 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Upload className="w-10 h-10 text-indigo-700" />
               </div>
-              <p className="text-2xl font-bold text-slate-900 mb-2">שחרר להעלאה</p>
-              <p className="text-slate-500">מסמכים, תמונות, או כל קובץ</p>
+              <p className="text-2xl font-bold text-stone-900 mb-2">שחרר להעלאה</p>
+              <p className="text-stone-500">מסמכים, תמונות, או כל קובץ</p>
             </div>
           </div>
         )}
@@ -1292,7 +1291,7 @@ ${summaryText}
         <div className="p-4 space-y-3 max-w-3xl mx-auto">
           {/* Date */}
           <div className="flex justify-center py-2">
-            <span className="bg-white/90 backdrop-blur text-slate-500 text-xs px-4 py-1.5 rounded-full shadow-sm">
+            <span className="bg-white/90 backdrop-blur text-stone-500 text-xs px-4 py-1.5 rounded-full shadow-sm">
               {new Date().toLocaleDateString('he-IL', { weekday: 'long', day: 'numeric', month: 'long' })}
             </span>
           </div>
@@ -1306,9 +1305,9 @@ ${summaryText}
                     ? 'text-white rounded-2xl rounded-br-md' 
                     : msg.role === 'system'
                     ? 'bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl'
-                    : 'bg-white text-slate-800 rounded-2xl rounded-bl-md shadow-sm border border-slate-100'
+                    : 'bg-white text-stone-800 rounded-2xl rounded-bl-md shadow-sm border border-stone-100'
                 }`}
-                style={msg.role === 'user' ? {backgroundColor: '#1e40af'} : {}}
+                style={msg.role === 'user' ? {backgroundColor: '#4f46e5'} : {}}
               >
                 {/* Message Content */}
                 <div className="px-4 py-3">
@@ -1330,14 +1329,14 @@ ${summaryText}
 
                 {/* Generated Document */}
                 {msg.metadata?.generated_document && (
-                  <div className="mx-3 mb-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-4 border border-blue-100">
+                  <div className="mx-3 mb-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-100">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-blue-700" />
+                      <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                        <FileText className="w-5 h-5 text-indigo-700" />
                       </div>
                       <div>
-                        <p className="font-medium text-slate-900">מסמך נוצר</p>
-                        <p className="text-xs text-slate-500">לחץ לצפייה ושמירה</p>
+                        <p className="font-medium text-stone-900">מסמך נוצר</p>
+                        <p className="text-xs text-stone-500">לחץ לצפייה ושמירה</p>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -1346,16 +1345,16 @@ ${summaryText}
                           setCurrentDocument(msg.metadata?.generated_document)
                           setShowDocModal(true)
                         }}
-                        className="flex-1 bg-blue-800 hover:bg-blue-900 text-white py-2 px-4 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"
                       >
                         <Eye className="w-4 h-4" />
                         צפה ושמור
                       </button>
                       <button 
                         onClick={() => copyToClipboard(msg.metadata?.generated_document?.content || '')}
-                        className="p-2 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg transition"
+                        className="p-2 bg-white hover:bg-stone-50 border border-stone-200 rounded-lg transition"
                       >
-                        <Copy className="w-4 h-4 text-slate-600" />
+                        <Copy className="w-4 h-4 text-stone-600" />
                       </button>
                     </div>
                   </div>
@@ -1363,7 +1362,7 @@ ${summaryText}
                 
                 {/* Message Footer */}
                 <div className={`px-4 pb-2 flex items-center justify-between ${
-                  msg.role === 'user' ? 'text-blue-200' : 'text-slate-400'
+                  msg.role === 'user' ? 'text-indigo-200' : 'text-stone-400'
                 }`}>
                   <span className="text-xs">{formatTime(msg.created_at)}</span>
                   <div className="flex items-center gap-1">
@@ -1371,7 +1370,7 @@ ${summaryText}
                     {msg.role === 'assistant' && (
                       <button 
                         onClick={() => copyToClipboard(msg.content)}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-100 rounded transition"
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-stone-100 rounded transition"
                       >
                         <Copy className="w-3 h-3" />
                       </button>
@@ -1385,7 +1384,7 @@ ${summaryText}
           {/* Quick Action Buttons */}
           {activeQuickAction && (
             <div className="flex justify-end">
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 max-w-[85%]">
+              <div className="bg-white rounded-2xl shadow-sm border border-stone-100 p-4 max-w-[85%]">
                 <div className="flex flex-wrap gap-2">
                   {activeQuickAction.buttons.map((btn) => (
                     <button
@@ -1393,9 +1392,9 @@ ${summaryText}
                       onClick={() => handleQuickActionClick(btn.id)}
                       className={`px-4 py-2 rounded-xl text-sm font-medium transition ${
                         btn.style === 'danger' ? 'bg-red-500 hover:bg-red-600 text-white' :
-                        btn.style === 'primary' ? 'bg-blue-800 hover:bg-blue-900 text-white' :
-                        btn.style === 'outline' ? 'border border-slate-200 hover:bg-slate-50 text-slate-700' :
-                        'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                        btn.style === 'primary' ? 'bg-indigo-600 hover:bg-indigo-700 text-white' :
+                        btn.style === 'outline' ? 'border border-stone-200 hover:bg-stone-50 text-stone-700' :
+                        'bg-stone-100 hover:bg-stone-200 text-stone-700'
                       }`}
                     >
                       {btn.label}
@@ -1409,14 +1408,14 @@ ${summaryText}
           {/* Typing Indicator - shows while waiting for stream to start */}
           {isTyping && (
             <div className="flex justify-end">
-              <div className="bg-white rounded-2xl rounded-bl-md shadow-sm px-5 py-3 border border-slate-100">
+              <div className="bg-white rounded-2xl rounded-bl-md shadow-sm px-5 py-3 border border-stone-100">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1">
                     <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
                     <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
                     <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                   </div>
-                  <span className="text-xs text-slate-400">חושב...</span>
+                  <span className="text-xs text-stone-400">חושב...</span>
                 </div>
               </div>
             </div>
@@ -1425,12 +1424,12 @@ ${summaryText}
           {/* Upload Progress */}
           {uploadProgress !== null && (
             <div className="flex justify-start">
-              <div className="bg-blue-800 text-white rounded-2xl rounded-br-md px-4 py-3">
+              <div className="bg-indigo-600 text-white rounded-2xl rounded-br-md px-4 py-3">
                 <div className="flex items-center gap-3">
                   <Loader2 className="w-5 h-5 animate-spin" />
                   <div>
                     <p className="text-sm">מעלה קובץ...</p>
-                    <div className="w-32 h-1.5 bg-blue-400 rounded-full mt-1">
+                    <div className="w-32 h-1.5 bg-indigo-400 rounded-full mt-1">
                       <div 
                         className="h-full bg-white rounded-full transition-all"
                         style={{ width: `${uploadProgress}%` }}
@@ -1456,10 +1455,10 @@ ${summaryText}
             <X className="w-4 h-4" />
           </button>
           <p className="font-medium mb-1">💡 רוצה סקירה מקצועית?</p>
-          <p className="text-sm text-blue-200 mb-3">הממונה שלנו יעבור על המסמכים ויוודא שהכל תקין</p>
+          <p className="text-sm text-indigo-200 mb-3">הממונה שלנו יעבור על המסמכים ויוודא שהכל תקין</p>
           <button 
             onClick={() => requestReview()}
-            className="w-full bg-white py-2 rounded-xl font-medium text-sm hover:bg-blue-50 transition"
+            className="w-full bg-white py-2 rounded-xl font-medium text-sm hover:bg-indigo-50 transition"
             style={{color: '#1e40af'}}
           >
             בקש סקירה
@@ -1468,14 +1467,14 @@ ${summaryText}
       )}
 
       {/* Suggestions */}
-      <div className="bg-white/80 backdrop-blur border-t border-slate-200 flex-shrink-0">
+      <div className="bg-white/80 backdrop-blur border-t border-stone-200 flex-shrink-0">
         <div className="flex gap-2 p-3 max-w-4xl mx-auto overflow-x-auto scrollbar-hide md:flex-wrap md:justify-center">
           {suggestions.slice(0, 6).map((s, i) => (
             <button 
               key={i}
               onClick={() => sendMessage(s.text)}
               disabled={isLoading}
-              className="flex-shrink-0 md:flex-shrink bg-white border border-slate-200 hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50 px-4 py-2.5 rounded-full text-sm text-slate-700 transition flex items-center gap-2 shadow-sm whitespace-nowrap"
+              className="flex-shrink-0 md:flex-shrink bg-white border border-stone-200 hover:border-indigo-300 hover:bg-indigo-50 disabled:opacity-50 px-4 py-2.5 rounded-full text-sm text-stone-700 transition flex items-center gap-2 shadow-sm whitespace-nowrap"
             >
               <span>{s.icon}</span>
               <span>{s.text}</span>
@@ -1485,11 +1484,11 @@ ${summaryText}
       </div>
 
       {/* Input Area */}
-      <div className="bg-white border-t border-slate-200 p-3 flex-shrink-0">
+      <div className="bg-white border-t border-stone-200 p-3 flex-shrink-0">
         <div className="max-w-3xl mx-auto">
           {/* Quick Actions Menu */}
           {showQuickActions && (
-            <div className="mb-3 p-2 bg-slate-50 rounded-2xl grid grid-cols-4 gap-2">
+            <div className="mb-3 p-2 bg-stone-50 rounded-2xl grid grid-cols-4 gap-2">
               {[
                 { icon: '📄', label: 'מסמך', action: 'document' },
                 { icon: '📸', label: 'תמונה', action: 'image' },
@@ -1507,28 +1506,43 @@ ${summaryText}
                   className="flex flex-col items-center gap-2 p-3 hover:bg-white rounded-xl transition"
                 >
                   <span className="text-2xl">{item.icon}</span>
-                  <span className="text-xs text-slate-600">{item.label}</span>
+                  <span className="text-xs text-stone-600">{item.label}</span>
                 </button>
               ))}
             </div>
           )}
 
+          {/* Escalation banner */}
+          <div className="flex items-center justify-between mb-2 px-1">
+            <p className="text-[11px] text-stone-400">🤖 עוזר AI — לא ייעוץ משפטי מחייב</p>
+            <button 
+              onClick={() => {
+                const msg = 'רוצה לדבר עם הממונה'
+                setInput(msg)
+                setTimeout(() => sendMessage(msg), 100)
+              }}
+              className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full transition"
+            >
+              👤 העבר לדנה (הממונה)
+            </button>
+          </div>
+
           <div className="flex items-end gap-2">
             <button 
               onClick={() => setShowQuickActions(!showQuickActions)}
               className={`p-3 rounded-full transition flex-shrink-0 ${
-                showQuickActions ? 'bg-blue-100 text-blue-600' : 'hover:bg-slate-100 text-slate-500'
+                showQuickActions ? 'bg-indigo-100 text-indigo-600' : 'hover:bg-stone-100 text-stone-500'
               }`}
             >
               {showQuickActions ? <X className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
             </button>
             
-            <div className="flex-1 bg-slate-100 rounded-full flex items-center px-4 border-2 border-transparent focus-within:border-blue-400 focus-within:bg-white transition">
+            <div className="flex-1 bg-stone-100 rounded-full flex items-center px-4 border-2 border-transparent focus-within:border-indigo-400 focus-within:bg-white transition">
               <input
                 ref={inputRef}
                 type="text"
                 placeholder="הקלד הודעה..."
-                className="flex-1 bg-transparent border-0 focus:outline-none py-3 text-slate-800"
+                className="flex-1 bg-transparent border-0 focus:outline-none py-3 text-stone-800"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -1541,23 +1555,35 @@ ${summaryText}
               />
               <button 
                 onClick={() => fileInputRef.current?.click()}
-                className="p-1 hover:bg-slate-200 rounded-full transition"
+                className="p-1 hover:bg-stone-200 rounded-full transition"
               >
-                <Paperclip className="w-5 h-5 text-slate-400" />
+                <Paperclip className="w-5 h-5 text-stone-400" />
               </button>
             </div>
             
             <button 
               onClick={() => sendMessage()}
               disabled={!input.trim() || isLoading}
-              className="p-3 rounded-full transition shadow-lg disabled:bg-slate-300 disabled:shadow-none flex-shrink-0"
-              style={{backgroundColor: '#1e40af'}}
+              className="p-3 rounded-full transition shadow-lg disabled:bg-stone-300 disabled:shadow-none flex-shrink-0 bg-indigo-500 hover:bg-indigo-600"
             >
               {isLoading ? (
                 <Loader2 className="w-6 h-6 text-white animate-spin" />
               ) : (
                 <Send className="w-6 h-6 text-white" />
               )}
+            </button>
+          </div>
+
+          {/* AI Disclaimer + Escalate to DPO */}
+          <div className="flex items-center justify-between px-2 pt-1.5 pb-0.5">
+            <p className="text-[11px] text-stone-400">🤖 עוזר AI — תשובות אינן מהוות ייעוץ משפטי מחייב</p>
+            <button 
+              onClick={() => { 
+                sendMessage('רוצה לדבר עם הממונה')
+              }}
+              className="text-[11px] text-indigo-500 hover:text-indigo-700 font-semibold whitespace-nowrap bg-indigo-50 px-2 py-0.5 rounded-full"
+            >
+              👤 העבר לדנה
             </button>
           </div>
 
@@ -1571,6 +1597,7 @@ ${summaryText}
               e.target.value = ''
             }}
           />
+          <p className="text-center text-[10px] text-stone-400 mt-1 px-2">⚠️ עוזר AI — התשובות הן המלצה בלבד ואינן מהוות ייעוץ משפטי מחייב</p>
         </div>
       </div>
 
@@ -1586,14 +1613,14 @@ ${summaryText}
                     ...currentDocument,
                     isEditing: !currentDocument.isEditing
                   })}
-                  className={`p-2 rounded-full transition ${currentDocument.isEditing ? 'bg-blue-100 text-blue-700' : 'hover:bg-slate-100'}`}
+                  className={`p-2 rounded-full transition ${currentDocument.isEditing ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-stone-100'}`}
                   title={currentDocument.isEditing ? 'סיום עריכה' : 'עריכה'}
                 >
                   <Edit3 className="w-5 h-5" />
                 </button>
                 <button 
                   onClick={() => setShowDocModal(false)}
-                  className="p-2 hover:bg-slate-100 rounded-full transition"
+                  className="p-2 hover:bg-stone-100 rounded-full transition"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -1608,11 +1635,11 @@ ${summaryText}
                     ...currentDocument,
                     content: e.target.value
                   })}
-                  className="w-full h-full min-h-[300px] p-3 border border-slate-200 rounded-lg text-sm text-slate-700 font-sans leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full h-full min-h-[300px] p-3 border border-stone-200 rounded-lg text-sm text-stone-700 font-sans leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   dir="rtl"
                 />
               ) : (
-                <pre className="whitespace-pre-wrap text-sm text-slate-700 font-sans leading-relaxed">
+                <pre className="whitespace-pre-wrap text-sm text-stone-700 font-sans leading-relaxed">
                   {currentDocument.content}
                 </pre>
               )}
@@ -1621,14 +1648,14 @@ ${summaryText}
             <div className="p-4 border-t flex gap-2 flex-shrink-0">
               <button
                 onClick={() => copyToClipboard(currentDocument.content)}
-                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
+                className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
               >
                 <Copy className="w-4 h-4" />
                 העתק
               </button>
               <button
                 onClick={() => downloadAsPdf(currentDocument.content, currentDocument.name || 'מסמך')}
-                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
+                className="flex-1 py-3 bg-stone-100 hover:bg-stone-200 rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
               >
                 <FileDown className="w-4 h-4" />
                 PDF
@@ -1639,7 +1666,7 @@ ${summaryText}
                   setShowDocModal(false)
                 }}
                 disabled={isGeneratingDoc}
-                className="flex-1 py-3 bg-blue-800 hover:bg-blue-900 disabled:bg-blue-400 text-white rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
+                className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white rounded-xl font-medium transition flex items-center justify-center gap-2 text-sm"
               >
                 {isGeneratingDoc ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
