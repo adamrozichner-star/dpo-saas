@@ -29,7 +29,7 @@ export default function PaymentRequiredPage() {
           .eq('auth_user_id', user.id)
           .single()
 
-         if (userData?.org_id) {
+        if (userData?.org_id) {
           const { data: sub } = await supabase
             .from('subscriptions')
             .select('id, status')
@@ -38,18 +38,7 @@ export default function PaymentRequiredPage() {
             .single()
 
           if (sub) {
-            // Check if onboarding is complete
-            const { data: profile } = await supabase
-              .from('organization_profiles')
-              .select('id')
-              .eq('org_id', userData.org_id)
-              .single()
-
-            if (profile) {
-              router.push('/dashboard')
-            } else {
-              router.push('/onboarding')
-            }
+            router.push('/dashboard?welcome=true')
             return
           }
         }
@@ -143,7 +132,7 @@ export default function PaymentRequiredPage() {
               התנתקות
             </button>
             <a
-              href="mailto:support@mydpo.co.il"
+              href="mailto:adamrozichner@gmail.com"
               className="text-sm text-emerald-600 hover:text-emerald-700 transition-colors"
             >
               צריך עזרה?
