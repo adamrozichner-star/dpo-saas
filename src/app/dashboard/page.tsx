@@ -217,7 +217,60 @@ function DashboardContent() {
   const generateTasks = (docs: any[], incidents: any[], dsars: any[], org: any): Task[] => {
     const tasks: Task[] = []
     const docTypes = docs.map(d => d.type)
+    const activeDocs = docs.filter(d => d.status === 'active')
+    const pendingDocs = docs.filter(d => d.status === 'pending_review')
 
+    // 1. Pending review docs — DPO hasn't approved yet
+    if (pendingDocs.length > 0) {
+      tasks.push({
+        id: 'pending-review',
+        type: 'info',
+        title: `${pendingDocs.length} מסמכים ממתינים לאישור הממונה`,
+        description: 'הממונה יסקור ויאשר את המסמכים בהקדם. תקבלו הודעה במייל',
+        priority: 'low',
+        action: 'צפייה',
+        actionPath: '/dashboard?tab=documents'
+      })
+    }
+
+    // 2. Post-approval action items — what to DO with approved docs
+    if (activeDocs.some(d => d.type === 'privacy_policy')) {
+      tasks.push({
+        id: 'action-publish-privacy',
+        type: 'action',
+        title: 'פרסום מדיניות פרטיות באתר',
+        description: 'הורידו את המסמך ופרסמו באתר הארגון עם קישור בפוטר',
+        priority: 'medium',
+        action: 'לצפייה',
+        actionPath: '/dashboard?tab=documents'
+      })
+    }
+
+    if (activeDocs.some(d => d.type === 'dpo_appointment')) {
+      tasks.push({
+        id: 'action-sign-dpo',
+        type: 'action',
+        title: 'חתימה על כתב מינוי DPO',
+        description: 'הורידו, חתמו ושמרו עותק. יש להעביר עותק חתום לממונה',
+        priority: 'high',
+        action: 'לצפייה',
+        actionPath: '/dashboard?tab=documents'
+      })
+    }
+
+    if (activeDocs.some(d => d.type === 'security_policy')) {
+      tasks.push({
+        id: 'action-distribute-security',
+        type: 'action',
+        title: 'הפצת נוהל אבטחה לעובדים',
+        description: 'שלחו את נוהל האבטחה לכל העובדים ותעדו שקראו',
+        priority: 'medium',
+        action: 'לצפייה',
+        actionPath: '/dashboard?tab=documents'
+      })
+    }
+
+    // 3. Missing docs
     if (!docTypes.includes('privacy_policy')) {
       tasks.push({
         id: 'missing-privacy',
@@ -278,6 +331,7 @@ function DashboardContent() {
       })
     }
 
+    // 4. Incidents
     const openIncidents = incidents.filter(i => !['resolved', 'closed'].includes(i.status))
     openIncidents.forEach(incident => {
       const deadline = incident.authority_deadline ? new Date(incident.authority_deadline) : null
@@ -874,6 +928,7 @@ function TasksTab({ tasks }: { tasks: Task[] }) {
 // DOCUMENTS TAB
 // ============================================
 function DocumentsTab({ documents, organization, supabase }: { documents: Document[], organization: any, supabase: any }) {
+  const [viewMode, setViewMode] = useState<'grid'|'list'>('grid')
   const { toast } = useToast()
   const [filter, setFilter] = useState<string>('all')
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
@@ -1002,12 +1057,22 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
           <h1 className="text-2xl font-semibold text-stone-800">📁 מסמכים</h1>
           <p className="text-stone-500 mt-1">כל המסמכים והמדיניות של הארגון</p>
         </div>
-        <Link href="/chat">
-          <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            מסמך חדש
-          </button>
-        </Link>
+        <div className="flex items-center gap-2">
+          <div className="flex bg-stone-100 rounded-lg p-0.5">
+            <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`} title="תצוגת כרטיסים">
+              <svg className="h-4 w-4 text-stone-500" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+            </button>
+            <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`} title="תצוגת רשימה">
+              <svg className="h-4 w-4 text-stone-500" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2.5" rx="1"/><rect x="1" y="6.75" width="14" height="2.5" rx="1"/><rect x="1" y="11.5" width="14" height="2.5" rx="1"/></svg>
+            </button>
+          </div>
+          <Link href="/chat">
+            <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              מסמך חדש
+            </button>
+          </Link>
+        </div>
       </div>
 
       {/* Status Filters */}
@@ -1095,6 +1160,30 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
               יצירת מסמך
             </button>
           </Link>
+        </div>
+      ) : viewMode === 'list' ? (
+        /* LIST VIEW */
+        <div className="bg-white rounded-xl border border-stone-200 divide-y divide-stone-100">
+          {filteredDocs.map(doc => (
+            <div key={doc.id} className="flex items-center gap-3 px-4 py-3 hover:bg-stone-50 transition-colors">
+              <FileText className="h-4 w-4 text-indigo-500 flex-shrink-0" />
+              <span className="flex-1 min-w-0 font-medium text-stone-800 text-sm truncate">{doc.title || getDocTypeLabel(doc.type)}</span>
+              <span 
+                className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusStyle(doc.status)} cursor-help`}
+                title={
+                  doc.status === 'pending_review' ? 'הממונה צריך לסקור ולאשר את המסמך' :
+                  doc.status === 'active' ? 'המסמך אושר ופעיל' :
+                  doc.status === 'pending_signature' ? 'נדרשת חתימה' : ''
+                }
+              >
+                {getStatusLabel(doc.status)}
+              </span>
+              <span className="text-xs text-stone-400 flex-shrink-0">{new Date(doc.created_at).toLocaleDateString('he-IL')}</span>
+              <button onClick={() => openDoc(doc)} className="p-1.5 hover:bg-stone-200 rounded-lg transition" title="צפייה">
+                <Eye className="h-3.5 w-3.5 text-stone-500" />
+              </button>
+            </div>
+          ))}
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">
@@ -1331,6 +1420,27 @@ function IncidentsTab({ incidents, orgId }: { incidents: any[], orgId: string })
                           זמן לדיווח לרשות: {timeLeft.text}
                         </p>
                       )}
+                      {/* Next steps guidance */}
+                      <div className="mt-3 p-2.5 bg-amber-50 rounded-lg border border-amber-100">
+                        <p className="text-xs font-medium text-amber-700 mb-1">📋 הצעדים הבאים:</p>
+                        <div className="text-xs text-amber-600 space-y-0.5">
+                          {incident.status === 'new' && <>
+                            <p>1. תעדו את כל הפרטים הידועים על האירוע</p>
+                            <p>2. בדקו את היקף החשיפה (כמה נושאי מידע מושפעים)</p>
+                            <p>3. עדכנו סטטוס ל"בבדיקה" דרך הצ׳אט</p>
+                          </>}
+                          {incident.status === 'investigating' && <>
+                            <p>1. השלימו את חקירת האירוע ומפו את כל המידע שנחשף</p>
+                            <p>2. הכינו דוח לרשות להגנת הפרטיות</p>
+                            <p>3. שקלו הודעה לנושאי מידע שנפגעו</p>
+                          </>}
+                          {incident.status === 'contained' && <>
+                            <p>1. ודאו שהפרצה נסגרה לחלוטין</p>
+                            <p>2. דווחו לרשות אם נדרש (72 שעות מגילוי)</p>
+                            <p>3. הכינו תוכנית מניעה לעתיד</p>
+                          </>}
+                        </div>
+                      </div>
                     </div>
                     <Link href={`/chat?incident=${incident.id}`}>
                       <button className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors">
