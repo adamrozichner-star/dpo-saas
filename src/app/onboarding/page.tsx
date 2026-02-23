@@ -3,171 +3,215 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
 import { 
-  Shield, ArrowRight, ArrowLeft, CheckCircle2, Building2,
-  Globe, Users, Loader2, Sparkles, Phone, Mail, User,
-  Monitor, Smartphone, CreditCard, Heart, Baby, X
+  Shield, 
+  ArrowRight, 
+  ArrowLeft, 
+  CheckCircle2, 
+  Building2,
+  Database,
+  Share2,
+  Lock,
+  FileCheck,
+  Loader2,
+  AlertCircle,
+  User,
+  Sparkles,
+  HelpCircle,
+  Phone,
+  Mail,
+  Crown,
+  X
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { DPO_CONFIG } from '@/lib/dpo-config'
+import { onboardingSteps } from '@/lib/mock-data'
+import { OnboardingQuestion, OnboardingAnswer } from '@/types'
 
-// =============================================
-// SOFTWARE OPTIONS — the key insight: ask about tools, not compliance
-// =============================================
-const softwareOptions = [
-  { id: 'priority', label: 'Priority' },
-  { id: 'monday', label: 'Monday' },
-  { id: 'salesforce', label: 'Salesforce' },
-  { id: 'hubspot', label: 'HubSpot' },
-  { id: 'google_workspace', label: 'Google Workspace' },
-  { id: 'microsoft_365', label: 'Microsoft 365' },
-  { id: 'shopify', label: 'Shopify' },
-  { id: 'woocommerce', label: 'WooCommerce' },
-  { id: 'wix', label: 'Wix' },
-  { id: 'elementor', label: 'Elementor / WordPress' },
-  { id: 'crm_other', label: 'CRM אחר' },
-  { id: 'erp_other', label: 'ERP אחר' },
-  { id: 'payroll', label: 'מערכת שכר' },
-  { id: 'accounting', label: 'הנה"ח (חשבשבת, רווחית)' },
-  { id: 'other', label: 'אחר' },
+const stepIcons = [Building2, Database, Share2, Lock, FileCheck, User]
+const stepDescriptions = [
+  'נתחיל עם פרטים בסיסיים על העסק',
+  'ספרו לנו איזה מידע אתם אוספים',
+  'איך ואיפה המידע מאוחסן ומשותף',
+  'בואו נבדוק את רמת האבטחה הנוכחית',
+  'עוד קצת על המצב הרגולטורי הקיים',
+  'הכירו את הממונה שלכם'
 ]
 
-const industries = [
-  { id: 'retail', label: 'קמעונאות / מסחר', icon: '🛍️' },
-  { id: 'technology', label: 'טכנולוגיה / הייטק', icon: '💻' },
-  { id: 'healthcare', label: 'בריאות / רפואה', icon: '🏥' },
-  { id: 'finance', label: 'פיננסים / ביטוח', icon: '🏦' },
-  { id: 'education', label: 'חינוך / הדרכה', icon: '🎓' },
-  { id: 'services', label: 'שירותים מקצועיים', icon: '💼' },
-  { id: 'manufacturing', label: 'ייצור / תעשייה', icon: '🏭' },
-  { id: 'food', label: 'מזון / מסעדנות', icon: '🍽️' },
-  { id: 'realestate', label: 'נדל"ן', icon: '🏠' },
-  { id: 'other', label: 'אחר', icon: '📦' },
-]
+// Industry-specific suggestions for data types
+const industrySuggestions: Record<string, string[]> = {
+  healthcare: ['contact', 'id', 'health'],
+  finance: ['contact', 'id', 'financial'],
+  retail: ['contact', 'financial', 'behavioral'],
+  technology: ['contact', 'behavioral', 'employment'],
+  education: ['contact', 'id', 'employment'],
+  services: ['contact', 'financial'],
+  manufacturing: ['contact', 'employment'],
+  other: ['contact']
+}
 
-const employeeCounts = [
-  { id: '1-10', label: 'עד 10' },
-  { id: '11-50', label: '11-50' },
-  { id: '51-250', label: '51-250' },
-  { id: '250+', label: '+250' },
-]
-
-// =============================================
-// MAIN COMPONENT
-// =============================================
 function OnboardingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, supabase, loading } = useAuth()
-
-  const [step, setStep] = useState(0) // 0-3 = intake screens, 4 = generating
+  
+  const [currentStep, setCurrentStep] = useState(0)
+  const [answers, setAnswers] = useState<OnboardingAnswer[]>([])
+  const [selectedTier, setSelectedTier] = useState<'basic' | 'extended' | 'enterprise' | null>(null)
+  const [showTierSelection, setShowTierSelection] = useState(false) // Start with questions, show pricing AFTER
+  const [showDpoIntro, setShowDpoIntro] = useState(false) // Show DPO intro after pricing
+  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
-  const [genStatus, setGenStatus] = useState('')
-  const [genProgress, setGenProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState<string>('')
+  const [generationProgress, setGenerationProgress] = useState(0)
+  const [recommendedTier, setRecommendedTier] = useState<'basic' | 'extended' | 'enterprise'>('basic')
 
-  // Form data — business questions, NOT compliance questions
-  const [form, setForm] = useState({
-    // Screen 1: About the business
-    business_name: '',
-    business_id: '',
-    industry: '',
-    employee_count: '',
-    // Screen 2: How the business works
-    website_url: '',
-    software: [] as string[],
-    has_app: null as boolean | null,
-    // Screen 3: Who are the customers
-    customer_type: [] as string[], // b2b, b2c
-    works_with_minors: null as boolean | null,
-    has_health_data: null as boolean | null,
-    collects_payments: null as boolean | null,
-    // Screen 4: Contact
-    contact_name: '',
-    contact_role: '',
-    contact_email: '',
-    contact_phone: '',
-  })
+  // Questions only - DPO intro is shown separately after pricing
+  const allSteps = onboardingSteps
+  const totalSteps = allSteps.length
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login')
     }
   }, [loading, user, router])
 
-  // Pre-fill email from auth
   useEffect(() => {
-    if (user?.email && !form.contact_email) {
-      setForm(f => ({ ...f, contact_email: user.email || '' }))
+    const tier = searchParams.get('tier')
+    if (tier === 'basic' || tier === 'extended' || tier === 'enterprise') {
+      setSelectedTier(tier)
+      if (tier === 'enterprise') {
+        setShowEnterpriseModal(true)
+      }
+      // Don't skip to pricing - let user go through questions first
     }
-  }, [user])
+  }, [searchParams])
 
-  // Auto-save to localStorage
+  // Auto-save answers to localStorage
   useEffect(() => {
-    if (form.business_name || form.industry) {
-      localStorage.setItem('dpo_onboarding_v2', JSON.stringify({ form, step }))
+    if (answers.length > 0) {
+      localStorage.setItem('dpo_onboarding_answers', JSON.stringify(answers))
+      localStorage.setItem('dpo_onboarding_step', String(currentStep))
     }
-  }, [form, step])
+  }, [answers, currentStep])
 
-  // Restore from localStorage
+  // Load saved answers on mount
   useEffect(() => {
-    const saved = localStorage.getItem('dpo_onboarding_v2')
+    const saved = localStorage.getItem('dpo_onboarding_answers')
+    const savedStep = localStorage.getItem('dpo_onboarding_step')
     if (saved) {
       try {
-        const { form: savedForm, step: savedStep } = JSON.parse(saved)
-        if (savedForm) setForm(savedForm)
-        if (savedStep) setStep(savedStep)
-      } catch (e) {}
+        setAnswers(JSON.parse(saved))
+        if (savedStep) setCurrentStep(parseInt(savedStep))
+      } catch (e) {
+        // Ignore parse errors
+      }
     }
   }, [])
 
-  // =============================================
-  // HELPERS
-  // =============================================
-  const updateForm = (field: string, value: any) => {
-    setForm(f => ({ ...f, [field]: value }))
+  const currentStepData = allSteps[currentStep]
+  const progress = ((currentStep + 1) / totalSteps) * 100
+
+  const getAnswer = (questionId: string) => {
+    return answers.find(a => a.questionId === questionId)?.value
   }
 
-  const toggleArrayItem = (field: string, value: string) => {
-    setForm(f => {
-      const arr = (f as any)[field] as string[]
-      return {
-        ...f,
-        [field]: arr.includes(value) ? arr.filter(v => v !== value) : [...arr, value]
-      }
-    })
+  const handleAnswer = (questionId: string, value: string | string[] | boolean | number) => {
+    const existing = answers.findIndex(a => a.questionId === questionId)
+    if (existing >= 0) {
+      const newAnswers = [...answers]
+      newAnswers[existing] = { questionId, value }
+      setAnswers(newAnswers)
+    } else {
+      setAnswers([...answers, { questionId, value }])
+    }
+  }
+
+  // Get suggested data types based on industry
+  const getSuggestedDataTypes = () => {
+    const businessType = getAnswer('business_type') as string
+    return industrySuggestions[businessType] || industrySuggestions.other
   }
 
   const canProceed = () => {
-    switch (step) {
-      case 0: return form.business_name && form.business_id && form.industry && form.employee_count
-      case 1: return true // Software is optional, website is optional
-      case 2: return form.customer_type.length > 0
-      case 3: return form.contact_name && form.contact_email
-      default: return false
+    if (currentStep === totalSteps - 1) return true // DPO intro step
+    if (!currentStepData || !currentStepData.questions) return false
+    return currentStepData.questions.every((q: OnboardingQuestion) => {
+      if (!q.required) return true
+      const answer = getAnswer(q.id)
+      if (Array.isArray(answer)) return answer.length > 0
+      return answer !== undefined && answer !== ''
+    })
+  }
+
+  // Calculate recommended tier based on answers
+  const calculateRecommendedTier = (): 'basic' | 'extended' | 'enterprise' => {
+    const dataTypes = getAnswer('data_types') as string[] || []
+    const recordCount = getAnswer('record_count') as string || ''
+    const industry = getAnswer('industry') as string || ''
+    const thirdPartySharing = getAnswer('third_party_sharing') as boolean
+    const internationalTransfers = getAnswer('international_transfers') as boolean
+    
+    // Enterprise indicators
+    if (
+      recordCount === 'over_100k' ||
+      industry === 'healthcare' ||
+      industry === 'finance' ||
+      (dataTypes.includes('health') && dataTypes.includes('financial'))
+    ) {
+      return 'enterprise'
     }
+    
+    // Extended indicators
+    if (
+      recordCount === '10k_to_100k' ||
+      dataTypes.includes('health') ||
+      dataTypes.includes('biometric') ||
+      thirdPartySharing ||
+      internationalTransfers ||
+      dataTypes.length >= 4
+    ) {
+      return 'extended'
+    }
+    
+    return 'basic'
   }
 
   const handleNext = () => {
-    if (step < 3) {
-      setStep(step + 1)
+    if (currentStep < totalSteps - 1) {
+      // Still in questionnaire steps
+      setCurrentStep(currentStep + 1)
       window.scrollTo({ top: 0, behavior: 'smooth' })
-    } else {
-      handleComplete()
+    } else if (!showTierSelection && !selectedTier) {
+      // Finished questionnaire - show pricing with recommendation
+      const recommended = calculateRecommendedTier()
+      setRecommendedTier(recommended)
+      setShowTierSelection(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
+  }
+  
+  // When user selects a tier and continues
+  const handleTierContinue = () => {
+    if (!selectedTier) return
+    setShowTierSelection(false)
+    setShowDpoIntro(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const handleBack = () => {
-    if (step > 0) {
-      setStep(step - 1)
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 
-  // =============================================
-  // COMPLETION — create org + generate docs
-  // =============================================
   const handleComplete = async () => {
     if (!supabase || !user) {
       setError('לא מחובר למערכת')
@@ -175,628 +219,842 @@ function OnboardingContent() {
     }
 
     setIsGenerating(true)
-    setStep(4) // Switch to generating screen
     setError(null)
-    setGenProgress(5)
-    setGenStatus('יוצרים את הארגון שלכם...')
+    setGenerationProgress(10)
+    setStatus('יוצרים את הארגון שלכם...')
 
     try {
-      // 1. Check if user already has an org (from payment flow)
-      setGenProgress(15)
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('org_id')
-        .eq('auth_user_id', user.id)
+      const businessNameAnswer = answers.find(a => a.questionId === 'business_name')
+      const businessIdAnswer = answers.find(a => a.questionId === 'business_id')
+      
+      const businessName = businessNameAnswer?.value as string || 'עסק חדש'
+      const businessId = businessIdAnswer?.value as string || ''
+
+      setGenerationProgress(20)
+
+      const { data: orgData, error: orgError } = await supabase
+        .from('organizations')
+        .insert({
+          name: businessName,
+          business_id: businessId,
+          tier: selectedTier || 'basic',
+          status: 'active'
+        })
+        .select()
         .single()
 
-      let orgId = existingUser?.org_id
-
-      if (orgId) {
-        // Update existing org with onboarding data
-        await supabase
-          .from('organizations')
-          .update({
-            name: form.business_name,
-            business_id: form.business_id,
-          })
-          .eq('id', orgId)
-      } else {
-        // No org yet — create one
-        const { data: orgData, error: orgError } = await supabase
-          .from('organizations')
-          .insert({
-            name: form.business_name,
-            business_id: form.business_id,
-            tier: 'basic',
-            status: 'active'
-          })
-          .select()
-          .single()
-
-        if (orgError) throw new Error('שגיאה ביצירת הארגון: ' + orgError.message)
-        orgId = orgData.id
-
-        // Link user to new org
-        await supabase
-          .from('users')
-          .update({ org_id: orgId })
-          .eq('auth_user_id', user.id)
+      if (orgError) {
+        throw new Error('שגיאה ביצירת הארגון: ' + orgError.message)
       }
 
-      setGenProgress(25)
-      setGenStatus('מעדכנים את פרטי המשתמש...')
+      setGenerationProgress(40)
+      setStatus('מעדכנים את פרטי המשתמש...')
 
-      // 3. Save business profile
-      setGenProgress(35)
-      setGenStatus('שומרים את פרופיל העסק...')
+      await supabase
+        .from('users')
+        .update({ org_id: orgData.id })
+        .eq('auth_user_id', user.id)
+
+      setGenerationProgress(50)
+      setStatus('שומרים את פרופיל הארגון...')
       
-      // Convert form to the answers format the system expects
-      const answers = Object.entries(form).map(([key, value]) => ({
-        questionId: key,
-        value
-      }))
-
       await supabase
         .from('organization_profiles')
         .insert({
-          org_id: orgId,
-          profile_data: { 
-            answers, 
-            form,
-            completedAt: new Date().toISOString(),
-            version: 2 // New onboarding version
-          }
+          org_id: orgData.id,
+          profile_data: { answers, completedAt: new Date().toISOString() }
         })
 
-      // 4. Generate documents via AI
-      setGenProgress(50)
-      setGenStatus('הממונה מנתח את העסק שלכם...')
-
-      // Get auth token for the API call
-      const { data: { session } } = await supabase.auth.getSession()
-      const authHeaders: Record<string, string> = {
-        'Content-Type': 'application/json'
-      }
-      if (session?.access_token) {
-        authHeaders['Authorization'] = `Bearer ${session.access_token}`
-      }
-
+      setGenerationProgress(60)
+      setStatus('מייצרים מסמכים...')
+      
       try {
-        setGenProgress(60)
-        setGenStatus('מכינים מדיניות פרטיות...')
-        
-        await new Promise(r => setTimeout(r, 800))
-        setGenProgress(70)
-        setGenStatus('מכינים נוהל אבטחת מידע...')
-        
-        await new Promise(r => setTimeout(r, 800))
-        setGenProgress(80)
-        setGenStatus('ממפים מאגרי מידע...')
-
         const response = await fetch('/api/generate-documents', {
           method: 'POST',
-          headers: authHeaders,
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            orgId: orgId,
-            orgName: form.business_name,
-            businessId: form.business_id,
-            answers
+            orgId: orgData.id,
+            orgName: businessName,
+            businessId: businessId,
+            answers: answers
           })
         })
         
         if (response.ok) {
-          setGenProgress(90)
-          setGenStatus('מסמכים נוצרו בהצלחה!')
+          setGenerationProgress(90)
+          setStatus('מסמכים נוצרו בהצלחה!')
         }
       } catch (docError) {
-        console.log('Document generation skipped:', docError)
-        setGenProgress(90)
-        setGenStatus('ממשיכים להגדרת המערכת...')
+        console.log('Document generation skipped')
       }
 
-      // 5. Send welcome email
+      // Clear saved data
+      localStorage.removeItem('dpo_onboarding_answers')
+      localStorage.removeItem('dpo_onboarding_step')
+
+      setGenerationProgress(100)
+      setStatus('הושלם! המסמכים שלכם מוכנים 🎉')
+      
+      // Send welcome email with org details
       try {
+        const orgName = answers.find(a => a.questionId === 'org_name')?.value || 'הארגון שלך'
         await fetch('/api/email', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-internal-key': 'internal' // Email route now requires auth
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             template: 'welcome',
-            to: user.email,
-            data: {
-              name: form.contact_name || user.user_metadata?.name || 'משתמש',
-              orgName: form.business_name
+            to: user?.email,
+            data: { 
+              name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'משתמש',
+              orgName: orgName
             }
           })
         })
-      } catch (e) {
-        console.log('Welcome email skipped')
+      } catch (emailErr) {
+        console.log('Welcome email skipped:', emailErr)
       }
-
-      // 6. Clear saved data and redirect
-      localStorage.removeItem('dpo_onboarding_v2')
-      setGenProgress(100)
-      setGenStatus('הכל מוכן! מעבירים ללוח הבקרה...')
-
+      
+      // Give users time to see the completed docs (10 seconds)
+      await new Promise(r => setTimeout(r, 6000))
+      setStatus('מעבירים ללוח הבקרה...')
+      
       setTimeout(() => {
-        router.push('/dashboard')
-      }, 1500)
+        router.push('/payment-required')
+      }, 2000)
 
     } catch (err: any) {
-      console.error('Onboarding error:', err)
-      setError(err.message || 'שגיאה בתהליך ההרשמה')
+      setError(err.message || 'אירעה שגיאה בתהליך ההרשמה')
       setIsGenerating(false)
-      setStep(3) // Go back to last form step
     }
   }
 
-  // =============================================
-  // LOADING STATE
-  // =============================================
+  const handleEnterpriseSelect = () => {
+    setSelectedTier('enterprise')
+    setShowEnterpriseModal(true)
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
   }
 
-  // =============================================
-  // STEP 4: GENERATING SCREEN
-  // =============================================
-  if (step === 4) {
-    const stages = [
-      { label: 'יצרנו פרופיל לעסק שלכם', threshold: 15 },
-      { label: 'מנתחים את דרישות הפרטיות...', threshold: 35 },
-      { label: 'מכינים מדיניות פרטיות...', threshold: 60 },
-      { label: 'מכינים נוהל אבטחת מידע...', threshold: 70 },
-      { label: 'ממפים מאגרי מידע...', threshold: 80 },
-      { label: 'הממונה סוקר את המסמכים...', threshold: 95 },
-    ]
-
+  if (isGenerating) {
+    const isComplete = generationProgress >= 100
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4" dir="rtl">
-        <div className="max-w-lg w-full text-center">
-          {/* Animated shield */}
-          <div className="relative mx-auto w-24 h-24 mb-8">
-            <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-ping" />
-            <div className="relative bg-gradient-to-br from-blue-500 to-blue-700 rounded-full w-24 h-24 flex items-center justify-center">
-              <Shield className="h-12 w-12 text-white" />
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
+        <Card className="w-full max-w-md text-center">
+          <CardContent className="pt-8 pb-8">
+            <div className="relative mb-6">
+              <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto transition-all duration-500 ${isComplete ? 'bg-emerald-100' : 'bg-primary/10'}`}>
+                {isComplete ? (
+                  <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+                ) : (
+                  <Sparkles className="h-10 w-10 text-primary animate-pulse" />
+                )}
+              </div>
+            </div>
+            <h2 className="text-2xl font-bold mb-2">
+              {isComplete ? '🎉 המסמכים מוכנים!' : 'מייצרים את המסמכים שלכם'}
+            </h2>
+            <p className="text-gray-600 mb-6">{status}</p>
+            <Progress value={generationProgress} className="h-3 mb-4" />
+            <div className="grid grid-cols-4 gap-2 text-xs text-gray-500">
+              <div className={generationProgress >= 25 ? 'text-primary font-medium' : ''}>
+                <FileCheck className="h-4 w-4 mx-auto mb-1" />
+                מדיניות פרטיות
+              </div>
+              <div className={generationProgress >= 50 ? 'text-primary font-medium' : ''}>
+                <Database className="h-4 w-4 mx-auto mb-1" />
+                הגדרות מאגר
+              </div>
+              <div className={generationProgress >= 75 ? 'text-primary font-medium' : ''}>
+                <Lock className="h-4 w-4 mx-auto mb-1" />
+                נהלי אבטחה
+              </div>
+              <div className={generationProgress >= 90 ? 'text-primary font-medium' : ''}>
+                <User className="h-4 w-4 mx-auto mb-1" />
+                כתב מינוי
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Enterprise Contact Modal
+  if (showEnterpriseModal) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
+        <Card className="w-full max-w-lg">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 bg-slate-100 rounded-full p-4 w-fit">
+              <Crown className="h-10 w-10 text-slate-700" />
+            </div>
+            <Badge className="mx-auto mb-2 bg-slate-600">לארגונים</Badge>
+            <CardTitle className="text-2xl">חבילה ארגונית</CardTitle>
+            <CardDescription>
+              פתרון מותאם אישית לארגונים גדולים
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="bg-slate-50 rounded-lg p-4">
+              <h4 className="font-semibold mb-3">החבילה כוללת:</h4>
+              <ul className="space-y-2 text-sm">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  2 שעות זמן DPO בחודש
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  זמן תגובה עד 4 שעות
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  סקירת תאימות חודשית
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  הדרכות לעובדים (רבעוני)
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  DPIA מלא כלול
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  משתמשים ללא הגבלה
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  SLA מובטח
+                </li>
+              </ul>
+            </div>
+
+            <div className="text-center">
+              <p className="text-3xl font-bold mb-1">₪3,500</p>
+              <p className="text-gray-600">לחודש</p>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-center text-gray-600">צרו קשר לתיאום פגישת היכרות:</p>
+              
+              <Button 
+                className="w-full h-12 bg-slate-700 hover:bg-slate-800"
+                onClick={() => window.location.href = 'mailto:enterprise@dpo-pro.co.il?subject=בקשת מידע - חבילה ארגונית'}
+              >
+                <Mail className="h-5 w-5 ml-2" />
+                enterprise@dpo-pro.co.il
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="w-full h-12"
+                onClick={() => window.location.href = 'tel:+972-3-555-1234'}
+              >
+                <Phone className="h-5 w-5 ml-2" />
+                03-555-1234
+              </Button>
+            </div>
+
+            <p className="text-center text-sm text-gray-500">
+              נחזור אליכם תוך יום עסקים אחד
+            </p>
+
+            <Button 
+              variant="ghost" 
+              className="w-full"
+              onClick={() => {
+                setShowEnterpriseModal(false)
+                setSelectedTier(null)
+              }}
+            >
+              <ArrowRight className="h-4 w-4 ml-2" />
+              חזרה לבחירת חבילות
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (showTierSelection) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4">
+        <div className="max-w-5xl mx-auto">
+          <button 
+            onClick={() => setShowTierSelection(false)}
+            className="inline-flex items-center gap-2 mb-8 text-gray-600 hover:text-gray-900"
+          >
+            <ArrowRight className="h-4 w-4" />
+            חזרה לשאלון
+          </button>
+
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 mb-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+                <Shield className="h-6 w-6 text-white" />
+              </div>
+              <span className="font-bold text-2xl" style={{color: '#1e40af'}}>MyDPO</span>
+            </div>
+            <h1 className="text-3xl font-bold mb-2">בחרו את החבילה שלכם</h1>
+            <p className="text-gray-600 mb-4">בהתבסס על הפרטים שמילאתם, אנחנו ממליצים על:</p>
+            
+            {/* Trial Banner */}
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-3 rounded-full font-semibold shadow-lg">
+              <Sparkles className="h-5 w-5" />
+              14 ימי ניסיון חינם • ללא כרטיס אשראי • ביטול בכל עת
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-white mb-2">הממונה שלכם עובד על זה...</h1>
-          <p className="text-slate-400 mb-10">אנחנו מכינים את חבילת הציות שלכם. זה ייקח כמה שניות.</p>
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Basic Package */}
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-lg relative ${selectedTier === 'basic' ? 'ring-2 ring-primary' : ''} ${recommendedTier === 'basic' ? 'border-2 border-emerald-500' : ''}`}
+              onClick={() => setSelectedTier('basic')}
+            >
+              {recommendedTier === 'basic' && (
+                <Badge className="absolute -top-3 right-4 bg-emerald-500">מומלץ עבורך</Badge>
+              )}
+              <CardHeader>
+                <CardTitle>חבילה בסיסית</CardTitle>
+                <CardDescription>לעסקים קטנים ובינוניים</CardDescription>
+                <div className="pt-2">
+                  <span className="text-3xl font-bold">₪500</span>
+                  <span className="text-gray-600"> / חודש</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    DPO ממונה מוסמך
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    מערכת AI מלאה
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    הפקת מסמכים אוטומטית
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    Q&A חכם לעובדים
+                  </li>
+                  <li className="flex items-center gap-2 text-gray-400">
+                    <X className="h-4 w-4 flex-shrink-0" />
+                    סקירה תקופתית
+                  </li>
+                  <li className="flex items-center gap-2 text-gray-400">
+                    <X className="h-4 w-4 flex-shrink-0" />
+                    ליווי DPIA
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
 
-          {/* Progress bar */}
-          <div className="w-full bg-slate-700 rounded-full h-2 mb-8 overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-700"
-              style={{ width: `${genProgress}%` }}
-            />
+            {/* Extended Package */}
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-lg border-2 relative ${selectedTier === 'extended' ? 'ring-2 ring-primary border-primary' : 'border-primary/50'} ${recommendedTier === 'extended' ? 'border-emerald-500' : ''}`}
+              onClick={() => setSelectedTier('extended')}
+            >
+              {recommendedTier === 'extended' ? (
+                <Badge className="absolute -top-3 right-4 bg-emerald-500">מומלץ עבורך</Badge>
+              ) : (
+                <Badge className="absolute -top-3 right-4 bg-primary">הכי פופולרי</Badge>
+              )}
+              <CardHeader>
+                <CardTitle>חבילה מורחבת</CardTitle>
+                <CardDescription>לעסקים עם פעילות מורכבת</CardDescription>
+                <div className="pt-2">
+                  <span className="text-3xl font-bold">₪1,200</span>
+                  <span className="text-gray-600"> / חודש</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    כל מה שבחבילה הבסיסית
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    30 דקות זמן DPO בחודש
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    סקירה רבעונית
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    זמן תגובה 24 שעות
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    ליווי DPIA
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    עד 3 משתמשים
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            {/* Enterprise Package */}
+            <Card 
+              className={`cursor-pointer transition-all hover:shadow-lg bg-gradient-to-br from-slate-50 to-slate-100 relative ${selectedTier === 'enterprise' ? 'ring-2 ring-slate-500' : ''} ${recommendedTier === 'enterprise' ? 'border-2 border-emerald-500' : ''}`}
+              onClick={handleEnterpriseSelect}
+            >
+              {recommendedTier === 'enterprise' && (
+                <Badge className="absolute -top-3 right-4 bg-emerald-500">מומלץ עבורך</Badge>
+              )}
+              <CardHeader>
+                <Badge className="w-fit mb-2 bg-slate-600">לארגונים</Badge>
+                <CardTitle className="flex items-center gap-2">
+                  <Crown className="h-5 w-5 text-slate-600" />
+                  חבילה ארגונית
+                </CardTitle>
+                <CardDescription>לארגונים עם דרישות מורכבות</CardDescription>
+                <div className="pt-2">
+                  <span className="text-3xl font-bold">₪3,500</span>
+                  <span className="text-gray-600"> / חודש</span>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    כל מה שבחבילה המורחבת
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    2 שעות זמן DPO בחודש
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    סקירה חודשית
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    זמן תגובה 4 שעות
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    הדרכות לעובדים
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
+                    משתמשים ללא הגבלה + SLA
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Stage checklist */}
-          <div className="space-y-3 text-right">
-            {stages.map((stage, i) => {
-              const done = genProgress >= stage.threshold
-              const active = !done && (i === 0 || genProgress >= stages[i - 1].threshold)
-              return (
-                <div key={i} className={`flex items-center gap-3 transition-all duration-500 ${
-                  done ? 'text-emerald-400' : active ? 'text-white' : 'text-slate-600'
-                }`}>
-                  {done ? (
-                    <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
-                  ) : active ? (
-                    <Loader2 className="h-5 w-5 flex-shrink-0 animate-spin" />
+          <div className="text-center mt-8">
+            <Button 
+              size="lg" 
+              onClick={() => {
+                if (selectedTier === 'enterprise') {
+                  setShowEnterpriseModal(true)
+                } else {
+                  handleTierContinue()
+                }
+              }}
+              disabled={!selectedTier}
+              className="h-14 px-8 text-lg"
+            >
+              {selectedTier === 'enterprise' ? 'צרו קשר' : 'הכירו את הממונה שלכם'}
+              <ArrowLeft className="mr-2 h-5 w-5" />
+            </Button>
+          </div>
+
+          {/* Comparison hint */}
+          <p className="text-center text-sm text-gray-500 mt-4">
+            לא בטוחים מה מתאים לכם? <Link href="/contact" className="text-primary hover:underline">דברו איתנו</Link>
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // DPO Introduction Step - Attractive single screen (shown AFTER pricing)
+  if (showDpoIntro) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4" dir="rtl">
+        <div className="max-w-4xl w-full">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-6">
+            <Button variant="ghost" onClick={() => { setShowDpoIntro(false); setShowTierSelection(true); }} className="gap-2 text-white/80 hover:text-white hover:bg-white/10">
+              <ArrowRight className="h-4 w-4" />
+              חזרה לבחירת חבילה
+            </Button>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/10 backdrop-blur-sm">
+                <Shield className="h-5 w-5 text-white" />
+              </div>
+              <span className="font-bold text-white">MyDPO</span>
+            </div>
+          </div>
+
+          {/* Main Card */}
+          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+            <div className="grid md:grid-cols-2">
+              {/* Image Side */}
+              <div className="relative bg-gradient-to-br from-blue-600 to-indigo-700 p-8 flex items-center justify-center min-h-[400px]">
+                {/* Professional woman placeholder - using avatar.iran.liara.run for realistic placeholder */}
+                <div className="relative">
+                  <div className="w-48 h-48 md:w-56 md:h-56 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl bg-gradient-to-br from-blue-400 to-indigo-500">
+                    {/* Professional woman image - using UI Faces */}
+                    <img 
+                      src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop&crop=face"
+                      alt={DPO_CONFIG.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to initials if image fails
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-white text-5xl font-bold">ד״כ</div>';
+                      }}
+                    />
+                  </div>
+                  {/* Verified badge */}
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-1.5 shadow-lg">
+                    <CheckCircle2 className="h-4 w-4" />
+                    מוסמכת
+                  </div>
+                </div>
+                {/* Decorative elements */}
+                <div className="absolute top-6 right-6 w-20 h-20 bg-white/10 rounded-full blur-xl" />
+                <div className="absolute bottom-10 left-10 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
+              </div>
+
+              {/* Content Side */}
+              <div className="p-8 flex flex-col justify-center">
+                <Badge className="w-fit mb-3 bg-blue-100 text-blue-700 hover:bg-blue-100">הממונה שלכם</Badge>
+                <h1 className="text-3xl font-bold text-slate-900 mb-1">{DPO_CONFIG.name}</h1>
+                <p className="text-slate-600 mb-6">ממונה הגנת פרטיות מוסמכת | 12 שנות ניסיון</p>
+
+                {/* Contact Info - Compact */}
+                <div className="flex flex-wrap gap-3 mb-6">
+                  <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-lg">
+                    <Mail className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium">{DPO_CONFIG.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-lg">
+                    <FileCheck className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium">רישיון {DPO_CONFIG.licenseNumber}</span>
+                  </div>
+                </div>
+
+                {/* What DPO does - Compact grid */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6">
+                  <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2 text-sm">
+                    <Sparkles className="h-4 w-4 text-blue-600" />
+                    מה הממונה תעשה עבורכם?
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                      <span>פיקוח על עמידה בחוק</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                      <span>טיפול בפניות נושאי מידע</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                      <span>ייעוץ פרטיות ואבטחה</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                      <span>קשר עם הרשות להגנת הפרטיות</span>
+                    </div>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    {error}
+                  </div>
+                )}
+
+                {/* CTA Button */}
+                <Button 
+                  size="lg" 
+                  className="w-full h-14 text-lg bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 shadow-lg"
+                  onClick={handleComplete}
+                  disabled={isGenerating}
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader2 className="ml-2 h-5 w-5 animate-spin" />
+                      {status || 'מכינים את המערכת...'}
+                    </>
                   ) : (
-                    <div className="h-5 w-5 rounded-full border border-slate-600 flex-shrink-0" />
+                    <>
+                      <Sparkles className="ml-2 h-5 w-5" />
+                      סיום והפקת מסמכים
+                    </>
                   )}
-                  <span className="text-sm">{stage.label}</span>
+                </Button>
+                
+                <p className="text-center text-xs text-slate-500 mt-3">
+                  המסמכים יופקו אוטומטית ויהיו זמינים בלוח הבקרה
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const StepIcon = stepIcons[currentStep] || FileCheck
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4">
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <Link href="/" className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900">
+            <ArrowRight className="h-4 w-4" />
+            חזרה
+          </Link>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
+              <Shield className="h-5 w-5 text-white" />
+            </div>
+            <span className="font-bold" style={{color: '#1e40af'}}>MyDPO</span>
+          </div>
+        </div>
+
+        {/* Progress with Step Icons */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            {allSteps.map((step, index) => {
+              const Icon = stepIcons[index] || FileCheck
+              const isActive = index === currentStep
+              const isComplete = index < currentStep
+              return (
+                <div 
+                  key={step.id} 
+                  className={`flex flex-col items-center ${index < totalSteps - 1 ? 'flex-1' : ''}`}
+                >
+                  <div 
+                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                      isActive 
+                        ? 'bg-primary text-white scale-110' 
+                        : isComplete 
+                          ? 'bg-green-500 text-white' 
+                          : 'bg-gray-200 text-gray-500'
+                    }`}
+                  >
+                    {isComplete ? (
+                      <CheckCircle2 className="h-5 w-5" />
+                    ) : (
+                      <Icon className="h-5 w-5" />
+                    )}
+                  </div>
+                  <span className={`text-xs mt-1 hidden sm:block ${isActive ? 'text-primary font-medium' : 'text-gray-500'}`}>
+                    {step.title}
+                  </span>
                 </div>
               )
             })}
           </div>
-
-          {error && (
-            <div className="mt-6 bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-300 text-sm">
-              {error}
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  }
-
-  // =============================================
-  // INTAKE FORM SCREENS
-  // =============================================
-  const stepTitles = [
-    'ספרו לנו על העסק',
-    'איך העסק עובד?',
-    'מי הלקוחות שלכם?',
-    'פרטי קשר'
-  ]
-
-  const stepSubtitles = [
-    'נתחיל עם הבסיס — זה ייקח דקה',
-    'זה עוזר לנו להבין את סביבת המידע שלכם',
-    'כדי שנבין איזה סוג מידע עובר אצלכם',
-    'כמעט סיימנו! איך ליצור קשר'
-  ]
-
-  return (
-    <div className="min-h-screen bg-slate-50" dir="rtl">
-      {/* Header */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-10">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-blue-700">MyDPO</Link>
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <span>שלב {step + 1} מתוך 4</span>
-          </div>
-        </div>
-        {/* Progress bar */}
-        <div className="h-1 bg-slate-100">
-          <div 
-            className="h-full bg-blue-600 transition-all duration-500"
-            style={{ width: `${((step + 1) / 4) * 100}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        {/* Step header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-slate-900 mb-1">{stepTitles[step]}</h1>
-          <p className="text-slate-500">{stepSubtitles[step]}</p>
+          <Progress value={progress} className="h-2" />
         </div>
 
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm flex items-start gap-2">
-            <X className="h-4 w-4 mt-0.5 flex-shrink-0" />
-            <span>{error}</span>
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+            <AlertCircle className="h-5 w-5" />
+            {error}
           </div>
         )}
 
-        {/* =============================================
-            SCREEN 0: About the business
-            ============================================= */}
-        {step === 0 && (
-          <div className="space-y-6">
-            {/* Business name */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">שם העסק *</label>
-              <input
-                type="text"
-                value={form.business_name}
-                onChange={e => updateForm('business_name', e.target.value)}
-                placeholder='לדוגמה: "טכנולוגיות אלפא בע״מ"'
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              />
-            </div>
-
-            {/* Business ID */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">ח.פ / עוסק מורשה *</label>
-              <input
-                type="text"
-                value={form.business_id}
-                onChange={e => updateForm('business_id', e.target.value)}
-                placeholder="9 ספרות"
-                maxLength={9}
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              />
-            </div>
-
-            {/* Industry */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">תחום פעילות *</label>
-              <div className="grid grid-cols-2 gap-2">
-                {industries.map(ind => (
-                  <button
-                    key={ind.id}
-                    onClick={() => updateForm('industry', ind.id)}
-                    className={`px-4 py-3 rounded-lg border text-sm text-right transition-all ${
-                      form.industry === ind.id
-                        ? 'bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500'
-                        : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <span className="ml-2">{ind.icon}</span>
-                    {ind.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Employee count */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">כמה עובדים? *</label>
-              <div className="grid grid-cols-4 gap-2">
-                {employeeCounts.map(size => (
-                  <button
-                    key={size.id}
-                    onClick={() => updateForm('employee_count', size.id)}
-                    className={`px-4 py-3 rounded-lg border text-sm transition-all ${
-                      form.employee_count === size.id
-                        ? 'bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500'
-                        : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    {size.label}
-                  </button>
-                ))}
-              </div>
-            </div>
+        {/* Step Header */}
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+            <StepIcon className="h-8 w-8 text-primary" />
           </div>
-        )}
+          <h2 className="text-2xl font-bold mb-1">{currentStepData?.title}</h2>
+          <p className="text-gray-600">{stepDescriptions[currentStep]}</p>
+        </div>
 
-        {/* =============================================
-            SCREEN 1: How the business works
-            ============================================= */}
-        {step === 1 && (
-          <div className="space-y-6">
-            {/* Website */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                כתובת אתר האינטרנט
-                <span className="text-slate-400 font-normal mr-1">(אופציונלי)</span>
-              </label>
-              <input
-                type="url"
-                value={form.website_url}
-                onChange={e => updateForm('website_url', e.target.value)}
-                placeholder="https://www.example.co.il"
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg text-left ltr focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                dir="ltr"
-              />
-              <p className="text-xs text-slate-400 mt-1">בעתיד נוכל לסרוק את האתר ולזהות בעיות פרטיות אוטומטית</p>
-            </div>
-
-            {/* Software */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                אילו מערכות תוכנה אתם משתמשים?
-                <span className="text-slate-400 font-normal mr-1">(בחרו את כל הרלוונטיות)</span>
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {softwareOptions.map(sw => (
-                  <button
-                    key={sw.id}
-                    onClick={() => toggleArrayItem('software', sw.id)}
-                    className={`px-3 py-2 rounded-full border text-sm transition-all ${
-                      form.software.includes(sw.id)
-                        ? 'bg-blue-50 border-blue-500 text-blue-700'
-                        : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
-                    }`}
-                  >
-                    {form.software.includes(sw.id) && '✓ '}{sw.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Has app */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">יש לכם אפליקציה?</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => updateForm('has_app', true)}
-                  className={`px-4 py-3 rounded-lg border text-sm transition-all flex items-center justify-center gap-2 ${
-                    form.has_app === true
-                      ? 'bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500'
-                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  <Smartphone className="h-4 w-4" /> כן
-                </button>
-                <button
-                  onClick={() => updateForm('has_app', false)}
-                  className={`px-4 py-3 rounded-lg border text-sm transition-all ${
-                    form.has_app === false
-                      ? 'bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500'
-                      : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                  }`}
-                >
-                  לא
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* =============================================
-            SCREEN 2: Who are the customers
-            ============================================= */}
-        {step === 2 && (
-          <div className="space-y-6">
-            {/* Customer type */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">מי הלקוחות שלכם? *</label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: 'b2b', label: 'עסקים (B2B)', icon: Building2 },
-                  { id: 'b2c', label: 'צרכנים פרטיים (B2C)', icon: Users },
-                ].map(ct => (
-                  <button
-                    key={ct.id}
-                    onClick={() => toggleArrayItem('customer_type', ct.id)}
-                    className={`px-4 py-4 rounded-lg border text-sm transition-all flex flex-col items-center gap-2 ${
-                      form.customer_type.includes(ct.id)
-                        ? 'bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500'
-                        : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <ct.icon className="h-6 w-6" />
-                    {ct.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Sensitive data questions — simple yes/no/not sure */}
-            {[
-              { field: 'works_with_minors', label: 'האם עובדים עם קטינים (מתחת לגיל 18)?', icon: Baby },
-              { field: 'has_health_data', label: 'האם מעבדים מידע רפואי / בריאותי?', icon: Heart },
-              { field: 'collects_payments', label: 'האם אוספים פרטי תשלום מלקוחות?', icon: CreditCard },
-            ].map(q => (
-              <div key={q.field}>
-                <label className="block text-sm font-medium text-slate-700 mb-2 flex items-center gap-2">
-                  <q.icon className="h-4 w-4 text-slate-400" />
-                  {q.label}
+        {/* Questions */}
+        <Card>
+          <CardContent className="pt-6 space-y-6">
+            {currentStepData?.questions.map((question: OnboardingQuestion) => (
+              <div key={question.id} className="space-y-3">
+                <label className="block font-medium text-lg">
+                  {question.text}
+                  {question.required && <span className="text-red-500 mr-1">*</span>}
                 </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { val: true, label: 'כן' },
-                    { val: false, label: 'לא' },
-                    { val: null, label: 'לא בטוח' },
-                  ].map(opt => (
-                    <button
-                      key={String(opt.val)}
-                      onClick={() => updateForm(q.field, opt.val)}
-                      className={`px-4 py-2.5 rounded-lg border text-sm transition-all ${
-                        (form as any)[q.field] === opt.val
-                          ? 'bg-blue-50 border-blue-500 text-blue-700 ring-1 ring-blue-500'
-                          : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                      }`}
+                
+                {question.helpText && (
+                  <p className="text-sm text-gray-500 flex items-center gap-1">
+                    <HelpCircle className="h-4 w-4" />
+                    {question.helpText}
+                  </p>
+                )}
+
+                {/* Show suggestions for data_types based on industry */}
+                {question.id === 'data_types' && getAnswer('business_type') && (
+                  <div className="p-3 bg-blue-50 rounded-lg text-sm">
+                    <p className="font-medium text-blue-800 mb-1">
+                      <Sparkles className="h-4 w-4 inline ml-1" />
+                      מומלץ לתחום שלכם:
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {getSuggestedDataTypes().map(type => {
+                        const option = question.options?.find(o => o.value === type)
+                        return option ? (
+                          <Badge key={type} variant="secondary" className="text-xs">
+                            {option.label}
+                          </Badge>
+                        ) : null
+                      })}
+                    </div>
+                  </div>
+                )}
+                
+                {question.type === 'text' && (
+                  <Input
+                    value={(getAnswer(question.id) as string) || ''}
+                    onChange={(e) => handleAnswer(question.id, e.target.value)}
+                    placeholder="הקלידו כאן..."
+                    className="h-12 text-lg"
+                  />
+                )}
+
+                {question.type === 'single_choice' && question.options && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {question.options.map((option) => (
+                      <Button
+                        key={option.value}
+                        type="button"
+                        variant={getAnswer(question.id) === option.value ? 'default' : 'outline'}
+                        className="justify-start h-auto py-3 px-4"
+                        onClick={() => handleAnswer(question.id, option.value)}
+                      >
+                        {getAnswer(question.id) === option.value && (
+                          <CheckCircle2 className="h-4 w-4 ml-2 flex-shrink-0" />
+                        )}
+                        {option.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+
+                {question.type === 'multi_choice' && question.options && (
+                  <div className="grid grid-cols-2 gap-2">
+                    {question.options.map((option) => {
+                      const currentValues = (getAnswer(question.id) as string[]) || []
+                      const isSelected = currentValues.includes(option.value)
+                      const isSuggested = question.id === 'data_types' && getSuggestedDataTypes().includes(option.value)
+                      return (
+                        <Button
+                          key={option.value}
+                          type="button"
+                          variant={isSelected ? 'default' : 'outline'}
+                          className={`justify-start h-auto py-3 px-4 ${isSuggested && !isSelected ? 'border-blue-300 bg-blue-50' : ''}`}
+                          onClick={() => {
+                            if (isSelected) {
+                              handleAnswer(question.id, currentValues.filter(v => v !== option.value))
+                            } else {
+                              handleAnswer(question.id, [...currentValues, option.value])
+                            }
+                          }}
+                        >
+                          {isSelected && (
+                            <CheckCircle2 className="h-4 w-4 ml-2 flex-shrink-0" />
+                          )}
+                          {option.label}
+                        </Button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {question.type === 'number' && (
+                  <Input
+                    type="number"
+                    value={(getAnswer(question.id) as number) || ''}
+                    onChange={(e) => handleAnswer(question.id, parseInt(e.target.value) || 0)}
+                    placeholder="0"
+                    className="h-12 text-lg"
+                  />
+                )}
+
+                {question.type === 'boolean' && (
+                  <div className="flex gap-4">
+                    <Button
+                      type="button"
+                      variant={getAnswer(question.id) === true ? 'default' : 'outline'}
+                      className="flex-1 h-14 text-lg"
+                      onClick={() => handleAnswer(question.id, true)}
                     >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
+                      {getAnswer(question.id) === true && <CheckCircle2 className="h-5 w-5 ml-2" />}
+                      כן
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={getAnswer(question.id) === false ? 'default' : 'outline'}
+                      className="flex-1 h-14 text-lg"
+                      onClick={() => handleAnswer(question.id, false)}
+                    >
+                      {getAnswer(question.id) === false && <CheckCircle2 className="h-5 w-5 ml-2" />}
+                      לא
+                    </Button>
+                  </div>
+                )}
               </div>
             ))}
-          </div>
-        )}
+          </CardContent>
+        </Card>
 
-        {/* =============================================
-            SCREEN 3: Contact info
-            ============================================= */}
-        {step === 3 && (
-          <div className="space-y-6">
-            {/* Contact name */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">שם איש/אשת קשר *</label>
-              <input
-                type="text"
-                value={form.contact_name}
-                onChange={e => updateForm('contact_name', e.target.value)}
-                placeholder="השם המלא"
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              />
-            </div>
-
-            {/* Role */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                תפקיד
-                <span className="text-slate-400 font-normal mr-1">(אופציונלי)</span>
-              </label>
-              <input
-                type="text"
-                value={form.contact_role}
-                onChange={e => updateForm('contact_role', e.target.value)}
-                placeholder='לדוגמה: "מנכ״ל", "מנהל/ת תפעול"'
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg text-right focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              />
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">אימייל *</label>
-              <input
-                type="email"
-                value={form.contact_email}
-                onChange={e => updateForm('contact_email', e.target.value)}
-                placeholder="email@example.com"
-                dir="ltr"
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg text-left focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              />
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                טלפון
-                <span className="text-slate-400 font-normal mr-1">(אופציונלי)</span>
-              </label>
-              <input
-                type="tel"
-                value={form.contact_phone}
-                onChange={e => updateForm('contact_phone', e.target.value)}
-                placeholder="050-000-0000"
-                dir="ltr"
-                className="w-full px-4 py-3 border border-slate-300 rounded-lg text-left focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              />
-            </div>
-
-            {/* Trust message */}
-            <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-start gap-3">
-              <Shield className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-800">
-                <p className="font-medium mb-1">הממונה שלכם: {DPO_CONFIG.name}</p>
-                <p className="text-blue-600">לאחר ההרשמה, הממונה יסקור את המסמכים שנייצר עבורכם ויאשר אותם תוך 48 שעות.</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* =============================================
-            NAVIGATION
-            ============================================= */}
-        <div className="flex items-center justify-between mt-10 pt-6 border-t border-slate-200">
-          {step > 0 ? (
-            <button
-              onClick={handleBack}
-              className="flex items-center gap-2 text-slate-500 hover:text-slate-700 transition-colors text-sm"
-            >
-              <ArrowRight className="h-4 w-4" />
-              חזרה
-            </button>
-          ) : (
-            <div />
-          )}
-
-          <button
-            onClick={handleNext}
-            disabled={!canProceed() || isGenerating}
-            className={`flex items-center gap-2 px-8 py-3 rounded-lg font-medium text-sm transition-all ${
-              canProceed()
-                ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
-                : 'bg-slate-200 text-slate-400 cursor-not-allowed'
-            }`}
+        {/* Navigation */}
+        <div className="flex justify-between mt-6">
+          <Button
+            variant="outline"
+            onClick={handleBack}
+            disabled={currentStep === 0}
+            className="h-12"
           >
-            {isGenerating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : step === 3 ? (
-              <>
-                <Sparkles className="h-4 w-4" />
-                סיום והפעלת המערכת
-              </>
-            ) : (
-              <>
-                המשך
-                <ArrowLeft className="h-4 w-4" />
-              </>
-            )}
-          </button>
+            <ArrowRight className="ml-2 h-4 w-4" />
+            הקודם
+          </Button>
+          <Button
+            onClick={handleNext}
+            disabled={!canProceed()}
+            className="h-12 px-8"
+          >
+            {currentStep === totalSteps - 1 ? 'בחירת חבילה' : 'הבא'}
+            <ArrowLeft className="mr-2 h-4 w-4" />
+          </Button>
         </div>
+
+        {/* Step indicator text */}
+        <p className="text-center text-sm text-gray-500 mt-4">
+          שלב {currentStep + 1} מתוך {totalSteps} • התשובות נשמרות אוטומטית
+        </p>
       </div>
     </div>
   )
 }
 
-// =============================================
-// PAGE WRAPPER
-// =============================================
 export default function OnboardingPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     }>
       <OnboardingContent />
