@@ -139,13 +139,17 @@ function DashboardContent() {
         if (docs) setDocuments(docs)
 
         // Load org profile (onboarding answers)
+        let profileData: any = null
         try {
           const { data: profile } = await supabase
             .from('organization_profiles')
             .select('profile_data')
             .eq('org_id', org.id)
             .single()
-          if (profile) setOrgProfile(profile.profile_data)
+          if (profile) {
+            profileData = profile.profile_data
+            setOrgProfile(profile.profile_data)
+          }
         } catch {}
 
         const { data: incidentData } = await supabase
@@ -170,7 +174,7 @@ function DashboardContent() {
           await supabase.from('organizations').update({ compliance_score: score }).eq('id', org.id)
         } catch {}
         
-        const generatedTasks = generateTasks(docs || [], incidentData || [], dsarData || [], org)
+        const generatedTasks = generateTasks(docs || [], incidentData || [], dsarData || [], { ...org, profile_data: profileData })
         setTasks(generatedTasks)
 
         // Load message threads (DPO-User messaging)
@@ -330,6 +334,46 @@ function DashboardContent() {
         action: 'צור עכשיו',
         actionPath: '/chat?task=consent_form&prompt=' + encodeURIComponent('אנא צור עבורי טופס הסכמה לאיסוף מידע אישי מלקוחות')
       })
+    }
+
+    // 3.5 CISO detection — if org handles sensitive data + >50 employees
+    const profileAnswers = (org as any)?.profile_data?.answers || []
+    const getAnswer = (qId: string) => {
+      // Try from profileAnswers or from answers array if passed differently
+      const a = profileAnswers.find?.((a: any) => a.questionId === qId) 
+      return a?.value
+    }
+    const empCount = getAnswer('employee_count')
+    const dataTypes = getAnswer('data_types') || []
+    const hasSensitive = Array.isArray(dataTypes) && (dataTypes.includes('health') || dataTypes.includes('biometric') || dataTypes.includes('financial'))
+    const isLargeOrg = empCount === '51-200' || empCount === '200+'
+    
+    if (hasSensitive && isLargeOrg) {
+      tasks.push({
+        id: 'ciso-needed',
+        type: 'info',
+        title: '⚠️ ייתכן שנדרש ממונה אבטחת מידע (CISO)',
+        description: 'בהתאם לתיקון 13, ארגון המעבד מידע רגיש עם מעל 50 עובדים עשוי לחייב מינוי CISO בנוסף ל-DPO',
+        priority: 'medium',
+        action: 'שאל את הממונה',
+        actionPath: '/chat?prompt=' + encodeURIComponent('האם הארגון שלי חייב למנות CISO בנוסף ל-DPO?')
+      })
+    }
+
+    // 3.6 Annual review — if org > 11 months old
+    if (org?.created_at) {
+      const monthsOld = (Date.now() - new Date(org.created_at).getTime()) / (30 * 24 * 60 * 60 * 1000)
+      if (monthsOld >= 11) {
+        tasks.push({
+          id: 'annual-review',
+          type: 'action',
+          title: '📅 סקירה שנתית — עדכון מסמכים ומדיניות',
+          description: 'עברה כמעט שנה מאז הקמת מערכת הציות. יש לבצע סקירה שנתית ולעדכן מסמכים',
+          priority: 'high',
+          action: 'בצע סקירה',
+          actionPath: '/chat?prompt=' + encodeURIComponent('אני רוצה לבצע סקירה שנתית של מסמכי הציות והמדיניות שלי')
+        })
+      }
     }
 
     // 4. Incidents
@@ -1395,7 +1439,7 @@ function IncidentsTab({ incidents, orgId }: { incidents: any[], orgId: string })
           <h1 className="text-2xl font-semibold text-stone-800">🚨 אירועי אבטחה</h1>
           <p className="text-stone-500 mt-1">ניהול ותיעוד אירועי אבטחה ופרטיות</p>
         </div>
-        <Link href="/chat">
+        <Link href={`/chat?prompt=${encodeURIComponent('אני רוצה לדווח על אירוע אבטחה חדש. מה הפרטים שאתה צריך?')}`}>
           <button className="px-4 py-2 bg-rose-500 text-white rounded-lg font-medium hover:bg-rose-600 transition-colors flex items-center gap-2">
             <AlertTriangle className="h-4 w-4" />
             דיווח אירוע חדש
@@ -1458,11 +1502,18 @@ function IncidentsTab({ incidents, orgId }: { incidents: any[], orgId: string })
                         </div>
                       </div>
                     </div>
-                    <Link href={`/chat?incident=${incident.id}`}>
-                      <button className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors">
-                        טיפול
-                      </button>
-                    </Link>
+                    <div className="flex flex-col gap-2">
+                      <Link href={`/chat?incident=${incident.id}`}>
+                        <button className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors w-full">
+                          טיפול
+                        </button>
+                      </Link>
+                      <Link href={`/chat?prompt=${encodeURIComponent(`צור עבורי דוח לרשות להגנת הפרטיות עבור אירוע האבטחה: ${incident.title}. כלול את כל הפרטים הנדרשים בהתאם לתיקון 13.`)}`}>
+                        <button className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-200 transition-colors w-full">
+                          📋 דוח לרשות
+                        </button>
+                      </Link>
+                    </div>
                   </div>
                 </div>
               )
@@ -2015,6 +2066,11 @@ function SettingsTab({ organization, user, orgProfile, supabase }: { organizatio
     previous_incidents: 'אירועי אבטחה בעבר',
     existing_policy: 'מדיניות פרטיות קיימת',
     database_registered: 'רישום מאגרי מידע',
+    has_cameras: 'מצלמות אבטחה',
+    processes_minors: 'עיבוד מידע קטינים',
+    website_leads: 'טפסי לידים באתר',
+    suppliers_count: 'ספקים חיצוניים',
+    cv_retention: 'שמירת קורות חיים',
   }
 
   const VALUE_LABELS: Record<string, string> = {
@@ -2033,6 +2089,7 @@ function SettingsTab({ organization, user, orgProfile, supabase }: { organizatio
     antivirus: 'אנטי-וירוס', training: 'הדרכות',
     yes: 'כן', partial: 'חלקם', no: 'לא', unknown: 'לא יודע/ת',
     '1-10': '1-10', '11-50': '11-50', '51-200': '51-200', '200+': 'מעל 200',
+    '0': 'אין', '6-20': '6-20', '20+': 'מעל 20',
   }
 
   const formatValue = (val: any): string => {
