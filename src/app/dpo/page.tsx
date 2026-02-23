@@ -45,6 +45,15 @@ const DOC_LABELS: Record<string, string> = {
   procedure: 'נוהל', custom: 'מסמך מותאם'
 }
 
+const PROFILE_LABELS: Record<string, string> = {
+  business_name: 'שם העסק', business_id: 'ח.פ / עוסק מורשה', business_type: 'תחום פעילות',
+  employee_count: 'עובדים', data_types: 'סוגי מידע', data_sources: 'מקורות מידע',
+  processing_purposes: 'שימוש במידע', third_party_sharing: 'שיתוף חיצוני',
+  international_transfer: 'העברה בינלאומית', cloud_storage: 'שירותי ענן',
+  security_measures: 'אמצעי אבטחה', previous_incidents: 'אירועים בעבר',
+  existing_policy: 'מדיניות קיימת', database_registered: 'רישום מאגרים'
+}
+
 function timeAgo(d: string): string {
   if (!d) return ''
   const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000)
@@ -101,6 +110,7 @@ export default function DPODashboard() {
   const [tab, setTab] = useState<'inbox' | 'orgs'>('inbox')
   const [orgSearch, setOrgSearch] = useState('')
   const [selectedOrg, setSelectedOrg] = useState<any>(null)
+  const [orgTab, setOrgTab] = useState<'overview'|'docs'|'activity'|'profile'>('overview')
 
   // =============================================
   // AUTH & FETCH
@@ -541,50 +551,131 @@ export default function DPODashboard() {
               </div>
 
               {selectedOrg && (
-                <div className="dpo-modal-overlay" onClick={() => setSelectedOrg(null)}>
-                  <div className="dpo-modal" onClick={e => e.stopPropagation()}>
+                <div className="dpo-modal-overlay" onClick={() => { setSelectedOrg(null); setOrgTab('overview') }}>
+                  <div className="dpo-modal dpo-modal-wide" onClick={e => e.stopPropagation()}>
                     <div className="dpo-modal-head">
-                      <h3>{selectedOrg.organization?.name}</h3>
-                      <button className="dpo-btn-sm" onClick={() => setSelectedOrg(null)}>✕</button>
+                      <div>
+                        <h3>{selectedOrg.organization?.name}</h3>
+                        {selectedOrg.contact_email && <span style={{ fontSize: 12, color: '#71717a' }}>📧 {selectedOrg.contact_email}</span>}
+                      </div>
+                      <button className="dpo-btn-sm" onClick={() => { setSelectedOrg(null); setOrgTab('overview') }}>✕</button>
                     </div>
-                    <div className="dpo-chips">
-                      <span className="dpo-chip">ציון: {selectedOrg.organization?.compliance_score || 0}</span>
-                      <span className="dpo-chip">מסמכים: {selectedOrg.documents?.length || 0}</span>
-                      <span className="dpo-chip">שעות: {Math.round(selectedOrg.time_this_month_minutes || 0)} דק׳</span>
+                    
+                    {/* Tabs */}
+                    <div className="dpo-org-tabs">
+                      {[
+                        { key: 'overview', label: '📊 סקירה' },
+                        { key: 'docs', label: `📄 מסמכים (${selectedOrg.documents?.length || 0})` },
+                        { key: 'activity', label: '📋 פעילות' },
+                        { key: 'profile', label: '🏢 פרופיל' },
+                      ].map(tab => (
+                        <button key={tab.key}
+                          className={`dpo-org-tab ${orgTab === tab.key ? 'active' : ''}`}
+                          onClick={() => setOrgTab(tab.key as any)}
+                        >{tab.label}</button>
+                      ))}
                     </div>
-                    {selectedOrg.documents?.length > 0 && (
-                      <div style={{ marginTop: 12 }}>
-                        <span className="dpo-sub">📄 מסמכים</span>
-                        {selectedOrg.documents.map((d: any) => (
-                          <div key={d.id} className="dpo-done-row">
-                            <span style={{ color: d.status === 'active' ? '#22c55e' : '#4f46e5' }}>
-                              {d.status === 'active' ? '✓' : '⏳'}
-                            </span>
-                            <span className="dpo-done-title">{d.title || d.type}</span>
-                            <span className="dpo-done-meta">
-                              {d.status === 'active' ? 'פעיל' : d.status === 'pending_review' ? 'ממתין' : d.status}
-                            </span>
+
+                    <div className="dpo-modal-body">
+                      {/* OVERVIEW TAB */}
+                      {orgTab === 'overview' && (
+                        <>
+                          <div className="dpo-chips">
+                            <span className="dpo-chip">ציון: {selectedOrg.organization?.compliance_score || 0}%</span>
+                            <span className="dpo-chip">מסמכים: {selectedOrg.documents?.length || 0}</span>
+                            <span className="dpo-chip">🕐 {Math.round(selectedOrg.time_this_month_minutes || 0)} דק׳ החודש</span>
+                            <span className="dpo-chip">{selectedOrg.organization?.tier === 'extended' ? '⭐ מורחבת' : 'בסיסית'}</span>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                    {selectedOrg.queue_history?.length > 0 && (
-                      <div style={{ marginTop: 16 }}>
-                        <span className="dpo-sub">📋 היסטוריית פעילות</span>
-                        {selectedOrg.queue_history.map((q: any) => {
-                          const c = TYPE_MAP[q.type] || { emoji: '📌', label: q.type, accent: '#71717a' }
-                          return (
-                            <div key={q.id} className="dpo-done-row">
-                              <span style={{ color: q.status === 'resolved' ? '#22c55e' : '#f59e0b' }}>
-                                {q.status === 'resolved' ? '✓' : '●'}
-                              </span>
-                              <span className="dpo-done-title">{c.emoji} {q.title}</span>
-                              <span className="dpo-done-meta">{timeAgo(q.resolved_at || q.created_at)}</span>
+                          {selectedOrg.documents?.length > 0 && (
+                            <div style={{ marginTop: 12 }}>
+                              <span className="dpo-sub">📄 מסמכים</span>
+                              {selectedOrg.documents.map((d: any) => (
+                                <div key={d.id} className="dpo-done-row">
+                                  <span style={{ color: d.status === 'active' ? '#22c55e' : '#4f46e5' }}>
+                                    {d.status === 'active' ? '✓' : '⏳'}
+                                  </span>
+                                  <span className="dpo-done-title">{d.title || DOC_LABELS[d.type] || d.type}</span>
+                                  <span className="dpo-done-meta">
+                                    {d.status === 'active' ? 'פעיל' : d.status === 'pending_review' ? 'ממתין' : d.status}
+                                  </span>
+                                </div>
+                              ))}
                             </div>
-                          )
-                        })}
-                      </div>
-                    )}
+                          )}
+                        </>
+                      )}
+
+                      {/* DOCUMENTS TAB — full doc content */}
+                      {orgTab === 'docs' && (
+                        <div>
+                          {!selectedOrg.documents?.length ? (
+                            <p style={{ color: '#71717a', textAlign: 'center', padding: 20 }}>אין מסמכים</p>
+                          ) : selectedOrg.documents.map((d: any) => (
+                            <div key={d.id} className="dpo-doc" style={{ marginBottom: 12 }}>
+                              <div className="dpo-doc-top">
+                                <div>
+                                  <span style={{ fontWeight: 600 }}>{d.title || DOC_LABELS[d.type] || d.type}</span>
+                                  <span className={`dpo-status-pill ${d.status === 'active' ? 'approved' : ''}`} style={{ marginRight: 8, fontSize: 11 }}>
+                                    {d.status === 'active' ? '✓ פעיל' : d.status === 'pending_review' ? '⏳ ממתין' : d.status}
+                                  </span>
+                                </div>
+                                <span style={{ fontSize: 11, color: '#a1a1aa' }}>{new Date(d.created_at).toLocaleDateString('he-IL')}</span>
+                              </div>
+                              <div style={{ 
+                                padding: '10px 14px', background: '#fafafa', borderRadius: 8, 
+                                fontSize: 13, lineHeight: 1.7, maxHeight: 200, overflowY: 'auto', whiteSpace: 'pre-wrap',
+                                marginTop: 8, border: '1px solid #f0f0f0'
+                              }}>
+                                {(d.content || '').slice(0, 800)}{d.content?.length > 800 ? '...' : ''}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* ACTIVITY TAB */}
+                      {orgTab === 'activity' && (
+                        <div>
+                          {!selectedOrg.queue_history?.length ? (
+                            <p style={{ color: '#71717a', textAlign: 'center', padding: 20 }}>אין פעילות</p>
+                          ) : selectedOrg.queue_history.map((q: any) => {
+                            const c = TYPE_MAP[q.type] || { emoji: '📌', label: q.type, accent: '#71717a' }
+                            return (
+                              <div key={q.id} className="dpo-done-row" style={{ padding: '10px 0', borderBottom: '1px solid #f4f4f5' }}>
+                                <span style={{ color: q.status === 'resolved' ? '#22c55e' : '#f59e0b' }}>
+                                  {q.status === 'resolved' ? '✓' : '●'}
+                                </span>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                  <span className="dpo-done-title">{c.emoji} {q.title}</span>
+                                  {q.ai_summary && <p style={{ fontSize: 12, color: '#71717a', marginTop: 2 }}>{(q.ai_summary || '').slice(0, 120)}</p>}
+                                </div>
+                                <span className="dpo-done-meta">{timeAgo(q.resolved_at || q.created_at)}</span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {/* PROFILE TAB — onboarding answers */}
+                      {orgTab === 'profile' && (
+                        <div>
+                          {selectedOrg.profile?.answers ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                              {selectedOrg.profile.answers.map((a: any) => (
+                                <div key={a.questionId} style={{ padding: '10px 12px', background: '#fafafa', borderRadius: 8 }}>
+                                  <p style={{ fontSize: 11, color: '#71717a', marginBottom: 2 }}>{PROFILE_LABELS[a.questionId] || a.questionId}</p>
+                                  <p style={{ fontSize: 13, fontWeight: 500, color: '#27272a' }}>
+                                    {Array.isArray(a.value) ? a.value.join(', ') : typeof a.value === 'boolean' ? (a.value ? 'כן' : 'לא') : String(a.value || '-')}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p style={{ color: '#71717a', textAlign: 'center', padding: 20 }}>אין נתוני פרופיל</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -729,6 +820,12 @@ const CSS = `
 /* Modal */
 .dpo-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
 .dpo-modal{background:#fff;border-radius:12px;padding:20px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto}
+.dpo-modal-wide{max-width:720px}
+.dpo-org-tabs{display:flex;gap:4px;border-bottom:1px solid #e4e4e7;margin:12px -20px 0;padding:0 20px}
+.dpo-org-tab{padding:8px 14px;font-size:13px;font-weight:500;color:#71717a;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.dpo-org-tab.active{color:#4f46e5;border-bottom-color:#4f46e5}
+.dpo-org-tab:hover{color:#27272a}
+.dpo-modal-body{padding-top:16px;max-height:55vh;overflow-y:auto}
 .dpo-modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
 .dpo-modal-head h3{font-size:18px;font-weight:700}
 
@@ -755,5 +852,9 @@ const CSS = `
   .dpo-org-row{flex-wrap:wrap;gap:6px}
   .dpo-done-row{flex-wrap:wrap}
   .dpo-done-meta{width:100%;text-align:left}
+  .dpo-modal-wide{max-width:95vw;padding:14px}
+  .dpo-org-tabs{gap:0;overflow-x:auto}
+  .dpo-org-tab{font-size:12px;padding:6px 10px;white-space:nowrap}
+  .dpo-modal-body{max-height:50vh}
 }
 `
