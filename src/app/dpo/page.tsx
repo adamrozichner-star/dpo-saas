@@ -111,6 +111,9 @@ export default function DPODashboard() {
   const [orgSearch, setOrgSearch] = useState('')
   const [selectedOrg, setSelectedOrg] = useState<any>(null)
   const [orgTab, setOrgTab] = useState<'overview'|'docs'|'activity'|'profile'>('overview')
+  const [composeMsg, setComposeMsg] = useState('')
+  const [composeSending, setComposeSending] = useState(false)
+  const [composeSent, setComposeSent] = useState(false)
 
   // =============================================
   // AUTH & FETCH
@@ -162,6 +165,28 @@ export default function DPODashboard() {
       const r = await dpoFetch(`/api/dpo?action=org_detail&org_id=${orgId}`)
       setSelectedOrg(await r.json())
     } catch {}
+  }
+
+  const sendDpoMessage = async (orgId: string, orgName: string) => {
+    if (!composeMsg.trim()) return
+    setComposeSending(true)
+    try {
+      await dpoFetch('/api/messages', { 
+        method: 'POST', 
+        body: JSON.stringify({ 
+          action: 'create_thread', 
+          orgId, 
+          subject: `הודעה מהממונה — ${DPO_NAME}`, 
+          content: composeMsg, 
+          senderType: 'dpo', 
+          senderName: DPO_NAME 
+        }) 
+      })
+      setComposeSent(true)
+      setComposeMsg('')
+      setTimeout(() => setComposeSent(false), 4000)
+    } catch { toast('שגיאה בשליחה', 'error') }
+    setComposeSending(false)
   }
 
   // =============================================
@@ -551,14 +576,14 @@ export default function DPODashboard() {
               </div>
 
               {selectedOrg && (
-                <div className="dpo-modal-overlay" onClick={() => { setSelectedOrg(null); setOrgTab('overview') }}>
+                <div className="dpo-modal-overlay" onClick={() => { setSelectedOrg(null); setOrgTab('overview'); setComposeMsg(''); setComposeSent(false) }}>
                   <div className="dpo-modal dpo-modal-wide" onClick={e => e.stopPropagation()}>
                     <div className="dpo-modal-head">
                       <div>
                         <h3>{selectedOrg.organization?.name}</h3>
                         {selectedOrg.contact_email && <span style={{ fontSize: 12, color: '#71717a' }}>📧 {selectedOrg.contact_email}</span>}
                       </div>
-                      <button className="dpo-btn-sm" onClick={() => { setSelectedOrg(null); setOrgTab('overview') }}>✕</button>
+                      <button className="dpo-btn-sm" onClick={() => { setSelectedOrg(null); setOrgTab('overview'); setComposeMsg(''); setComposeSent(false) }}>✕</button>
                     </div>
                     
                     {/* Tabs */}
@@ -602,6 +627,30 @@ export default function DPODashboard() {
                               ))}
                             </div>
                           )}
+
+                          {/* Proactive message compose */}
+                          <div style={{ marginTop: 16, padding: '14px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0' }}>
+                            <span className="dpo-sub">💬 שלח הודעה לארגון</span>
+                            <textarea 
+                              value={composeMsg} 
+                              onChange={e => setComposeMsg(e.target.value)} 
+                              placeholder="כתוב הודעה ללקוח..."
+                              style={{ width: '100%', marginTop: 8, padding: '10px 12px', borderRadius: 8, border: '1px solid #d4d4d8', fontSize: 13, minHeight: 60, resize: 'vertical', fontFamily: 'inherit' }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                              {composeSent ? (
+                                <span style={{ fontSize: 13, color: '#22c55e', fontWeight: 600 }}>✓ נשלח בהצלחה</span>
+                              ) : <span />}
+                              <button 
+                                className="dpo-btn-primary"
+                                disabled={!composeMsg.trim() || composeSending}
+                                onClick={() => sendDpoMessage(selectedOrg.organization?.id, selectedOrg.organization?.name)}
+                                style={{ padding: '6px 16px', fontSize: 13, opacity: composeMsg.trim() ? 1 : 0.5 }}
+                              >
+                                {composeSending ? '...' : '📤 שלח'}
+                              </button>
+                            </div>
+                          </div>
                         </>
                       )}
 
