@@ -372,6 +372,48 @@ export const onboardingQuestions: OnboardingQuestion[] = [
       { value: 'unknown', label: 'לא יודע/ת' }
     ],
     category: 'compliance'
+  },
+  // Step 6: Extended Details
+  {
+    id: 'has_cameras',
+    text: 'האם יש מצלמות אבטחה בעסק?',
+    type: 'boolean',
+    required: true,
+    category: 'extended'
+  },
+  {
+    id: 'processes_minors',
+    text: 'האם אתם מעבדים מידע של קטינים (מתחת לגיל 18)?',
+    type: 'boolean',
+    required: true,
+    category: 'extended'
+  },
+  {
+    id: 'website_leads',
+    text: 'האם יש טפסי לידים או איסוף מידע באתר?',
+    type: 'boolean',
+    required: true,
+    category: 'extended'
+  },
+  {
+    id: 'suppliers_count',
+    text: 'כמה ספקים חיצוניים מעבדים מידע אישי עבורכם?',
+    type: 'single_choice',
+    required: true,
+    options: [
+      { value: '0', label: 'אין' },
+      { value: '1-5', label: '1-5' },
+      { value: '6-20', label: '6-20' },
+      { value: '20+', label: 'מעל 20' }
+    ],
+    category: 'extended'
+  },
+  {
+    id: 'cv_retention',
+    text: 'האם אתם שומרים קורות חיים של מועמדים?',
+    type: 'boolean',
+    required: true,
+    category: 'extended'
   }
 ]
 
@@ -381,5 +423,6 @@ export const onboardingSteps = [
   { id: 2, title: 'סוגי המידע', questions: onboardingQuestions.filter(q => q.category === 'data') },
   { id: 3, title: 'שיתוף ואחסון', questions: onboardingQuestions.filter(q => q.category === 'sharing') },
   { id: 4, title: 'אבטחת מידע', questions: onboardingQuestions.filter(q => q.category === 'security') },
-  { id: 5, title: 'מצב קיים', questions: onboardingQuestions.filter(q => q.category === 'compliance') }
+  { id: 5, title: 'מצב קיים', questions: onboardingQuestions.filter(q => q.category === 'compliance') },
+  { id: 6, title: 'פרטים נוספים', questions: onboardingQuestions.filter(q => q.category === 'extended') }
 ]
