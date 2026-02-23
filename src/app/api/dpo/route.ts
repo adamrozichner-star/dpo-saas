@@ -576,13 +576,30 @@ export async function GET(request: NextRequest) {
         .eq('org_id', orgId)
         .single()
 
+      // Also get org profile (onboarding answers from registration)
+      const { data: orgProfile } = await supabase
+        .from('organization_profiles')
+        .select('profile_data')
+        .eq('org_id', orgId)
+        .single()
+
+      // Get user contact info
+      const { data: orgUser } = await supabase
+        .from('users')
+        .select('email, auth_user_id')
+        .eq('org_id', orgId)
+        .limit(1)
+        .single()
+
       return NextResponse.json({
         organization: org,
         compliance,
         documents,
         queue_history: queueHistory,
         time_this_month_minutes: Math.round(totalMinutesThisMonth),
-        onboarding_context: onboarding?.answers || {}
+        onboarding_context: onboarding?.answers || {},
+        profile: orgProfile?.profile_data || null,
+        contact_email: orgUser?.email || null
       })
     }
 
