@@ -51,7 +51,9 @@ const PROFILE_LABELS: Record<string, string> = {
   processing_purposes: 'שימוש במידע', third_party_sharing: 'שיתוף חיצוני',
   international_transfer: 'העברה בינלאומית', cloud_storage: 'שירותי ענן',
   security_measures: 'אמצעי אבטחה', previous_incidents: 'אירועים בעבר',
-  existing_policy: 'מדיניות קיימת', database_registered: 'רישום מאגרים'
+  existing_policy: 'מדיניות קיימת', database_registered: 'רישום מאגרים',
+  has_cameras: 'מצלמות', processes_minors: 'קטינים', website_leads: 'לידים באתר',
+  suppliers_count: 'ספקים', cv_retention: 'קורות חיים'
 }
 
 function timeAgo(d: string): string {
