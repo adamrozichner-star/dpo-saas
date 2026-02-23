@@ -92,6 +92,7 @@ function DashboardContent() {
   const [isLoading, setIsLoading] = useState(true)
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [messageThreads, setMessageThreads] = useState<any[]>([])
+  const [orgProfile, setOrgProfile] = useState<any>(null)
 
   useEffect(() => {
     if (!loading && !session) {
@@ -135,6 +136,16 @@ function DashboardContent() {
           .order('created_at', { ascending: false })
         
         if (docs) setDocuments(docs)
+
+        // Load org profile (onboarding answers)
+        try {
+          const { data: profile } = await supabase
+            .from('organization_profiles')
+            .select('profile_data')
+            .eq('org_id', org.id)
+            .single()
+          if (profile) setOrgProfile(profile.profile_data)
+        } catch {}
 
         const { data: incidentData } = await supabase
           .from('security_incidents')
@@ -482,7 +493,7 @@ function DashboardContent() {
             />
           )}
           {activeTab === 'settings' && (
-            <SettingsTab organization={organization} user={user} />
+            <SettingsTab organization={organization} user={user} orgProfile={orgProfile} supabase={supabase} />
           )}
         </div>
       </main>
@@ -1701,7 +1712,77 @@ function MessagesTab({ threads, orgId, onRefresh, supabase }: { threads: any[], 
 // ============================================
 // SETTINGS TAB
 // ============================================
-function SettingsTab({ organization, user }: { organization: any, user: any }) {
+function SettingsTab({ organization, user, orgProfile, supabase }: { organization: any, user: any, orgProfile: any, supabase: any }) {
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editName, setEditName] = useState(organization?.name || '')
+  const [editBusinessId, setEditBusinessId] = useState(organization?.business_id || '')
+  const [saveMsg, setSaveMsg] = useState('')
+
+  const QUESTION_LABELS: Record<string, string> = {
+    business_name: 'שם העסק',
+    business_id: 'מספר ח.פ / עוסק מורשה',
+    business_type: 'תחום פעילות',
+    employee_count: 'מספר עובדים',
+    data_types: 'סוגי מידע נאספים',
+    data_sources: 'מקורות מידע',
+    processing_purposes: 'שימוש במידע',
+    third_party_sharing: 'שיתוף עם גורמים חיצוניים',
+    international_transfer: 'העברה מחוץ לישראל',
+    cloud_storage: 'שירותי ענן',
+    security_measures: 'אמצעי אבטחה',
+    previous_incidents: 'אירועי אבטחה בעבר',
+    existing_policy: 'מדיניות פרטיות קיימת',
+    database_registered: 'רישום מאגרי מידע',
+  }
+
+  const VALUE_LABELS: Record<string, string> = {
+    retail: 'קמעונאות / מסחר', technology: 'טכנולוגיה / הייטק', healthcare: 'בריאות / רפואה',
+    finance: 'פיננסים / ביטוח', education: 'חינוך / הדרכה', services: 'שירותים מקצועיים',
+    manufacturing: 'ייצור / תעשייה', other: 'אחר',
+    contact: 'פרטי קשר', id: 'מספר זהות / דרכון', financial: 'פרטי תשלום',
+    health: 'מידע רפואי', biometric: 'מידע ביומטרי', location: 'נתוני מיקום',
+    behavioral: 'נתוני התנהגות', employment: 'מידע תעסוקתי',
+    direct: 'ישירות מלקוחות', website: 'אתר / אפליקציה', third_party: 'צדדים שלישיים',
+    public: 'מקורות ציבוריים', employees: 'עובדים',
+    service: 'מתן שירות', marketing: 'שיווק', analytics: 'אנליטיקס', legal: 'עמידה בחוק',
+    hr: 'משאבי אנוש', security: 'אבטחה',
+    none: 'לא', israeli: 'ספק ישראלי', international: 'ספק בינלאומי', both: 'שניהם',
+    encryption: 'הצפנה', access_control: 'בקרת גישה', backup: 'גיבויים', firewall: 'חומת אש',
+    antivirus: 'אנטי-וירוס', training: 'הדרכות',
+    yes: 'כן', partial: 'חלקם', no: 'לא', unknown: 'לא יודע/ת',
+    '1-10': '1-10', '11-50': '11-50', '51-200': '51-200', '200+': 'מעל 200',
+  }
+
+  const formatValue = (val: any): string => {
+    if (Array.isArray(val)) return val.map(v => VALUE_LABELS[v] || v).join(', ')
+    if (typeof val === 'boolean') return val ? 'כן' : 'לא'
+    return VALUE_LABELS[val] || String(val || '-')
+  }
+
+  const handleSave = async () => {
+    if (!supabase || !organization?.id) return
+    setSaving(true)
+    try {
+      await supabase.from('organizations').update({
+        name: editName, 
+        business_id: editBusinessId
+      }).eq('id', organization.id)
+      organization.name = editName
+      organization.business_id = editBusinessId
+      setEditing(false)
+      setSaveMsg('נשמר בהצלחה ✓')
+      setTimeout(() => setSaveMsg(''), 3000)
+    } catch (e) {
+      setSaveMsg('שגיאה בשמירה')
+    }
+    setSaving(false)
+  }
+
+  const answers = orgProfile?.answers || []
+  // Filter out basic fields already shown above
+  const profileAnswers = answers.filter((a: any) => !['business_name', 'business_id'].includes(a.questionId))
+
   return (
     <div className="space-y-6">
       <div>
@@ -1709,16 +1790,42 @@ function SettingsTab({ organization, user }: { organization: any, user: any }) {
         <p className="text-stone-500 mt-1">ניהול הארגון והחשבון</p>
       </div>
 
+      {/* Org Details — Editable */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
-        <h2 className="font-semibold text-stone-800 mb-4">פרטי הארגון</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-semibold text-stone-800">פרטי הארגון</h2>
+          {!editing ? (
+            <button onClick={() => setEditing(true)} className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
+              ✏️ עריכה
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button onClick={handleSave} disabled={saving} className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 disabled:opacity-50">
+                {saving ? '...' : 'שמור'}
+              </button>
+              <button onClick={() => { setEditing(false); setEditName(organization?.name); setEditBusinessId(organization?.business_id) }} className="px-3 py-1.5 bg-stone-100 text-stone-600 rounded-lg text-sm">
+                ביטול
+              </button>
+            </div>
+          )}
+        </div>
+        {saveMsg && <p className="text-sm text-emerald-600 mb-3">{saveMsg}</p>}
         <div className="grid sm:grid-cols-2 gap-6">
           <div>
             <label className="text-sm text-stone-500">שם העסק</label>
-            <p className="font-medium text-stone-800 mt-1">{organization?.name || '-'}</p>
+            {editing ? (
+              <input value={editName} onChange={e => setEditName(e.target.value)} className="w-full mt-1 px-3 py-2 border border-stone-300 rounded-lg text-stone-800 focus:outline-none focus:border-indigo-400" />
+            ) : (
+              <p className="font-medium text-stone-800 mt-1">{organization?.name || '-'}</p>
+            )}
           </div>
           <div>
             <label className="text-sm text-stone-500">מספר ח.פ</label>
-            <p className="font-medium text-stone-800 mt-1">{organization?.business_id || '-'}</p>
+            {editing ? (
+              <input value={editBusinessId} onChange={e => setEditBusinessId(e.target.value)} className="w-full mt-1 px-3 py-2 border border-stone-300 rounded-lg text-stone-800 focus:outline-none focus:border-indigo-400" />
+            ) : (
+              <p className="font-medium text-stone-800 mt-1">{organization?.business_id || '-'}</p>
+            )}
           </div>
           <div>
             <label className="text-sm text-stone-500">חבילה</label>
@@ -1739,9 +1846,25 @@ function SettingsTab({ organization, user }: { organization: any, user: any }) {
         </div>
       </div>
 
+      {/* Business Profile — from onboarding */}
+      {profileAnswers.length > 0 && (
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
+          <h2 className="font-semibold text-stone-800 mb-4">🏢 פרופיל עסקי</h2>
+          <p className="text-sm text-stone-400 mb-4">מבוסס על תשובות ההרשמה · לעדכון — פנו לממונה</p>
+          <div className="grid sm:grid-cols-2 gap-4">
+            {profileAnswers.map((a: any) => (
+              <div key={a.questionId} className="p-3 bg-stone-50 rounded-xl">
+                <label className="text-xs text-stone-500 font-medium">{QUESTION_LABELS[a.questionId] || a.questionId}</label>
+                <p className="text-sm font-medium text-stone-700 mt-1">{formatValue(a.value)}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* DPO Info */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
-        <h2 className="font-semibold text-stone-800 mb-4">ממונה הגנת הפרטיות</h2>
+        <h2 className="font-semibold text-stone-800 mb-4">🛡️ ממונה הגנת הפרטיות</h2>
         <div className="grid sm:grid-cols-2 gap-6">
           <div>
             <label className="text-sm text-stone-500">שם הממונה</label>
@@ -1763,7 +1886,7 @@ function SettingsTab({ organization, user }: { organization: any, user: any }) {
       </div>
 
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
-        <h2 className="font-semibold text-stone-800 mb-4">פרטי משתמש</h2>
+        <h2 className="font-semibold text-stone-800 mb-4">👤 פרטי משתמש</h2>
         <div className="grid sm:grid-cols-2 gap-6">
           <div>
             <label className="text-sm text-stone-500">אימייל</label>
