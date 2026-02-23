@@ -109,6 +109,8 @@ export default function DPODashboard() {
   // View
   const [tab, setTab] = useState<'inbox' | 'orgs'>('inbox')
   const [orgSearch, setOrgSearch] = useState('')
+  const [showAllPending, setShowAllPending] = useState(false)
+  const [showAllResolved, setShowAllResolved] = useState(false)
   const [selectedOrg, setSelectedOrg] = useState<any>(null)
   const [orgTab, setOrgTab] = useState<'overview'|'docs'|'activity'|'profile'>('overview')
   const [composeMsg, setComposeMsg] = useState('')
@@ -363,7 +365,7 @@ export default function DPODashboard() {
               {pending.length > 0 && (
                 <section className="dpo-section">
                   <h2 className="dpo-section-title">🔴 דורש טיפול ({pending.length})</h2>
-                  {pending.map(item => {
+                  {(showAllPending ? pending : pending.slice(0, 10)).map(item => {
                     const cfg = TYPE_MAP[item.type] || { label: item.type, emoji: '📌', accent: '#71717a' }
                     const open = expandedItem === item.id
                     return (
@@ -459,6 +461,11 @@ export default function DPODashboard() {
                       </div>
                     )
                   })}
+                  {!showAllPending && pending.length > 10 && (
+                    <button className="dpo-show-more" onClick={() => setShowAllPending(true)}>
+                      הצג עוד {pending.length - 10} פריטים
+                    </button>
+                  )}
                 </section>
               )}
 
@@ -473,7 +480,7 @@ export default function DPODashboard() {
               {resolved.length > 0 && (
                 <section className="dpo-section">
                   <h2 className="dpo-section-title">✅ הושלם לאחרונה ({resolved.length})</h2>
-                  {resolved.slice(0, 12).map(item => {
+                  {(showAllResolved ? resolved : resolved.slice(0, 12)).map(item => {
                     const cfg = TYPE_MAP[item.type] || { label: item.type, emoji: '📌', accent: '#71717a' }
                     const isOpen = expandedItem === `done-${item.id}`
                     return (
@@ -551,6 +558,11 @@ export default function DPODashboard() {
                       </div>
                     )
                   })}
+                  {!showAllResolved && resolved.length > 12 && (
+                    <button className="dpo-show-more" onClick={() => setShowAllResolved(true)}>
+                      הצג עוד {resolved.length - 12} פריטים
+                    </button>
+                  )}
                 </section>
               )}
             </>
@@ -852,6 +864,8 @@ const CSS = `
 .dpo-empty{text-align:center;padding:40px 20px;background:#fff;border-radius:12px;border:1px solid #e4e4e7;margin-bottom:24px}
 .dpo-empty-title{font-size:16px;font-weight:700;color:#22c55e;margin-top:8px}
 .dpo-empty-sub{font-size:13px;color:#71717a}
+.dpo-show-more{width:100%;padding:10px;margin-top:8px;background:#f4f4f5;border:1px solid #e4e4e7;border-radius:8px;color:#4f46e5;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit}
+.dpo-show-more:hover{background:#eef2ff;border-color:#c7d2fe}
 
 /* Search */
 .dpo-search{width:100%;padding:10px 14px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:12px;background:#fff}
