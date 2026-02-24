@@ -49,15 +49,15 @@ const DPO_SYSTEM_PROMPT = `אתה עוזר דיגיטלי מומחה בהגנת 
 אם המשתמש מזכיר דליפה, פריצה, האקר, וירוס, כופר, פישינג, אובדן מחשב, מייל בטעות, גישה לא מורשית - זהה כאירוע אבטחה! הסבר על 72 שעות לדיווח.
 
 📄 יצירת מסמכים:
-כשמבקשים ממך ליצור מסמך - צור את המסמך המלא עצמו, מוכן לשימוש.
-עטוף את המסמך בין [DOC_START] ל-[DOC_END]. לפני [DOC_START] אפשר לכתוב משפט קצר, ואחרי [DOC_END] אפשר לכתוב הערה קצרה.
+כשמבקשים ממך ליצור מסמך - צור את המסמך המלא עצמו, מוכן לשימוש. לא הסבר על מה צריך להיות בו!
+בסוף מסמך הוסף: [DOCUMENT_GENERATED]
 
 🎨 סגנון: חם ונגיש, מקצועי אבל לא יבש. פסקאות קצרות. הצעה לפעולה בסוף כל תשובה.`
 
 function detectIntent(message: string): string {
   const msg = message.toLowerCase()
   if (/דליפ|פריצ|האק|וירוס|כופר|פישינג|נגנב|אבד|נפרץ|אירוע|בטעות שלחתי|גישה לא מורשית|דלף|breach|leak/.test(msg)) return 'incident'
-  if (/צור לי|צור עבור|תכין לי|צריך מסמך|תייצר|אנא צור|תכתוב לי|הכן לי|ייצר לי/.test(msg)) return 'document'
+  if (/מדיניות פרטיות|privacy policy|תקנון|נוהל|טופס (הסכמה|consent)|מסמך|צור לי|צור עבור|תכין לי|צריך מסמך|תייצר|הסכם עיבוד|dpa|כתב מינוי|אנא צור/.test(msg)) return 'document'
   if (/בקשת מידע|עובד.*(רוצה|מבקש|שאל)|לקוח.*(רוצה|מבקש)|למחוק.*מידע|זכות.*(עיון|מחיקה|תיקון)|dsar/.test(msg)) return 'dsar'
   if (/סטטוס|מה המצב|איפה אני|ציון|ציות|מה חסר/.test(msg)) return 'status'
   if (/לדבר עם|להעביר ל|ממונה אנושי|בן אדם|עזרה אישית|מסובך/.test(msg)) return 'escalate'
@@ -114,57 +114,50 @@ export async function POST(request: NextRequest) {
       if (data) userMsgId = data.id
     } catch (e) { /* table may not exist */ }
 
-   // Get org context
+    // Get org context
     const { data: org } = await supabase
       .from('organizations')
-      .select('name, business_id, tier')
+      .select('name, industry, employee_count, compliance_score')
       .eq('id', orgId)
       .single()
 
-    // Get full business profile from onboarding
+    // Get org profile (onboarding answers) for richer context
     let profileContext = ''
     try {
       const { data: profile } = await supabase
         .from('organization_profiles')
         .select('profile_data')
         .eq('org_id', orgId)
-        .order('created_at', { ascending: false })
-        .limit(1)
         .single()
+      
+      if (profile?.profile_data?.answers) {
+        const answers = profile.profile_data.answers
+        const dataTypes = answers.find((a: any) => a.questionId === 'data_types')?.value
+        const dataSources = answers.find((a: any) => a.questionId === 'data_sources')?.value
+        const dataSharing = answers.find((a: any) => a.questionId === 'shares_data')?.value
+        const hasCameras = answers.find((a: any) => a.questionId === 'has_cameras')?.value
+        const processesMinors = answers.find((a: any) => a.questionId === 'processes_minors')?.value
+        const websiteLeads = answers.find((a: any) => a.questionId === 'website_leads')?.value
+        const suppliersCount = answers.find((a: any) => a.questionId === 'suppliers_count')?.value
+        const cvRetention = answers.find((a: any) => a.questionId === 'cv_retention')?.value
+        const existingPolicy = answers.find((a: any) => a.questionId === 'existing_policy')?.value
+        const dbRegistered = answers.find((a: any) => a.questionId === 'database_registered')?.value
 
-      if (profile?.profile_data?.form) {
-        const f = profile.profile_data.form
-        const softwareLabels: Record<string, string> = {
-          priority: 'Priority', monday: 'Monday', salesforce: 'Salesforce',
-          hubspot: 'HubSpot', google_workspace: 'Google Workspace',
-          microsoft_365: 'Microsoft 365', shopify: 'Shopify',
-          woocommerce: 'WooCommerce', wix: 'Wix', elementor: 'WordPress/Elementor',
-          crm_other: 'CRM אחר', erp_other: 'ERP אחר', payroll: 'מערכת שכר',
-          accounting: 'הנה"ח', other: 'אחר'
-        }
-        const industryLabels: Record<string, string> = {
-          retail: 'קמעונאות', technology: 'טכנולוגיה', healthcare: 'בריאות',
-          finance: 'פיננסים', education: 'חינוך', services: 'שירותים',
-          manufacturing: 'תעשייה', food: 'מזון', realestate: 'נדל"ן', other: 'אחר'
-        }
-
-        profileContext = `
-- תחום: ${industryLabels[f.industry] || f.industry || 'לא צוין'}
-- מספר עובדים: ${f.employee_count || 'לא ידוע'}
-- ח.פ: ${f.business_id || org?.business_id || ''}
-- אתר: ${f.website_url || 'לא צוין'}
-- מערכות תוכנה: ${(f.software || []).map((s: string) => softwareLabels[s] || s).join(', ') || 'לא צוין'}
-- אפליקציה: ${f.has_app === true ? 'כן' : f.has_app === false ? 'לא' : 'לא צוין'}
-- סוג לקוחות: ${(f.customer_type || []).map((t: string) => t === 'b2b' ? 'עסקים' : t === 'b2c' ? 'צרכנים פרטיים' : t).join(', ') || 'לא צוין'}
-- עבודה עם קטינים: ${f.works_with_minors === true ? 'כן' : f.works_with_minors === false ? 'לא' : 'לא ידוע'}
-- מידע רפואי: ${f.has_health_data === true ? 'כן' : f.has_health_data === false ? 'לא' : 'לא ידוע'}
-- איסוף אמצעי תשלום: ${f.collects_payments === true ? 'כן' : f.collects_payments === false ? 'לא' : 'לא ידוע'}
-- איש קשר: ${f.contact_name || ''} ${f.contact_role ? '(' + f.contact_role + ')' : ''}`
+        const parts = []
+        if (dataTypes?.length) parts.push(`סוגי מידע: ${dataTypes.join(', ')}`)
+        if (dataSources?.length) parts.push(`מקורות: ${dataSources.join(', ')}`)
+        if (dataSharing) parts.push(`משתף מידע: ${dataSharing}`)
+        if (hasCameras) parts.push(`מצלמות: ${hasCameras === 'true' || hasCameras === true ? 'כן' : 'לא'}`)
+        if (processesMinors) parts.push(`מידע קטינים: ${processesMinors === 'true' || processesMinors === true ? 'כן' : 'לא'}`)
+        if (websiteLeads) parts.push(`טפסי לידים באתר: ${websiteLeads === 'true' || websiteLeads === true ? 'כן' : 'לא'}`)
+        if (suppliersCount) parts.push(`ספקים חיצוניים: ${suppliersCount}`)
+        if (cvRetention) parts.push(`שמירת קורות חיים: ${cvRetention === 'true' || cvRetention === true ? 'כן' : 'לא'}`)
+        if (existingPolicy !== undefined) parts.push(`מדיניות קיימת: ${existingPolicy === 'true' || existingPolicy === true ? 'כן' : 'לא'}`)
+        if (dbRegistered) parts.push(`מאגרים רשומים: ${dbRegistered}`)
+        
+        if (parts.length > 0) profileContext = '\n- ' + parts.join('\n- ')
       }
-    } catch (e) { /* no profile */ }
-
-    // Get DPO config
-    const dpoName = 'עו"ד דנה כהן' // TODO: pull from dpos table
+    } catch {} // profile may not exist
 
     // Get recent history
     let conversationHistory: { role: 'user' | 'assistant', content: string }[] = []
@@ -186,15 +179,14 @@ export async function POST(request: NextRequest) {
 
 📊 מידע על הארגון:
 - שם: ${org?.name || 'לא ידוע'}
-${profileContext || '- תחום: לא צוין\n- מספר עובדים: לא ידוע'}
-- ממונה הגנת פרטיות: ${dpoName}
-
-חשוב מאוד: כשאתה יוצר מסמך, השתמש בפרטים האמיתיים של הארגון שלעיל. אל תשתמש ב-[שם הארגון] או בסוגריים מרובעים - השתמש בשם האמיתי ובפרטים האמיתיים.
+- תחום: ${org?.industry || 'לא צוין'}
+- מספר עובדים: ${org?.employee_count || 'לא ידוע'}
+- ציון ציות: ${org?.compliance_score || 0}%${profileContext}
 
 ${intent === 'incident' ? '\n⚠️ זוהה אירוע אבטחה פוטנציאלי! וודא שהמשתמש מבין את הדחיפות (72 שעות).\n' : ''}
-${intent === 'document' ? '\n📄 המשתמש מבקש מסמך - צור את המסמך המלא עצמו עם הפרטים האמיתיים של הארגון! השתמש ב-[DOCUMENT_GENERATED] בסוף.\n' : ''}
+${intent === 'document' ? '\n📄 המשתמש מבקש מסמך - צור את המסמך המלא עצמו! השתמש ב-[DOCUMENT_GENERATED] בסוף.\n' : ''}
 ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה אנושי.\n' : ''}`
-    
+
     const maxTokens = intent === 'document' ? 4000 : 1500
 
     // Create streaming response
@@ -247,15 +239,9 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
 
           // Check for generated document
           let generatedDoc = null
-          const docStartIdx = fullText.indexOf('[DOC_START]')
-          const docEndIdx = fullText.indexOf('[DOC_END]')
-          
-          if (docStartIdx !== -1 && docEndIdx !== -1 && docEndIdx > docStartIdx) {
-            const docContent = fullText.substring(docStartIdx + '[DOC_START]'.length, docEndIdx).trim()
-            generatedDoc = { type: detectDocType(message), content: docContent, name: getDocTitle(detectDocType(message)) }
-          } else if (fullText.includes('[DOCUMENT_GENERATED]')) {
-            const cleanedText = fullText.replace('[DOCUMENT_GENERATED]', '').trim()
-            generatedDoc = { type: detectDocType(message), content: cleanedText, name: getDocTitle(detectDocType(message)) }
+          if (fullText.includes('[DOCUMENT_GENERATED]')) {
+            fullText = fullText.replace('[DOCUMENT_GENERATED]', '').trim()
+            generatedDoc = { type: detectDocType(message), content: fullText, name: getDocTitle(detectDocType(message)) }
           } else if (intent === 'document' && fullText.length > 800) {
             const indicators = [/\d+\.\s+[א-ת]/m, /\d+\.\d+\.?\s+[א-ת]/m, /גרסה/i, /מדיניות/, /נוהל/, /תחולה/, /הגדרות/, /אחריות/, /מטרה/, /בקרה/]
             const matchCount = indicators.filter(r => r.test(fullText)).length
