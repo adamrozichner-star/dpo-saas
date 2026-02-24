@@ -12,10 +12,22 @@ export default function AccessibilityMenu() {
     document.documentElement.style.fontSize = `${fontSize}%`
   }, [fontSize])
 
+  // High contrast: use CSS variables instead of filter (filter breaks position:fixed)
   useEffect(() => {
+    const root = document.documentElement
     if (highContrast) {
+      root.style.setProperty('--a11y-bg', '#000')
+      root.style.setProperty('--a11y-text', '#fff')
+      root.style.setProperty('--a11y-border', '#fff')
+      document.body.style.backgroundColor = '#000'
+      document.body.style.color = '#fff'
       document.body.classList.add('a11y-high-contrast')
     } else {
+      root.style.removeProperty('--a11y-bg')
+      root.style.removeProperty('--a11y-text')
+      root.style.removeProperty('--a11y-border')
+      document.body.style.backgroundColor = ''
+      document.body.style.color = ''
       document.body.classList.remove('a11y-high-contrast')
     }
   }, [highContrast])
@@ -37,23 +49,46 @@ export default function AccessibilityMenu() {
   return (
     <>
       <style>{`
-        .a11y-high-contrast { filter: contrast(1.4) !important; }
+        .a11y-high-contrast * { 
+          background-color: inherit;
+          border-color: #666 !important;
+        }
+        .a11y-high-contrast { 
+          background: #000 !important; 
+          color: #fff !important; 
+        }
+        .a11y-high-contrast p, 
+        .a11y-high-contrast span, 
+        .a11y-high-contrast h1, .a11y-high-contrast h2, .a11y-high-contrast h3, 
+        .a11y-high-contrast a, 
+        .a11y-high-contrast button,
+        .a11y-high-contrast label,
+        .a11y-high-contrast li { 
+          color: #fff !important; 
+        }
+        .a11y-high-contrast a { color: #90cdf4 !important; text-decoration: underline !important; }
+        .a11y-high-contrast button { border: 1px solid #666 !important; }
         .a11y-link-highlight a { outline: 2px solid #4f46e5 !important; outline-offset: 2px !important; }
       `}</style>
       
-      {/* Floating button */}
+      {/* Floating button — always on top, never affected by body filters */}
       <button
         onClick={() => setOpen(!open)}
         className="fixed bottom-4 left-4 z-[9999] w-12 h-12 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center text-xl"
         aria-label="תפריט נגישות"
         title="נגישות"
+        style={{ isolation: 'isolate' }}
       >
         ♿
       </button>
 
       {/* Menu panel */}
       {open && (
-        <div className="fixed bottom-20 left-4 z-[9999] bg-white rounded-xl shadow-2xl border border-stone-200 p-4 w-64" dir="rtl">
+        <div 
+          className="fixed bottom-20 left-4 z-[9999] bg-white rounded-xl shadow-2xl border border-stone-200 p-4 w-64" 
+          dir="rtl"
+          style={{ isolation: 'isolate' }}
+        >
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-stone-800 text-sm">♿ נגישות</h3>
             <button onClick={() => setOpen(false)} className="text-stone-400 hover:text-stone-600 text-lg">✕</button>
