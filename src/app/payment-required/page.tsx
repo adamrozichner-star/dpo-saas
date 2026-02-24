@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Shield, Lock, CheckCircle2, Loader2, FileText, Eye, Download, Sparkles } from 'lucide-react'
+import { Shield, Lock, CheckCircle2, Loader2, FileText, Eye, Download, Sparkles, ArrowLeft } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
 const DOC_LABELS: Record<string, string> = {
@@ -30,6 +30,7 @@ export default function PaymentRequiredPage() {
   const [documents, setDocuments] = useState<any[]>([])
   const [orgName, setOrgName] = useState('')
   const [previewDoc, setPreviewDoc] = useState<any>(null)
+  const [hasOrg, setHasOrg] = useState(false)
 
   useEffect(() => {
     if (!loading && !session) {
@@ -49,6 +50,9 @@ export default function PaymentRequiredPage() {
           .single()
 
         if (userData?.org_id) {
+          setHasOrg(true)
+          
+          // Check subscription
           const { data: sub } = await supabase
             .from('subscriptions')
             .select('id, status')
@@ -61,6 +65,7 @@ export default function PaymentRequiredPage() {
             return
           }
 
+          // Load org + docs
           const { data: org } = await supabase
             .from('organizations')
             .select('name')
@@ -94,8 +99,11 @@ export default function PaymentRequiredPage() {
     )
   }
 
+  const hasDocs = documents.length > 0
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 via-white to-stone-50" dir="rtl">
+      {/* Top bar */}
       <div className="border-b border-stone-200 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -111,18 +119,39 @@ export default function PaymentRequiredPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Hero — adapts based on whether docs exist */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-full text-sm font-medium mb-4">
-            <Sparkles className="h-4 w-4" />
-            {documents.length > 0 ? `${documents.length} מסמכים נוצרו בהצלחה!` : 'החשבון מוכן'}
-          </div>
-          <h1 className="text-3xl font-bold text-stone-800 mb-2">
-            {orgName ? `המסמכים של ${orgName} מוכנים` : 'המסמכים שלך מוכנים'}
-          </h1>
-          <p className="text-stone-500 text-lg">השלם את התשלום כדי לצפות, להוריד ולנהל את כל המסמכים</p>
+          {hasDocs ? (
+            <>
+              <div className="inline-flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-full text-sm font-medium mb-4">
+                <Sparkles className="h-4 w-4" />
+                {documents.length} מסמכים נוצרו בהצלחה!
+              </div>
+              <h1 className="text-3xl font-bold text-stone-800 mb-2">
+                {orgName ? `המסמכים של ${orgName} מוכנים` : 'המסמכים שלך מוכנים'}
+              </h1>
+              <p className="text-stone-500 text-lg">
+                השלם את התשלום כדי לצפות, להוריד ולנהל את כל המסמכים
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-full text-sm font-medium mb-4">
+                <Shield className="h-4 w-4" />
+                ברוך הבא ל-MyDPO
+              </div>
+              <h1 className="text-3xl font-bold text-stone-800 mb-2">
+                {orgName ? `${orgName}, הגנת הפרטיות שלך מתחילה כאן` : 'הגנת הפרטיות שלך מתחילה כאן'}
+              </h1>
+              <p className="text-stone-500 text-lg">
+                ממונה הגנת פרטיות + מערכת AI מלאה — כל מה שצריך לתיקון 13
+              </p>
+            </>
+          )}
         </div>
 
-        {documents.length > 0 && (
+        {/* Blurred Document Cards — only when docs exist */}
+        {hasDocs && (
           <div className="grid sm:grid-cols-2 gap-4 mb-8">
             {documents.map((doc) => (
               <div key={doc.id} className="bg-white rounded-xl border border-stone-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
@@ -166,18 +195,43 @@ export default function PaymentRequiredPage() {
           </div>
         )}
 
-        {documents.length === 0 && (
-          <div className="bg-white rounded-xl border border-stone-200 p-8 text-center mb-8">
-            <FileText className="h-12 w-12 text-stone-300 mx-auto mb-3" />
-            <p className="text-stone-500">המסמכים ייוצרו לאחר השלמת התשלום</p>
+        {/* No docs — show what they'll GET (visual preview of deliverables) */}
+        {!hasDocs && (
+          <div className="grid sm:grid-cols-2 gap-3 mb-8">
+            {[
+              { icon: '🔒', title: 'מדיניות פרטיות', desc: 'מותאמת לעסק שלך' },
+              { icon: '🛡️', title: 'נוהל אבטחת מידע', desc: 'עם נהלים מפורטים' },
+              { icon: '📋', title: 'כתב מינוי DPO', desc: 'מוכן לחתימה' },
+              { icon: '📊', title: 'מפת עיבוד נתונים', desc: 'ROPA מלא' },
+              { icon: '🗄️', title: 'רישום מאגרי מידע', desc: 'לפי דרישות החוק' },
+              { icon: '✅', title: 'טופס הסכמה', desc: 'לאיסוף מידע אישי' },
+            ].map((item, i) => (
+              <div key={i} className="bg-white rounded-xl border border-stone-200 p-4 flex items-center gap-3 opacity-75">
+                <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0 text-lg">
+                  {item.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-stone-800 text-sm">{item.title}</p>
+                  <p className="text-xs text-stone-400">{item.desc}</p>
+                </div>
+                <Lock className="h-4 w-4 text-stone-300 flex-shrink-0" />
+              </div>
+            ))}
           </div>
         )}
 
+        {/* CTA Card */}
         <div className="bg-white rounded-2xl border border-stone-200 shadow-lg p-6 sm:p-8 text-center max-w-lg mx-auto">
           <h2 className="text-xl font-bold text-stone-800 mb-2">פתח גישה מלאה</h2>
           <p className="text-stone-500 text-sm mb-5">כל מה שצריך לעמוד בתיקון 13</p>
           <div className="bg-stone-50 rounded-xl p-4 mb-5 text-right space-y-2">
-            {['צפייה והורדת כל המסמכים', 'DPO ממונה מוסמך — עו"ד דנה כהן', 'עוזר AI לשאלות ציות', 'ניהול אירועי אבטחה + דדליינים', 'עדכונים אוטומטיים בשינוי רגולציה'].map((item, i) => (
+            {[
+              'צפייה והורדת כל המסמכים',
+              'DPO ממונה מוסמך — עו"ד דנה כהן',
+              'עוזר AI לשאלות ציות',
+              'ניהול אירועי אבטחה + דדליינים',
+              'עדכונים אוטומטיים בשינוי רגולציה',
+            ].map((item, i) => (
               <div key={i} className="flex items-center gap-2 text-sm text-stone-600">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
                 <span>{item}</span>
@@ -196,6 +250,7 @@ export default function PaymentRequiredPage() {
         <p className="text-center text-xs text-stone-400 mt-8">© 2025 MyDPO. כל הזכויות שמורות.</p>
       </div>
 
+      {/* Preview Modal */}
       {previewDoc && (
         <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setPreviewDoc(null)}>
           <div className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-hidden" onClick={e => e.stopPropagation()}>
