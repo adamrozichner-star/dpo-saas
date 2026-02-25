@@ -152,6 +152,8 @@ export default function DPODashboard() {
   const [modalEditDoc, setModalEditDoc] = useState<string | null>(null)
   const [modalEditContent, setModalEditContent] = useState('')
   const [modalDocBusy, setModalDocBusy] = useState(false)
+  const [expandedDocType, setExpandedDocType] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   // =============================================
   // AUTH & FETCH
@@ -289,6 +291,29 @@ export default function DPODashboard() {
     try {
       await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'approve_document', documentId: docId }) })
       toast('✅ אושר')
+      loadOrgDetail(selectedOrg?.organization?.id)
+    }
+    catch { toast('שגיאה', 'error') }
+    setModalDocBusy(false)
+  }
+
+  const modalDeleteDoc = async (docId: string) => {
+    setModalDocBusy(true)
+    try {
+      await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'delete_document', documentId: docId }) })
+      toast('🗑️ נמחק')
+      setConfirmDeleteId(null)
+      loadOrgDetail(selectedOrg?.organization?.id)
+    }
+    catch { toast('שגיאה', 'error') }
+    setModalDocBusy(false)
+  }
+
+  const modalFinalizeDoc = async (docId: string, version: number) => {
+    setModalDocBusy(true)
+    try {
+      await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'finalize_document', documentId: docId, version }) })
+      toast('✅ סומן כגרסה סופית')
       loadOrgDetail(selectedOrg?.organization?.id)
     }
     catch { toast('שגיאה', 'error') }
@@ -786,60 +811,179 @@ export default function DPODashboard() {
                         </>
                       )}
 
-                      {/* DOCUMENTS — editable */}
+                      {/* DOCUMENTS — grouped by type with version history */}
                       {orgTab === 'docs' && (
                         <div>
                           {!selectedOrg.documents?.length ? (
                             <p style={{ color: '#71717a', textAlign: 'center', padding: 20 }}>אין מסמכים</p>
-                          ) : selectedOrg.documents.map((d: any) => (
-                            <div key={d.id} className="dpo-doc" style={{ marginBottom: 12 }}>
-                              <div className="dpo-doc-top">
-                                <div className="dpo-doc-info">
-                                  <span className="dpo-doc-name">{d.title || DOC_LABELS[d.type] || d.type}</span>
-                                  <span className={`dpo-doc-badge ${d.status === 'active' ? 'active' : 'pending'}`}>
-                                    {d.status === 'active' ? '✓ פעיל' : d.status === 'pending_review' ? '⏳ ממתין' : d.status}
-                                  </span>
-                                </div>
-                                <div className="dpo-doc-actions">
-                                  {d.status === 'pending_review' && (
-                                    <button className="dpo-btn-sm dpo-btn-green" disabled={modalDocBusy} onClick={() => modalApproveDoc(d.id)}>✓ אשר</button>
-                                  )}
-                                  <button className="dpo-btn-sm" onClick={() => { 
-                                    if (modalEditDoc === d.id) { setModalEditDoc(null) } 
-                                    else { setModalEditDoc(d.id); setModalEditContent(d.content || '') }
-                                  }}>
-                                    {modalEditDoc === d.id ? '▲ סגור' : '✏️ ערוך'}
-                                  </button>
-                                </div>
-                              </div>
-                              <span style={{ fontSize: 11, color: '#a1a1aa' }}>{new Date(d.created_at).toLocaleDateString('he-IL')}</span>
-                              
-                              {modalEditDoc === d.id ? (
-                                <div style={{ marginTop: 8 }}>
-                                  <textarea 
-                                    className="dpo-doc-editor" 
-                                    value={modalEditContent} 
-                                    onChange={e => setModalEditContent(e.target.value)} 
-                                    rows={14} 
-                                  />
-                                  <div className="dpo-doc-edit-btns">
-                                    <button className="dpo-btn-primary" disabled={modalDocBusy} onClick={() => modalEditSave(d.id)}>
-                                      {modalDocBusy ? '...' : '💾 שמור ואשר'}
-                                    </button>
-                                    <button className="dpo-btn-sm" onClick={() => setModalEditDoc(null)}>ביטול</button>
+                          ) : (() => {
+                            // Group docs by type, sort each group by date desc
+                            const grouped: Record<string, any[]> = {}
+                            for (const d of selectedOrg.documents) {
+                              const key = d.type || 'other'
+                              if (!grouped[key]) grouped[key] = []
+                              grouped[key].push(d)
+                            }
+                            // Sort each group: active first, then by date desc
+                            Object.values(grouped).forEach(arr => arr.sort((a: any, b: any) => {
+                              if (a.status === 'active' && b.status !== 'active') return -1
+                              if (b.status === 'active' && a.status !== 'active') return 1
+                              return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                            }))
+
+                            return Object.entries(grouped).map(([type, docs]) => {
+                              const latest = docs[0]
+                              const history = docs.slice(1)
+                              const isHistoryOpen = expandedDocType === type
+
+                              return (
+                                <div key={type} style={{ marginBottom: 16, border: '1px solid #e4e4e7', borderRadius: 10, overflow: 'hidden' }}>
+                                  {/* Type header */}
+                                  <div style={{ padding: '10px 14px', background: '#f8fafc', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                      <span style={{ fontWeight: 700, fontSize: 14, color: '#1e293b' }}>{DOC_LABELS[type] || type}</span>
+                                      <span style={{ fontSize: 11, color: '#a1a1aa' }}>{docs.length} {docs.length > 1 ? 'גרסאות' : 'גרסה'}</span>
+                                    </div>
+                                    {latest.status === 'active' && latest.version && (
+                                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: '#f0fdf4', color: '#22c55e', border: '1px solid #bbf7d0' }}>
+                                        🔒 גרסה סופית v{latest.version}
+                                      </span>
+                                    )}
                                   </div>
+
+                                  {/* Latest / current version */}
+                                  <div style={{ padding: '12px 14px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <span className={`dpo-doc-badge ${latest.status === 'active' ? 'active' : 'pending'}`}>
+                                          {latest.status === 'active' ? '✓ פעיל' : latest.status === 'draft' ? '📝 טיוטה' : '⏳ ממתין'}
+                                        </span>
+                                        <span style={{ fontSize: 11, color: '#a1a1aa' }}>{new Date(latest.created_at).toLocaleDateString('he-IL')}</span>
+                                        {latest.version && <span style={{ fontSize: 11, color: '#4f46e5', fontWeight: 600 }}>v{latest.version}</span>}
+                                      </div>
+                                      <div className="dpo-doc-actions">
+                                        {latest.status !== 'active' && (
+                                          <button className="dpo-btn-sm dpo-btn-green" disabled={modalDocBusy} onClick={() => modalFinalizeDoc(latest.id, (latest.version || 0) + 1)}>
+                                            🔒 סמן סופי
+                                          </button>
+                                        )}
+                                        {latest.status !== 'active' && (
+                                          <button className="dpo-btn-sm dpo-btn-green" disabled={modalDocBusy} onClick={() => modalApproveDoc(latest.id)}>✓ אשר</button>
+                                        )}
+                                        <button className="dpo-btn-sm" onClick={() => {
+                                          if (modalEditDoc === latest.id) { setModalEditDoc(null) }
+                                          else { setModalEditDoc(latest.id); setModalEditContent(latest.content || '') }
+                                        }}>
+                                          {modalEditDoc === latest.id ? '▲ סגור' : '✏️ ערוך'}
+                                        </button>
+                                        {confirmDeleteId === latest.id ? (
+                                          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                            <button className="dpo-btn-sm" style={{ color: '#ef4444', borderColor: '#ef4444' }} disabled={modalDocBusy} onClick={() => modalDeleteDoc(latest.id)}>✓ אישור</button>
+                                            <button className="dpo-btn-sm" onClick={() => setConfirmDeleteId(null)}>ביטול</button>
+                                          </div>
+                                        ) : (
+                                          <button className="dpo-btn-sm" style={{ color: '#ef4444' }} onClick={() => setConfirmDeleteId(latest.id)} title="מחיקה">🗑️</button>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Edit or view */}
+                                    {modalEditDoc === latest.id ? (
+                                      <div>
+                                        <textarea className="dpo-doc-editor" value={modalEditContent} onChange={e => setModalEditContent(e.target.value)} rows={12} />
+                                        <div className="dpo-doc-edit-btns">
+                                          <button className="dpo-btn-primary" disabled={modalDocBusy} onClick={() => modalEditSave(latest.id)}>
+                                            {modalDocBusy ? '...' : '💾 שמור ואשר'}
+                                          </button>
+                                          <button className="dpo-btn-sm" onClick={() => setModalEditDoc(null)}>ביטול</button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div style={{
+                                        padding: '10px 14px', background: '#fafafa', borderRadius: 8,
+                                        fontSize: 13, lineHeight: 1.7, maxHeight: 200, overflowY: 'auto', whiteSpace: 'pre-wrap',
+                                        border: '1px solid #f0f0f0'
+                                      }}>
+                                        {(latest.content || '').slice(0, 800)}{latest.content?.length > 800 ? '...' : ''}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Version history toggle */}
+                                  {history.length > 0 && (
+                                    <div style={{ borderTop: '1px solid #f0f0f0' }}>
+                                      <button
+                                        onClick={() => setExpandedDocType(isHistoryOpen ? null : type)}
+                                        style={{
+                                          width: '100%', padding: '8px 14px', border: 'none', background: '#f8fafc',
+                                          cursor: 'pointer', fontSize: 12, color: '#4f46e5', fontWeight: 600,
+                                          fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6
+                                        }}
+                                      >
+                                        <span>{isHistoryOpen ? '▼' : '◀'}</span>
+                                        <span>היסטוריה — {history.length} גרסאות קודמות</span>
+                                      </button>
+
+                                      {isHistoryOpen && (
+                                        <div style={{ padding: '0 14px 12px' }}>
+                                          {history.map((d: any, idx: number) => (
+                                            <div key={d.id} style={{
+                                              padding: '8px 10px', marginTop: 6, background: '#fafafa', borderRadius: 6,
+                                              border: '1px solid #f0f0f0', opacity: 0.8
+                                            }}>
+                                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 4 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                  <span style={{ fontSize: 11, color: '#a1a1aa' }}>
+                                                    {new Date(d.created_at).toLocaleDateString('he-IL')}
+                                                  </span>
+                                                  <span style={{ fontSize: 10, color: '#71717a', background: '#f4f4f5', padding: '1px 6px', borderRadius: 3 }}>
+                                                    {d.status === 'active' ? 'אושר' : d.status === 'draft' ? 'טיוטה' : d.status}
+                                                  </span>
+                                                  {d.version && <span style={{ fontSize: 10, color: '#4f46e5' }}>v{d.version}</span>}
+                                                </div>
+                                                <div style={{ display: 'flex', gap: 4 }}>
+                                                  <button className="dpo-btn-sm" onClick={() => {
+                                                    if (modalEditDoc === d.id) { setModalEditDoc(null) }
+                                                    else { setModalEditDoc(d.id); setModalEditContent(d.content || '') }
+                                                  }} style={{ fontSize: 10, padding: '2px 6px' }}>
+                                                    {modalEditDoc === d.id ? '▲' : '👁️'}
+                                                  </button>
+                                                  {confirmDeleteId === d.id ? (
+                                                    <div style={{ display: 'flex', gap: 2 }}>
+                                                      <button className="dpo-btn-sm" style={{ color: '#ef4444', borderColor: '#ef4444', fontSize: 10, padding: '2px 6px' }} disabled={modalDocBusy} onClick={() => modalDeleteDoc(d.id)}>✓</button>
+                                                      <button className="dpo-btn-sm" style={{ fontSize: 10, padding: '2px 6px' }} onClick={() => setConfirmDeleteId(null)}>✕</button>
+                                                    </div>
+                                                  ) : (
+                                                    <button className="dpo-btn-sm" style={{ color: '#ef4444', fontSize: 10, padding: '2px 6px' }} onClick={() => setConfirmDeleteId(d.id)}>🗑️</button>
+                                                  )}
+                                                </div>
+                                              </div>
+                                              {modalEditDoc === d.id && (
+                                                <div style={{ marginTop: 6 }}>
+                                                  <textarea className="dpo-doc-editor" value={modalEditContent} onChange={e => setModalEditContent(e.target.value)} rows={8} style={{ minHeight: 120 }} />
+                                                  <div className="dpo-doc-edit-btns">
+                                                    <button className="dpo-btn-primary" disabled={modalDocBusy} onClick={() => modalEditSave(d.id)} style={{ fontSize: 12, padding: '5px 14px' }}>
+                                                      {modalDocBusy ? '...' : '💾 שמור'}
+                                                    </button>
+                                                    <button className="dpo-btn-sm" onClick={() => setModalEditDoc(null)}>ביטול</button>
+                                                  </div>
+                                                </div>
+                                              )}
+                                              {modalEditDoc !== d.id && (
+                                                <div style={{ fontSize: 12, color: '#71717a', lineHeight: 1.5, maxHeight: 60, overflow: 'hidden' }}>
+                                                  {(d.content || '').slice(0, 150)}...
+                                                </div>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
-                              ) : (
-                                <div style={{ 
-                                  padding: '10px 14px', background: '#fafafa', borderRadius: 8, 
-                                  fontSize: 13, lineHeight: 1.7, maxHeight: 200, overflowY: 'auto', whiteSpace: 'pre-wrap',
-                                  marginTop: 8, border: '1px solid #f0f0f0'
-                                }}>
-                                  {(d.content || '').slice(0, 800)}{d.content?.length > 800 ? '...' : ''}
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                              )
+                            })
+                          })()}
                         </div>
                       )}
 
