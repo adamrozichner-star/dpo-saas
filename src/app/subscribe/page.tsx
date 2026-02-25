@@ -92,6 +92,23 @@ function SubscribeContent() {
   const [error, setError] = useState<string | null>(null)
   const [showEnterpriseModal, setShowEnterpriseModal] = useState(false)
 
+  // Reset processing state if user navigates back from payment page
+  useEffect(() => {
+    // On mount: always start fresh (covers browser remount on back)
+    setIsProcessing(false)
+    setSelectedPlan(null)
+    
+    // On bfcache restore (covers Safari/Chrome back)
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        setIsProcessing(false)
+        setSelectedPlan(null)
+      }
+    }
+    window.addEventListener('pageshow', handlePageShow)
+    return () => window.removeEventListener('pageshow', handlePageShow)
+  }, [])
+
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login?redirect=/subscribe')
