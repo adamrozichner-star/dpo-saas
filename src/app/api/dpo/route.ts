@@ -1131,6 +1131,39 @@ export async function POST(request: NextRequest) {
             duration_seconds: 60
           })
         } catch (e) { /* ignore */ }
+
+        // Auto-resolve review queue items when ALL org docs are active
+        try {
+          const { data: allDocs } = await supabase
+            .from('documents')
+            .select('id, status')
+            .eq('org_id', doc.org_id)
+
+          const allActive = allDocs && allDocs.length > 0 && allDocs.every((d: any) => d.status === 'active')
+
+          if (allActive) {
+            // Find pending review queue items for this org and resolve them
+            const { data: pendingReviews } = await supabase
+              .from('dpo_queue')
+              .select('id')
+              .eq('org_id', doc.org_id)
+              .eq('type', 'review')
+              .in('status', ['pending', 'in_progress'])
+
+            if (pendingReviews && pendingReviews.length > 0) {
+              for (const qi of pendingReviews) {
+                await supabase
+                  .from('dpo_queue')
+                  .update({
+                    status: 'resolved',
+                    resolved_at: new Date().toISOString(),
+                    ai_draft_response: 'כל המסמכים נסקרו ואושרו.'
+                  })
+                  .eq('id', qi.id)
+              }
+            }
+          }
+        } catch (e) { /* ignore auto-resolve errors */ }
       }
 
       return NextResponse.json({ success: true })
@@ -1157,6 +1190,24 @@ export async function POST(request: NextRequest) {
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
+
+      // Auto-resolve review queue items when all org docs are active
+      try {
+        const { data: doc } = await supabase.from('documents').select('org_id').eq('id', documentId).single()
+        if (doc) {
+          const { data: allDocs } = await supabase.from('documents').select('id, status').eq('org_id', doc.org_id)
+          const allActive = allDocs && allDocs.length > 0 && allDocs.every((d: any) => d.status === 'active')
+          if (allActive) {
+            const { data: pendingReviews } = await supabase
+              .from('dpo_queue').select('id').eq('org_id', doc.org_id).eq('type', 'review').in('status', ['pending', 'in_progress'])
+            if (pendingReviews?.length) {
+              for (const qi of pendingReviews) {
+                await supabase.from('dpo_queue').update({ status: 'resolved', resolved_at: new Date().toISOString(), ai_draft_response: 'כל המסמכים נסקרו ואושרו.' }).eq('id', qi.id)
+              }
+            }
+          }
+        }
+      } catch (e) { /* ignore */ }
 
       return NextResponse.json({ success: true })
     }
