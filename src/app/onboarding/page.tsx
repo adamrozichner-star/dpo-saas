@@ -82,6 +82,35 @@ function OnboardingContent() {
     }
   }, [loading, user, router])
 
+  // Guard: if user already completed onboarding, redirect to dashboard
+  useEffect(() => {
+    if (!user || !supabase) return
+    const checkExisting = async () => {
+      try {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('org_id, organizations(id)')
+          .eq('auth_user_id', user.id)
+          .single()
+
+        if (userData?.org_id) {
+          const { data: profile } = await supabase
+            .from('organization_profiles')
+            .select('id')
+            .eq('org_id', userData.org_id)
+            .maybeSingle()
+
+          if (profile) {
+            // Already onboarded — go to dashboard
+            router.push('/dashboard')
+            return
+          }
+        }
+      } catch {}
+    }
+    checkExisting()
+  }, [user, supabase])
+
   useEffect(() => {
     const tier = searchParams.get('tier')
     if (tier === 'basic' || tier === 'extended' || tier === 'enterprise') {
@@ -140,8 +169,7 @@ function OnboardingContent() {
   }
 
   const canProceed = () => {
-    if (currentStep === totalSteps - 1) return true // DPO intro step
-    if (!currentStepData || !currentStepData.questions) return false
+    if (!currentStepData || !currentStepData.questions) return true // non-question step
     return currentStepData.questions.every((q: OnboardingQuestion) => {
       if (!q.required) return true
       const answer = getAnswer(q.id)
