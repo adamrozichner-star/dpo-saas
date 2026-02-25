@@ -245,14 +245,14 @@ export default function DPODashboard() {
 
   const approveDoc = async (docId: string) => {
     setDocBusy(true)
-    try { await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'approve_document', documentId: docId }) }); toast('✅ אושר'); if (expandedItem) loadCtx(expandedItem); loadData() }
+    try { await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'approve_document', documentId: docId }) }); toast('✅ אושר'); if (expandedItem) loadCtx(expandedItem); loadAll() }
     catch { toast('שגיאה', 'error') }
     setDocBusy(false)
   }
 
   const editDoc = async (docId: string) => {
     setDocBusy(true)
-    try { await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'edit_document', documentId: docId, content: editContent }) }); toast('✅ עודכן ואושר'); setEditingDoc(null); if (expandedItem) loadCtx(expandedItem); loadData() }
+    try { await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'edit_document', documentId: docId, content: editContent }) }); toast('✅ עודכן ואושר'); setEditingDoc(null); if (expandedItem) loadCtx(expandedItem); loadAll() }
     catch { toast('שגיאה', 'error') }
     setDocBusy(false)
   }
@@ -272,7 +272,7 @@ export default function DPODashboard() {
     toast('✅ כל המסמכים אושרו')
     if (expandedItem) loadCtx(expandedItem)
     // Reload queue — API auto-resolves review items when all docs active
-    loadData()
+    loadAll()
     setDocBusy(false)
   }
 
