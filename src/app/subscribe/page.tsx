@@ -224,9 +224,14 @@ function SubscribeContent() {
             </div>
             <span className="font-bold text-xl" style={{color: '#1e40af'}}>MyDPO</span>
           </Link>
-          <Link href="/dashboard">
-            <Button variant="ghost">חזרה ללוח הבקרה</Button>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/onboarding">
+              <Button variant="ghost" className="text-sm">צפייה בתוצאות הסיווג</Button>
+            </Link>
+            <Link href="/dashboard">
+              <Button variant="ghost">חזרה ללוח הבקרה</Button>
+            </Link>
+          </div>
         </div>
       </header>
 
