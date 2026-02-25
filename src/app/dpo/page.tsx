@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/Toast'
 
 // =============================================
-// CONFIG — Change DPO name here
+// CONFIG
 // =============================================
 const DPO_NAME = 'עו"ד דנה כהן'
-const MONTHLY_QUOTA_HOURS = 12
 
 // =============================================
 // TYPES
@@ -55,6 +54,25 @@ const PROFILE_LABELS: Record<string, string> = {
   has_cameras: 'מצלמות', processes_minors: 'קטינים', website_leads: 'לידים באתר',
   suppliers_count: 'ספקים', cv_retention: 'קורות חיים'
 }
+
+const REMINDERS = [
+  { id: 'annual-review', emoji: '📅', title: 'סקירה שנתית — עדכון מסמכים', freq: 'פעם בשנה' },
+  { id: 'employee-training', emoji: '🎓', title: 'הדרכת עובדים — פרטיות ואבטחה', freq: 'פעם בשנה' },
+  { id: 'supplier-review', emoji: '🔗', title: 'בדיקת ספקים ומעבדי מידע', freq: 'פעם ב-6 חודשים' },
+  { id: 'database-registration', emoji: '🗄️', title: 'עדכון רישום מאגרי מידע', freq: 'בעת שינוי' },
+  { id: 'data-retention', emoji: '🗑️', title: 'מחיקת מידע עודף', freq: 'פעם ברבעון' },
+  { id: 'privacy-policy-website', emoji: '🌐', title: 'בדיקת מדיניות פרטיות באתר', freq: 'פעם ברבעון' },
+  { id: 'incident-drill', emoji: '🚨', title: 'תרגיל אירוע אבטחה', freq: 'פעם בשנה' },
+  { id: 'consent-audit', emoji: '✅', title: 'בדיקת תקינות הסכמות', freq: 'פעם ברבעון' },
+]
+
+const GUIDELINES = [
+  { emoji: '📋', title: 'פרסום מדיניות פרטיות באתר', desc: 'ודאו שהמדיניות נגישה בפוטר של כל עמוד' },
+  { emoji: '✍️', title: 'חתימה על כתב מינוי DPO', desc: 'מסמך רשמי שחייב להיות חתום ע"י מנכ"ל' },
+  { emoji: '📢', title: 'הפצת נוהל אבטחה לעובדים', desc: 'כל עובד חייב לקבל ולחתום על הנוהל' },
+  { emoji: '🗄️', title: 'רישום מאגרי מידע', desc: 'דיווח לרשם מאגרי המידע על כל מאגר פעיל' },
+  { emoji: '📊', title: 'עדכון מפת עיבוד (ROPA)', desc: 'תיעוד של כל פעילות עיבוד נתונים בארגון' },
+]
 
 function timeAgo(d: string): string {
   if (!d) return ''
@@ -114,10 +132,26 @@ export default function DPODashboard() {
   const [showAllPending, setShowAllPending] = useState(false)
   const [showAllResolved, setShowAllResolved] = useState(false)
   const [selectedOrg, setSelectedOrg] = useState<any>(null)
-  const [orgTab, setOrgTab] = useState<'overview'|'docs'|'activity'|'profile'>('overview')
+  const [orgTab, setOrgTab] = useState<'overview'|'docs'|'messages'|'reminders'|'guidelines'|'activity'|'profile'>('overview')
   const [composeMsg, setComposeMsg] = useState('')
   const [composeSending, setComposeSending] = useState(false)
   const [composeSent, setComposeSent] = useState(false)
+
+  // NEW: collapsible sections
+  const [pendingCollapsed, setPendingCollapsed] = useState(false)
+  const [resolvedCollapsed, setResolvedCollapsed] = useState(false)
+
+  // NEW: type filter for inbox
+  const [typeFilter, setTypeFilter] = useState<string>('all')
+
+  // NEW: org pagination
+  const [orgPage, setOrgPage] = useState(0)
+  const ORGS_PER_PAGE = 50
+
+  // NEW: org modal doc editing
+  const [modalEditDoc, setModalEditDoc] = useState<string | null>(null)
+  const [modalEditContent, setModalEditContent] = useState('')
+  const [modalDocBusy, setModalDocBusy] = useState(false)
 
   // =============================================
   // AUTH & FETCH
@@ -168,6 +202,9 @@ export default function DPODashboard() {
     try {
       const r = await dpoFetch(`/api/dpo?action=org_detail&org_id=${orgId}`)
       setSelectedOrg(await r.json())
+      setOrgTab('overview')
+      setComposeMsg(''); setComposeSent(false)
+      setModalEditDoc(null)
     } catch {}
   }
 
@@ -178,12 +215,9 @@ export default function DPODashboard() {
       await dpoFetch('/api/messages', { 
         method: 'POST', 
         body: JSON.stringify({ 
-          action: 'create_thread', 
-          orgId, 
+          action: 'create_thread', orgId, 
           subject: `הודעה מהממונה — ${DPO_NAME}`, 
-          content: composeMsg, 
-          senderType: 'dpo', 
-          senderName: DPO_NAME 
+          content: composeMsg, senderType: 'dpo', senderName: DPO_NAME 
         }) 
       })
       setComposeSent(true)
@@ -237,17 +271,42 @@ export default function DPODashboard() {
     setDocBusy(false)
   }
 
+  // Modal doc edit + approve
+  const modalEditSave = async (docId: string) => {
+    setModalDocBusy(true)
+    try { 
+      await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'edit_document', documentId: docId, content: modalEditContent }) })
+      toast('✅ עודכן ואושר')
+      setModalEditDoc(null)
+      loadOrgDetail(selectedOrg?.organization?.id)
+    }
+    catch { toast('שגיאה', 'error') }
+    setModalDocBusy(false)
+  }
+
+  const modalApproveDoc = async (docId: string) => {
+    setModalDocBusy(true)
+    try {
+      await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'approve_document', documentId: docId }) })
+      toast('✅ אושר')
+      loadOrgDetail(selectedOrg?.organization?.id)
+    }
+    catch { toast('שגיאה', 'error') }
+    setModalDocBusy(false)
+  }
+
   // =============================================
   // DERIVED
   // =============================================
-  const pending = queue.filter(i => i.status === 'pending' || i.status === 'in_progress')
+  const allPending = queue.filter(i => i.status === 'pending' || i.status === 'in_progress')
+  const pending = typeFilter === 'all' ? allPending : allPending.filter(i => i.type === typeFilter)
   const resolved = queue.filter(i => i.status === 'resolved').sort((a, b) => new Date(b.resolved_at || b.created_at).getTime() - new Date(a.resolved_at || a.created_at).getTime())
-  // Stats — handle field name differences from API
   const resolvedCount = stats?.resolved_this_month || stats?.total_resolved_this_month || 0
-  const avgTimeSec = stats?.avg_time_seconds || 0
-  const totalMinutes = (resolvedCount * avgTimeSec) / 60
-  const mH = totalMinutes > 0 ? (totalMinutes / 60).toFixed(1) : '0'
-  const qPct = totalMinutes > 0 ? Math.min(100, Math.round((totalMinutes / 60 / MONTHLY_QUOTA_HOURS) * 100)) : 0
+
+  // Org pagination
+  const filteredOrgs = orgs.filter(o => !orgSearch || o.name?.toLowerCase().includes(orgSearch.toLowerCase()))
+  const pagedOrgs = filteredOrgs.slice(0, (orgPage + 1) * ORGS_PER_PAGE)
+  const hasMoreOrgs = pagedOrgs.length < filteredOrgs.length
 
   // =============================================
   // RENDER HELPERS
@@ -274,7 +333,7 @@ export default function DPODashboard() {
                 <div className="dpo-doc-actions">
                   <button className="dpo-btn-sm dpo-btn-green" disabled={docBusy} onClick={() => approveDoc(doc.id)}>✓ אשר</button>
                   <button className="dpo-btn-sm" onClick={() => { setEditingDoc(doc.id); setEditContent(doc.content || ''); setExpandedDoc(doc.id) }}>✏️ ערוך</button>
-                  <button className="dpo-btn-sm" onClick={() => { setRegenId(regenId === doc.id ? null : doc.id); setRegenFeedback('') }}>🔄</button>
+                  <button className="dpo-btn-sm" onClick={() => { setRegenId(regenId === doc.id ? null : doc.id); setRegenFeedback('') }} title="צור מחדש">🔄</button>
                 </div>
               )}
             </div>
@@ -337,13 +396,38 @@ export default function DPODashboard() {
           </div>
           <div className="dpo-nav-left">
             <button className={tab === 'inbox' ? 'dpo-tab active' : 'dpo-tab'} onClick={() => setTab('inbox')}>
-              תיבת דואר {pending.length > 0 && <span className="dpo-badge">{pending.length}</span>}
+              תיבת דואר {allPending.length > 0 && <span className="dpo-badge">{allPending.length}</span>}
             </button>
             <button className={tab === 'orgs' ? 'dpo-tab active' : 'dpo-tab'} onClick={() => setTab('orgs')}>
               ארגונים ({orgs.length})
             </button>
-            <button className="dpo-tab" onClick={loadAll}>🔄</button>
-            <span className="dpo-time-pill">⏱ {mH}h / {MONTHLY_QUOTA_HOURS}h</span>
+
+            {/* Type filter — only in inbox view */}
+            {tab === 'inbox' && (
+              <select 
+                value={typeFilter} 
+                onChange={e => setTypeFilter(e.target.value)}
+                className="dpo-filter-select"
+              >
+                <option value="all">הכל</option>
+                {Object.entries(TYPE_MAP).map(([key, { emoji, label }]) => (
+                  <option key={key} value={key}>{emoji} {label}</option>
+                ))}
+              </select>
+            )}
+
+            {/* Refresh button — redesigned */}
+            <button 
+              className="dpo-refresh-btn" 
+              onClick={loadAll}
+              title="רענן נתונים"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+              </svg>
+            </button>
+
             <button className="dpo-logout" onClick={() => { sessionStorage.removeItem('dpo_session_token'); sessionStorage.removeItem('dpo_session_expires'); router.push('/dpo/login') }}>יציאה</button>
           </div>
         </nav>
@@ -351,127 +435,123 @@ export default function DPODashboard() {
         <main className="dpo-main">
           {tab === 'inbox' && (
             <>
-              {/* KPIs */}
+              {/* KPIs — 3 only (removed timer) */}
               <div className="dpo-kpis">
                 <div className="dpo-kpi"><div className="dpo-kpi-num" style={{ color: '#4f46e5' }}>{orgs.length}</div><div className="dpo-kpi-label">ארגונים</div></div>
-                <div className="dpo-kpi"><div className="dpo-kpi-num" style={{ color: '#ef4444' }}>{pending.length}</div><div className="dpo-kpi-label">ממתין</div></div>
+                <div className="dpo-kpi"><div className="dpo-kpi-num" style={{ color: '#ef4444' }}>{allPending.length}</div><div className="dpo-kpi-label">ממתין</div></div>
                 <div className="dpo-kpi"><div className="dpo-kpi-num" style={{ color: '#22c55e' }}>{resolvedCount}</div><div className="dpo-kpi-label">טופלו</div></div>
-                <div className="dpo-kpi">
-                  <div className="dpo-kpi-num" style={{ color: '#4f46e5' }}>{mH}h</div>
-                  <div className="dpo-kpi-label">שעון DPO</div>
-                  <div className="dpo-kpi-bar"><div className="dpo-kpi-fill" style={{ width: `${qPct}%` }} /></div>
-                </div>
               </div>
 
-              {/* Pending */}
-              {pending.length > 0 && (
+              {/* Pending — collapsible */}
+              {allPending.length > 0 && (
                 <section className="dpo-section">
-                  <h2 className="dpo-section-title">🔴 דורש טיפול ({pending.length})</h2>
-                  {(showAllPending ? pending : pending.slice(0, 10)).map(item => {
-                    const cfg = TYPE_MAP[item.type] || { label: item.type, emoji: '📌', accent: '#71717a' }
-                    const open = expandedItem === item.id
-                    return (
-                      <div key={item.id} className={`dpo-card ${open ? 'open' : ''}`}>
-                        <div className="dpo-card-head" onClick={() => {
-                          if (open) { setExpandedItem(null); return }
-                          setExpandedItem(item.id); setEditedResponse(item.ai_draft_response || ''); setEditingResp(false); loadCtx(item.id)
-                        }}>
-                          <div className="dpo-card-info">
-                            <span className="dpo-card-tag" style={{ color: cfg.accent }}>{cfg.emoji} {cfg.label}</span>
-                            <div className="dpo-card-title">{item.title}</div>
-                            <div className="dpo-card-meta">{item.organizations?.name} · {timeAgo(item.created_at)}</div>
-                          </div>
-                          <span className="dpo-card-chevron">{open ? '▲' : '▼'}</span>
-                        </div>
+                  <div className="dpo-section-header" onClick={() => setPendingCollapsed(!pendingCollapsed)}>
+                    <h2 className="dpo-section-title">🔴 דורש טיפול ({pending.length}{typeFilter !== 'all' ? ` מתוך ${allPending.length}` : ''})</h2>
+                    <span className="dpo-collapse-icon">{pendingCollapsed ? '▶' : '▼'}</span>
+                  </div>
+                  {!pendingCollapsed && (
+                    <>
+                      {(showAllPending ? pending : pending.slice(0, 10)).map(item => {
+                        const cfg = TYPE_MAP[item.type] || { label: item.type, emoji: '📌', accent: '#71717a' }
+                        const open = expandedItem === item.id
+                        return (
+                          <div key={item.id} className={`dpo-card ${open ? 'open' : ''}`}>
+                            <div className="dpo-card-head" onClick={() => {
+                              if (open) { setExpandedItem(null); return }
+                              setExpandedItem(item.id); setEditedResponse(item.ai_draft_response || ''); setEditingResp(false); loadCtx(item.id)
+                            }}>
+                              <div className="dpo-card-info">
+                                <span className="dpo-card-tag" style={{ color: cfg.accent }}>{cfg.emoji} {cfg.label}</span>
+                                <div className="dpo-card-title">{item.title}</div>
+                                <div className="dpo-card-meta">{item.organizations?.name} · {timeAgo(item.created_at)}</div>
+                              </div>
+                              <span className="dpo-card-chevron">{open ? '▲' : '▼'}</span>
+                            </div>
 
-                        {open && (
-                          <div className="dpo-card-body">
-                            {loadingCtx ? <div className="dpo-spinner" style={{ margin: '20px auto' }} /> : (
-                              <>
-                                {/* Org chips */}
-                                {itemContext && (
-                                  <div className="dpo-chips">
-                                    <span className="dpo-chip">ציון: {itemContext.item?.organizations?.compliance_score || '—'}</span>
-                                    <span className="dpo-chip">מסמכים: {itemContext.documents?.length || 0}</span>
-                                  </div>
-                                )}
-
-                                {/* Chat messages */}
-                                {itemContext?.messages?.length > 0 && (
-                                  <div className="dpo-bubbles">
-                                    <span className="dpo-sub">💬 שיחה</span>
-                                    {itemContext.messages.slice(-4).map((m: any, i: number) => (
-                                      <div key={i} className={`dpo-bubble ${m.role === 'user' ? 'user' : 'ai'}`}>
-                                        <div className="dpo-bubble-role">{m.role === 'user' ? '👤 לקוח' : '🤖 AI'}</div>
-                                        {(m.content || '').slice(0, 200)}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-
-                                {/* AI summary fallback */}
-                                {item.ai_summary && !itemContext?.messages?.length && (() => {
-                                  const p = parseChat(item.ai_summary)
-                                  if (p.isChat) return (
-                                    <div className="dpo-bubbles">
-                                      <span className="dpo-sub">💬 שיחה</span>
-                                      {p.msgs.map((m, i) => (
-                                        <div key={i} className={`dpo-bubble ${m.role === 'user' ? 'user' : 'ai'}`}><div className="dpo-bubble-role">{m.role === 'user' ? '👤' : '🤖'}</div>{m.text.slice(0, 200)}</div>
-                                      ))}
-                                    </div>
-                                  )
-                                  return <div className="dpo-ai-box"><span className="dpo-ai-label">✦ ניתוח AI</span>{item.ai_summary.slice(0, 300)}</div>
-                                })()}
-
-                                {/* Doc review */}
-                                {item.type === 'review' && renderDocReview(itemContext?.documents || [])}
-
-                                {/* Response draft (non-review) */}
-                                {item.type !== 'review' && (
-                                  <div style={{ marginTop: 14 }}>
-                                    <span className="dpo-sub">✏️ תשובה</span>
-                                    {editingResp ? (
-                                      <textarea className="dpo-textarea" value={editedResponse} onChange={e => setEditedResponse(e.target.value)} rows={4} autoFocus />
-                                    ) : (
-                                      <div className="dpo-draft" onClick={() => setEditingResp(true)}>
-                                        {item.ai_draft_response?.slice(0, 300) || 'לחץ לכתוב תשובה...'}
+                            {open && (
+                              <div className="dpo-card-body">
+                                {loadingCtx ? <div className="dpo-spinner" style={{ margin: '20px auto' }} /> : (
+                                  <>
+                                    {itemContext && (
+                                      <div className="dpo-chips">
+                                        <span className="dpo-chip">ציון: {itemContext.item?.organizations?.compliance_score || '—'}</span>
+                                        <span className="dpo-chip">מסמכים: {itemContext.documents?.length || 0}</span>
                                       </div>
                                     )}
-                                  </div>
-                                )}
 
-                                {/* Actions */}
-                                <div className="dpo-actions">
-                                  {item.type === 'review' ? (
-                                    <button className="dpo-btn-primary" disabled={resolving} onClick={() => resolveItem(item, 'approved_ai')}>{resolving ? '...' : '✓ סיים סקירה ועדכן לקוח'}</button>
-                                  ) : editingResp ? (
-                                    <>
-                                      <button className="dpo-btn-primary" disabled={resolving} onClick={() => resolveItem(item, 'edited')}>{resolving ? '...' : '✓ שלח'}</button>
-                                      <button className="dpo-btn-secondary" onClick={() => setEditingResp(false)}>ביטול</button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <button className="dpo-btn-primary" disabled={resolving} onClick={() => resolveItem(item, 'approved_ai')}>{resolving ? '...' : '✓ אשר ושלח'}</button>
-                                      <button className="dpo-btn-secondary" onClick={() => setEditingResp(true)}>✏️ ערוך</button>
-                                    </>
-                                  )}
-                                </div>
-                              </>
+                                    {itemContext?.messages?.length > 0 && (
+                                      <div className="dpo-bubbles">
+                                        <span className="dpo-sub">💬 שיחה</span>
+                                        {itemContext.messages.slice(-4).map((m: any, i: number) => (
+                                          <div key={i} className={`dpo-bubble ${m.role === 'user' ? 'user' : 'ai'}`}>
+                                            <div className="dpo-bubble-role">{m.role === 'user' ? '👤 לקוח' : '🤖 AI'}</div>
+                                            {(m.content || '').slice(0, 200)}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {item.ai_summary && !itemContext?.messages?.length && (() => {
+                                      const p = parseChat(item.ai_summary)
+                                      if (p.isChat) return (
+                                        <div className="dpo-bubbles">
+                                          <span className="dpo-sub">💬 שיחה</span>
+                                          {p.msgs.map((m, i) => (
+                                            <div key={i} className={`dpo-bubble ${m.role === 'user' ? 'user' : 'ai'}`}><div className="dpo-bubble-role">{m.role === 'user' ? '👤' : '🤖'}</div>{m.text.slice(0, 200)}</div>
+                                          ))}
+                                        </div>
+                                      )
+                                      return <div className="dpo-ai-box"><span className="dpo-ai-label">✦ ניתוח AI</span>{item.ai_summary.slice(0, 300)}</div>
+                                    })()}
+
+                                    {item.type === 'review' && renderDocReview(itemContext?.documents || [])}
+
+                                    {item.type !== 'review' && (
+                                      <div style={{ marginTop: 14 }}>
+                                        <span className="dpo-sub">✏️ תשובה</span>
+                                        {editingResp ? (
+                                          <textarea className="dpo-textarea" value={editedResponse} onChange={e => setEditedResponse(e.target.value)} rows={4} autoFocus />
+                                        ) : (
+                                          <div className="dpo-draft" onClick={() => setEditingResp(true)}>
+                                            {item.ai_draft_response?.slice(0, 300) || 'לחץ לכתוב תשובה...'}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    <div className="dpo-actions">
+                                      {item.type === 'review' ? (
+                                        <button className="dpo-btn-primary" disabled={resolving} onClick={() => resolveItem(item, 'approved_ai')}>{resolving ? '...' : '✓ סיים סקירה ועדכן לקוח'}</button>
+                                      ) : editingResp ? (
+                                        <>
+                                          <button className="dpo-btn-primary" disabled={resolving} onClick={() => resolveItem(item, 'edited')}>{resolving ? '...' : '✓ שלח'}</button>
+                                          <button className="dpo-btn-secondary" onClick={() => setEditingResp(false)}>ביטול</button>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <button className="dpo-btn-primary" disabled={resolving} onClick={() => resolveItem(item, 'approved_ai')}>{resolving ? '...' : '✓ אשר ושלח'}</button>
+                                          <button className="dpo-btn-secondary" onClick={() => setEditingResp(true)}>✏️ ערוך</button>
+                                        </>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                  {!showAllPending && pending.length > 10 && (
-                    <button className="dpo-show-more" onClick={() => setShowAllPending(true)}>
-                      הצג עוד {pending.length - 10} פריטים
-                    </button>
+                        )
+                      })}
+                      {!showAllPending && pending.length > 10 && (
+                        <button className="dpo-show-more" onClick={() => setShowAllPending(true)}>
+                          הצג עוד {pending.length - 10} פריטים
+                        </button>
+                      )}
+                    </>
                   )}
                 </section>
               )}
 
-              {pending.length === 0 && (
+              {allPending.length === 0 && (
                 <div className="dpo-empty">
                   <div style={{ fontSize: 40 }}>✅</div>
                   <div className="dpo-empty-title">אין פריטים ממתינים</div>
@@ -479,91 +559,85 @@ export default function DPODashboard() {
                 </div>
               )}
 
+              {/* Resolved — collapsible */}
               {resolved.length > 0 && (
                 <section className="dpo-section">
-                  <h2 className="dpo-section-title">✅ הושלם לאחרונה ({resolved.length})</h2>
-                  {(showAllResolved ? resolved : resolved.slice(0, 12)).map(item => {
-                    const cfg = TYPE_MAP[item.type] || { label: item.type, emoji: '📌', accent: '#71717a' }
-                    const isOpen = expandedItem === `done-${item.id}`
-                    return (
-                      <div key={item.id} className={`dpo-card ${isOpen ? 'open' : ''}`} style={{ opacity: isOpen ? 1 : 0.85 }}>
-                        <div className="dpo-card-head" onClick={() => {
-                          if (isOpen) { setExpandedItem(null); return }
-                          setExpandedItem(`done-${item.id}`); loadCtx(item.id)
-                        }}>
-                          <div className="dpo-card-info">
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={{ color: '#22c55e', fontWeight: 700 }}>✓</span>
-                              <span className="dpo-card-title" style={{ fontSize: 14 }}>{item.title}</span>
-                            </div>
-                            <div className="dpo-card-meta">{item.organizations?.name} · {timeAgo(item.resolved_at || item.created_at)} · <span style={{ color: cfg.accent }}>{cfg.label}</span></div>
-                          </div>
-                          <span className="dpo-card-chevron">{isOpen ? '▲' : '▼'}</span>
-                        </div>
-                        {isOpen && (
-                          <div className="dpo-card-body">
-                            {loadingCtx ? <div className="dpo-spinner" style={{ margin: '20px auto' }} /> : (
-                              <>
-                                {/* Resolution details */}
-                                <div className="dpo-chips">
-                                  <span className="dpo-chip">🕐 {item.resolved_at ? new Date(item.resolved_at).toLocaleDateString('he-IL') : '—'}</span>
-                                  <span className="dpo-chip">{cfg.emoji} {cfg.label}</span>
+                  <div className="dpo-section-header" onClick={() => setResolvedCollapsed(!resolvedCollapsed)}>
+                    <h2 className="dpo-section-title">✅ הושלם לאחרונה ({resolved.length})</h2>
+                    <span className="dpo-collapse-icon">{resolvedCollapsed ? '▶' : '▼'}</span>
+                  </div>
+                  {!resolvedCollapsed && (
+                    <>
+                      {(showAllResolved ? resolved : resolved.slice(0, 12)).map(item => {
+                        const cfg = TYPE_MAP[item.type] || { label: item.type, emoji: '📌', accent: '#71717a' }
+                        const isOpen = expandedItem === `done-${item.id}`
+                        return (
+                          <div key={item.id} className={`dpo-card ${isOpen ? 'open' : ''}`} style={{ opacity: isOpen ? 1 : 0.85 }}>
+                            <div className="dpo-card-head" onClick={() => {
+                              if (isOpen) { setExpandedItem(null); return }
+                              setExpandedItem(`done-${item.id}`); loadCtx(item.id)
+                            }}>
+                              <div className="dpo-card-info">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <span style={{ color: '#22c55e', fontWeight: 700 }}>✓</span>
+                                  <span className="dpo-card-title" style={{ fontSize: 14 }}>{item.title}</span>
                                 </div>
-
-                                {/* Original AI analysis */}
-                                {item.ai_summary && (
-                                  <div className="dpo-ai-box">
-                                    <span className="dpo-ai-label">✦ ניתוח AI מקורי</span>
-                                    {item.ai_summary.slice(0, 300)}
-                                  </div>
-                                )}
-
-                                {/* Chat history if escalation */}
-                                {itemContext?.messages?.length > 0 && (
-                                  <div className="dpo-bubbles">
-                                    <span className="dpo-sub">💬 שיחה</span>
-                                    {itemContext.messages.slice(-4).map((m: any, i: number) => (
-                                      <div key={i} className={`dpo-bubble ${m.role === 'user' ? 'user' : 'ai'}`}>
-                                        <div className="dpo-bubble-role">{m.role === 'user' ? '👤 לקוח' : '🤖 AI'}</div>
-                                        {(m.content || '').slice(0, 200)}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-
-                                {/* DPO response */}
-                                {item.ai_draft_response && (
-                                  <div style={{ marginTop: 12 }}>
-                                    <span className="dpo-sub">📝 תשובת הממונה</span>
-                                    <div style={{ padding: '10px 14px', background: '#f0fdf4', borderRight: '3px solid #22c55e', borderRadius: 8, fontSize: 13, lineHeight: 1.6 }}>
-                                      {item.ai_draft_response}
+                                <div className="dpo-card-meta">{item.organizations?.name} · {timeAgo(item.resolved_at || item.created_at)} · <span style={{ color: cfg.accent }}>{cfg.label}</span></div>
+                              </div>
+                              <span className="dpo-card-chevron">{isOpen ? '▲' : '▼'}</span>
+                            </div>
+                            {isOpen && (
+                              <div className="dpo-card-body">
+                                {loadingCtx ? <div className="dpo-spinner" style={{ margin: '20px auto' }} /> : (
+                                  <>
+                                    <div className="dpo-chips">
+                                      <span className="dpo-chip">🕐 {item.resolved_at ? new Date(item.resolved_at).toLocaleDateString('he-IL') : '—'}</span>
+                                      <span className="dpo-chip">{cfg.emoji} {cfg.label}</span>
                                     </div>
-                                  </div>
-                                )}
-
-                                {/* Docs (for review type) */}
-                                {item.type === 'review' && itemContext?.documents?.length > 0 && (
-                                  <div style={{ marginTop: 12 }}>
-                                    <span className="dpo-sub">📄 מסמכים שאושרו</span>
-                                    {itemContext.documents.filter((d: OrgDoc) => d.status === 'active').map((doc: OrgDoc) => (
-                                      <div key={doc.id} className="dpo-done-row">
-                                        <span style={{ color: '#22c55e' }}>✓</span>
-                                        <span>{doc.title || DOC_LABELS[doc.type] || doc.type}</span>
+                                    {item.ai_summary && (
+                                      <div className="dpo-ai-box"><span className="dpo-ai-label">✦ ניתוח AI מקורי</span>{item.ai_summary.slice(0, 300)}</div>
+                                    )}
+                                    {itemContext?.messages?.length > 0 && (
+                                      <div className="dpo-bubbles">
+                                        <span className="dpo-sub">💬 שיחה</span>
+                                        {itemContext.messages.slice(-4).map((m: any, i: number) => (
+                                          <div key={i} className={`dpo-bubble ${m.role === 'user' ? 'user' : 'ai'}`}>
+                                            <div className="dpo-bubble-role">{m.role === 'user' ? '👤 לקוח' : '🤖 AI'}</div>
+                                            {(m.content || '').slice(0, 200)}
+                                          </div>
+                                        ))}
                                       </div>
-                                    ))}
-                                  </div>
+                                    )}
+                                    {item.ai_draft_response && (
+                                      <div style={{ marginTop: 12 }}>
+                                        <span className="dpo-sub">📝 תשובת הממונה</span>
+                                        <div style={{ padding: '10px 14px', background: '#f0fdf4', borderRight: '3px solid #22c55e', borderRadius: 8, fontSize: 13, lineHeight: 1.6 }}>{item.ai_draft_response}</div>
+                                      </div>
+                                    )}
+                                    {item.type === 'review' && itemContext?.documents?.length > 0 && (
+                                      <div style={{ marginTop: 12 }}>
+                                        <span className="dpo-sub">📄 מסמכים שאושרו</span>
+                                        {itemContext.documents.filter((d: OrgDoc) => d.status === 'active').map((doc: OrgDoc) => (
+                                          <div key={doc.id} className="dpo-done-row">
+                                            <span style={{ color: '#22c55e' }}>✓</span>
+                                            <span>{doc.title || DOC_LABELS[doc.type] || doc.type}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </>
                                 )}
-                              </>
+                              </div>
                             )}
                           </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                  {!showAllResolved && resolved.length > 12 && (
-                    <button className="dpo-show-more" onClick={() => setShowAllResolved(true)}>
-                      הצג עוד {resolved.length - 12} פריטים
-                    </button>
+                        )
+                      })}
+                      {!showAllResolved && resolved.length > 12 && (
+                        <button className="dpo-show-more" onClick={() => setShowAllResolved(true)}>
+                          הצג עוד {resolved.length - 12} פריטים
+                        </button>
+                      )}
+                    </>
                   )}
                 </section>
               )}
@@ -573,9 +647,10 @@ export default function DPODashboard() {
           {/* ORGS TAB */}
           {tab === 'orgs' && (
             <section className="dpo-section">
-              <input className="dpo-search" placeholder="🔍 חיפוש ארגון..." value={orgSearch} onChange={e => setOrgSearch(e.target.value)} />
+              <input className="dpo-search" placeholder="🔍 חיפוש ארגון..." value={orgSearch} onChange={e => { setOrgSearch(e.target.value); setOrgPage(0) }} />
+              <p className="dpo-org-count">{filteredOrgs.length} ארגונים{orgSearch ? ` (מסננים לפי "${orgSearch}")` : ''}</p>
               <div className="dpo-org-list">
-                {orgs.filter(o => !orgSearch || o.name.toLowerCase().includes(orgSearch.toLowerCase())).map(org => {
+                {pagedOrgs.map(org => {
                   const s = org.compliance_score || 0
                   const sc = s >= 70 ? '#22c55e' : s >= 40 ? '#f59e0b' : '#ef4444'
                   return (
@@ -588,41 +663,55 @@ export default function DPODashboard() {
                   )
                 })}
               </div>
+              {hasMoreOrgs && (
+                <button className="dpo-show-more" onClick={() => setOrgPage(p => p + 1)}>
+                  הצג עוד {Math.min(ORGS_PER_PAGE, filteredOrgs.length - pagedOrgs.length)} ארגונים
+                </button>
+              )}
 
+              {/* ORG DETAIL MODAL — 7 TABS */}
               {selectedOrg && (
-                <div className="dpo-modal-overlay" onClick={() => { setSelectedOrg(null); setOrgTab('overview'); setComposeMsg(''); setComposeSent(false) }}>
+                <div className="dpo-modal-overlay" onClick={() => setSelectedOrg(null)}>
                   <div className="dpo-modal dpo-modal-wide" onClick={e => e.stopPropagation()}>
                     <div className="dpo-modal-head">
                       <div>
                         <h3>{selectedOrg.organization?.name}</h3>
-                        {selectedOrg.contact_email && <span style={{ fontSize: 12, color: '#71717a' }}>📧 {selectedOrg.contact_email}</span>}
+                        <div style={{ display: 'flex', gap: 12, marginTop: 4, flexWrap: 'wrap' }}>
+                          {selectedOrg.contact_email && <span style={{ fontSize: 12, color: '#71717a' }}>📧 {selectedOrg.contact_email}</span>}
+                          {selectedOrg.organization?.phone && <span style={{ fontSize: 12, color: '#71717a' }}>📞 {selectedOrg.organization.phone}</span>}
+                          <span style={{ fontSize: 11, color: '#a1a1aa' }}>
+                            {selectedOrg.organization?.tier === 'extended' ? '⭐ מורחבת' : 'בסיסית'} · ציון: {selectedOrg.organization?.compliance_score || 0}%
+                          </span>
+                        </div>
                       </div>
-                      <button className="dpo-btn-sm" onClick={() => { setSelectedOrg(null); setOrgTab('overview'); setComposeMsg(''); setComposeSent(false) }}>✕</button>
+                      <button className="dpo-btn-sm" onClick={() => setSelectedOrg(null)}>✕</button>
                     </div>
                     
-                    {/* Tabs */}
+                    {/* 7 Tabs */}
                     <div className="dpo-org-tabs">
                       {[
                         { key: 'overview', label: '📊 סקירה' },
                         { key: 'docs', label: `📄 מסמכים (${selectedOrg.documents?.length || 0})` },
-                        { key: 'activity', label: '📋 פעילות' },
+                        { key: 'messages', label: '💬 הודעות' },
+                        { key: 'reminders', label: '⏰ תזכורות' },
+                        { key: 'guidelines', label: '📋 הנחיות' },
+                        { key: 'activity', label: '📜 פעילות' },
                         { key: 'profile', label: '🏢 פרופיל' },
-                      ].map(tab => (
-                        <button key={tab.key}
-                          className={`dpo-org-tab ${orgTab === tab.key ? 'active' : ''}`}
-                          onClick={() => setOrgTab(tab.key as any)}
-                        >{tab.label}</button>
+                      ].map(t => (
+                        <button key={t.key}
+                          className={`dpo-org-tab ${orgTab === t.key ? 'active' : ''}`}
+                          onClick={() => setOrgTab(t.key as any)}
+                        >{t.label}</button>
                       ))}
                     </div>
 
                     <div className="dpo-modal-body">
-                      {/* OVERVIEW TAB */}
+                      {/* OVERVIEW */}
                       {orgTab === 'overview' && (
                         <>
                           <div className="dpo-chips">
                             <span className="dpo-chip">ציון: {selectedOrg.organization?.compliance_score || 0}%</span>
                             <span className="dpo-chip">מסמכים: {selectedOrg.documents?.length || 0}</span>
-                            <span className="dpo-chip">🕐 {Math.round(selectedOrg.time_this_month_minutes || 0)} דק׳ החודש</span>
                             <span className="dpo-chip">{selectedOrg.organization?.tier === 'extended' ? '⭐ מורחבת' : 'בסיסית'}</span>
                           </div>
                           {selectedOrg.documents?.length > 0 && (
@@ -641,34 +730,10 @@ export default function DPODashboard() {
                               ))}
                             </div>
                           )}
-
-                          {/* Proactive message compose */}
-                          <div style={{ marginTop: 16, padding: '14px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0' }}>
-                            <span className="dpo-sub">💬 שלח הודעה לארגון</span>
-                            <textarea 
-                              value={composeMsg} 
-                              onChange={e => setComposeMsg(e.target.value)} 
-                              placeholder="כתוב הודעה ללקוח..."
-                              style={{ width: '100%', marginTop: 8, padding: '10px 12px', borderRadius: 8, border: '1px solid #d4d4d8', fontSize: 13, minHeight: 60, resize: 'vertical', fontFamily: 'inherit' }}
-                            />
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-                              {composeSent ? (
-                                <span style={{ fontSize: 13, color: '#22c55e', fontWeight: 600 }}>✓ נשלח בהצלחה</span>
-                              ) : <span />}
-                              <button 
-                                className="dpo-btn-primary"
-                                disabled={!composeMsg.trim() || composeSending}
-                                onClick={() => sendDpoMessage(selectedOrg.organization?.id, selectedOrg.organization?.name)}
-                                style={{ padding: '6px 16px', fontSize: 13, opacity: composeMsg.trim() ? 1 : 0.5 }}
-                              >
-                                {composeSending ? '...' : '📤 שלח'}
-                              </button>
-                            </div>
-                          </div>
                         </>
                       )}
 
-                      {/* DOCUMENTS TAB — full doc content */}
+                      {/* DOCUMENTS — editable */}
                       {orgTab === 'docs' && (
                         <div>
                           {!selectedOrg.documents?.length ? (
@@ -676,27 +741,130 @@ export default function DPODashboard() {
                           ) : selectedOrg.documents.map((d: any) => (
                             <div key={d.id} className="dpo-doc" style={{ marginBottom: 12 }}>
                               <div className="dpo-doc-top">
-                                <div>
-                                  <span style={{ fontWeight: 600 }}>{d.title || DOC_LABELS[d.type] || d.type}</span>
-                                  <span className={`dpo-status-pill ${d.status === 'active' ? 'approved' : ''}`} style={{ marginRight: 8, fontSize: 11 }}>
+                                <div className="dpo-doc-info">
+                                  <span className="dpo-doc-name">{d.title || DOC_LABELS[d.type] || d.type}</span>
+                                  <span className={`dpo-doc-badge ${d.status === 'active' ? 'active' : 'pending'}`}>
                                     {d.status === 'active' ? '✓ פעיל' : d.status === 'pending_review' ? '⏳ ממתין' : d.status}
                                   </span>
                                 </div>
-                                <span style={{ fontSize: 11, color: '#a1a1aa' }}>{new Date(d.created_at).toLocaleDateString('he-IL')}</span>
+                                <div className="dpo-doc-actions">
+                                  {d.status === 'pending_review' && (
+                                    <button className="dpo-btn-sm dpo-btn-green" disabled={modalDocBusy} onClick={() => modalApproveDoc(d.id)}>✓ אשר</button>
+                                  )}
+                                  <button className="dpo-btn-sm" onClick={() => { 
+                                    if (modalEditDoc === d.id) { setModalEditDoc(null) } 
+                                    else { setModalEditDoc(d.id); setModalEditContent(d.content || '') }
+                                  }}>
+                                    {modalEditDoc === d.id ? '▲ סגור' : '✏️ ערוך'}
+                                  </button>
+                                </div>
                               </div>
-                              <div style={{ 
-                                padding: '10px 14px', background: '#fafafa', borderRadius: 8, 
-                                fontSize: 13, lineHeight: 1.7, maxHeight: 200, overflowY: 'auto', whiteSpace: 'pre-wrap',
-                                marginTop: 8, border: '1px solid #f0f0f0'
-                              }}>
-                                {(d.content || '').slice(0, 800)}{d.content?.length > 800 ? '...' : ''}
+                              <span style={{ fontSize: 11, color: '#a1a1aa' }}>{new Date(d.created_at).toLocaleDateString('he-IL')}</span>
+                              
+                              {modalEditDoc === d.id ? (
+                                <div style={{ marginTop: 8 }}>
+                                  <textarea 
+                                    className="dpo-doc-editor" 
+                                    value={modalEditContent} 
+                                    onChange={e => setModalEditContent(e.target.value)} 
+                                    rows={14} 
+                                  />
+                                  <div className="dpo-doc-edit-btns">
+                                    <button className="dpo-btn-primary" disabled={modalDocBusy} onClick={() => modalEditSave(d.id)}>
+                                      {modalDocBusy ? '...' : '💾 שמור ואשר'}
+                                    </button>
+                                    <button className="dpo-btn-sm" onClick={() => setModalEditDoc(null)}>ביטול</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{ 
+                                  padding: '10px 14px', background: '#fafafa', borderRadius: 8, 
+                                  fontSize: 13, lineHeight: 1.7, maxHeight: 200, overflowY: 'auto', whiteSpace: 'pre-wrap',
+                                  marginTop: 8, border: '1px solid #f0f0f0'
+                                }}>
+                                  {(d.content || '').slice(0, 800)}{d.content?.length > 800 ? '...' : ''}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* MESSAGES — compose + send */}
+                      {orgTab === 'messages' && (
+                        <div>
+                          {/* Message history from queue */}
+                          {selectedOrg.queue_history?.filter((q: any) => q.type === 'escalation').length > 0 ? (
+                            <div style={{ marginBottom: 16 }}>
+                              <span className="dpo-sub">💬 היסטוריית שיחות</span>
+                              {selectedOrg.queue_history.filter((q: any) => q.type === 'escalation').slice(0, 5).map((q: any) => (
+                                <div key={q.id} className="dpo-done-row" style={{ padding: '8px 0' }}>
+                                  <span style={{ color: q.status === 'resolved' ? '#22c55e' : '#f59e0b' }}>
+                                    {q.status === 'resolved' ? '✓' : '●'}
+                                  </span>
+                                  <div style={{ flex: 1 }}>
+                                    <span style={{ fontSize: 13, fontWeight: 500 }}>{q.title}</span>
+                                    {q.ai_draft_response && <p style={{ fontSize: 12, color: '#71717a', marginTop: 2 }}>{q.ai_draft_response.slice(0, 100)}</p>}
+                                  </div>
+                                  <span className="dpo-done-meta">{timeAgo(q.resolved_at || q.created_at)}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p style={{ color: '#a1a1aa', fontSize: 13, marginBottom: 16 }}>אין שיחות קודמות עם ארגון זה</p>
+                          )}
+
+                          {/* Compose */}
+                          <div style={{ padding: '14px', background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0' }}>
+                            <span className="dpo-sub" style={{ marginTop: 0 }}>💬 שלח הודעה חדשה</span>
+                            <textarea 
+                              value={composeMsg} onChange={e => setComposeMsg(e.target.value)} 
+                              placeholder="כתוב הודעה ללקוח..."
+                              style={{ width: '100%', marginTop: 8, padding: '10px 12px', borderRadius: 8, border: '1px solid #d4d4d8', fontSize: 13, minHeight: 80, resize: 'vertical', fontFamily: 'inherit' }}
+                            />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                              {composeSent ? <span style={{ fontSize: 13, color: '#22c55e', fontWeight: 600 }}>✓ נשלח בהצלחה</span> : <span />}
+                              <button 
+                                className="dpo-btn-primary"
+                                disabled={!composeMsg.trim() || composeSending}
+                                onClick={() => sendDpoMessage(selectedOrg.organization?.id, selectedOrg.organization?.name)}
+                                style={{ padding: '8px 20px', fontSize: 13, opacity: composeMsg.trim() ? 1 : 0.5 }}
+                              >
+                                {composeSending ? '...' : '📤 שלח'}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* REMINDERS */}
+                      {orgTab === 'reminders' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {REMINDERS.map(r => (
+                            <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fafafa', borderRadius: 8, border: '1px solid #f0f0f0' }}>
+                              <span style={{ fontSize: 18 }}>{r.emoji}</span>
+                              <div style={{ flex: 1 }}>
+                                <p style={{ fontSize: 13, fontWeight: 600, color: '#27272a' }}>{r.title}</p>
+                                <p style={{ fontSize: 11, color: '#a1a1aa' }}>{r.freq}</p>
                               </div>
                             </div>
                           ))}
                         </div>
                       )}
 
-                      {/* ACTIVITY TAB */}
+                      {/* GUIDELINES */}
+                      {orgTab === 'guidelines' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {GUIDELINES.map((g, i) => (
+                            <div key={i} style={{ padding: '12px', background: '#eef2ff', borderRadius: 8, borderRight: '3px solid #4f46e5' }}>
+                              <p style={{ fontSize: 13, fontWeight: 600, color: '#1e293b' }}>{g.emoji} {g.title}</p>
+                              <p style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>{g.desc}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* ACTIVITY */}
                       {orgTab === 'activity' && (
                         <div>
                           {!selectedOrg.queue_history?.length ? (
@@ -719,7 +887,7 @@ export default function DPODashboard() {
                         </div>
                       )}
 
-                      {/* PROFILE TAB — onboarding answers */}
+                      {/* PROFILE */}
                       {orgTab === 'profile' && (
                         <div>
                           {selectedOrg.profile?.answers ? (
@@ -770,8 +938,16 @@ const CSS = `
 .dpo-tab:hover{background:#f4f4f5}
 .dpo-tab.active{background:#18181b;color:#fff}
 .dpo-badge{font-size:10px;background:#ef4444;color:#fff;padding:1px 6px;border-radius:10px;margin-right:4px}
-.dpo-time-pill{font-size:11px;color:#4f46e5;background:#eef2ff;padding:3px 10px;border-radius:16px;font-weight:600}
 .dpo-logout{padding:3px 8px;border-radius:4px;font-size:11px;border:1px solid #e4e4e7;background:none;cursor:pointer;color:#71717a;font-family:inherit}
+
+/* Filter select */
+.dpo-filter-select{padding:4px 10px;border-radius:6px;font-size:12px;border:1px solid #e4e4e7;background:#fff;color:#71717a;cursor:pointer;font-family:inherit;appearance:auto}
+.dpo-filter-select:focus{outline:none;border-color:#4f46e5}
+
+/* Refresh button */
+.dpo-refresh-btn{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:6px;border:1px solid #e4e4e7;background:#fff;color:#71717a;cursor:pointer;transition:all .15s}
+.dpo-refresh-btn:hover{background:#eef2ff;border-color:#c7d2fe;color:#4f46e5}
+.dpo-refresh-btn:active{transform:rotate(180deg)}
 
 /* MAIN */
 .dpo-main{max-width:860px;margin:0 auto;padding:20px 16px 60px}
@@ -781,12 +957,13 @@ const CSS = `
 .dpo-kpi{text-align:center;flex:1;min-width:70px}
 .dpo-kpi-num{font-size:22px;font-weight:900;line-height:1.1}
 .dpo-kpi-label{font-size:11px;color:#71717a;margin-top:2px}
-.dpo-kpi-bar{width:56px;height:3px;border-radius:2px;background:#e4e4e7;margin:4px auto 0}
-.dpo-kpi-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#4f46e5,#818cf8)}
 
-/* Section */
+/* Section — collapsible */
 .dpo-section{margin-bottom:24px}
-.dpo-section-title{font-size:14px;font-weight:700;color:#71717a;margin-bottom:10px}
+.dpo-section-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:4px 0;margin-bottom:10px;user-select:none}
+.dpo-section-header:hover .dpo-collapse-icon{color:#4f46e5}
+.dpo-section-title{font-size:14px;font-weight:700;color:#71717a;margin:0}
+.dpo-collapse-icon{font-size:12px;color:#a1a1aa;transition:color .15s}
 
 /* Card */
 .dpo-card{background:#fff;border-radius:10px;border:1px solid #e4e4e7;margin-bottom:8px;overflow:hidden;transition:box-shadow .15s}
@@ -869,9 +1046,10 @@ const CSS = `
 .dpo-show-more{width:100%;padding:10px;margin-top:8px;background:#f4f4f5;border:1px solid #e4e4e7;border-radius:8px;color:#4f46e5;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit}
 .dpo-show-more:hover{background:#eef2ff;border-color:#c7d2fe}
 
-/* Search */
-.dpo-search{width:100%;padding:10px 14px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:12px;background:#fff}
+/* Search + org count */
+.dpo-search{width:100%;padding:10px 14px;border:1px solid #e4e4e7;border-radius:8px;font-size:13px;font-family:inherit;margin-bottom:8px;background:#fff}
 .dpo-search:focus{outline:none;border-color:#4f46e5}
+.dpo-org-count{font-size:12px;color:#a1a1aa;margin-bottom:10px}
 
 /* Org list */
 .dpo-org-list{display:flex;flex-direction:column;gap:4px}
@@ -884,14 +1062,14 @@ const CSS = `
 
 /* Modal */
 .dpo-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
-.dpo-modal{background:#fff;border-radius:12px;padding:20px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto}
-.dpo-modal-wide{max-width:720px}
-.dpo-org-tabs{display:flex;gap:4px;border-bottom:1px solid #e4e4e7;margin:12px -20px 0;padding:0 20px}
-.dpo-org-tab{padding:8px 14px;font-size:13px;font-weight:500;color:#71717a;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
-.dpo-org-tab.active{color:#4f46e5;border-bottom-color:#4f46e5}
+.dpo-modal{background:#fff;border-radius:12px;padding:20px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto}
+.dpo-modal-wide{max-width:780px}
+.dpo-org-tabs{display:flex;gap:2px;border-bottom:1px solid #e4e4e7;margin:12px -20px 0;padding:0 20px;overflow-x:auto}
+.dpo-org-tab{padding:8px 12px;font-size:12px;font-weight:500;color:#71717a;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;font-family:inherit}
+.dpo-org-tab.active{color:#4f46e5;border-bottom-color:#4f46e5;font-weight:600}
 .dpo-org-tab:hover{color:#27272a}
-.dpo-modal-body{padding-top:16px;max-height:55vh;overflow-y:auto}
-.dpo-modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.dpo-modal-body{padding-top:16px;max-height:60vh;overflow-y:auto}
+.dpo-modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
 .dpo-modal-head h3{font-size:18px;font-weight:700}
 
 /* Spinner */
@@ -905,7 +1083,6 @@ const CSS = `
   .dpo-nav-name{display:none}
   .dpo-nav-sep{display:none}
   .dpo-nav-left{width:100%;justify-content:space-between}
-  .dpo-time-pill{display:none}
   .dpo-main{padding:12px 10px 40px}
   .dpo-kpis{gap:8px;flex-wrap:wrap}
   .dpo-kpi-num{font-size:18px}
@@ -919,7 +1096,8 @@ const CSS = `
   .dpo-done-meta{width:100%;text-align:left}
   .dpo-modal-wide{max-width:95vw;padding:14px}
   .dpo-org-tabs{gap:0;overflow-x:auto}
-  .dpo-org-tab{font-size:12px;padding:6px 10px;white-space:nowrap}
+  .dpo-org-tab{font-size:11px;padding:6px 8px}
   .dpo-modal-body{max-height:50vh}
+  .dpo-filter-select{font-size:11px;padding:3px 6px}
 }
 `
