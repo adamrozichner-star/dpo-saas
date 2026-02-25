@@ -840,6 +840,7 @@ function OnboardingContent() {
           .maybeSingle()
 
         if (sub) {
+          localStorage.removeItem('dpo_v3_answers')
           router.push('/dashboard')
           return
         }
@@ -870,14 +871,22 @@ function OnboardingContent() {
     }
   }, [v3Answers, step])
 
-  // Restore
+  // Restore from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('dpo_v3_answers')
     const savedStep = localStorage.getItem('dpo_v3_step')
     if (saved) {
       try {
-        setV3Answers(JSON.parse(saved))
-        if (savedStep) setStep(parseInt(savedStep))
+        const parsed = JSON.parse(saved)
+        setV3Answers(parsed)
+        if (savedStep) {
+          // Mid-flow: resume at saved step
+          setStep(parseInt(savedStep))
+        } else if (parsed.databases?.length > 0) {
+          // Completed flow (step cleared, answers kept): show report
+          setShowReport(true)
+          setIsReviewMode(true)
+        }
       } catch (e) { /* ignore */ }
     }
   }, [])
@@ -999,8 +1008,10 @@ function OnboardingContent() {
         if (response.ok) { setGenerationProgress(90); setStatus('מסמכים נוצרו בהצלחה!') }
       } catch (docError) { console.log('Document generation skipped') }
 
-      localStorage.removeItem('dpo_v3_answers')
-      localStorage.removeItem('dpo_v3_step')
+      // Keep v3 answers in localStorage — cleared only after subscription confirmed
+      // This ensures "back to results" works from subscribe page
+      localStorage.setItem('dpo_v3_answers', JSON.stringify(v3Answers))
+      localStorage.removeItem('dpo_v3_step') // Step no longer needed
 
       setGenerationProgress(100)
       setStatus('הושלם! מעבירים ללוח הבקרה...')
