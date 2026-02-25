@@ -590,13 +590,29 @@ export default function DPODashboard() {
                               <div className="dpo-card-body">
                                 {loadingCtx ? <div className="dpo-spinner" style={{ margin: '20px auto' }} /> : (
                                   <>
+                                    {/* Quick actions bar */}
+                                    <div className="dpo-resolved-actions">
+                                      <button className="dpo-btn-action" onClick={() => { setTab('orgs'); loadOrgDetail(item.org_id) }}>
+                                        🏢 פתח ארגון
+                                      </button>
+                                      <button className="dpo-btn-action" onClick={() => { setTab('orgs'); loadOrgDetail(item.org_id); setTimeout(() => setOrgTab('messages'), 300) }}>
+                                        💬 שלח הודעה
+                                      </button>
+                                      <button className="dpo-btn-action" onClick={() => { setTab('orgs'); loadOrgDetail(item.org_id); setTimeout(() => setOrgTab('docs'), 300) }}>
+                                        📄 ערוך מסמכים
+                                      </button>
+                                    </div>
+
                                     <div className="dpo-chips">
                                       <span className="dpo-chip">🕐 {item.resolved_at ? new Date(item.resolved_at).toLocaleDateString('he-IL') : '—'}</span>
                                       <span className="dpo-chip">{cfg.emoji} {cfg.label}</span>
+                                      <span className="dpo-chip">🏢 {item.organizations?.name}</span>
                                     </div>
+
                                     {item.ai_summary && (
                                       <div className="dpo-ai-box"><span className="dpo-ai-label">✦ ניתוח AI מקורי</span>{item.ai_summary.slice(0, 300)}</div>
                                     )}
+
                                     {itemContext?.messages?.length > 0 && (
                                       <div className="dpo-bubbles">
                                         <span className="dpo-sub">💬 שיחה</span>
@@ -608,19 +624,56 @@ export default function DPODashboard() {
                                         ))}
                                       </div>
                                     )}
+
                                     {item.ai_draft_response && (
                                       <div style={{ marginTop: 12 }}>
                                         <span className="dpo-sub">📝 תשובת הממונה</span>
                                         <div style={{ padding: '10px 14px', background: '#f0fdf4', borderRight: '3px solid #22c55e', borderRadius: 8, fontSize: 13, lineHeight: 1.6 }}>{item.ai_draft_response}</div>
                                       </div>
                                     )}
-                                    {item.type === 'review' && itemContext?.documents?.length > 0 && (
+
+                                    {/* Full doc list with actions — not just approved */}
+                                    {itemContext?.documents?.length > 0 && (
                                       <div style={{ marginTop: 12 }}>
-                                        <span className="dpo-sub">📄 מסמכים שאושרו</span>
-                                        {itemContext.documents.filter((d: OrgDoc) => d.status === 'active').map((doc: OrgDoc) => (
-                                          <div key={doc.id} className="dpo-done-row">
-                                            <span style={{ color: '#22c55e' }}>✓</span>
-                                            <span>{doc.title || DOC_LABELS[doc.type] || doc.type}</span>
+                                        <span className="dpo-sub">📄 מסמכים ({itemContext.documents.length})</span>
+                                        {itemContext.documents.map((doc: OrgDoc) => (
+                                          <div key={doc.id} className="dpo-doc" style={{ marginBottom: 6 }}>
+                                            <div className="dpo-doc-top">
+                                              <div className="dpo-doc-info">
+                                                <span className="dpo-doc-name">{doc.title || DOC_LABELS[doc.type] || doc.type}</span>
+                                                <span className={`dpo-doc-badge ${doc.status === 'active' ? 'active' : 'pending'}`}>
+                                                  {doc.status === 'active' ? '✓ אושר' : doc.status === 'draft' ? '📝 טיוטה' : '⏳ ממתין'}
+                                                </span>
+                                              </div>
+                                              {doc.status !== 'active' && (
+                                                <div className="dpo-doc-actions">
+                                                  <button className="dpo-btn-sm dpo-btn-green" disabled={docBusy} onClick={() => approveDoc(doc.id)}>✓ אשר</button>
+                                                  <button className="dpo-btn-sm" onClick={() => { setEditingDoc(doc.id); setEditContent(doc.content || ''); setExpandedDoc(doc.id) }}>✏️ ערוך</button>
+                                                </div>
+                                              )}
+                                            </div>
+                                            {expandedDoc === doc.id ? (
+                                              <div className="dpo-doc-expanded">
+                                                {editingDoc === doc.id ? (
+                                                  <>
+                                                    <textarea className="dpo-doc-editor" value={editContent} onChange={e => setEditContent(e.target.value)} rows={10} />
+                                                    <div className="dpo-doc-edit-btns">
+                                                      <button className="dpo-btn-primary" disabled={docBusy} onClick={() => editDoc(doc.id)}>{docBusy ? '...' : '💾 שמור ואשר'}</button>
+                                                      <button className="dpo-btn-sm" onClick={() => { setEditingDoc(null); setExpandedDoc(null) }}>ביטול</button>
+                                                    </div>
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    <div className="dpo-doc-text">{doc.content}</div>
+                                                    <button className="dpo-btn-sm" style={{ marginTop: 8 }} onClick={() => setExpandedDoc(null)}>סגור ▲</button>
+                                                  </>
+                                                )}
+                                              </div>
+                                            ) : (
+                                              <div className="dpo-doc-preview" onClick={() => { setExpandedDoc(doc.id); setEditingDoc(null) }}>
+                                                {(doc.content || '').slice(0, 120)}... <span className="dpo-link">קרא עוד ▼</span>
+                                              </div>
+                                            )}
                                           </div>
                                         ))}
                                       </div>
@@ -1035,6 +1088,9 @@ const CSS = `
 .dpo-btn-sm.dpo-btn-green:hover{background:#16a34a}
 
 /* Done rows */
+.dpo-resolved-actions{display:flex;gap:6px;margin:10px 0;flex-wrap:wrap}
+.dpo-btn-action{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;border:1px solid #e4e4e7;background:#fff;color:#4f46e5;cursor:pointer;font-family:inherit;transition:all .15s}
+.dpo-btn-action:hover{background:#eef2ff;border-color:#c7d2fe}
 .dpo-done-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f4f4f5;font-size:13px}
 .dpo-done-title{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dpo-done-meta{color:#a1a1aa;font-size:11px;flex-shrink:0}
