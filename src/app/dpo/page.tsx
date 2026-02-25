@@ -326,10 +326,10 @@ export default function DPODashboard() {
               <div className="dpo-doc-info">
                 <span className="dpo-doc-name">{doc.title || DOC_LABELS[doc.type] || doc.type}</span>
                 <span className={`dpo-doc-badge ${doc.status === 'active' ? 'active' : 'pending'}`}>
-                  {doc.status === 'active' ? '✓ אושר' : '⏳ ממתין'}
+                  {doc.status === 'active' ? '✓ אושר' : doc.status === 'draft' ? '📝 טיוטה' : '⏳ ממתין'}
                 </span>
               </div>
-              {doc.status === 'pending_review' && (
+              {doc.status !== 'active' && (
                 <div className="dpo-doc-actions">
                   <button className="dpo-btn-sm dpo-btn-green" disabled={docBusy} onClick={() => approveDoc(doc.id)}>✓ אשר</button>
                   <button className="dpo-btn-sm" onClick={() => { setEditingDoc(doc.id); setEditContent(doc.content || ''); setExpandedDoc(doc.id) }}>✏️ ערוך</button>
