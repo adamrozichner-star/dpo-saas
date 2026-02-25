@@ -2,10 +2,8 @@
 
 import { useState, useEffect, Suspense, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
 import { 
   Shield, ArrowRight, CheckCircle2, Database,
   Lock, FileCheck, Loader2, AlertCircle, User, Sparkles,
@@ -1093,79 +1091,104 @@ function OnboardingContent() {
   // DPO Introduction
   if (showDpoIntro) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4" dir="rtl">
-        <div className="max-w-4xl w-full">
+      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white p-4" dir="rtl">
+        <div className="max-w-md mx-auto">
+          {/* Header — same as cards flow */}
           <div className="flex items-center justify-between mb-6">
-            <Button variant="ghost" onClick={() => { setShowDpoIntro(false); setShowReport(true) }} className="gap-2 text-white/80 hover:text-white hover:bg-white/10">
-              <ArrowRight className="h-4 w-4" />חזרה לתוצאות
-            </Button>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/10 backdrop-blur-sm">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
                 <Shield className="h-5 w-5 text-white" />
               </div>
-              <span className="font-bold text-white">MyDPO</span>
+              <span className="font-bold text-[#1e40af]">MyDPO</span>
             </div>
+            <button onClick={() => { setShowDpoIntro(false); setShowReport(true) }}
+              className="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
+              <ArrowRight className="h-3 w-3" />חזרה
+            </button>
           </div>
-          <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
-            <div className="grid md:grid-cols-2">
-              <div className="relative bg-gradient-to-br from-blue-600 to-indigo-700 p-8 flex items-center justify-center min-h-[400px]">
-                <div className="relative">
-                  <div className="w-48 h-48 md:w-56 md:h-56 rounded-full overflow-hidden border-4 border-white/30 shadow-2xl bg-gradient-to-br from-blue-400 to-indigo-500">
-                    <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop&crop=face"
-                      alt="עו״ד דנה כהן" className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                        (e.target as HTMLImageElement).parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-white text-5xl font-bold">ד״כ</div>';
-                      }} />
-                  </div>
-                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-1.5 shadow-lg">
-                    <CheckCircle2 className="h-4 w-4" />מוסמכת
-                  </div>
-                </div>
-                <div className="absolute top-6 right-6 w-20 h-20 bg-white/10 rounded-full blur-xl" />
-                <div className="absolute bottom-10 left-10 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
+
+          {/* DPO Card — matches smart card style */}
+          <div className="bg-white rounded-2xl p-6 shadow-lg text-center">
+            {/* Photo */}
+            <div className="relative w-28 h-28 mx-auto mb-4">
+              <div className="w-28 h-28 rounded-full overflow-hidden border-3 border-amber-200 shadow-lg bg-gradient-to-br from-amber-100 to-indigo-100">
+                <img 
+                  src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=300&fit=crop&crop=face"
+                  alt="עו״ד דנה כהן" className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                    (e.target as HTMLImageElement).parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-indigo-600 text-3xl font-bold bg-indigo-50">ד״כ</div>';
+                  }} 
+                />
               </div>
-              <div className="p-8 flex flex-col justify-center">
-                <Badge className="w-fit mb-3 bg-blue-100 text-blue-700 hover:bg-blue-100">הממונה שלכם</Badge>
-                <h1 className="text-3xl font-bold text-slate-900 mb-1">עו״ד דנה כהן</h1>
-                <p className="text-slate-600 mb-6">ממונה הגנת פרטיות מוסמכת | 12 שנות ניסיון</p>
-                <div className="flex flex-wrap gap-3 mb-6">
-                  <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-lg">
-                    <Mail className="h-4 w-4 text-blue-600" /><span className="text-sm font-medium">dpo@mydpo.co.il</span>
-                  </div>
-                  <div className="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-lg">
-                    <FileCheck className="h-4 w-4 text-blue-600" /><span className="text-sm font-medium">רישיון DPO-2025-001</span>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 mb-6">
-                  <h4 className="font-semibold text-slate-800 mb-3 flex items-center gap-2 text-sm">
-                    <Sparkles className="h-4 w-4 text-blue-600" />מה הממונה תעשה עבורכם?
-                  </h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    {['פיקוח על עמידה בחוק', 'טיפול בפניות נושאי מידע', 'ייעוץ פרטיות ואבטחה', 'קשר עם הרשות להגנת הפרטיות'].map(item => (
-                      <div key={item} className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" /><span>{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                {error && (
-                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
-                    <AlertCircle className="h-4 w-4" />{error}
-                  </div>
-                )}
-                <Button size="lg" 
-                  className="w-full h-14 text-lg bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 shadow-lg"
-                  onClick={handleComplete} disabled={isGenerating}>
-                  {isGenerating ? (
-                    <><Loader2 className="ml-2 h-5 w-5 animate-spin" />{status || 'מכינים את המערכת...'}</>
-                  ) : (
-                    <><Sparkles className="ml-2 h-5 w-5" />סיום והפקת מסמכים</>
-                  )}
-                </Button>
-                <p className="text-center text-xs text-slate-500 mt-3">המסמכים יופקו אוטומטית ויהיו זמינים בלוח הבקרה</p>
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-3 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 shadow">
+                <CheckCircle2 className="h-3 w-3" />מוסמכת
               </div>
             </div>
+
+            {/* Badge */}
+            <div className="inline-block text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full mb-2">
+              הממונה שלכם
+            </div>
+
+            {/* Name */}
+            <h1 className="text-2xl font-bold text-gray-800 mb-1">עו״ד דנה כהן</h1>
+            <p className="text-sm text-gray-500 mb-4">ממונה הגנת פרטיות מוסמכת | 12 שנות ניסיון</p>
+
+            {/* Contact chips */}
+            <div className="flex flex-wrap gap-2 justify-center mb-5">
+              <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg text-xs text-gray-600">
+                <Mail className="h-3.5 w-3.5 text-indigo-500" />dpo@mydpo.co.il
+              </div>
+              <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg text-xs text-gray-600">
+                <FileCheck className="h-3.5 w-3.5 text-indigo-500" />רישיון DPO-2025-001
+              </div>
+            </div>
+
+            {/* What DPO does */}
+            <div className="bg-amber-50/60 rounded-xl p-4 mb-5 text-right">
+              <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2 text-sm justify-center">
+                <Sparkles className="h-4 w-4 text-amber-500" />מה הממונה תעשה עבורכם?
+              </h4>
+              <div className="grid grid-cols-1 gap-1.5 text-sm">
+                {[
+                  'פיקוח שוטף על עמידה בחוק הגנת הפרטיות',
+                  'טיפול בפניות נושאי מידע וזכויות',
+                  'ייעוץ פרטיות ואבטחת מידע',
+                  'קשר עם הרשות להגנת הפרטיות',
+                ].map(item => (
+                  <div key={item} className="flex items-center gap-2 justify-start">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                    <span className="text-gray-600">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
+                <AlertCircle className="h-4 w-4" />{error}
+              </div>
+            )}
+
+            {/* CTA */}
+            <button
+              onClick={handleComplete}
+              disabled={isGenerating}
+              className="w-full py-3.5 rounded-xl border-none text-white text-base font-bold cursor-pointer disabled:opacity-60"
+              style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}
+            >
+              {isGenerating ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin" />{status || 'מכינים את המערכת...'}
+                </span>
+              ) : (
+                'סיום והפקת מסמכים ⬅'
+              )}
+            </button>
+            <p className="text-center text-[11px] text-gray-400 mt-3">
+              המסמכים יופקו אוטומטית ויהיו זמינים בלוח הבקרה
+            </p>
           </div>
         </div>
       </div>
