@@ -1242,6 +1242,89 @@ ${doc.content?.substring(0, 3000)}
       return NextResponse.json({ success: true, content: newContent })
     }
 
+    // =========================================
+    // Delete document
+    // =========================================
+    if (action === 'delete_document') {
+      const { documentId } = body
+      if (!documentId) {
+        return NextResponse.json({ error: 'Missing documentId' }, { status: 400 })
+      }
+
+      // Get doc info for audit log before deleting
+      const { data: doc } = await supabase
+        .from('documents')
+        .select('org_id, title, type')
+        .eq('id', documentId)
+        .single()
+
+      const { error } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', documentId)
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      // Audit log
+      if (doc) {
+        try {
+          await supabase.from('dpo_time_log').insert({
+            org_id: doc.org_id,
+            action: 'document_delete',
+            description: `מחיקת מסמך: ${doc.title || doc.type}`,
+            duration_seconds: 10
+          })
+        } catch (e) { /* ignore */ }
+      }
+
+      return NextResponse.json({ success: true })
+    }
+
+    // =========================================
+    // Finalize document — mark as official final version
+    // =========================================
+    if (action === 'finalize_document') {
+      const { documentId, version } = body
+      if (!documentId) {
+        return NextResponse.json({ error: 'Missing documentId' }, { status: 400 })
+      }
+
+      const { error } = await supabase
+        .from('documents')
+        .update({ 
+          status: 'active',
+          version: version || 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId)
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      // Audit log
+      const { data: doc } = await supabase
+        .from('documents')
+        .select('org_id, title, type')
+        .eq('id', documentId)
+        .single()
+
+      if (doc) {
+        try {
+          await supabase.from('dpo_time_log').insert({
+            org_id: doc.org_id,
+            action: 'document_finalize',
+            description: `גרסה סופית (v${version || 1}): ${doc.title || doc.type}`,
+            duration_seconds: 30
+          })
+        } catch (e) { /* ignore */ }
+      }
+
+      return NextResponse.json({ success: true })
+    }
+
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
 
   } catch (error) {
