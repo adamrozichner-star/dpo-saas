@@ -106,6 +106,10 @@ function DashboardContent() {
       setShowWelcome(true)
       window.history.replaceState({}, '', '/dashboard')
     }
+    const tabParam = searchParams.get('tab')
+    if (tabParam && ['overview','tasks','documents','incidents','messages','reminders','settings'].includes(tabParam)) {
+      setActiveTab(tabParam as any)
+    }
   }, [searchParams])
 
   useEffect(() => {
@@ -129,6 +133,19 @@ function DashboardContent() {
       if (userData?.organizations) {
         const org = userData.organizations
         setOrganization(org)
+
+        // Check if onboarding was completed (has profile data)
+        const { data: profile } = await supabase
+          .from('organization_profiles')
+          .select('id')
+          .eq('org_id', org.id)
+          .maybeSingle()
+
+        if (!profile) {
+          // Org exists but onboarding not completed — send back
+          router.push('/onboarding')
+          return
+        }
         
         const { data: docs } = await supabase
           .from('documents')
@@ -189,6 +206,10 @@ function DashboardContent() {
         } catch (e) {
           console.log('Messages loading skipped')
         }
+      } else {
+        // No organization — user needs onboarding
+        router.push('/onboarding')
+        return
       }
     } catch (error) {
       console.error('Error loading data:', error)
@@ -2277,6 +2298,7 @@ function AuditLogSection({ orgId, supabase }: { orgId: string, supabase: any }) 
     setLoading(false)
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (expanded && logs.length === 0) loadLogs() }, [expanded])
 
   const EVENT_LABELS: Record<string, string> = {
