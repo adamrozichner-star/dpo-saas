@@ -95,6 +95,8 @@ export default function AuthCallbackPage() {
           localStorage.removeItem('dpo_onboarding_step');
           localStorage.removeItem('dpo_onboarding_org_id');
           localStorage.removeItem('dpo_onboarding_org_name');
+          localStorage.removeItem('dpo_v3_answers');
+          localStorage.removeItem('dpo_v3_step');
           
           const name = session.user.user_metadata?.full_name || 
                        session.user.user_metadata?.name ||
@@ -122,11 +124,11 @@ export default function AuthCallbackPage() {
             })
           }).catch(e => console.error('Email error:', e));
 
-          // New user - go to quick assessment (payment-first flow)
-          setStatus('מעביר להגדרות...');
+          // New user - go to onboarding
+          setStatus('מעביר לשאלון...');
           // Small delay to ensure session is fully stored
           await new Promise(resolve => setTimeout(resolve, 300));
-          window.location.href = '/payment-required';
+          window.location.href = '/onboarding';
         } else {
           // Existing user - check if they have an active subscription
           setStatus('בודק מנוי...');
@@ -153,15 +155,15 @@ export default function AuthCallbackPage() {
           
           if (hasSubscription) {
             setStatus('מעביר ללוח הבקרה...');
-            window.location.href = '/payment-required';
+            window.location.href = '/dashboard';
           } else if (fullUser?.org_id) {
             // Has org but no subscription — needs to pay
             setStatus('מעביר לתשלום...');
             window.location.href = '/subscribe';
           } else {
-            // No org — needs quick assessment first
-            setStatus('מעביר להגדרות...');
-            window.location.href = '/payment-required';
+            // No org — needs onboarding
+            setStatus('מעביר לשאלון...');
+            window.location.href = '/onboarding';
           }
         }
       } catch (err) {
