@@ -1,17 +1,15 @@
 'use client'
 
 import { useState, useEffect, Suspense, useCallback } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { 
-  Shield, ArrowRight, ArrowLeft, CheckCircle2, Database,
+  Shield, ArrowRight, CheckCircle2, Database,
   Lock, FileCheck, Loader2, AlertCircle, User, Sparkles,
-  Phone, Mail, Crown, X
+  Mail
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { OnboardingAnswer } from '@/types'
@@ -609,7 +607,7 @@ function DBDetailCard({ dbType, animDir, onDone }: {
 // CLASSIFICATION REPORT
 // ═══════════════════════════════════════════════════════
 
-function ClassificationReport({ answers, onContinue }: { answers: V3Answers; onContinue: () => void }) {
+function ClassificationReport({ answers, onContinue, isReview }: { answers: V3Answers; onContinue: () => void; isReview?: boolean }) {
   const dbs = answers.databases || []
   const customDBs = answers.customDatabases || []
   const classifications = dbs.map(db => ({ type: db, ...classifyDB(db, answers) }))
@@ -754,7 +752,7 @@ function ClassificationReport({ answers, onContinue }: { answers: V3Answers; onC
         className="w-full mt-4 py-3.5 rounded-xl border-none text-white text-base font-bold cursor-pointer"
         style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
       >
-        🚀 בחירת חבילה והפקת מסמכים
+        {isReview ? 'בחירת חבילה ותשלום' : 'הכירו את הממונה שלכם'}
       </button>
     </div>
   )
@@ -766,7 +764,6 @@ function ClassificationReport({ answers, onContinue }: { answers: V3Answers; onC
 
 function OnboardingContent() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const { user, supabase, loading } = useAuth()
 
   // Flow state
@@ -776,16 +773,13 @@ function OnboardingContent() {
   const [tempName, setTempName] = useState('')
   const [showReport, setShowReport] = useState(false)
 
-  // Post-questionnaire state (kept from original)
-  const [selectedTier, setSelectedTier] = useState<'basic' | 'extended' | 'enterprise' | null>(null)
-  const [showTierSelection, setShowTierSelection] = useState(false)
+  // Post-questionnaire state
   const [showDpoIntro, setShowDpoIntro] = useState(false)
-  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState('')
   const [generationProgress, setGenerationProgress] = useState(0)
-  const [recommendedTier, setRecommendedTier] = useState<'basic' | 'extended' | 'enterprise'>('basic')
+  const [isReviewMode, setIsReviewMode] = useState(false) // Returning user reviewing results
 
   const set = useCallback((k: string, v: any) => setV3Answers(p => ({ ...p, [k]: v })), [])
 
@@ -823,22 +817,48 @@ function OnboardingContent() {
   const isDBPhase = step >= dbPhaseStart && step < dbPhaseStart + totalDBs && !showReport
   const currentDBIdx = step - dbPhaseStart
   const currentDetailDB = isDBPhase ? selectedDBs[currentDBIdx] : null
-  const totalSteps = mainLen + totalDBs + 1
-  const progress = Math.min((step / (totalSteps - 1)) * 100, 100)
+  // Progress: two-phase — main cards then DB details
+  const progress = isDBPhase
+    ? Math.min(((currentDBIdx + 1) / Math.max(totalDBs, 1)) * 100, 100)
+    : Math.min(((step + 1) / mainLen) * 100, 100)
 
   // Auth check
   useEffect(() => {
     if (!loading && !user) router.push('/login')
   }, [loading, user, router])
 
-  // Onboarding guard: if already completed, redirect to dashboard
+  // Onboarding guard: check existing org/subscription state
   useEffect(() => {
     if (!supabase || !user) return
     const checkExisting = async () => {
       const { data: userData } = await supabase.from('users').select('org_id').eq('auth_user_id', user.id).single()
       if (userData?.org_id) {
-        const { data: profileData } = await supabase.from('organization_profiles').select('id').eq('org_id', userData.org_id).single()
-        if (profileData) router.push('/dashboard')
+        // Check if they have an active subscription
+        const { data: sub } = await supabase
+          .from('subscriptions')
+          .select('id')
+          .eq('org_id', userData.org_id)
+          .in('status', ['active', 'past_due'])
+          .maybeSingle()
+
+        if (sub) {
+          router.push('/dashboard')
+          return
+        }
+
+        // No subscription — check if profile exists (completed onboarding before)
+        const { data: profileData } = await supabase
+          .from('organization_profiles')
+          .select('profile_data')
+          .eq('org_id', userData.org_id)
+          .single()
+
+        if (profileData?.profile_data?.v3Answers) {
+          // Returning user: load saved answers, show classification report
+          setV3Answers(profileData.profile_data.v3Answers)
+          setShowReport(true)
+          setIsReviewMode(true)
+        }
       }
     }
     checkExisting()
@@ -864,14 +884,6 @@ function OnboardingContent() {
     }
   }, [])
 
-  useEffect(() => {
-    const tier = searchParams.get('tier')
-    if (tier === 'basic' || tier === 'extended' || tier === 'enterprise') {
-      setSelectedTier(tier as any)
-      if (tier === 'enterprise') setShowEnterpriseModal(true)
-    }
-  }, [searchParams])
-
   // Text input state
   const [textInput, setTextInput] = useState('')
 
@@ -884,14 +896,14 @@ function OnboardingContent() {
 
   // Guard: if we've passed all main cards and there are no DBs to detail, show report
   useEffect(() => {
-    if (step >= mainLen && !showReport && !showTierSelection && !showDpoIntro && !isGenerating) {
+    if (step >= mainLen && !showReport && !showDpoIntro && !isGenerating) {
       const predefinedDBs = v3Answers.databases || []
       if (predefinedDBs.length === 0 || step >= mainLen + predefinedDBs.length) {
         setShowReport(true)
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, mainLen, showReport, showTierSelection, showDpoIntro, isGenerating])
+  }, [step, mainLen, showReport, showDpoIntro, isGenerating])
 
   // When DB detail phase finishes, go to classification report
   const handleDBDetailDone = useCallback((dbType: string, detail: any) => {
@@ -924,20 +936,18 @@ function OnboardingContent() {
     return 'basic'
   }, [v3Answers])
 
-  // After classification report → show tier selection
+  // After classification report → DPO intro (new user) or subscribe (returning user)
   const handleReportContinue = useCallback(() => {
-    const rec = calculateRecommendedTier()
-    setRecommendedTier(rec)
-    setShowTierSelection(true)
-  }, [calculateRecommendedTier])
-
-  // Tier continue → DPO intro
-  const handleTierContinue = () => {
-    if (!selectedTier) return
-    setShowTierSelection(false)
-    setShowDpoIntro(true)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+    if (isReviewMode) {
+      // Returning user already has org + docs, go straight to subscribe
+      router.push('/subscribe')
+    } else {
+      // New user: show DPO intro before saving
+      setShowReport(false)
+      setShowDpoIntro(true)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [isReviewMode, router])
 
   // Final complete: save org, profile, generate docs
   const handleComplete = async () => {
@@ -952,10 +962,12 @@ function OnboardingContent() {
       const businessName = v3Answers.bizName || 'עסק חדש'
       const legacyAnswers = mapV3ToLegacyAnswers(v3Answers)
 
+      const autoTier = calculateRecommendedTier()
+
       setGenerationProgress(20)
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
-        .insert({ name: businessName, business_id: '', tier: selectedTier || 'basic', status: 'active' })
+        .insert({ name: businessName, business_id: '', tier: autoTier, status: 'active' })
         .select().single()
 
       if (orgError) throw new Error('שגיאה ביצירת הארגון: ' + orgError.message)
@@ -1006,7 +1018,7 @@ function OnboardingContent() {
         })
       } catch (emailErr) { console.log('Welcome email skipped:', emailErr) }
 
-      setTimeout(() => router.push('/payment-required'), 1500)
+      setTimeout(() => router.push('/subscribe'), 1500)
     } catch (err: any) {
       setError(err.message || 'אירעה שגיאה בתהליך ההרשמה')
       setIsGenerating(false)
@@ -1078,162 +1090,14 @@ function OnboardingContent() {
     )
   }
 
-  // Enterprise modal
-  if (showEnterpriseModal) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
-        <Card className="w-full max-w-lg">
-          <CardHeader className="text-center">
-            <div className="mx-auto mb-4 bg-slate-100 rounded-full p-4 w-fit">
-              <Crown className="h-10 w-10 text-slate-700" />
-            </div>
-            <Badge className="mx-auto mb-2 bg-slate-600">לארגונים</Badge>
-            <CardTitle className="text-2xl">חבילה ארגונית</CardTitle>
-            <CardDescription>פתרון מותאם אישית לארגונים גדולים</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="bg-slate-50 rounded-lg p-4">
-              <h4 className="font-semibold mb-3">החבילה כוללת:</h4>
-              <ul className="space-y-2 text-sm">
-                {['2 שעות זמן DPO בחודש', 'זמן תגובה עד 4 שעות', 'סקירת תאימות חודשית', 'הדרכות לעובדים (רבעוני)', 'DPIA מלא כלול', 'משתמשים ללא הגבלה', 'SLA מובטח'].map(item => (
-                  <li key={item} className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />{item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold mb-1">₪3,500</p>
-              <p className="text-gray-600">לחודש</p>
-            </div>
-            <div className="space-y-3">
-              <p className="text-center text-gray-600">צרו קשר לתיאום פגישת היכרות:</p>
-              <Button className="w-full h-12 bg-slate-700 hover:bg-slate-800"
-                onClick={() => window.location.href = 'mailto:enterprise@dpo-pro.co.il?subject=בקשת מידע - חבילה ארגונית'}>
-                <Mail className="h-5 w-5 ml-2" />enterprise@dpo-pro.co.il
-              </Button>
-              <Button variant="outline" className="w-full h-12"
-                onClick={() => window.location.href = 'tel:+972-3-555-1234'}>
-                <Phone className="h-5 w-5 ml-2" />03-555-1234
-              </Button>
-            </div>
-            <p className="text-center text-sm text-gray-500">נחזור אליכם תוך יום עסקים אחד</p>
-            <Button variant="ghost" className="w-full"
-              onClick={() => { setShowEnterpriseModal(false); setSelectedTier(null) }}>
-              <ArrowRight className="h-4 w-4 ml-2" />חזרה לבחירת חבילות
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // Tier selection
-  if (showTierSelection) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-4">
-        <div className="max-w-5xl mx-auto">
-          <button onClick={() => { setShowTierSelection(false); setShowReport(true) }}
-            className="inline-flex items-center gap-2 mb-8 text-gray-600 hover:text-gray-900">
-            <ArrowRight className="h-4 w-4" />חזרה לתוצאות
-          </button>
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#1e40af]">
-                <Shield className="h-6 w-6 text-white" />
-              </div>
-              <span className="font-bold text-2xl text-[#1e40af]">MyDPO</span>
-            </div>
-            <h1 className="text-3xl font-bold mb-2">בחרו את החבילה שלכם</h1>
-            <p className="text-gray-600 mb-4">בהתבסס על הפרטים שמילאתם, אנחנו ממליצים על:</p>
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-3 rounded-full font-semibold shadow-lg">
-              <Sparkles className="h-5 w-5" />
-              14 ימי ניסיון חינם • ללא כרטיס אשראי • ביטול בכל עת
-            </div>
-          </div>
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Basic */}
-            <Card className={`cursor-pointer transition-all hover:shadow-lg relative ${selectedTier === 'basic' ? 'ring-2 ring-primary' : ''} ${recommendedTier === 'basic' ? 'border-2 border-emerald-500' : ''}`}
-              onClick={() => setSelectedTier('basic')}>
-              {recommendedTier === 'basic' && <Badge className="absolute -top-3 right-4 bg-emerald-500">מומלץ עבורך</Badge>}
-              <CardHeader>
-                <CardTitle>חבילה בסיסית</CardTitle>
-                <CardDescription>לעסקים קטנים ובינוניים</CardDescription>
-                <div className="pt-2"><span className="text-3xl font-bold">₪500</span><span className="text-gray-600"> / חודש</span></div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm">
-                  {['DPO ממונה מוסמך', 'מערכת AI מלאה', 'הפקת מסמכים אוטומטית', 'Q&A חכם לעובדים'].map(i => (
-                    <li key={i} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />{i}</li>
-                  ))}
-                  {['סקירה תקופתית', 'ליווי DPIA'].map(i => (
-                    <li key={i} className="flex items-center gap-2 text-gray-400"><X className="h-4 w-4 flex-shrink-0" />{i}</li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-            {/* Extended */}
-            <Card className={`cursor-pointer transition-all hover:shadow-lg relative ${selectedTier === 'extended' ? 'ring-2 ring-primary' : ''} ${recommendedTier === 'extended' ? 'border-2 border-emerald-500' : ''}`}
-              onClick={() => setSelectedTier('extended')}>
-              {recommendedTier === 'extended' && <Badge className="absolute -top-3 right-4 bg-emerald-500">מומלץ עבורך</Badge>}
-              <CardHeader>
-                <CardTitle>חבילה מורחבת</CardTitle>
-                <CardDescription>לעסקים עם מידע רגיש</CardDescription>
-                <div className="pt-2"><span className="text-3xl font-bold">₪1,000</span><span className="text-gray-600"> / חודש</span></div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm">
-                  {['הכל בבסיסית +', 'סקירה תקופתית', '30 דקות DPO בחודש', 'ייעוץ טלפוני', 'עדכוני רגולציה'].map(i => (
-                    <li key={i} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />{i}</li>
-                  ))}
-                  <li className="flex items-center gap-2 text-gray-400"><X className="h-4 w-4 flex-shrink-0" />DPIA מלא</li>
-                </ul>
-              </CardContent>
-            </Card>
-            {/* Enterprise */}
-            <Card className={`cursor-pointer transition-all hover:shadow-lg relative ${selectedTier === 'enterprise' ? 'ring-2 ring-primary' : ''} ${recommendedTier === 'enterprise' ? 'border-2 border-emerald-500' : ''}`}
-              onClick={() => setSelectedTier('enterprise')}>
-              {recommendedTier === 'enterprise' && <Badge className="absolute -top-3 right-4 bg-emerald-500">מומלץ עבורך</Badge>}
-              <CardHeader>
-                <Badge className="w-fit mb-2 bg-slate-600">לארגונים</Badge>
-                <CardTitle>חבילה ארגונית</CardTitle>
-                <CardDescription>לארגונים גדולים ומורכבים</CardDescription>
-                <div className="pt-2"><span className="text-3xl font-bold">₪3,500</span><span className="text-gray-600"> / חודש</span></div>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm">
-                  {['הכל במורחבת +', '2 שעות DPO בחודש', 'DPIA מלא כלול', 'הדרכות לעובדים', 'SLA מובטח'].map(i => (
-                    <li key={i} className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />{i}</li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-          <div className="flex justify-center mt-8">
-            <Button size="lg" onClick={() => {
-              if (selectedTier === 'enterprise') setShowEnterpriseModal(true)
-              else handleTierContinue()
-            }} disabled={!selectedTier} className="h-14 px-8 text-lg">
-              {selectedTier === 'enterprise' ? 'צרו קשר' : 'הכירו את הממונה שלכם'}
-              <ArrowLeft className="mr-2 h-5 w-5" />
-            </Button>
-          </div>
-          <p className="text-center text-sm text-gray-500 mt-4">
-            לא בטוחים מה מתאים לכם? <Link href="/contact" className="text-primary hover:underline">דברו איתנו</Link>
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   // DPO Introduction
   if (showDpoIntro) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4" dir="rtl">
         <div className="max-w-4xl w-full">
           <div className="flex items-center justify-between mb-6">
-            <Button variant="ghost" onClick={() => { setShowDpoIntro(false); setShowTierSelection(true) }} className="gap-2 text-white/80 hover:text-white hover:bg-white/10">
-              <ArrowRight className="h-4 w-4" />חזרה לבחירת חבילה
+            <Button variant="ghost" onClick={() => { setShowDpoIntro(false); setShowReport(true) }} className="gap-2 text-white/80 hover:text-white hover:bg-white/10">
+              <ArrowRight className="h-4 w-4" />חזרה לתוצאות
             </Button>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/10 backdrop-blur-sm">
@@ -1314,10 +1178,17 @@ function OnboardingContent() {
       <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white p-4">
         <div className="max-w-lg mx-auto">
           <div className="flex items-center justify-between mb-4">
-            <button onClick={() => { setShowReport(false); setStep(dbPhaseStart + totalDBs - 1) }}
-              className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
-              <ArrowRight className="h-4 w-4" />חזרה
-            </button>
+            {isReviewMode ? (
+              <button onClick={() => router.push('/subscribe')}
+                className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+                <ArrowRight className="h-4 w-4" />חזרה לחבילות
+              </button>
+            ) : (
+              <button onClick={() => { setShowReport(false); setStep(dbPhaseStart + totalDBs - 1) }}
+                className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+                <ArrowRight className="h-4 w-4" />חזרה
+              </button>
+            )}
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
                 <Shield className="h-5 w-5 text-white" />
@@ -1325,7 +1196,7 @@ function OnboardingContent() {
               <span className="font-bold text-[#1e40af]">MyDPO</span>
             </div>
           </div>
-          <ClassificationReport answers={v3Answers} onContinue={handleReportContinue} />
+          <ClassificationReport answers={v3Answers} onContinue={handleReportContinue} isReview={isReviewMode} />
         </div>
       </div>
     )
