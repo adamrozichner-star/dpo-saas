@@ -121,7 +121,7 @@ interface V3Answers {
   processors?: string[]
   customProcessors?: string[]
   hasConsent?: string
-  dbDetails?: Record<string, { fields?: string[]; size?: string; retention?: string }>
+  dbDetails?: Record<string, { fields?: string[]; size?: string; retention?: string; access?: string }>
   [key: string]: any
 }
 
@@ -157,7 +157,7 @@ function classifyDB(dbType: string, answers: V3Answers): Omit<DBClassification, 
   const size = detail.size || 'under100'
   const hasSensitive = fields.some(f => SENSITIVE_FIELDS.includes(f))
   const sizeNum = SIZE_RANGES.find(s => s.v === size)?.num || 50
-  const accessNum = ACCESS_RANGES.find(a => a.v === answers.access)?.num || 10
+  const accessNum = ACCESS_RANGES.find(a => a.v === detail.access)?.num || ACCESS_RANGES.find(a => a.v === answers.access)?.num || 10
 
   let level = 'basic', levelHe = 'בסיסי', color = '#22c55e', emoji = '✅', reasons: string[] = []
 
@@ -169,7 +169,7 @@ function classifyDB(dbType: string, answers: V3Answers): Omit<DBClassification, 
     if (sizeNum >= 100000) reasons.push('מעל 100,000 נושאי מידע')
     if (accessNum >= 100) reasons.push('מעל 100 בעלי הרשאה')
   }
-  if (answers.access === '1-2' && sizeNum < 10000 && !hasSensitive && dbType !== 'cameras' && dbType !== 'medical') {
+  if ((detail.access === '1-2' || (!detail.access && answers.access === '1-2')) && sizeNum < 10000 && !hasSensitive && dbType !== 'cameras' && dbType !== 'medical') {
     level = 'individual'; levelHe = 'ניהול יחיד'; color = '#6366f1'; emoji = '👤'
     reasons = ['עד 2 בעלי הרשאה, ללא מידע רגיש']
   }
@@ -206,7 +206,16 @@ function mapV3ToLegacyAnswers(v3: V3Answers): OnboardingAnswer[] {
   const accessToEmp: Record<string, string> = {
     '1-2': '1-10', '3-10': '1-10', '11-50': '11-50', '50-100': '51-200', '100+': '200+'
   }
-  push('employee_count', accessToEmp[v3.access || ''] || '1-10')
+  // Derive max access across all DBs
+  const allAccess = Object.values(v3.dbDetails || {}).map(d => d.access).filter(Boolean) as string[]
+  const maxAccess = allAccess.length > 0
+    ? allAccess.reduce((max, a) => {
+        const maxNum = ACCESS_RANGES.find(r => r.v === max)?.num || 0
+        const aNum = ACCESS_RANGES.find(r => r.v === a)?.num || 0
+        return aNum > maxNum ? a : max
+      })
+    : v3.access || '3-10'
+  push('employee_count', accessToEmp[maxAccess] || '1-10')
 
   const dataTypes: string[] = []
   const dbs = v3.databases || []
@@ -483,16 +492,17 @@ function NamedOwnerPicker({ options, value, onSelect, name, onNameChange, allowO
 
 function DBDetailCard({ dbType, animDir, onDone, existingDetail }: {
   dbType: string; animDir: string;
-  onDone: (detail: { fields: string[]; size: string; retention: string | null }) => void
-  existingDetail?: { fields?: string[]; size?: string; retention?: string }
+  onDone: (detail: { fields: string[]; size: string; retention: string | null; access: string }) => void
+  existingDetail?: { fields?: string[]; size?: string; retention?: string; access?: string }
 }) {
   const [fields, setFields] = useState<string[]>(existingDetail?.fields || [])
   const [size, setSize] = useState<string | null>(existingDetail?.size || null)
   const [retention, setRetention] = useState<string | null>(existingDetail?.retention || null)
+  const [access, setAccess] = useState<string | null>(existingDetail?.access || null)
   const dbInfo = DB_TYPES.find(d => d.v === dbType)
   const availableFields = DB_FIELDS[dbType] || []
   const toggle = (f: string) => setFields(p => p.includes(f) ? p.filter(x => x !== f) : [...p, f])
-  const ok = fields.length > 0 && size
+  const ok = fields.length > 0 && size && access
 
   return (
     <div 
@@ -548,6 +558,23 @@ function DBDetailCard({ dbType, animDir, onDone, existingDetail }: {
         ))}
       </div>
 
+      <div className="text-xs font-semibold text-gray-700 mb-2">כמה אנשים ניגשים למאגר?</div>
+      <div className="flex flex-wrap gap-1.5 mb-4">
+        {ACCESS_RANGES.map(a => (
+          <button
+            key={a.v}
+            onClick={() => setAccess(a.v)}
+            className={`px-2.5 py-1 rounded-lg text-xs cursor-pointer transition-all border-[1.5px] ${
+              access === a.v
+                ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
+                : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300'
+            }`}
+          >
+            {a.l}
+          </button>
+        ))}
+      </div>
+
       <div className="text-xs font-semibold text-gray-700 mb-2">מחיקת מידע ישן</div>
       <div className="flex flex-wrap gap-1.5 mb-3">
         {RETENTION_OPTIONS.map(r => (
@@ -571,13 +598,13 @@ function DBDetailCard({ dbType, animDir, onDone, existingDetail }: {
       )}
 
       <button
-        onClick={() => ok && onDone({ fields, size: size!, retention })}
+        onClick={() => ok && onDone({ fields, size: size!, retention, access: access! })}
         disabled={!ok}
         className={`w-full py-2.5 rounded-xl border-none text-sm font-semibold cursor-pointer transition-all ${
           ok ? 'bg-indigo-500 text-white hover:bg-indigo-600' : 'bg-gray-300 text-gray-500 cursor-default'
         }`}
       >
-        {ok ? '✓ הבא' : 'סמנו שדות וגודל'}
+        {ok ? '✓ הבא' : 'סמנו שדות, גודל וגישה'}
       </button>
     </div>
   )
@@ -681,6 +708,11 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
                   {detail.fields!.length} שדות
                 </span>
               )}
+              {detail.access && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+                  {ACCESS_RANGES.find(a => a.v === detail.access)?.l} בעלי גישה
+                </span>
+              )}
               {c.hasSensitive && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">🔒 רגיש</span>
               )}
@@ -761,9 +793,6 @@ function OnboardingContent() {
     { id: 'bizName', icon: '🏢', q: 'מה שם העסק?', type: 'text', placeholder: 'שם מלא של העסק' },
     { id: 'companyId', icon: '🔢', q: 'מה מספר ח.פ / ע.מ?', type: 'text', placeholder: 'לדוגמה: 515000000' },
     { id: 'industry', icon: '🎯', q: 'מה התחום?', type: 'pick_other' },
-    { id: 'access', icon: '👥', q: 'כמה אנשים ניגשים למידע אישי?', type: 'pick',
-      hint: 'בעלי הרשאה = קריטריון סיווג בחוק. מעל 100 = רמה גבוהה',
-      lawRef: 'תקנות אבטחת מידע 2017, סעיף 1' },
     { id: 'databases', icon: '📊', q: 'אילו מאגרי מידע אישי קיימים בעסק?', type: 'multi_other',
       hint: 'מייל + CRM + תיקיות = מאגר אחד. ספק עצמאי עם ת.ז = מידע פרטי!' },
     { id: 'totalSize', icon: '📏', q: 'כמה רשומות של אנשים יש לכם בכל המאגרים?', type: 'pick',
