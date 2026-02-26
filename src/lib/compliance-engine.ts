@@ -27,6 +27,12 @@ export interface ComplianceAction {
   resolvedNote?: string
 }
 
+export interface ActionOverride {
+  status: 'completed'
+  resolvedAt: string
+  note?: string
+}
+
 export interface ComplianceSummary {
   actions: ComplianceAction[]
   score: number
@@ -43,7 +49,8 @@ export interface ComplianceSummary {
 export function deriveComplianceActions(
   v3Answers: any,
   documents: any[],
-  incidents: any[]
+  incidents: any[],
+  actionOverrides?: Record<string, ActionOverride>
 ): ComplianceSummary {
   const actions: ComplianceAction[] = []
   const docTypes = documents.map(d => d.type)
@@ -376,6 +383,21 @@ export function deriveComplianceActions(
       category: 'user_action',
       actionPath: '/dashboard?tab=incidents'
     })
+  }
+
+  // ═══════════════════════════════════════════════════
+  // APPLY USER OVERRIDES (manually completed actions)
+  // ═══════════════════════════════════════════════════
+  if (actionOverrides) {
+    for (const action of actions) {
+      const override = actionOverrides[action.id]
+      if (override && override.status === 'completed') {
+        action.status = 'completed'
+        action.category = 'done'
+        action.owner = 'system'
+        action.resolvedNote = override.note || `סומן כבוצע — ${new Date(override.resolvedAt).toLocaleDateString('he-IL')}`
+      }
+    }
   }
 
   // ═══════════════════════════════════════════════════
