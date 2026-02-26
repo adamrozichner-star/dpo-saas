@@ -260,7 +260,7 @@ function DashboardContent() {
   // ACTION RESOLUTION
   // ═══════════════════════════════════════════════════
   const resolveAction = async (actionId: string, note?: string) => {
-    if (!organization?.id) return
+    if (!organization?.id || !supabase) return
 
     const newOverrides = {
       ...actionOverrides,
@@ -316,7 +316,7 @@ function DashboardContent() {
   }
 
   const undoAction = async (actionId: string) => {
-    if (!organization?.id) return
+    if (!organization?.id || !supabase) return
 
     const newOverrides = { ...actionOverrides }
     delete newOverrides[actionId]
