@@ -4,81 +4,11 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { 
-  Shield, 
-  Check,
-  Loader2,
-  CreditCard,
-  CheckCircle2,
-  X,
-  Building2,
-  Phone
+  Shield, Check, Loader2, CreditCard, CheckCircle2,
+  Phone, Sparkles, AlertTriangle, Eye
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
-
-const plans = [
-  {
-    id: 'basic',
-    name: 'בסיסית',
-    price: 500,
-    description: 'לעסקים קטנים עם פעילות סטנדרטית',
-    features: [
-      'DPO ממונה מוסמך',
-      'מערכת ניהול פרטיות מלאה',
-      'מסמכים מותאמים אוטומטית',
-      'בוט שאלות ותשובות AI',
-      'תמיכה בדוא"ל',
-      'זמן תגובה: 72 שעות',
-    ],
-    notIncluded: [
-      'סקירה תקופתית',
-      'זמינות DPO מורחבת',
-      'ליווי אירועי אבטחה',
-    ],
-    popular: false,
-    cta: 'בחירת חבילה'
-  },
-  {
-    id: 'extended',
-    name: 'מורחבת',
-    price: 1200,
-    description: 'לעסקים עם מידע רגיש או פעילות מורכבת',
-    features: [
-      'כל מה שבחבילה הבסיסית',
-      'סקירה תקופתית רבעונית',
-      'זמינות DPO עד 30 דק׳/חודש',
-      'ליווי אירועי אבטחה',
-      'תמיכה טלפונית',
-      'זמן תגובה: 24 שעות',
-      'עד 3 משתמשים',
-    ],
-    notIncluded: [],
-    popular: true,
-    cta: 'בחירת חבילה'
-  },
-  {
-    id: 'enterprise',
-    name: 'ארגונית',
-    price: 3500,
-    description: 'לארגונים גדולים עם דרישות מורכבות',
-    features: [
-      'כל מה שבחבילה המורחבת',
-      'זמינות DPO עד 2 שעות/חודש',
-      'זמן תגובה: 4 שעות',
-      'סקירה תקופתית חודשית',
-      'הדרכת עובדים (רבעונית)',
-      'DPIA מלא כלול',
-      'משתמשים ללא הגבלה',
-      'SLA מובטח',
-      'מנהל לקוח ייעודי',
-    ],
-    notIncluded: [],
-    popular: false,
-    cta: 'צרו קשר'
-  }
-]
 
 function SubscribeContent() {
   const router = useRouter()
@@ -90,20 +20,15 @@ function SubscribeContent() {
   const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [organization, setOrganization] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
-  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false)
+  const [recommendedTier, setRecommendedTier] = useState<string>('basic')
+  const [reasons, setReasons] = useState<string[]>([])
 
-  // Reset processing state if user navigates back from payment page
+  // Reset processing state on mount / back-button
   useEffect(() => {
-    // On mount: always start fresh (covers browser remount on back)
     setIsProcessing(false)
     setSelectedPlan(null)
-    
-    // On bfcache restore (covers Safari/Chrome back)
     const handlePageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) {
-        setIsProcessing(false)
-        setSelectedPlan(null)
-      }
+      if (e.persisted) { setIsProcessing(false); setSelectedPlan(null) }
     }
     window.addEventListener('pageshow', handlePageShow)
     return () => window.removeEventListener('pageshow', handlePageShow)
@@ -114,62 +39,64 @@ function SubscribeContent() {
       router.push('/login?redirect=/subscribe')
       return
     }
-
-    if (user && supabase) {
-      loadOrganization()
-    }
+    if (user && supabase) loadOrganization()
 
     const payment = searchParams.get('payment')
-    if (payment === 'success') {
-      setPaymentSuccess(true)
-    }
+    if (payment === 'success') setPaymentSuccess(true)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, user, supabase, searchParams])
+
+  // Load recommendation from localStorage
+  useEffect(() => {
+    const tier = localStorage.getItem('dpo_recommended_tier')
+    if (tier === 'basic' || tier === 'extended') setRecommendedTier(tier)
+
+    try {
+      const saved = localStorage.getItem('dpo_v3_answers')
+      if (!saved) return
+      const v3 = JSON.parse(saved)
+      const r: string[] = []
+
+      const dbs = v3.databases || []
+      const dbCount = dbs.length + (v3.customDatabases?.length || 0)
+      if (dbCount > 0) r.push(`${dbCount} מאגרי מידע זוהו בארגון`)
+
+      if (v3.industry === 'health') r.push('תחום בריאות — רגולציה מחמירה')
+      else if (v3.industry === 'finance') r.push('תחום פיננסי — רגולציה מחמירה')
+
+      if (dbs.includes('medical')) r.push('מידע רפואי — דורש סיווג אבטחה גבוה')
+      if ((v3.processors?.length || 0) > 0) r.push(`${v3.processors.length} ספקים חיצוניים — נדרשים הסכמי עיבוד`)
+
+      const SIZE_NUMS: Record<string, number> = { 'under100': 50, '100-1k': 500, '1k-10k': 5000, '10k-100k': 50000, '100k+': 150000 }
+      const totalRecords = Object.values(v3.dbDetails || {}).reduce((sum: number, d: any) => sum + (SIZE_NUMS[d.size] || 50), 0)
+      if (totalRecords >= 10000) r.push(`כ-${totalRecords.toLocaleString()} נושאי מידע`)
+
+      if (v3.securityOwner === 'none') r.push('אין אחראי אבטחת מידע — נדרשת חבילה עם ליווי')
+      if (v3.hasConsent === 'no') r.push('חסר מנגנון הסכמה — דורש טיפול')
+
+      setReasons(r)
+    } catch (e) { /* ignore */ }
+  }, [])
 
   const loadOrganization = async () => {
     if (!supabase || !user) return
-
     const { data: userData } = await supabase
-      .from('users')
-      .select('org_id')
-      .eq('auth_user_id', user.id)
-      .single()
-
+      .from('users').select('org_id').eq('auth_user_id', user.id).single()
     if (userData?.org_id) {
       const { data: org } = await supabase
-        .from('organizations')
-        .select('*')
-        .eq('id', userData.org_id)
-        .single()
-      
+        .from('organizations').select('*').eq('id', userData.org_id).single()
       setOrganization(org)
+      if (org?.tier && !localStorage.getItem('dpo_recommended_tier')) {
+        setRecommendedTier(org.tier)
+      }
     }
   }
 
   const handleSelectPlan = async (planId: string) => {
-    if (planId === 'enterprise') {
-      setShowEnterpriseModal(true)
-      return
-    }
-
-    if (!user) {
-      router.push('/login?redirect=/subscribe')
-      return
-    }
-
+    if (!user) { router.push('/login?redirect=/subscribe'); return }
     setSelectedPlan(planId)
     setError(null)
     setIsProcessing(true)
-
-    // Get quick assessment data from localStorage (payment-first flow)
-    let quickAssessment = null;
-    try {
-      const saved = localStorage.getItem('mydpo_quick_assessment');
-      if (saved) {
-        quickAssessment = JSON.parse(saved);
-      }
-    } catch (e) {
-      // Ignore parse errors
-    }
 
     try {
       const response = await fetch('/api/cardcom/create-payment', {
@@ -177,31 +104,25 @@ function SubscribeContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           plan: planId,
-          orgId: organization?.id,  // May be null - API will create org
+          orgId: organization?.id,
           userId: user?.id,
           userEmail: user?.email,
           userName: organization?.name || user?.user_metadata?.name || '',
-          companyName: quickAssessment?.companyName,
-          industry: quickAssessment?.industry,
-          companySize: quickAssessment?.companySize,
         })
       })
-
       const data = await response.json()
-      
       if (data.success && data.paymentUrl) {
         window.location.href = data.paymentUrl
       } else {
-        // Better error messages
         let errorMsg = data.error || 'שגיאה ביצירת התשלום'
         if (errorMsg.includes('not configured') || errorMsg.includes('missing credentials')) {
-          errorMsg = 'מערכת התשלומים בתהליך הגדרה. נסה שוב בעוד מספר דקות.'
+          errorMsg = 'מערכת התשלומים בתהליך הגדרה. נסו שוב בעוד מספר דקות.'
         }
         setError(errorMsg)
         setIsProcessing(false)
       }
     } catch (err) {
-      setError('שגיאה בחיבור לשרת. נסה שוב.')
+      setError('שגיאה בחיבור לשרת. נסו שוב.')
       setIsProcessing(false)
     }
   }
@@ -216,247 +137,209 @@ function SubscribeContent() {
 
   if (paymentSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Card className="w-full max-w-md text-center">
-          <CardContent className="p-8">
-            <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold mb-2">התשלום בוצע בהצלחה!</h1>
-            <p className="text-gray-600 mb-6">המנוי שלך הופעל. ברוכים הבאים ל-MyDPO!</p>
-            <Button onClick={() => router.push('/dashboard')}>
-              המשך ללוח הבקרה
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50" dir="rtl">
+        <div className="w-full max-w-sm text-center bg-white rounded-2xl p-8 shadow-lg">
+          <CheckCircle2 className="h-14 w-14 text-green-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold mb-2">התשלום בוצע בהצלחה!</h1>
+          <p className="text-gray-600 mb-6">המנוי שלכם הופעל. ברוכים הבאים ל-MyDPO!</p>
+          <Button onClick={() => router.push('/dashboard')} className="w-full">
+            המשך ללוח הבקרה
+          </Button>
+        </div>
       </div>
     )
   }
 
+  const otherTier = recommendedTier === 'basic' ? 'extended' : 'basic'
+
+  const plans: Record<string, { name: string; price: number; desc: string; features: string[] }> = {
+    basic: {
+      name: 'בסיסית',
+      price: 500,
+      desc: 'לעסקים קטנים עם פעילות סטנדרטית',
+      features: [
+        'DPO ממונה מוסמך',
+        'מערכת AI מלאה',
+        'מסמכים מותאמים אוטומטית',
+        'בוט שאלות ותשובות',
+        'תמיכה בדוא״ל (72 שעות)',
+      ],
+    },
+    extended: {
+      name: 'מורחבת',
+      price: 1200,
+      desc: 'לעסקים עם מידע רגיש או פעילות מורכבת',
+      features: [
+        'הכל בבסיסית, ובנוסף:',
+        'סקירה תקופתית רבעונית',
+        'זמינות DPO עד 30 דק׳/חודש',
+        'ליווי אירועי אבטחה',
+        'תמיכה טלפונית (24 שעות)',
+        'עד 3 משתמשים',
+      ],
+    },
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
-      <header className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
-              <Shield className="h-6 w-6 text-white" />
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white" dir="rtl">
+      {/* Compact header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-sm border-b">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
+            <Shield className="h-5 w-5 text-white" />
+          </div>
+          <span className="font-bold text-[#1e40af]">MyDPO</span>
+        </div>
+        <Link href="/onboarding" className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
+          <Eye className="h-3 w-3" />
+          חזרה לתוצאות
+        </Link>
+      </div>
+
+      <div className="max-w-md mx-auto px-4 py-5">
+        {/* Recommendation banner */}
+        <div className="bg-white rounded-xl p-3.5 shadow-sm border border-blue-100 mb-4">
+          <div className="flex items-start gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <Sparkles className="h-4 w-4 text-blue-600" />
             </div>
-            <span className="font-bold text-xl" style={{color: '#1e40af'}}>MyDPO</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link href="/onboarding">
-              <Button variant="ghost" className="text-sm">צפייה בתוצאות הסיווג</Button>
-            </Link>
-            <Link href="/dashboard">
-              <Button variant="ghost">חזרה ללוח הבקרה</Button>
-            </Link>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold text-gray-800 mb-1">
+                על בסיס הניתוח, אנחנו ממליצים על חבילה {plans[recommendedTier].name}
+              </div>
+              {reasons.length > 0 && (
+                <div className="space-y-0.5">
+                  {reasons.slice(0, 4).map((r, i) => (
+                    <div key={i} className="text-[11px] text-gray-500 flex items-center gap-1.5">
+                      <span className="w-1 h-1 rounded-full bg-amber-400 flex-shrink-0" /> {r}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </header>
 
-      <main className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold mb-4">בחרו את החבילה המתאימה לכם</h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            כל החבילות כוללות DPO ממונה מוסמך ומערכת ניהול פרטיות מלאה.
-          </p>
+        {/* Recommended plan — prominent */}
+        <PlanCard
+          plan={plans[recommendedTier]}
+          planId={recommendedTier}
+          isRecommended={true}
+          isProcessing={isProcessing}
+          selectedPlan={selectedPlan}
+          onSelect={handleSelectPlan}
+        />
+
+        {/* Divider */}
+        <div className="flex items-center gap-3 my-3.5">
+          <div className="flex-1 h-px bg-gray-200" />
+          <span className="text-[11px] text-gray-400">או</span>
+          <div className="flex-1 h-px bg-gray-200" />
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto items-stretch">
-          {plans.map((plan) => (
-            <Card 
-              key={plan.id}
-              className={`relative flex flex-col ${plan.popular ? 'border-primary border-2 shadow-lg' : ''} ${plan.id === 'enterprise' ? 'bg-gradient-to-b from-slate-50 to-slate-100' : ''}`}
-            >
-              {plan.popular && (
-                <Badge className="absolute -top-3 right-4 bg-primary">
-                  הכי פופולרי
-                </Badge>
-              )}
-              {plan.id === 'enterprise' && (
-                <Badge className="absolute -top-3 right-4 bg-slate-800">
-                  <Building2 className="h-3 w-3 ml-1" />
-                  לארגונים
-                </Badge>
-              )}
-              <CardHeader>
-                <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                <CardDescription>{plan.description}</CardDescription>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold">₪{plan.price.toLocaleString()}</span>
-                  <span className="text-gray-500"> / חודש</span>
-                </div>
-              </CardHeader>
-              <CardContent className="flex-1 flex flex-col">
-                <ul className="space-y-3 mb-6 flex-1">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                      <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                      <span className="text-sm">{feature}</span>
-                    </li>
-                  ))}
-                  {plan.notIncluded.map((feature, i) => (
-                    <li key={i} className="flex items-center gap-2 text-gray-400">
-                      <X className="h-5 w-5 flex-shrink-0" />
-                      <span className="text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button 
-                  className={`w-full mt-auto ${plan.id === 'enterprise' ? 'bg-slate-800 hover:bg-slate-900' : ''}`}
-                  variant={plan.popular ? 'default' : plan.id === 'enterprise' ? 'default' : 'outline'}
-                  onClick={() => handleSelectPlan(plan.id)}
-                  disabled={isProcessing && selectedPlan !== 'enterprise'}
-                >
-                  {isProcessing && selectedPlan === plan.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin ml-2" />
-                  ) : plan.id === 'enterprise' ? (
-                    <Phone className="h-4 w-4 ml-2" />
-                  ) : (
-                    <CreditCard className="h-4 w-4 ml-2" />
-                  )}
-                  {isProcessing && selectedPlan === plan.id ? 'מעבד...' : plan.cta}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {/* Other plan — compact */}
+        <PlanCard
+          plan={plans[otherTier]}
+          planId={otherTier}
+          isRecommended={false}
+          isProcessing={isProcessing}
+          selectedPlan={selectedPlan}
+          onSelect={handleSelectPlan}
+        />
 
+        {/* Error */}
         {error && (
-          <div className="max-w-md mx-auto mt-6 p-4 bg-red-50 border border-red-200 rounded-lg text-center text-red-700">
-            {error === 'Payment not configured' ? 'מערכת התשלומים עדיין לא הוגדרה' : error}
+          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl text-center text-red-700 text-sm flex items-center justify-center gap-2">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0" />{error}
           </div>
         )}
 
-        <div className="mt-12 text-center text-gray-500 text-sm">
-          <p>🔒 תשלום מאובטח</p>
-          <p>ניתן לבטל בכל עת • ללא התחייבות</p>
+        {/* Enterprise link */}
+        <div className="mt-5 text-center">
+          <a href="mailto:hello@mydpo.co.il?subject=בקשה לחבילה ארגונית" 
+             className="text-xs text-gray-400 hover:text-gray-600 inline-flex items-center gap-1">
+            ארגון גדול? <span className="underline">צרו קשר לחבילה מותאמת</span>
+          </a>
         </div>
 
-        {/* Comparison Table */}
-        <div className="mt-16 max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-8">השוואת חבילות</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b-2">
-                  <th className="text-right p-4">תכונה</th>
-                  <th className="text-center p-4">בסיסית</th>
-                  <th className="text-center p-4 bg-primary/5">מורחבת</th>
-                  <th className="text-center p-4 bg-slate-100">ארגונית</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b">
-                  <td className="p-4">מחיר חודשי</td>
-                  <td className="text-center p-4">₪500</td>
-                  <td className="text-center p-4 bg-primary/5 font-bold">₪1,200</td>
-                  <td className="text-center p-4 bg-slate-100">₪3,500</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-4">DPO ממונה</td>
-                  <td className="text-center p-4"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
-                  <td className="text-center p-4 bg-primary/5"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
-                  <td className="text-center p-4 bg-slate-100"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-4">מסמכים אוטומטיים</td>
-                  <td className="text-center p-4"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
-                  <td className="text-center p-4 bg-primary/5"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
-                  <td className="text-center p-4 bg-slate-100"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-4">זמן DPO</td>
-                  <td className="text-center p-4">חריגים בלבד</td>
-                  <td className="text-center p-4 bg-primary/5">30 דק׳/חודש</td>
-                  <td className="text-center p-4 bg-slate-100">2 שעות/חודש</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-4">זמן תגובה</td>
-                  <td className="text-center p-4">72 שעות</td>
-                  <td className="text-center p-4 bg-primary/5">24 שעות</td>
-                  <td className="text-center p-4 bg-slate-100">4 שעות</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-4">סקירה תקופתית</td>
-                  <td className="text-center p-4"><X className="h-5 w-5 text-gray-300 mx-auto" /></td>
-                  <td className="text-center p-4 bg-primary/5">רבעונית</td>
-                  <td className="text-center p-4 bg-slate-100">חודשית</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-4">משתמשים</td>
-                  <td className="text-center p-4">1</td>
-                  <td className="text-center p-4 bg-primary/5">3</td>
-                  <td className="text-center p-4 bg-slate-100">ללא הגבלה</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-4">הדרכת עובדים</td>
-                  <td className="text-center p-4"><X className="h-5 w-5 text-gray-300 mx-auto" /></td>
-                  <td className="text-center p-4 bg-primary/5"><X className="h-5 w-5 text-gray-300 mx-auto" /></td>
-                  <td className="text-center p-4 bg-slate-100"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-4">SLA מובטח</td>
-                  <td className="text-center p-4"><X className="h-5 w-5 text-gray-300 mx-auto" /></td>
-                  <td className="text-center p-4 bg-primary/5"><X className="h-5 w-5 text-gray-300 mx-auto" /></td>
-                  <td className="text-center p-4 bg-slate-100"><Check className="h-5 w-5 text-green-500 mx-auto" /></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+        {/* Footer badges */}
+        <div className="mt-3 flex items-center justify-center gap-3 text-[11px] text-gray-400 pb-4">
+          <span>🔒 תשלום מאובטח</span>
+          <span>·</span>
+          <span>ביטול בכל עת</span>
+          <span>·</span>
+          <span>ללא התחייבות</span>
         </div>
-      </main>
+      </div>
+    </div>
+  )
+}
 
-      {/* Enterprise Contact Modal */}
-      {showEnterpriseModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="h-5 w-5" />
-                  חבילה ארגונית
-                </CardTitle>
-                <Button variant="ghost" size="icon" onClick={() => setShowEnterpriseModal(false)}>
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-              <CardDescription>
-                צרו קשר לקבלת הצעה מותאמת לארגון שלכם
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="bg-slate-50 rounded-lg p-4 space-y-2">
-                <p className="font-medium">החבילה הארגונית כוללת:</p>
-                <ul className="text-sm text-gray-600 space-y-1">
-                  <li>• 2 שעות זמן DPO בחודש</li>
-                  <li>• זמן תגובה של 4 שעות</li>
-                  <li>• סקירה חודשית</li>
-                  <li>• הדרכות לעובדים</li>
-                  <li>• SLA מובטח</li>
-                  <li>• מנהל לקוח ייעודי</li>
-                </ul>
-              </div>
-              
-              <div className="space-y-3">
-                <a href="mailto:enterprise@dpo-pro.co.il?subject=בקשה לחבילה ארגונית" className="block">
-                  <Button className="w-full">
-                    📧 שלחו מייל
-                  </Button>
-                </a>
-                <a href="tel:+972-XXX-XXXXXX" className="block">
-                  <Button variant="outline" className="w-full">
-                    <Phone className="h-4 w-4 ml-2" />
-                    התקשרו אלינו
-                  </Button>
-                </a>
-              </div>
+function PlanCard({ plan, planId, isRecommended, isProcessing, selectedPlan, onSelect }: {
+  plan: { name: string; price: number; desc: string; features: string[] }
+  planId: string
+  isRecommended: boolean
+  isProcessing: boolean
+  selectedPlan: string | null
+  onSelect: (id: string) => void
+}) {
+  const processing = isProcessing && selectedPlan === planId
 
-              <p className="text-xs text-gray-500 text-center">
-                נחזור אליכם תוך יום עסקים אחד
-              </p>
-            </CardContent>
-          </Card>
+  return (
+    <div className={`bg-white rounded-xl overflow-hidden transition-all ${
+      isRecommended 
+        ? 'shadow-md border-2 border-blue-500' 
+        : 'shadow-sm border border-gray-200'
+    }`}>
+      {isRecommended && (
+        <div className="bg-blue-600 text-white text-center text-xs font-medium py-1.5">
+          ✨ מומלץ על בסיס הנתונים שלכם
         </div>
       )}
+      <div className={isRecommended ? 'p-4' : 'px-4 py-3'}>
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-2.5">
+          <div>
+            <span className={`font-bold ${isRecommended ? 'text-base' : 'text-sm'} text-gray-800`}>
+              חבילה {plan.name}
+            </span>
+            <div className="text-[11px] text-gray-500 mt-0.5">{plan.desc}</div>
+          </div>
+          <div className="text-left flex-shrink-0 mr-3">
+            <div className={`font-extrabold ${isRecommended ? 'text-2xl' : 'text-lg'} text-gray-800 leading-tight`}>
+              ₪{plan.price.toLocaleString()}
+            </div>
+            <div className="text-[10px] text-gray-400 text-left">לחודש + מע״מ</div>
+          </div>
+        </div>
+
+        {/* Features */}
+        <div className={`${isRecommended ? 'grid grid-cols-1 gap-1.5' : 'grid grid-cols-2 gap-x-2 gap-y-1'} mb-3`}>
+          {plan.features.map((f, i) => (
+            <div key={i} className={`flex items-center gap-1.5 ${isRecommended ? 'text-[13px]' : 'text-[11px]'} text-gray-600`}>
+              <Check className={`${isRecommended ? 'h-3.5 w-3.5' : 'h-3 w-3'} text-green-500 flex-shrink-0`} />
+              <span>{f}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* CTA */}
+        <button
+          onClick={() => onSelect(planId)}
+          disabled={isProcessing}
+          className={`w-full rounded-xl border-none font-bold cursor-pointer disabled:opacity-60 transition-all flex items-center justify-center gap-2 ${
+            isRecommended
+              ? 'bg-blue-600 hover:bg-blue-700 text-white text-sm py-3'
+              : 'bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs py-2.5'
+          }`}
+        >
+          {processing ? (
+            <><Loader2 className="h-4 w-4 animate-spin" /> מעבד...</>
+          ) : (
+            <><CreditCard className="h-4 w-4" /> בחירת חבילה {plan.name}</>
+          )}
+        </button>
+      </div>
     </div>
   )
 }
