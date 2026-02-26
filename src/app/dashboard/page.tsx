@@ -305,11 +305,13 @@ function DashboardContent() {
         .eq('id', organization.id)
 
       // Audit log
-      await supabase.from('audit_logs').insert({
-        org_id: organization.id,
-        action: 'action_resolved',
-        details: { actionId, note, newScore: newSummary.score }
-      }).then(() => {}).catch(() => {})
+      try {
+        await supabase.from('audit_logs').insert({
+          org_id: organization.id,
+          action: 'action_resolved',
+          details: { actionId, note, newScore: newSummary.score }
+        })
+      } catch {}
     } catch (e) {
       console.log('Could not persist action override:', e)
     }
