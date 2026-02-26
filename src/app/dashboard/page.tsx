@@ -238,9 +238,14 @@ function DashboardContent() {
         }
 
         // Show welcome on first-ever successful dashboard load
+        // Use both localStorage key AND check if we have real data
         if (user) {
           const welcomeKey = `dpo_welcomed_${user.id}`
-          if (!localStorage.getItem(welcomeKey)) {
+          const wasWelcomed = localStorage.getItem(welcomeKey)
+          const hasDocs = (docs && docs.length > 0)
+          
+          // Show welcome if: never welcomed, OR if ?welcome or ?payment param triggered it
+          if (!wasWelcomed && hasDocs) {
             setShowWelcome(true)
             localStorage.setItem(welcomeKey, 'true')
           }
