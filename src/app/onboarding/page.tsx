@@ -860,13 +860,24 @@ function OnboardingContent() {
   }, [supabase, user, router])
 
   useEffect(() => {
-    if (step > 0) {
+    if (step > 0 && user) {
       localStorage.setItem('dpo_v3_answers', JSON.stringify(v3Answers))
       localStorage.setItem('dpo_v3_step', String(step))
+      localStorage.setItem('dpo_v3_user', user.id)
     }
-  }, [v3Answers, step])
+  }, [v3Answers, step, user])
 
   useEffect(() => {
+    if (!user) return
+    const savedUser = localStorage.getItem('dpo_v3_user')
+    // Clear stale data from a different user
+    if (savedUser && savedUser !== user.id) {
+      localStorage.removeItem('dpo_v3_answers')
+      localStorage.removeItem('dpo_v3_step')
+      localStorage.removeItem('dpo_v3_user')
+      localStorage.removeItem('dpo_recommended_tier')
+      return
+    }
     const saved = localStorage.getItem('dpo_v3_answers')
     const savedStep = localStorage.getItem('dpo_v3_step')
     if (saved) {
@@ -881,7 +892,7 @@ function OnboardingContent() {
         }
       } catch (e) { /* ignore */ }
     }
-  }, [])
+  }, [user])
 
   const [textInput, setTextInput] = useState('')
 
