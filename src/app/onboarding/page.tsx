@@ -38,7 +38,7 @@ const DB_TYPES = [
   { v: 'employees', l: '👥 עובדים', icon: '👥' },
   { v: 'cameras', l: '📹 מצלמות', icon: '📹' },
   { v: 'website_leads', l: '🌐 לידים מהאתר', icon: '🌐' },
-  { v: 'suppliers_id', l: '🔑 ספקים עם ת.ז', icon: '🔑' },
+  { v: 'suppliers_id', l: '🔑 עוסק מורשה', icon: '🔑' },
   { v: 'payments', l: '💳 תשלומים', icon: '💳' },
   { v: 'medical', l: '🏥 רפואי', icon: '🏥' },
 ]
