@@ -916,7 +916,7 @@ function OnboardingContent() {
     setIsGenerating(true)
     setError(null)
     setGenerationProgress(10)
-    setStatus('יוצרים את הארגון שלכם...')
+    setStatus('מנתחים את הנתונים שלכם...')
 
     try {
       const businessName = v3Answers.bizName || 'עסק חדש'
@@ -924,7 +924,8 @@ function OnboardingContent() {
 
       const autoTier = calculateRecommendedTier()
 
-      setGenerationProgress(20)
+      setGenerationProgress(25)
+      setStatus('מתאימים את רמת האבטחה...')
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
         .insert({ name: businessName, business_id: '', tier: autoTier, status: 'active' })
@@ -932,12 +933,12 @@ function OnboardingContent() {
 
       if (orgError) throw new Error('שגיאה ביצירת הארגון: ' + orgError.message)
 
-      setGenerationProgress(40)
-      setStatus('מעדכנים את פרטי המשתמש...')
-      await supabase.from('users').update({ org_id: orgData.id }).eq('auth_user_id', user.id)
-
       setGenerationProgress(50)
       setStatus('שומרים את פרופיל הארגון...')
+      await supabase.from('users').update({ org_id: orgData.id }).eq('auth_user_id', user.id)
+
+      setGenerationProgress(65)
+      setStatus('בוחרים את החבילה המומלצת...')
       await supabase.from('organization_profiles').insert({
         org_id: orgData.id,
         profile_data: { 
@@ -947,8 +948,8 @@ function OnboardingContent() {
         }
       })
 
-      setGenerationProgress(60)
-      setStatus('מייצרים מסמכים...')
+      setGenerationProgress(80)
+      setStatus('מכינים את סביבת העבודה...')
       try {
         const response = await fetch('/api/generate-documents', {
           method: 'POST',
@@ -958,14 +959,15 @@ function OnboardingContent() {
             answers: legacyAnswers
           })
         })
-        if (response.ok) { setGenerationProgress(90); setStatus('מסמכים נוצרו בהצלחה!') }
+        if (response.ok) { setGenerationProgress(95); setStatus('כמעט מוכן!') }
       } catch (docError) { console.log('Document generation skipped') }
 
       localStorage.setItem('dpo_v3_answers', JSON.stringify(v3Answers))
       localStorage.removeItem('dpo_v3_step')
+      localStorage.setItem('dpo_recommended_tier', autoTier)
 
       setGenerationProgress(100)
-      setStatus('הושלם! מעבירים ללוח הבקרה...')
+      setStatus('הכל מוכן! מעבירים לחבילות...')
 
       try {
         await fetch('/api/email', {
@@ -1023,21 +1025,21 @@ function OnboardingContent() {
                 <Sparkles className="h-10 w-10 text-primary animate-pulse" />
               </div>
             </div>
-            <h2 className="text-2xl font-bold mb-2">מייצרים את המסמכים שלכם</h2>
+            <h2 className="text-2xl font-bold mb-2">מנתחים את העסק שלכם</h2>
             <p className="text-gray-600 mb-6">{status}</p>
             <Progress value={generationProgress} className="h-3 mb-4" />
             <div className="grid grid-cols-4 gap-2 text-xs text-gray-500">
-              <div className={generationProgress >= 25 ? 'text-primary font-medium' : ''}>
-                <FileCheck className="h-4 w-4 mx-auto mb-1" />מדיניות פרטיות
+              <div className={generationProgress >= 20 ? 'text-primary font-medium' : ''}>
+                <Database className="h-4 w-4 mx-auto mb-1" />ניתוח מאגרים
               </div>
-              <div className={generationProgress >= 50 ? 'text-primary font-medium' : ''}>
-                <Database className="h-4 w-4 mx-auto mb-1" />הגדרות מאגר
+              <div className={generationProgress >= 45 ? 'text-primary font-medium' : ''}>
+                <Shield className="h-4 w-4 mx-auto mb-1" />רמת אבטחה
               </div>
-              <div className={generationProgress >= 75 ? 'text-primary font-medium' : ''}>
-                <Lock className="h-4 w-4 mx-auto mb-1" />נהלי אבטחה
+              <div className={generationProgress >= 70 ? 'text-primary font-medium' : ''}>
+                <Lock className="h-4 w-4 mx-auto mb-1" />התאמת חבילה
               </div>
-              <div className={generationProgress >= 90 ? 'text-primary font-medium' : ''}>
-                <User className="h-4 w-4 mx-auto mb-1" />כתב מינוי
+              <div className={generationProgress >= 95 ? 'text-primary font-medium' : ''}>
+                <CheckCircle2 className="h-4 w-4 mx-auto mb-1" />הכל מוכן
               </div>
             </div>
           </CardContent>
