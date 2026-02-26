@@ -183,6 +183,23 @@ function DashboardContent() {
           }
         } catch {}
 
+        // Auto-fix: if v3Answers has a different bizName than org, update org
+        const v3BizName = profileData?.v3Answers?.bizName
+        const v3CompanyId = profileData?.v3Answers?.companyId
+        console.log('[Dashboard] Org name check:', { 
+          orgName: org.name, v3BizName, orgBusinessId: org.business_id, v3CompanyId 
+        })
+        if (v3BizName && v3BizName !== org.name) {
+          console.log('[Dashboard] Fixing org name:', org.name, '→', v3BizName)
+          await supabase.from('organizations').update({ 
+            name: v3BizName,
+            ...(v3CompanyId ? { business_id: v3CompanyId } : {})
+          }).eq('id', org.id)
+          org.name = v3BizName
+          if (v3CompanyId) org.business_id = v3CompanyId
+          setOrganization({ ...org })
+        }
+
         // Auto-generate docs if onboarding completed but no docs exist (401 recovery)
         if ((!docs || docs.length === 0) && profileData?.v3Answers) {
           console.log('No docs found but profile exists — auto-generating...')
