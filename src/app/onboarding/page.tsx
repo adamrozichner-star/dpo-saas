@@ -993,9 +993,15 @@ function OnboardingContent() {
       setGenerationProgress(80)
       setStatus('מכינים את סביבת העבודה...')
       try {
+        // Get auth token for API call
+        const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+        if (supabase) {
+          const { data: { session: sess } } = await supabase.auth.getSession()
+          if (sess?.access_token) authHeaders['Authorization'] = `Bearer ${sess.access_token}`
+        }
         const response = await fetch('/api/generate-documents', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify({
             orgId: orgData.id, orgName: businessName, businessId: v3Answers.companyId || '',
             answers: legacyAnswers, v3Answers
