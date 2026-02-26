@@ -72,9 +72,9 @@ export default function RegisterPage() {
         }
       } else {
         setSuccess(true)
-        // Redirect to quick assessment (payment-first flow)
+        // Redirect to onboarding questionnaire
         setTimeout(() => {
-        router.push('/payment-required')
+        router.push('/onboarding')
         }, 2000)
       }
     } catch (err) {
