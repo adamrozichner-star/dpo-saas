@@ -35,7 +35,7 @@ import { useSubscriptionGate } from '@/lib/use-subscription-gate'
 import { DPO_CONFIG } from '@/lib/dpo-config'
 import { useToast } from '@/components/Toast'
 import WelcomeModal from '@/components/WelcomeModal'
-import { deriveComplianceActions, ComplianceSummary } from '@/lib/compliance-engine'
+import { deriveComplianceActions, ComplianceSummary, ActionOverride } from '@/lib/compliance-engine'
 
 // ============================================
 // TYPES
@@ -96,6 +96,7 @@ function DashboardContent() {
   const [messageThreads, setMessageThreads] = useState<any[]>([])
   const [orgProfile, setOrgProfile] = useState<any>(null)
   const [complianceSummary, setComplianceSummary] = useState<ComplianceSummary | null>(null)
+  const [actionOverrides, setActionOverrides] = useState<Record<string, ActionOverride>>({})
 
   useEffect(() => {
     if (!loading && !session) {
@@ -211,7 +212,10 @@ function DashboardContent() {
         if (Object.keys(v3).length === 0) {
           try { v3 = JSON.parse(localStorage.getItem('dpo_v3_answers') || '{}') } catch {}
         }
-        const summary = deriveComplianceActions(v3, docs || [], incidentData || [])
+        // Load persisted action overrides (user-completed actions)
+        const overrides = profileData?.actionOverrides || {}
+        setActionOverrides(overrides)
+        const summary = deriveComplianceActions(v3, docs || [], incidentData || [], overrides)
         setComplianceSummary(summary)
         // Use engine score if we have v3 data, otherwise fallback to doc-based score
         if (Object.keys(v3).length > 0) {
@@ -249,6 +253,106 @@ function DashboardContent() {
       console.error('Error loading data:', error)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // ═══════════════════════════════════════════════════
+  // ACTION RESOLUTION
+  // ═══════════════════════════════════════════════════
+  const resolveAction = async (actionId: string, note?: string) => {
+    if (!organization?.id) return
+
+    const newOverrides = {
+      ...actionOverrides,
+      [actionId]: {
+        status: 'completed' as const,
+        resolvedAt: new Date().toISOString(),
+        note: note || undefined
+      }
+    }
+    setActionOverrides(newOverrides)
+
+    // Recalculate summary immediately with new overrides
+    let v3 = orgProfile?.v3Answers || {}
+    if (Object.keys(v3).length === 0) {
+      try { v3 = JSON.parse(localStorage.getItem('dpo_v3_answers') || '{}') } catch {}
+    }
+    const newSummary = deriveComplianceActions(v3, documents, incidents, newOverrides)
+    setComplianceSummary(newSummary)
+    setComplianceScore(newSummary.score)
+
+    // Persist to Supabase
+    try {
+      // Read current profile_data, merge overrides
+      const { data: profile } = await supabase
+        .from('organization_profiles')
+        .select('profile_data')
+        .eq('org_id', organization.id)
+        .single()
+
+      const currentData = profile?.profile_data || {}
+      await supabase
+        .from('organization_profiles')
+        .update({
+          profile_data: { ...currentData, actionOverrides: newOverrides }
+        })
+        .eq('org_id', organization.id)
+
+      // Sync score
+      await supabase
+        .from('organizations')
+        .update({ compliance_score: newSummary.score })
+        .eq('id', organization.id)
+
+      // Audit log
+      await supabase.from('audit_logs').insert({
+        org_id: organization.id,
+        action: 'action_resolved',
+        details: { actionId, note, newScore: newSummary.score }
+      }).then(() => {}).catch(() => {})
+    } catch (e) {
+      console.log('Could not persist action override:', e)
+    }
+  }
+
+  const undoAction = async (actionId: string) => {
+    if (!organization?.id) return
+
+    const newOverrides = { ...actionOverrides }
+    delete newOverrides[actionId]
+    setActionOverrides(newOverrides)
+
+    // Recalculate
+    let v3 = orgProfile?.v3Answers || {}
+    if (Object.keys(v3).length === 0) {
+      try { v3 = JSON.parse(localStorage.getItem('dpo_v3_answers') || '{}') } catch {}
+    }
+    const newSummary = deriveComplianceActions(v3, documents, incidents, newOverrides)
+    setComplianceSummary(newSummary)
+    setComplianceScore(newSummary.score)
+
+    // Persist
+    try {
+      const { data: profile } = await supabase
+        .from('organization_profiles')
+        .select('profile_data')
+        .eq('org_id', organization.id)
+        .single()
+
+      const currentData = profile?.profile_data || {}
+      await supabase
+        .from('organization_profiles')
+        .update({
+          profile_data: { ...currentData, actionOverrides: newOverrides }
+        })
+        .eq('org_id', organization.id)
+
+      await supabase
+        .from('organizations')
+        .update({ compliance_score: newSummary.score })
+        .eq('id', organization.id)
+    } catch (e) {
+      console.log('Could not undo action override:', e)
     }
   }
 
@@ -643,6 +747,8 @@ function DashboardContent() {
               incidents={incidents}
               unreadMessages={unreadMessages}
               onNavigate={setActiveTab}
+              onResolveAction={resolveAction}
+              onUndoAction={undoAction}
             />
           )}
           {activeTab === 'tasks' && (
@@ -724,7 +830,9 @@ function OverviewTab({
   documents, 
   incidents,
   unreadMessages,
-  onNavigate 
+  onNavigate,
+  onResolveAction,
+  onUndoAction
 }: { 
   organization: any
   complianceScore: number
@@ -735,7 +843,10 @@ function OverviewTab({
   incidents: any[]
   unreadMessages: number
   onNavigate: (tab: any) => void
+  onResolveAction: (actionId: string, note?: string) => void
+  onUndoAction: (actionId: string) => void
 }) {
+  const [confirmingAction, setConfirmingAction] = useState<string | null>(null)
   const hasSubscription = organization?.subscription_status === 'active'
   const actions = complianceSummary?.actions || []
 
@@ -847,20 +958,33 @@ function OverviewTab({
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-200">
           <h2 className="text-base font-semibold text-stone-700 mb-3 flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-            מה כבר בוצע עבורכם
+            מה כבר בוצע
+            <span className="text-xs font-normal bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{doneActions.length}</span>
           </h2>
           <div className="space-y-2">
-            {doneActions.map(action => (
-              <div key={action.id} className="flex items-center gap-3 py-2 px-3 bg-emerald-50/50 rounded-xl">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-stone-700">{action.title}</span>
-                  {action.resolvedNote && (
-                    <span className="text-xs text-emerald-600 mr-2">— {action.resolvedNote}</span>
+            {doneActions.map(action => {
+              const isUserResolved = action.status === 'completed' && action.resolvedNote?.includes('סומן כבוצע')
+              return (
+                <div key={action.id} className="flex items-center gap-3 py-2 px-3 bg-emerald-50/50 rounded-xl group">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-medium text-stone-700">{action.title}</span>
+                    {action.resolvedNote && (
+                      <span className="text-xs text-emerald-600 mr-2">— {action.resolvedNote}</span>
+                    )}
+                  </div>
+                  {isUserResolved && (
+                    <button
+                      onClick={() => onUndoAction(action.id)}
+                      className="opacity-0 group-hover:opacity-100 text-xs text-stone-400 hover:text-rose-500 transition-all cursor-pointer"
+                      title="ביטול סימון"
+                    >
+                      ↩ בטל
+                    </button>
                   )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
@@ -876,18 +1000,47 @@ function OverviewTab({
           <div className="space-y-2">
             {userActions.map(action => {
               const colors = getPriorityColor(action.priority)
+              const isConfirming = confirmingAction === action.id
               return (
-                <div key={action.id} className={`flex items-center gap-3 py-3 px-4 rounded-xl border ${colors.bg} ${colors.border}`}>
-                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${colors.dot}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-stone-800">{action.title}</p>
-                    <p className="text-xs text-stone-500 truncate">{action.description}</p>
-                  </div>
-                  <Link href={action.actionPath || '/chat'}>
-                    <button className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600 transition-colors whitespace-nowrap">
-                      טפל →
+                <div key={action.id} className={`rounded-xl border transition-all ${colors.bg} ${colors.border}`}>
+                  <div className="flex items-center gap-3 py-3 px-4">
+                    <button
+                      onClick={() => setConfirmingAction(isConfirming ? null : action.id)}
+                      className="w-5 h-5 rounded-full border-2 border-stone-300 flex-shrink-0 hover:border-emerald-400 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center justify-center"
+                      title="סמן כבוצע"
+                    >
+                      {isConfirming && <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />}
                     </button>
-                  </Link>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-stone-800">{action.title}</p>
+                      <p className="text-xs text-stone-500 truncate">{action.description}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Link href={action.actionPath || '/chat'}>
+                        <button className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600 transition-colors whitespace-nowrap">
+                          טפל →
+                        </button>
+                      </Link>
+                    </div>
+                  </div>
+                  {/* Confirmation drawer */}
+                  {isConfirming && (
+                    <div className="px-4 pb-3 flex items-center gap-2 border-t border-stone-200/50 pt-2">
+                      <span className="text-xs text-stone-500">ביצעת את הפעולה?</span>
+                      <button
+                        onClick={() => { onResolveAction(action.id); setConfirmingAction(null) }}
+                        className="px-3 py-1 bg-emerald-500 text-white rounded-lg text-xs font-medium hover:bg-emerald-600 transition-colors cursor-pointer"
+                      >
+                        ✓ כן, בוצע
+                      </button>
+                      <button
+                        onClick={() => setConfirmingAction(null)}
+                        className="px-3 py-1 bg-stone-200 text-stone-600 rounded-lg text-xs font-medium hover:bg-stone-300 transition-colors cursor-pointer"
+                      >
+                        ביטול
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -924,16 +1077,26 @@ function OverviewTab({
             חובות דיווח
           </h2>
           {reportingActions.map(action => (
-            <div key={action.id} className="flex items-center gap-3">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-red-800">{action.title}</p>
-                <p className="text-xs text-red-600">{action.description}</p>
+            <div key={action.id} className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-red-800">{action.title}</p>
+                  <p className="text-xs text-red-600">{action.description}</p>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Link href={action.actionPath || '/chat'}>
+                    <button className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors whitespace-nowrap">
+                      דווח עכשיו →
+                    </button>
+                  </Link>
+                  <button
+                    onClick={() => onResolveAction(action.id, 'דווח לרשות')}
+                    className="px-3 py-1.5 border border-red-300 text-red-700 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors whitespace-nowrap cursor-pointer"
+                  >
+                    ✓ דווח כבר
+                  </button>
+                </div>
               </div>
-              <Link href={action.actionPath || '/chat'}>
-                <button className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors whitespace-nowrap">
-                  דווח עכשיו →
-                </button>
-              </Link>
             </div>
           ))}
         </div>
