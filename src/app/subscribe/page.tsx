@@ -82,28 +82,25 @@ function SubscribeContent() {
     if (!supabase || !user) return
     const { data: userData, error: userErr } = await supabase
       .from('users').select('org_id').eq('auth_user_id', user.id).maybeSingle()
-    if (userErr || !userData) return // query failed, don't redirect — just stay
-    if (userData.org_id) {
-      // Check if already has active subscription — redirect to dashboard
-      const { data: sub } = await supabase
-        .from('subscriptions')
-        .select('id')
-        .eq('org_id', userData.org_id)
-        .in('status', ['active', 'past_due'])
-        .maybeSingle()
-      if (sub && !searchParams.get('payment')) {
-        router.replace('/dashboard')
-        return
-      }
+    if (userErr || !userData || !userData.org_id) return
+    
+    // If already has active subscription, go to dashboard
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('org_id', userData.org_id)
+      .in('status', ['active', 'past_due'])
+      .maybeSingle()
+    if (sub && !searchParams.get('payment')) {
+      router.replace('/dashboard')
+      return
+    }
 
-      const { data: org } = await supabase
-        .from('organizations').select('*').eq('id', userData.org_id).single()
-      setOrganization(org)
-      if (org?.tier && !localStorage.getItem('dpo_recommended_tier')) {
-        setRecommendedTier(org.tier)
-      }
-    } else if (!searchParams.get('payment')) {
-      router.replace('/onboarding')
+    const { data: org } = await supabase
+      .from('organizations').select('*').eq('id', userData.org_id).single()
+    setOrganization(org)
+    if (org?.tier && !localStorage.getItem('dpo_recommended_tier')) {
+      setRecommendedTier(org.tier)
     }
   }
 
