@@ -897,7 +897,12 @@ function OnboardingContent() {
   const [textInput, setTextInput] = useState('')
 
   const advance = useCallback((key?: string, val?: any) => {
-    if (key) set(key, val)
+    if (key) {
+      if (key === 'bizName' || key === 'companyId') {
+        console.log(`[Onboarding] Text saved: ${key} = "${val}"`)
+      }
+      set(key, val)
+    }
     setAnimDir('out')
     setTimeout(() => { setStep(s => s + 1); setAnimDir('in') }, 180)
   }, [set])
