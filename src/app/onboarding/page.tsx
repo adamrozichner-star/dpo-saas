@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense, useCallback } from 'react'
+import { useState, useEffect, Suspense, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -785,6 +785,9 @@ function OnboardingContent() {
   const [isReviewMode, setIsReviewMode] = useState(false)
 
   const set = useCallback((k: string, v: any) => setV3Answers(p => ({ ...p, [k]: v })), [])
+  
+  // Refs for text fields — these survive async state overwrites from localStorage/DB
+  const textFieldRefs = useRef<Record<string, string>>({})
 
   const selectedDBs = v3Answers.databases || []
   const needsCam = selectedDBs.includes('cameras')
@@ -880,16 +883,21 @@ function OnboardingContent() {
     }
     const saved = localStorage.getItem('dpo_v3_answers')
     const savedStep = localStorage.getItem('dpo_v3_step')
-    if (saved) {
+    if (saved && savedStep) {
       try {
         const parsed = JSON.parse(saved)
-        setV3Answers(parsed)
-        if (savedStep) {
-          setStep(parseInt(savedStep))
+        const resumeStep = parseInt(savedStep)
+        // Only resume if there's actually meaningful progress (step > 2 means past name/id cards)
+        if (resumeStep > 2 && parsed.bizName) {
+          console.log('[Onboarding] Resuming from step', resumeStep, 'bizName:', parsed.bizName)
+          setV3Answers(parsed)
+          setStep(resumeStep)
         } else if (parsed.databases?.length > 0) {
+          setV3Answers(parsed)
           setShowReport(true)
           setIsReviewMode(true)
         }
+        // If step <= 2, DON'T restore — let user start fresh with name entry
       } catch (e) { /* ignore */ }
     }
   }, [user])
@@ -966,16 +974,26 @@ function OnboardingContent() {
     setStatus('מנתחים את הנתונים שלכם...')
 
     try {
-      // Read business name from state, with localStorage fallback
+      // Build final answers: ref > state > localStorage (ref is bulletproof, never overwritten by async effects)
       let finalV3 = { ...v3Answers }
+      // Apply ref overrides (these came directly from user keystrokes, impossible to overwrite)
+      if (textFieldRefs.current.bizName) finalV3.bizName = textFieldRefs.current.bizName
+      if (textFieldRefs.current.companyId) finalV3.companyId = textFieldRefs.current.companyId
+      // Last resort: localStorage
       if (!finalV3.bizName) {
         try {
           const saved = JSON.parse(localStorage.getItem('dpo_v3_answers') || '{}')
-          if (saved.bizName) finalV3 = { ...finalV3, ...saved }
+          if (saved.bizName) finalV3.bizName = saved.bizName
+          if (saved.companyId && !finalV3.companyId) finalV3.companyId = saved.companyId
         } catch {}
       }
       const businessName = finalV3.bizName || 'עסק חדש'
-      console.log('[Onboarding] Creating org:', { bizName: finalV3.bizName, companyId: finalV3.companyId, businessName })
+      console.log('[Onboarding] Creating org:', { 
+        refBizName: textFieldRefs.current.bizName,
+        stateBizName: v3Answers.bizName,
+        finalBizName: finalV3.bizName,
+        businessName 
+      })
       const legacyAnswers = mapV3ToLegacyAnswers(finalV3)
 
       const autoTier = calculateRecommendedTier()
@@ -1185,6 +1203,20 @@ function OnboardingContent() {
               </div>
             )}
 
+            {/* Business name confirmation */}
+            <div className="bg-indigo-50/60 rounded-xl p-4 mb-4 text-right">
+              <label className="text-xs text-gray-500 mb-1 block">שם העסק שירשם:</label>
+              <input
+                value={textFieldRefs.current.bizName || v3Answers.bizName || ''}
+                onChange={e => {
+                  textFieldRefs.current.bizName = e.target.value
+                  set('bizName', e.target.value)
+                }}
+                className="w-full px-3 py-2 rounded-lg border border-indigo-200 text-center font-semibold text-gray-800 bg-white focus:outline-none focus:border-indigo-400"
+                placeholder="שם העסק"
+              />
+            </div>
+
             <button
               onClick={handleComplete}
               disabled={isGenerating}
@@ -1294,12 +1326,14 @@ function OnboardingContent() {
                   value={textInput || v3Answers[card.id] || ''}
                   onChange={e => {
                     setTextInput(e.target.value)
-                    // Also save to v3Answers immediately to prevent any state loss
                     set(card.id, e.target.value)
+                    // Save to ref as bulletproof backup
+                    textFieldRefs.current[card.id] = e.target.value
                   }}
                   className="w-full px-4 py-3 rounded-xl border-2 border-amber-300 text-base text-center outline-none focus:border-amber-400"
                   onKeyDown={e => {
                     if (e.key === 'Enter' && textInput) {
+                      textFieldRefs.current[card.id] = textInput
                       advance(card.id, textInput)
                       setTextInput('')
                     }
@@ -1309,7 +1343,9 @@ function OnboardingContent() {
                 <button 
                   onClick={() => {
                     if (textInput || v3Answers[card.id]) {
-                      advance(card.id, textInput || v3Answers[card.id])
+                      const val = textInput || v3Answers[card.id]
+                      textFieldRefs.current[card.id] = val
+                      advance(card.id, val)
                       setTextInput('')
                     }
                   }}
