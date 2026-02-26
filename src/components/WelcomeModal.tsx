@@ -219,7 +219,7 @@ export default function WelcomeModal({
           100% { transform: translateY(100vh) rotate(1080deg); opacity: 0; }
         }
         .animate-confetti-fall {
-          animation: confetti-fall 6s ease-out forwards;
+          animation: confetti-fall 4s ease-out forwards;
         }
       `}</style>
     </div>
