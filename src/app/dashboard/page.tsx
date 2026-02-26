@@ -1130,6 +1130,7 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
       employee_policy: 'מדיניות עובדים',
       ropa: 'מפת עיבוד (ROPA)',
       dpa: 'הסכם עיבוד מידע',
+      processor_agreement: 'הסכם עיבוד מידע (DPA)',
       procedure: 'נוהל',
       custom: 'מסמך'
     }
