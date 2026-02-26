@@ -92,7 +92,7 @@ function SubscribeContent() {
       .in('status', ['active', 'past_due'])
       .maybeSingle()
     if (sub && !searchParams.get('payment')) {
-      router.replace('/dashboard')
+      router.replace('/dashboard?welcome=true')
       return
     }
 
@@ -154,7 +154,7 @@ function SubscribeContent() {
           <CheckCircle2 className="h-14 w-14 text-green-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-2">התשלום בוצע בהצלחה!</h1>
           <p className="text-gray-600 mb-6">המנוי שלכם הופעל. ברוכים הבאים ל-MyDPO!</p>
-          <Button onClick={() => router.push('/dashboard')} className="w-full">
+          <Button onClick={() => router.push('/dashboard?welcome=true')} className="w-full">
             המשך ללוח הבקרה
           </Button>
         </div>
