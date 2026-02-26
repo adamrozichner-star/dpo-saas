@@ -8,6 +8,7 @@ import {
   answersToDocumentVariables
 } from '@/lib/document-generator'
 import { DocumentVariables } from '@/lib/document-templates'
+import { generateV3Documents } from '@/lib/v3-document-templates'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -28,10 +29,11 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
-    const { orgId, orgName, businessId, answers } = await request.json()
+    const { orgId, orgName, businessId, answers, v3Answers } = await request.json()
 
     console.log('Generating docs for:', orgName, 'orgId:', orgId)
     console.log('Answers received:', answers?.length || 0)
+    console.log('V3 answers:', v3Answers ? 'present' : 'missing')
 
     if (!orgId || !orgName) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -76,6 +78,25 @@ export async function POST(request: NextRequest) {
     )
     console.log('Generated', documents.length, 'documents')
 
+    // Generate v3 documents (ROPA, consent form, processor agreement) if v3Answers present
+    let v3Docs: Array<{ title: string; content: string; type: string }> = []
+    if (v3Answers && Object.keys(v3Answers).length > 0) {
+      console.log('Generating v3 documents from onboarding data...')
+      v3Docs = generateV3Documents({
+        orgName,
+        businessId: businessId || '',
+        v3Answers,
+        dpoName,
+        dpoEmail,
+        dpoPhone,
+        dpoLicense
+      })
+      console.log('Generated', v3Docs.length, 'v3 documents:', v3Docs.map(d => d.type).join(', '))
+    }
+
+    // Merge all documents
+    const allDocuments = [...documents, ...v3Docs]
+
     // Calculate compliance score
     const complianceScore = calculateComplianceScore(answers || [])
     console.log('Compliance score:', complianceScore.score, 'Level:', complianceScore.level)
@@ -103,7 +124,7 @@ export async function POST(request: NextRequest) {
         .eq('generated_by', 'system')
     }
 
-    const documentRecords = documents.map(doc => ({
+    const documentRecords = allDocuments.map(doc => ({
       org_id: orgId,
       type: doc.type,
       title: doc.title,
@@ -140,7 +161,7 @@ export async function POST(request: NextRequest) {
         priority: 'medium',
         status: 'pending',
         title: `סקירת מסמכים — ארגון חדש (${savedDocs?.length || 0} מסמכים)`,
-        description: `מסמכים שנוצרו אוטומטית דורשים אישור ממונה: ${documents.map(d => d.title).join(', ')}`,
+        description: `מסמכים שנוצרו אוטומטית דורשים אישור ממונה: ${allDocuments.map(d => d.title).join(', ')}`,
         ai_summary: `נוצרו ${savedDocs?.length || 0} מסמכים אוטומטית עבור ארגון חדש. יש לסקור ולאשר.`,
         ai_draft_response: 'מסמכים נסקרו ואושרו.'
       })
@@ -185,8 +206,8 @@ export async function POST(request: NextRequest) {
         org_id: orgId,
         action: 'documents_generated',
         details: {
-          document_count: documents.length,
-          document_types: documents.map(d => d.type),
+          document_count: allDocuments.length,
+          document_types: allDocuments.map(d => d.type),
           compliance_score: complianceScore.score,
           dpo_name: dpoName
         }
