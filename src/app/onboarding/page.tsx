@@ -192,11 +192,9 @@ function mapV3ToLegacyAnswers(v3: V3Answers): OnboardingAnswer[] {
   const answers: OnboardingAnswer[] = []
   const push = (id: string, val: any) => { if (val !== undefined && val !== null) answers.push({ questionId: id, value: val }) }
 
-  // Business basics
   push('business_name', v3.bizName)
-  push('business_id', '') // Will be empty — not collected in v3
+  push('business_id', '')
 
-  // Map industry to business_type
   const industryMap: Record<string, string> = {
     health: 'healthcare', retail: 'retail', tech: 'technology',
     services: 'services', finance: 'finance', education: 'education',
@@ -204,13 +202,11 @@ function mapV3ToLegacyAnswers(v3: V3Answers): OnboardingAnswer[] {
   }
   push('business_type', industryMap[v3.industry || ''] || 'other')
 
-  // Map access ranges to employee_count
   const accessToEmp: Record<string, string> = {
     '1-2': '1-10', '3-10': '1-10', '11-50': '11-50', '50-100': '51-200', '100+': '200+'
   }
   push('employee_count', accessToEmp[v3.access || ''] || '1-10')
 
-  // Derive data_types from selected databases + db fields
   const dataTypes: string[] = []
   const dbs = v3.databases || []
   if (dbs.some(d => ['customers', 'employees', 'cvs'].includes(d))) dataTypes.push('contact')
@@ -220,7 +216,6 @@ function mapV3ToLegacyAnswers(v3: V3Answers): OnboardingAnswer[] {
   if (dbs.includes('cameras')) dataTypes.push('biometric')
   if (dbs.includes('website_leads')) dataTypes.push('behavioral')
   if (dbs.some(d => ['employees', 'cvs'].includes(d))) { if (!dataTypes.includes('employment')) dataTypes.push('employment') }
-  // Check actual fields for sensitive data
   Object.values(v3.dbDetails || {}).forEach(detail => {
     const fields = detail.fields || []
     if (fields.some(f => ['שכר', 'חשבון בנק', 'מידע פיננסי', 'מספר כרטיס'].includes(f)) && !dataTypes.includes('financial'))
@@ -232,26 +227,20 @@ function mapV3ToLegacyAnswers(v3: V3Answers): OnboardingAnswer[] {
   })
   push('data_types', dataTypes.length > 0 ? dataTypes : ['contact'])
 
-  // Data sources
   const sources: string[] = ['direct']
   if (dbs.includes('website_leads')) sources.push('website')
   if ((v3.processors || []).length > 0) sources.push('third_party')
   if (dbs.some(d => ['employees', 'cvs'].includes(d))) sources.push('employees')
   push('data_sources', sources)
 
-  // Processing purposes
   const purposes: string[] = ['service', 'legal']
   if (dbs.includes('website_leads')) purposes.push('marketing')
   if (dbs.some(d => ['employees', 'cvs'].includes(d))) purposes.push('hr')
   push('processing_purposes', purposes)
 
-  // Third party sharing
   push('third_party_sharing', (v3.processors || []).length > 0 || (v3.customProcessors || []).length > 0)
-
-  // International transfer — derive from cloud storage
   push('international_transfer', (v3.storage || []).includes('cloud'))
 
-  // Cloud storage
   if ((v3.storage || []).includes('cloud')) {
     push('cloud_storage', 'international')
   } else if ((v3.storage || []).includes('erp')) {
@@ -260,7 +249,6 @@ function mapV3ToLegacyAnswers(v3: V3Answers): OnboardingAnswer[] {
     push('cloud_storage', 'none')
   }
 
-  // Security measures — derive from various v3 fields
   const measures: string[] = []
   if (v3.accessControl === 'strict') { measures.push('access_control'); measures.push('encryption') }
   if (v3.accessControl === 'partial') measures.push('access_control')
@@ -269,16 +257,10 @@ function mapV3ToLegacyAnswers(v3: V3Answers): OnboardingAnswer[] {
   if (measures.length === 0) measures.push('none')
   push('security_measures', measures)
 
-  // Previous incidents
   push('previous_incidents', false)
-
-  // Existing policy
   push('existing_policy', v3.hasConsent === 'yes')
-
-  // Database registered
   push('database_registered', 'unknown')
 
-  // Record count for tier calculation
   const totalRecords = Object.values(v3.dbDetails || {}).reduce((sum, d) => {
     return sum + (SIZE_RANGES.find(s => s.v === d.size)?.num || 50)
   }, 0)
@@ -406,7 +388,6 @@ function MultiPicker({ options, selected, onToggle, allowOther, otherItems, onAd
           )
         })}
       </div>
-      {/* Custom items */}
       {otherItems && otherItems.length > 0 && (
         <div className="flex flex-wrap gap-1 justify-center mt-2">
           {otherItems.map((item, i) => (
@@ -417,7 +398,6 @@ function MultiPicker({ options, selected, onToggle, allowOther, otherItems, onAd
           ))}
         </div>
       )}
-      {/* Add custom */}
       {allowOther && (
         <div className="flex gap-2 mt-3 justify-center">
           <input
@@ -635,7 +615,6 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
 
   return (
     <div dir="rtl">
-      {/* Header */}
       <div className="text-center mb-5">
         <div className="text-4xl mb-2">📊</div>
         <h2 className="text-xl font-extrabold text-gray-800 m-0">תוצאות סיווג המאגרים</h2>
@@ -644,7 +623,6 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
         </p>
       </div>
 
-      {/* Overall security level */}
       <div 
         className="p-4 rounded-2xl mb-4 text-center border-2"
         style={{
@@ -656,7 +634,6 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
         <div className="text-2xl font-black" style={{ color: highest.color }}>{highest.emoji} {highest.levelHe}</div>
       </div>
 
-      {/* Amendment 13 fine exposure */}
       <div className="p-4 rounded-2xl mb-4 border-2 border-red-300" style={{ background: 'linear-gradient(135deg, #fef2f2, #fff7ed)' }}>
         <div className="text-sm font-bold text-red-600 mb-2">⚖️ חשיפה לפי תיקון 13 (בתוקף מ-14.8.2025)</div>
         <div className="flex gap-3 flex-wrap">
@@ -676,7 +653,6 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
         </div>
       </div>
 
-      {/* Per-DB breakdown */}
       {classifications.map(c => {
         const dbInfo = DB_TYPES.find(d => d.v === c.type)
         const detail = answers.dbDetails?.[c.type] || {}
@@ -716,7 +692,6 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
         )
       })}
 
-      {/* Custom DBs */}
       {customDBs.map((name, i) => (
         <div key={`custom-${i}`} className="p-3 rounded-xl mb-2 border border-gray-200 bg-white">
           <div className="flex justify-between items-center">
@@ -726,7 +701,6 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
         </div>
       ))}
 
-      {/* Global alerts */}
       {globalAlerts.length > 0 && (
         <div className="mt-3 p-3 rounded-xl bg-yellow-50 border border-yellow-200">
           <div className="text-xs font-bold text-amber-800 mb-1.5">💡 פערים שזוהו</div>
@@ -736,7 +710,6 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
         </div>
       )}
 
-      {/* Generated docs */}
       <div className="mt-3 p-3 rounded-xl bg-green-50 border border-green-200">
         <div className="text-xs font-bold text-green-800 mb-1.5">📦 ייוצרו עבורכם:</div>
         {generatedDocs.map((d, i) => (
@@ -744,7 +717,6 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
         ))}
       </div>
 
-      {/* CTA */}
       <button
         onClick={onContinue}
         className="w-full mt-4 py-3.5 rounded-xl border-none text-white text-base font-bold cursor-pointer"
@@ -764,27 +736,24 @@ function OnboardingContent() {
   const router = useRouter()
   const { user, supabase, loading } = useAuth()
 
-  // Flow state
   const [step, setStep] = useState(0)
   const [v3Answers, setV3Answers] = useState<V3Answers>({ dbDetails: {}, customDatabases: [], customProcessors: [], customStorage: [] })
   const [animDir, setAnimDir] = useState('in')
   const [tempName, setTempName] = useState('')
   const [showReport, setShowReport] = useState(false)
 
-  // Post-questionnaire state
   const [showDpoIntro, setShowDpoIntro] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState('')
   const [generationProgress, setGenerationProgress] = useState(0)
-  const [isReviewMode, setIsReviewMode] = useState(false) // Returning user reviewing results
+  const [isReviewMode, setIsReviewMode] = useState(false)
 
   const set = useCallback((k: string, v: any) => setV3Answers(p => ({ ...p, [k]: v })), [])
 
   const selectedDBs = v3Answers.databases || []
   const needsCam = selectedDBs.includes('cameras')
 
-  // Build cards dynamically (camera card is conditional)
   const CARDS: CardDef[] = [
     { id: 'bizName', icon: '🏢', q: 'מה שם העסק?', type: 'text', placeholder: 'שם מלא של העסק' },
     { id: 'industry', icon: '🎯', q: 'מה התחום?', type: 'pick_other' },
@@ -815,23 +784,19 @@ function OnboardingContent() {
   const isDBPhase = step >= dbPhaseStart && step < dbPhaseStart + totalDBs && !showReport
   const currentDBIdx = step - dbPhaseStart
   const currentDetailDB = isDBPhase ? selectedDBs[currentDBIdx] : null
-  // Progress: two-phase — main cards then DB details
   const progress = isDBPhase
     ? Math.min(((currentDBIdx + 1) / Math.max(totalDBs, 1)) * 100, 100)
     : Math.min(((step + 1) / mainLen) * 100, 100)
 
-  // Auth check
   useEffect(() => {
     if (!loading && !user) router.push('/login')
   }, [loading, user, router])
 
-  // Onboarding guard: check existing org/subscription state
   useEffect(() => {
     if (!supabase || !user) return
     const checkExisting = async () => {
       const { data: userData } = await supabase.from('users').select('org_id').eq('auth_user_id', user.id).single()
       if (userData?.org_id) {
-        // Check if they have an active subscription
         const { data: sub } = await supabase
           .from('subscriptions')
           .select('id')
@@ -845,7 +810,6 @@ function OnboardingContent() {
           return
         }
 
-        // No subscription — check if profile exists (completed onboarding before)
         const { data: profileData } = await supabase
           .from('organization_profiles')
           .select('profile_data')
@@ -853,7 +817,6 @@ function OnboardingContent() {
           .single()
 
         if (profileData?.profile_data?.v3Answers) {
-          // Returning user: load saved answers, show classification report
           setV3Answers(profileData.profile_data.v3Answers)
           setShowReport(true)
           setIsReviewMode(true)
@@ -863,7 +826,6 @@ function OnboardingContent() {
     checkExisting()
   }, [supabase, user, router])
 
-  // Auto-save
   useEffect(() => {
     if (step > 0) {
       localStorage.setItem('dpo_v3_answers', JSON.stringify(v3Answers))
@@ -871,7 +833,6 @@ function OnboardingContent() {
     }
   }, [v3Answers, step])
 
-  // Restore from localStorage
   useEffect(() => {
     const saved = localStorage.getItem('dpo_v3_answers')
     const savedStep = localStorage.getItem('dpo_v3_step')
@@ -880,10 +841,8 @@ function OnboardingContent() {
         const parsed = JSON.parse(saved)
         setV3Answers(parsed)
         if (savedStep) {
-          // Mid-flow: resume at saved step
           setStep(parseInt(savedStep))
         } else if (parsed.databases?.length > 0) {
-          // Completed flow (step cleared, answers kept): show report
           setShowReport(true)
           setIsReviewMode(true)
         }
@@ -891,17 +850,14 @@ function OnboardingContent() {
     }
   }, [])
 
-  // Text input state
   const [textInput, setTextInput] = useState('')
 
-  // Card navigation
   const advance = useCallback((key?: string, val?: any) => {
     if (key) set(key, val)
     setAnimDir('out')
     setTimeout(() => { setStep(s => s + 1); setAnimDir('in') }, 180)
   }, [set])
 
-  // Guard: if we've passed all main cards and there are no DBs to detail, show report
   useEffect(() => {
     if (step >= mainLen && !showReport && !showDpoIntro && !isGenerating) {
       const predefinedDBs = v3Answers.databases || []
@@ -912,7 +868,6 @@ function OnboardingContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, mainLen, showReport, showDpoIntro, isGenerating])
 
-  // When DB detail phase finishes, go to classification report
   const handleDBDetailDone = useCallback((dbType: string, detail: any) => {
     setV3Answers(p => ({ ...p, dbDetails: { ...p.dbDetails, [dbType]: detail } }))
     setAnimDir('out')
@@ -927,8 +882,8 @@ function OnboardingContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, mainLen, selectedDBs.length])
 
-  // Calculate recommended tier
-  const calculateRecommendedTier = useCallback((): 'basic' | 'extended' | 'enterprise' => {
+  // FIX: DB enum only allows 'basic' | 'extended' — no 'enterprise'
+  const calculateRecommendedTier = useCallback((): 'basic' | 'extended' => {
     const totalRecords = Object.values(v3Answers.dbDetails || {}).reduce((sum, d) => {
       return sum + (SIZE_RANGES.find(s => s.v === d.size)?.num || 50)
     }, 0)
@@ -937,26 +892,22 @@ function OnboardingContent() {
     const isFinance = v3Answers.industry === 'finance'
     const isHealth = v3Answers.industry === 'health'
 
-    if (totalRecords >= 100000 || isHealth || isFinance) return 'enterprise'
+    if (totalRecords >= 100000 || isHealth || isFinance) return 'extended'
     if (totalRecords >= 10000 || hasMedical || dbs.length >= 5 || 
         (v3Answers.processors || []).length >= 3) return 'extended'
     return 'basic'
   }, [v3Answers])
 
-  // After classification report → DPO intro (new user) or subscribe (returning user)
   const handleReportContinue = useCallback(() => {
     if (isReviewMode) {
-      // Returning user already has org + docs, go straight to subscribe
       router.push('/subscribe')
     } else {
-      // New user: show DPO intro before saving
       setShowReport(false)
       setShowDpoIntro(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }, [isReviewMode, router])
 
-  // Final complete: save org, profile, generate docs
   const handleComplete = async () => {
     if (!supabase || !user) { setError('לא מחובר למערכת'); return }
 
@@ -1008,10 +959,8 @@ function OnboardingContent() {
         if (response.ok) { setGenerationProgress(90); setStatus('מסמכים נוצרו בהצלחה!') }
       } catch (docError) { console.log('Document generation skipped') }
 
-      // Keep v3 answers in localStorage — cleared only after subscription confirmed
-      // This ensures "back to results" works from subscribe page
       localStorage.setItem('dpo_v3_answers', JSON.stringify(v3Answers))
-      localStorage.removeItem('dpo_v3_step') // Step no longer needed
+      localStorage.removeItem('dpo_v3_step')
 
       setGenerationProgress(100)
       setStatus('הושלם! מעבירים ללוח הבקרה...')
@@ -1034,7 +983,6 @@ function OnboardingContent() {
     }
   }
 
-  // Get options for card
   const getOptions = (id: string) => {
     switch(id) {
       case 'industry': return INDUSTRIES
@@ -1055,8 +1003,6 @@ function OnboardingContent() {
     }
   }
 
-  // ═══ RENDER CONDITIONS ═══
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -1065,7 +1011,6 @@ function OnboardingContent() {
     )
   }
 
-  // Generation progress screen
   if (isGenerating) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
@@ -1099,12 +1044,10 @@ function OnboardingContent() {
     )
   }
 
-  // DPO Introduction
   if (showDpoIntro) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white p-4" dir="rtl">
         <div className="max-w-md mx-auto">
-          {/* Header — same as cards flow */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
@@ -1118,9 +1061,7 @@ function OnboardingContent() {
             </button>
           </div>
 
-          {/* DPO Card — matches smart card style */}
           <div className="bg-white rounded-2xl p-6 shadow-lg text-center">
-            {/* Photo */}
             <div className="relative w-28 h-28 mx-auto mb-4">
               <div className="w-28 h-28 rounded-full overflow-hidden border-3 border-amber-200 shadow-lg bg-gradient-to-br from-amber-100 to-indigo-100">
                 <img 
@@ -1137,16 +1078,13 @@ function OnboardingContent() {
               </div>
             </div>
 
-            {/* Badge */}
             <div className="inline-block text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full mb-2">
               הממונה שלכם
             </div>
 
-            {/* Name */}
             <h1 className="text-2xl font-bold text-gray-800 mb-1">עו״ד דנה כהן</h1>
             <p className="text-sm text-gray-500 mb-4">ממונה הגנת פרטיות מוסמכת | 12 שנות ניסיון</p>
 
-            {/* Contact chips */}
             <div className="flex flex-wrap gap-2 justify-center mb-5">
               <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg text-xs text-gray-600">
                 <Mail className="h-3.5 w-3.5 text-indigo-500" />dpo@mydpo.co.il
@@ -1156,7 +1094,6 @@ function OnboardingContent() {
               </div>
             </div>
 
-            {/* What DPO does */}
             <div className="bg-amber-50/60 rounded-xl p-4 mb-5 text-right">
               <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2 text-sm justify-center">
                 <Sparkles className="h-4 w-4 text-amber-500" />מה הממונה תעשה עבורכם?
@@ -1182,7 +1119,6 @@ function OnboardingContent() {
               </div>
             )}
 
-            {/* CTA */}
             <button
               onClick={handleComplete}
               disabled={isGenerating}
@@ -1206,7 +1142,6 @@ function OnboardingContent() {
     )
   }
 
-  // Classification report
   if (showReport) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white p-4">
@@ -1236,13 +1171,11 @@ function OnboardingContent() {
     )
   }
 
-  // ═══ MAIN SMART CARDS FLOW ═══
   const card = step < mainLen ? CARDS[step] : null
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white p-4" dir="rtl">
       <div className="max-w-md mx-auto">
-        {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
@@ -1255,7 +1188,6 @@ function OnboardingContent() {
               onClick={() => {
                 if (isDBPhase) {
                   if (currentDBIdx === 0) {
-                    // Go back to last main card
                     setStep(mainLen - 1)
                   } else {
                     setStep(s => s - 1)
@@ -1273,7 +1205,6 @@ function OnboardingContent() {
           )}
         </div>
 
-        {/* Progress */}
         <div className="flex justify-between items-center mb-2">
           <span className="text-xs text-amber-600 font-bold">
             ⚡ {isDBPhase ? `פירוט ${currentDBIdx + 1}/${totalDBs}` : `${step + 1}/${mainLen}`}
@@ -1287,7 +1218,6 @@ function OnboardingContent() {
           />
         </div>
 
-        {/* Main card rendering */}
         {card && !isDBPhase && (
           <CardShell icon={card.icon} question={card.q} hint={card.hint} lawRef={card.lawRef} animDir={animDir}>
             
@@ -1405,7 +1335,6 @@ function OnboardingContent() {
           </CardShell>
         )}
 
-        {/* DB Detail phase */}
         {isDBPhase && currentDetailDB && (
           <DBDetailCard
             key={currentDetailDB}
@@ -1415,7 +1344,6 @@ function OnboardingContent() {
           />
         )}
 
-        {/* Step indicator */}
         <p className="text-center text-[11px] text-gray-400 mt-4">
           {isDBPhase ? `פירוט מאגר ${currentDBIdx + 1} מתוך ${totalDBs}` : `שאלה ${step + 1} מתוך ${mainLen}`} • נשמר אוטומטית
         </p>
