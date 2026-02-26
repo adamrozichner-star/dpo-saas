@@ -766,7 +766,7 @@ function OnboardingContent() {
       lawRef: 'תקנות אבטחת מידע 2017, סעיף 1' },
     { id: 'databases', icon: '📊', q: 'אילו מאגרי מידע אישי קיימים בעסק?', type: 'multi_other',
       hint: 'מייל + CRM + תיקיות = מאגר אחד. ספק עצמאי עם ת.ז = מידע פרטי!' },
-    { id: 'totalSize', icon: '📏', q: 'כמה אנשים (נושאי מידע) בסך הכל?', type: 'pick',
+    { id: 'totalSize', icon: '📏', q: 'כמה רשומות של אנשים יש לכם בכל המאגרים?', type: 'pick',
       hint: 'מעל 100,000 = רמת אבטחה גבוהה אוטומטית',
       lawRef: 'תקנות אבטחת מידע 2017' },
     { id: 'storage', icon: '💾', q: 'באילו מערכות אתם עובדים?', type: 'multi_other_storage',
