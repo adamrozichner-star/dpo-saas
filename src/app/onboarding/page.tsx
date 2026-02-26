@@ -764,7 +764,7 @@ function OnboardingContent() {
     { id: 'access', icon: '👥', q: 'כמה אנשים ניגשים למידע אישי?', type: 'pick',
       hint: 'בעלי הרשאה = קריטריון סיווג בחוק. מעל 100 = רמה גבוהה',
       lawRef: 'תקנות אבטחת מידע 2017, סעיף 1' },
-    { id: 'databases', icon: '📊', q: 'מה קיים אצלכם?', type: 'multi_other',
+    { id: 'databases', icon: '📊', q: 'אילו מאגרי מידע אישי קיימים בעסק?', type: 'multi_other',
       hint: 'מייל + CRM + תיקיות = מאגר אחד. ספק עצמאי עם ת.ז = מידע פרטי!' },
     { id: 'totalSize', icon: '📏', q: 'כמה אנשים (נושאי מידע) בסך הכל?', type: 'pick',
       hint: 'מעל 100,000 = רמת אבטחה גבוהה אוטומטית',
