@@ -80,17 +80,18 @@ function SubscribeContent() {
 
   const loadOrganization = async () => {
     if (!supabase || !user) return
-    const { data: userData } = await supabase
-      .from('users').select('org_id').eq('auth_user_id', user.id).single()
-    if (userData?.org_id) {
+    const { data: userData, error: userErr } = await supabase
+      .from('users').select('org_id').eq('auth_user_id', user.id).maybeSingle()
+    if (userErr || !userData) return // query failed, don't redirect — just stay
+    if (userData.org_id) {
       const { data: org } = await supabase
         .from('organizations').select('*').eq('id', userData.org_id).single()
       setOrganization(org)
       if (org?.tier && !localStorage.getItem('dpo_recommended_tier')) {
         setRecommendedTier(org.tier)
       }
-    } else {
-      // No org yet — user needs to complete onboarding first
+    } else if (!searchParams.get('payment')) {
+      // Confirmed no org and not returning from payment — send to onboarding
       router.replace('/onboarding')
     }
   }
