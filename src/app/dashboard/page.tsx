@@ -107,13 +107,15 @@ function DashboardContent() {
   useEffect(() => {
     if (searchParams.get('welcome') === 'true' || searchParams.get('payment') === 'success') {
       setShowWelcome(true)
+      // Clear the welcomed key so the loadAllData trigger also works
+      if (user) localStorage.removeItem(`dpo_welcomed_${user.id}`)
       window.history.replaceState({}, '', '/dashboard')
     }
     const tabParam = searchParams.get('tab')
     if (tabParam && ['overview','tasks','documents','incidents','messages','reminders','settings'].includes(tabParam)) {
       setActiveTab(tabParam as any)
     }
-  }, [searchParams])
+  }, [searchParams, user])
 
   useEffect(() => {
     if (user && supabase) {
@@ -181,6 +183,40 @@ function DashboardContent() {
           }
         } catch {}
 
+        // Auto-generate docs if onboarding completed but no docs exist (401 recovery)
+        if ((!docs || docs.length === 0) && profileData?.v3Answers) {
+          console.log('No docs found but profile exists — auto-generating...')
+          try {
+            const { data: { session: sess } } = await supabase.auth.getSession()
+            const genRes = await fetch('/api/generate-documents', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(sess?.access_token ? { 'Authorization': `Bearer ${sess.access_token}` } : {})
+              },
+              body: JSON.stringify({
+                orgId: org.id,
+                orgName: org.name,
+                businessId: org.business_id || '',
+                answers: profileData.answers || [],
+                v3Answers: profileData.v3Answers
+              })
+            })
+            if (genRes.ok) {
+              // Reload docs
+              const { data: newDocs } = await supabase
+                .from('documents')
+                .select('*')
+                .eq('org_id', org.id)
+                .order('created_at', { ascending: false })
+              if (newDocs) setDocuments(newDocs)
+              console.log('Auto-generated', newDocs?.length, 'documents')
+            }
+          } catch (e) {
+            console.log('Auto-generation failed:', e)
+          }
+        }
+
         const { data: incidentData } = await supabase
           .from('security_incidents')
           .select('*')
@@ -238,14 +274,9 @@ function DashboardContent() {
         }
 
         // Show welcome on first-ever successful dashboard load
-        // Use both localStorage key AND check if we have real data
         if (user) {
           const welcomeKey = `dpo_welcomed_${user.id}`
-          const wasWelcomed = localStorage.getItem(welcomeKey)
-          const hasDocs = (docs && docs.length > 0)
-          
-          // Show welcome if: never welcomed, OR if ?welcome or ?payment param triggered it
-          if (!wasWelcomed && hasDocs) {
+          if (!localStorage.getItem(welcomeKey)) {
             setShowWelcome(true)
             localStorage.setItem(welcomeKey, 'true')
           }
@@ -2339,53 +2370,6 @@ function SettingsTab({ organization, user, orgProfile, supabase }: { organizatio
   const [editBusinessId, setEditBusinessId] = useState(organization?.business_id || '')
   const [saveMsg, setSaveMsg] = useState('')
 
-  const QUESTION_LABELS: Record<string, string> = {
-    business_name: 'שם העסק',
-    business_id: 'מספר ח.פ / עוסק מורשה',
-    business_type: 'תחום פעילות',
-    employee_count: 'מספר עובדים',
-    data_types: 'סוגי מידע נאספים',
-    data_sources: 'מקורות מידע',
-    processing_purposes: 'שימוש במידע',
-    third_party_sharing: 'שיתוף עם גורמים חיצוניים',
-    international_transfer: 'העברה מחוץ לישראל',
-    cloud_storage: 'שירותי ענן',
-    security_measures: 'אמצעי אבטחה',
-    previous_incidents: 'אירועי אבטחה בעבר',
-    existing_policy: 'מדיניות פרטיות קיימת',
-    database_registered: 'רישום מאגרי מידע',
-    has_cameras: 'מצלמות אבטחה',
-    processes_minors: 'עיבוד מידע קטינים',
-    website_leads: 'טפסי לידים באתר',
-    suppliers_count: 'ספקים חיצוניים',
-    cv_retention: 'שמירת קורות חיים',
-  }
-
-  const VALUE_LABELS: Record<string, string> = {
-    retail: 'קמעונאות / מסחר', technology: 'טכנולוגיה / הייטק', healthcare: 'בריאות / רפואה',
-    finance: 'פיננסים / ביטוח', education: 'חינוך / הדרכה', services: 'שירותים מקצועיים',
-    manufacturing: 'ייצור / תעשייה', other: 'אחר',
-    contact: 'פרטי קשר', id: 'מספר זהות / דרכון', financial: 'פרטי תשלום',
-    health: 'מידע רפואי', biometric: 'מידע ביומטרי', location: 'נתוני מיקום',
-    behavioral: 'נתוני התנהגות', employment: 'מידע תעסוקתי',
-    direct: 'ישירות מלקוחות', website: 'אתר / אפליקציה', third_party: 'צדדים שלישיים',
-    public: 'מקורות ציבוריים', employees: 'עובדים',
-    service: 'מתן שירות', marketing: 'שיווק', analytics: 'אנליטיקס', legal: 'עמידה בחוק',
-    hr: 'משאבי אנוש', security: 'אבטחה',
-    none: 'לא', israeli: 'ספק ישראלי', international: 'ספק בינלאומי', both: 'שניהם',
-    encryption: 'הצפנה', access_control: 'בקרת גישה', backup: 'גיבויים', firewall: 'חומת אש',
-    antivirus: 'אנטי-וירוס', training: 'הדרכות',
-    yes: 'כן', partial: 'חלקם', no: 'לא', unknown: 'לא יודע/ת',
-    '1-10': '1-10', '11-50': '11-50', '51-200': '51-200', '200+': 'מעל 200',
-    '0': 'אין', '6-20': '6-20', '20+': 'מעל 20',
-  }
-
-  const formatValue = (val: any): string => {
-    if (Array.isArray(val)) return val.map(v => VALUE_LABELS[v] || v).join(', ')
-    if (typeof val === 'boolean') return val ? 'כן' : 'לא'
-    return VALUE_LABELS[val] || String(val || '-')
-  }
-
   const handleSave = async () => {
     if (!supabase || !organization?.id) return
     setSaving(true)
@@ -2404,10 +2388,6 @@ function SettingsTab({ organization, user, orgProfile, supabase }: { organizatio
     }
     setSaving(false)
   }
-
-  const answers = orgProfile?.answers || []
-  // Filter out basic fields already shown above
-  const profileAnswers = answers.filter((a: any) => !['business_name', 'business_id'].includes(a.questionId))
 
   return (
     <div className="space-y-6">
@@ -2472,21 +2452,73 @@ function SettingsTab({ organization, user, orgProfile, supabase }: { organizatio
         </div>
       </div>
 
-      {/* Business Profile — from onboarding */}
-      {profileAnswers.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
-          <h2 className="font-semibold text-stone-800 mb-4">🏢 פרופיל עסקי</h2>
-          <p className="text-sm text-stone-400 mb-4">מבוסס על תשובות ההרשמה · לעדכון — פנו לממונה</p>
-          <div className="grid sm:grid-cols-2 gap-4">
-            {profileAnswers.map((a: any) => (
-              <div key={a.questionId} className="p-3 bg-stone-50 rounded-xl">
-                <label className="text-xs text-stone-500 font-medium">{QUESTION_LABELS[a.questionId] || a.questionId}</label>
-                <p className="text-sm font-medium text-stone-700 mt-1">{formatValue(a.value)}</p>
-              </div>
-            ))}
+      {/* Business Profile — from v3 onboarding */}
+      {(() => {
+        const v3 = orgProfile?.v3Answers
+        if (!v3) return null
+
+        const INDUSTRY_LABELS: Record<string, string> = {
+          health: 'בריאות / רפואה', retail: 'קמעונאות / מסחר', tech: 'טכנולוגיה / הייטק',
+          services: 'שירותים מקצועיים', finance: 'פיננסים / ביטוח', education: 'חינוך / הדרכה',
+          legal: 'משפטים', food: 'מזון / הסעדה', realestate: 'נדל"ן', other: 'אחר'
+        }
+        const DB_LABELS: Record<string, string> = {
+          customers: 'לקוחות', employees: 'עובדים', cvs: 'קורות חיים', cameras: 'מצלמות',
+          website_leads: 'לידים מאתר', suppliers_id: 'ספקים', payments: 'תשלומים', medical: 'רפואי'
+        }
+        const PROC_LABELS: Record<string, string> = {
+          crm_saas: 'CRM / מערכת ניהול', payroll: 'שכר / HR', marketing: 'שיווק דיגיטלי',
+          cloud_hosting: 'אחסון ענן', call_center: 'מוקד שירות', accounting: 'הנהלת חשבונות'
+        }
+        const STORAGE_LABELS: Record<string, string> = {
+          google: 'Google Workspace', microsoft: 'Microsoft 365', monday: 'Monday.com',
+          priority: 'Priority', sap: 'SAP', salesforce: 'Salesforce', local: 'שרת מקומי'
+        }
+        const ACCESS_LABELS: Record<string, string> = {
+          all: 'כולם', role: 'לפי תפקיד', strict: 'מוגבלת מאוד'
+        }
+        const CONSENT_LABELS: Record<string, string> = {
+          yes: 'כן', no: 'לא', partial: 'חלקית'
+        }
+
+        const items: { label: string; value: string }[] = []
+
+        if (v3.industry) items.push({ label: 'תחום פעילות', value: INDUSTRY_LABELS[v3.industry] || v3.industry })
+        if (v3.databases?.length) items.push({ label: 'מאגרי מידע', value: v3.databases.map((d: string) => DB_LABELS[d] || d).join(', ') })
+        if (v3.totalSize) items.push({ label: 'היקף רשומות כולל', value: v3.totalSize })
+        if (v3.storage?.length) items.push({ label: 'מערכות', value: v3.storage.map((s: string) => STORAGE_LABELS[s] || s).join(', ') })
+        if (v3.processors?.length) items.push({ label: 'ספקים חיצוניים', value: v3.processors.map((p: string) => PROC_LABELS[p] || p).join(', ') })
+        if (v3.securityOwner || v3.securityOwnerName) items.push({ label: 'אחראי אבטחת מידע', value: v3.securityOwnerName || v3.securityOwner || '-' })
+        if (v3.accessControl) items.push({ label: 'בקרת גישה', value: ACCESS_LABELS[v3.accessControl] || v3.accessControl })
+        if (v3.hasConsent) items.push({ label: 'מנגנון הסכמה', value: CONSENT_LABELS[v3.hasConsent] || v3.hasConsent })
+        if (v3.cameraOwnerName) items.push({ label: 'אחראי מצלמות', value: v3.cameraOwnerName })
+
+        // DB details summary
+        const dbDetails = v3.dbDetails || {}
+        const dbCount = Object.keys(dbDetails).length
+        const totalAccess = Object.values(dbDetails).reduce((max: number, d: any) => {
+          const ACCESS_NUMS: Record<string, number> = { '1-2': 2, '3-10': 10, '11-50': 50, '50-100': 100, '100+': 200 }
+          return Math.max(max, ACCESS_NUMS[d.access] || 0)
+        }, 0)
+        if (totalAccess > 0) items.push({ label: 'גישה מרבית למידע', value: `עד ${totalAccess} עובדים` })
+
+        if (items.length === 0) return null
+
+        return (
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
+            <h2 className="font-semibold text-stone-800 mb-4">🏢 פרופיל עסקי</h2>
+            <p className="text-sm text-stone-400 mb-4">מבוסס על תשובות ההרשמה · לעדכון — פנו לממונה</p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {items.map(item => (
+                <div key={item.label} className="p-3 bg-stone-50 rounded-xl">
+                  <label className="text-xs text-stone-500 font-medium">{item.label}</label>
+                  <p className="text-sm font-medium text-stone-700 mt-1">{item.value}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* DPO Info */}
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
