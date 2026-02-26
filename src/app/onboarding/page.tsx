@@ -1153,10 +1153,17 @@ function OnboardingContent() {
       <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white p-4">
         <div className="max-w-lg mx-auto">
           <div className="flex items-center justify-between mb-4">
-              <button onClick={() => { setShowReport(false); setIsReviewMode(false); setStep(0) }}
-                className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
-                <ArrowRight className="h-4 w-4" />חזרה לשאלון
-              </button>
+              {isReviewMode ? (
+                <button onClick={() => router.push('/subscribe')}
+                  className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+                  <ArrowRight className="h-4 w-4" />חזרה לחבילות
+                </button>
+              ) : (
+                <button onClick={() => { setShowReport(false); setStep(0) }}
+                  className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
+                  <ArrowRight className="h-4 w-4" />חזרה לשאלון
+                </button>
+              )}
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
                 <Shield className="h-5 w-5 text-white" />
