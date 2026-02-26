@@ -142,9 +142,18 @@ function DashboardContent() {
           .maybeSingle()
 
         if (!profile) {
-          // Org exists but onboarding not completed — send back
-          router.push('/onboarding')
-          return
+          // Org exists but onboarding not completed
+          // Only redirect if no active subscription (avoid loop with simulated payments)
+          const { data: sub } = await supabase
+            .from('subscriptions')
+            .select('id')
+            .eq('org_id', org.id)
+            .in('status', ['active', 'past_due'])
+            .maybeSingle()
+          if (!sub) {
+            router.push('/onboarding')
+            return
+          }
         }
         
         const { data: docs } = await supabase
