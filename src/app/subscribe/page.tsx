@@ -89,6 +89,9 @@ function SubscribeContent() {
       if (org?.tier && !localStorage.getItem('dpo_recommended_tier')) {
         setRecommendedTier(org.tier)
       }
+    } else {
+      // No org yet — user needs to complete onboarding first
+      router.replace('/onboarding')
     }
   }
 
