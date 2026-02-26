@@ -998,7 +998,7 @@ function OnboardingContent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             orgId: orgData.id, orgName: businessName, businessId: v3Answers.companyId || '',
-            answers: legacyAnswers
+            answers: legacyAnswers, v3Answers
           })
         })
         if (response.ok) { setGenerationProgress(95); setStatus('כמעט מוכן!') }
