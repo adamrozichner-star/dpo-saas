@@ -786,8 +786,9 @@ function OnboardingContent() {
 
   const set = useCallback((k: string, v: any) => setV3Answers(p => ({ ...p, [k]: v })), [])
   
-  // Refs for text fields — these survive async state overwrites from localStorage/DB
-  const textFieldRefs = useRef<Record<string, string>>({})
+  // === NUCLEAR FIX: Session-aware refs that can NEVER be overwritten by async effects ===
+  const sessionStarted = useRef(false) // true once user interacts with any card
+  const sessionAnswers = useRef<Record<string, any>>({}) // captures ALL user inputs this session
 
   const selectedDBs = v3Answers.databases || []
   const needsCam = selectedDBs.includes('cameras')
@@ -852,7 +853,9 @@ function OnboardingContent() {
           .eq('org_id', userData.org_id)
           .single()
 
-        if (profileData?.profile_data?.v3Answers) {
+        if (profileData?.profile_data?.v3Answers && !sessionStarted.current) {
+          // Only restore from DB if user hasn't started a new session
+          console.log('[Onboarding] Restoring from DB profile:', profileData.profile_data.v3Answers.bizName)
           setV3Answers(profileData.profile_data.v3Answers)
           setShowReport(true)
           setIsReviewMode(true)
@@ -872,9 +875,13 @@ function OnboardingContent() {
 
   useEffect(() => {
     if (!user) return
+    // If user already started interacting, NEVER overwrite
+    if (sessionStarted.current) return
+    
     const savedUser = localStorage.getItem('dpo_v3_user')
     // Clear stale data from a different user
     if (savedUser && savedUser !== user.id) {
+      console.log('[Onboarding] Different user, clearing localStorage')
       localStorage.removeItem('dpo_v3_answers')
       localStorage.removeItem('dpo_v3_step')
       localStorage.removeItem('dpo_v3_user')
@@ -887,17 +894,21 @@ function OnboardingContent() {
       try {
         const parsed = JSON.parse(saved)
         const resumeStep = parseInt(savedStep)
-        // Only resume if there's actually meaningful progress (step > 2 means past name/id cards)
         if (resumeStep > 2 && parsed.bizName) {
           console.log('[Onboarding] Resuming from step', resumeStep, 'bizName:', parsed.bizName)
           setV3Answers(parsed)
           setStep(resumeStep)
         } else if (parsed.databases?.length > 0) {
+          console.log('[Onboarding] Resuming to report, bizName:', parsed.bizName)
           setV3Answers(parsed)
           setShowReport(true)
           setIsReviewMode(true)
+        } else {
+          // Incomplete data — start fresh
+          console.log('[Onboarding] Stale data, clearing')
+          localStorage.removeItem('dpo_v3_answers')
+          localStorage.removeItem('dpo_v3_step')
         }
-        // If step <= 2, DON'T restore — let user start fresh with name entry
       } catch (e) { /* ignore */ }
     }
   }, [user])
@@ -905,11 +916,12 @@ function OnboardingContent() {
   const [textInput, setTextInput] = useState('')
 
   const advance = useCallback((key?: string, val?: any) => {
+    // Mark session as started — blocks ALL async overwrites
+    sessionStarted.current = true
     if (key) {
-      if (key === 'bizName' || key === 'companyId') {
-        console.log(`[Onboarding] Text saved: ${key} = "${val}"`)
-      }
+      console.log(`[Onboarding] advance: ${key} = "${typeof val === 'string' ? val : JSON.stringify(val)}"`)
       set(key, val)
+      sessionAnswers.current[key] = val
     }
     setAnimDir('out')
     setTimeout(() => { setStep(s => s + 1); setAnimDir('in') }, 180)
@@ -926,6 +938,7 @@ function OnboardingContent() {
   }, [step, mainLen, showReport, showDpoIntro, isGenerating])
 
   const handleDBDetailDone = useCallback((dbType: string, detail: any) => {
+    sessionStarted.current = true
     setV3Answers(p => ({ ...p, dbDetails: { ...p.dbDetails, [dbType]: detail } }))
     setAnimDir('out')
     setTimeout(() => {
@@ -974,22 +987,11 @@ function OnboardingContent() {
     setStatus('מנתחים את הנתונים שלכם...')
 
     try {
-      // Build final answers: ref > state > localStorage (ref is bulletproof, never overwritten by async effects)
-      let finalV3 = { ...v3Answers }
-      // Apply ref overrides (these came directly from user keystrokes, impossible to overwrite)
-      if (textFieldRefs.current.bizName) finalV3.bizName = textFieldRefs.current.bizName
-      if (textFieldRefs.current.companyId) finalV3.companyId = textFieldRefs.current.companyId
-      // Last resort: localStorage
-      if (!finalV3.bizName) {
-        try {
-          const saved = JSON.parse(localStorage.getItem('dpo_v3_answers') || '{}')
-          if (saved.bizName) finalV3.bizName = saved.bizName
-          if (saved.companyId && !finalV3.companyId) finalV3.companyId = saved.companyId
-        } catch {}
-      }
+      // Build final answers: merge state with session overrides (ref is bulletproof)
+      let finalV3 = { ...v3Answers, ...sessionAnswers.current }
       const businessName = finalV3.bizName || 'עסק חדש'
       console.log('[Onboarding] Creating org:', { 
-        refBizName: textFieldRefs.current.bizName,
+        sessionBizName: sessionAnswers.current.bizName,
         stateBizName: v3Answers.bizName,
         finalBizName: finalV3.bizName,
         businessName 
@@ -1207,9 +1209,10 @@ function OnboardingContent() {
             <div className="bg-indigo-50/60 rounded-xl p-4 mb-4 text-right">
               <label className="text-xs text-gray-500 mb-1 block">שם העסק שירשם:</label>
               <input
-                value={textFieldRefs.current.bizName || v3Answers.bizName || ''}
+                value={sessionAnswers.current.bizName || v3Answers.bizName || ''}
                 onChange={e => {
-                  textFieldRefs.current.bizName = e.target.value
+                  sessionStarted.current = true
+                  sessionAnswers.current.bizName = e.target.value
                   set('bizName', e.target.value)
                 }}
                 className="w-full px-3 py-2 rounded-lg border border-indigo-200 text-center font-semibold text-gray-800 bg-white focus:outline-none focus:border-indigo-400"
@@ -1234,6 +1237,7 @@ function OnboardingContent() {
             <p className="text-center text-[11px] text-gray-400 mt-3">
               המסמכים יופקו אוטומטית ויהיו זמינים בלוח הבקרה
             </p>
+            <p className="text-center text-[9px] text-gray-300 mt-1">v7</p>
           </div>
         </div>
       </div>
@@ -1325,15 +1329,14 @@ function OnboardingContent() {
                   placeholder={card.placeholder}
                   value={textInput || v3Answers[card.id] || ''}
                   onChange={e => {
+                    sessionStarted.current = true
                     setTextInput(e.target.value)
                     set(card.id, e.target.value)
-                    // Save to ref as bulletproof backup
-                    textFieldRefs.current[card.id] = e.target.value
+                    sessionAnswers.current[card.id] = e.target.value
                   }}
                   className="w-full px-4 py-3 rounded-xl border-2 border-amber-300 text-base text-center outline-none focus:border-amber-400"
                   onKeyDown={e => {
                     if (e.key === 'Enter' && textInput) {
-                      textFieldRefs.current[card.id] = textInput
                       advance(card.id, textInput)
                       setTextInput('')
                     }
@@ -1344,7 +1347,6 @@ function OnboardingContent() {
                   onClick={() => {
                     if (textInput || v3Answers[card.id]) {
                       const val = textInput || v3Answers[card.id]
-                      textFieldRefs.current[card.id] = val
                       advance(card.id, val)
                       setTextInput('')
                     }
