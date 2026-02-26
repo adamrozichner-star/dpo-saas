@@ -930,7 +930,7 @@ function OnboardingContent() {
       setStatus('מתאימים את רמת האבטחה...')
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
-        .insert({ name: businessName, business_id: '', tier: autoTier, status: 'active' })
+        .insert({ name: businessName, business_id: v3Answers.companyId || '', tier: autoTier, status: 'active' })
         .select().single()
 
       if (orgError) throw new Error('שגיאה ביצירת הארגון: ' + orgError.message)
@@ -957,7 +957,7 @@ function OnboardingContent() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            orgId: orgData.id, orgName: businessName, businessId: '',
+            orgId: orgData.id, orgName: businessName, businessId: v3Answers.companyId || '',
             answers: legacyAnswers
           })
         })
