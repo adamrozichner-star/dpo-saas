@@ -35,6 +35,7 @@ import { useSubscriptionGate } from '@/lib/use-subscription-gate'
 import { DPO_CONFIG } from '@/lib/dpo-config'
 import { useToast } from '@/components/Toast'
 import WelcomeModal from '@/components/WelcomeModal'
+import { deriveComplianceActions, ComplianceSummary } from '@/lib/compliance-engine'
 
 // ============================================
 // TYPES
@@ -94,6 +95,7 @@ function DashboardContent() {
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [messageThreads, setMessageThreads] = useState<any[]>([])
   const [orgProfile, setOrgProfile] = useState<any>(null)
+  const [complianceSummary, setComplianceSummary] = useState<ComplianceSummary | null>(null)
 
   useEffect(() => {
     if (!loading && !session) {
@@ -203,10 +205,25 @@ function DashboardContent() {
         const score = calculateScore(docs || [], incidentData || [])
         setComplianceScore(score)
         
-        // Sync score to DB so other pages (chat) read the same value
-        try {
-          await supabase.from('organizations').update({ compliance_score: score }).eq('id', org.id)
-        } catch {}
+        // Derive compliance actions from onboarding data
+        let v3 = profileData?.v3Answers || {}
+        // Fallback: try localStorage (saved during onboarding on same browser)
+        if (Object.keys(v3).length === 0) {
+          try { v3 = JSON.parse(localStorage.getItem('dpo_v3_answers') || '{}') } catch {}
+        }
+        const summary = deriveComplianceActions(v3, docs || [], incidentData || [])
+        setComplianceSummary(summary)
+        // Use engine score if we have v3 data, otherwise fallback to doc-based score
+        if (Object.keys(v3).length > 0) {
+          setComplianceScore(summary.score)
+          try {
+            await supabase.from('organizations').update({ compliance_score: summary.score }).eq('id', org.id)
+          } catch {}
+        } else {
+          try {
+            await supabase.from('organizations').update({ compliance_score: score }).eq('id', org.id)
+          } catch {}
+        }
         
         const generatedTasks = generateTasks(docs || [], incidentData || [], dsarData || [], { ...org, profile_data: profileData })
         setTasks(generatedTasks)
@@ -476,15 +493,22 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-stone-50 flex" dir="rtl">
       {/* Welcome Modal */}
-      {showWelcome && (
-        <WelcomeModal 
-          onClose={() => setShowWelcome(false)} 
-          orgName={organization?.name || ''} 
-          documentsCount={documents.length}
-          complianceScore={complianceScore}
-          v3Answers={orgProfile?.v3Answers}
-        />
-      )}
+      {showWelcome && (() => {
+        // Use orgProfile v3Answers, fallback to localStorage (saved during onboarding)
+        let v3 = orgProfile?.v3Answers
+        if (!v3 || Object.keys(v3).length === 0) {
+          try { v3 = JSON.parse(localStorage.getItem('dpo_v3_answers') || '{}') } catch {}
+        }
+        return (
+          <WelcomeModal 
+            onClose={() => setShowWelcome(false)} 
+            orgName={organization?.name || ''} 
+            documentsCount={documents.length}
+            complianceScore={complianceScore}
+            v3Answers={v3}
+          />
+        )
+      })()}
 
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 right-0 z-50 w-64 bg-stone-100/80 backdrop-blur-sm border-l border-stone-200 transform transition-transform duration-200 ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0 lg:static`}>
@@ -612,6 +636,8 @@ function DashboardContent() {
             <OverviewTab 
               organization={organization}
               complianceScore={complianceScore}
+              complianceSummary={complianceSummary}
+              orgProfile={orgProfile}
               tasks={tasks}
               documents={documents}
               incidents={incidents}
@@ -685,12 +711,15 @@ function NavButton({
   )
 }
 
+
 // ============================================
-// OVERVIEW TAB
+// OVERVIEW TAB — Data-driven from compliance engine
 // ============================================
 function OverviewTab({ 
   organization, 
   complianceScore, 
+  complianceSummary,
+  orgProfile,
   tasks, 
   documents, 
   incidents,
@@ -699,6 +728,8 @@ function OverviewTab({
 }: { 
   organization: any
   complianceScore: number
+  complianceSummary: ComplianceSummary | null
+  orgProfile: any
   tasks: Task[]
   documents: Document[]
   incidents: any[]
@@ -706,28 +737,28 @@ function OverviewTab({
   onNavigate: (tab: any) => void
 }) {
   const hasSubscription = organization?.subscription_status === 'active'
+  const actions = complianceSummary?.actions || []
+
+  // Group actions by category
+  const doneActions = actions.filter(a => a.category === 'done')
+  const userActions = actions.filter(a => a.category === 'user_action')
+  const dpoActions = actions.filter(a => a.category === 'dpo_pending')
+  const reportingActions = actions.filter(a => a.category === 'reporting')
+  const topPriorityAction = userActions[0] || reportingActions[0] || dpoActions[0]
 
   const getScoreInfo = () => {
-    if (complianceScore >= 70) return { label: 'מצוין', bg: 'bg-emerald-100', text: 'text-emerald-700' }
-    if (complianceScore >= 40) return { label: 'טעון שיפור', bg: 'bg-amber-100', text: 'text-amber-700' }
-    return { label: 'דורש טיפול', bg: 'bg-rose-100', text: 'text-rose-700' }
+    if (complianceScore >= 70) return { label: 'מצוין', bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', bar: 'bg-emerald-500' }
+    if (complianceScore >= 40) return { label: 'טעון שיפור', bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200', bar: 'bg-amber-500' }
+    return { label: 'דורש טיפול', bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200', bar: 'bg-rose-500' }
   }
-
   const scoreInfo = getScoreInfo()
 
-  // Compliance breakdown
-  const docTypes = documents.map(d => d.type)
-  const scoreBreakdown = [
-    { label: 'מדיניות פרטיות', done: docTypes.includes('privacy_policy'), points: 15, action: 'privacy_policy' },
-    { label: 'נוהל אבטחת מידע', done: docTypes.includes('security_policy') || docTypes.includes('security_procedures'), points: 15, action: 'security_policy' },
-    { label: 'כתב מינוי DPO', done: docTypes.includes('dpo_appointment'), points: 10, action: 'dpo_appointment' },
-    { label: 'רישום מאגרי מידע', done: docTypes.includes('database_registration') || docTypes.includes('database_definition'), points: 10, action: 'database_registration' },
-    { label: 'מפת עיבוד (ROPA)', done: docTypes.includes('ropa'), points: 10, action: 'ropa' },
-    { label: 'טופס הסכמה', done: docTypes.includes('consent_form'), points: 10, action: 'consent_form' },
-    { label: 'אין אירועי אבטחה פתוחים', done: incidents.filter(i => !['resolved', 'closed'].includes(i.status)).length === 0, points: 15, action: null },
-  ]
-  const maxScore = scoreBreakdown.reduce((s, item) => s + item.points, 15) // 15 base
-  const earnedScore = 15 + scoreBreakdown.filter(i => i.done).reduce((s, item) => s + item.points, 0)
+  const getPriorityColor = (p: string) => {
+    if (p === 'critical') return { bg: 'bg-red-50', border: 'border-red-200', dot: 'bg-red-500', text: 'text-red-700' }
+    if (p === 'high') return { bg: 'bg-rose-50', border: 'border-rose-200', dot: 'bg-rose-400', text: 'text-rose-700' }
+    if (p === 'medium') return { bg: 'bg-amber-50', border: 'border-amber-200', dot: 'bg-amber-400', text: 'text-amber-700' }
+    return { bg: 'bg-stone-50', border: 'border-stone-200', dot: 'bg-stone-400', text: 'text-stone-600' }
+  }
 
   return (
     <div className="space-y-6">
@@ -739,104 +770,199 @@ function OverviewTab({
         <p className="text-stone-500 mt-1">הנה סקירה של מצב הציות שלכם</p>
       </div>
 
-      {/* Next Step Banner — most important task at very top */}
-      {tasks.length > 0 && (() => {
-        const t = tasks[0]
-        return (
-          <div className="bg-gradient-to-l from-indigo-50 to-white rounded-2xl p-5 border border-indigo-200 shadow-sm">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-lg font-bold">→</span>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs text-indigo-600 font-semibold mb-0.5">הצעד הבא שלכם</p>
-                  <p className="font-semibold text-stone-800">{t.title}</p>
-                  <p className="text-sm text-stone-500 truncate">{t.description}</p>
-                </div>
+      {/* Top Row: Score + Next Step */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Compliance Score */}
+        <div className={`rounded-2xl p-6 shadow-sm border ${scoreInfo.border} ${scoreInfo.bg}`}>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-medium text-stone-500">ציון ציות</p>
+            <span className={`text-xs px-2 py-1 rounded-full font-medium ${scoreInfo.text} ${scoreInfo.bg}`}>
+              {scoreInfo.label}
+            </span>
+          </div>
+          <div className="flex items-baseline gap-1 mb-3">
+            <span className="text-5xl font-bold text-stone-800">{complianceScore}</span>
+            <span className="text-stone-400 text-lg">/100</span>
+          </div>
+          <div className="w-full h-2.5 bg-white/50 rounded-full overflow-hidden mb-3">
+            <div 
+              className={`h-full rounded-full transition-all duration-700 ${scoreInfo.bar}`}
+              style={{ width: `${complianceScore}%` }}
+            />
+          </div>
+          <div className="flex items-center gap-4 text-xs text-stone-500">
+            <span>✅ {doneActions.length} בוצעו</span>
+            <span>⏳ {dpoActions.length} ממתין לממונה</span>
+            <span>📋 {userActions.length + reportingActions.length} ממתינים לכם</span>
+          </div>
+        </div>
+
+        {/* Next Step */}
+        {topPriorityAction ? (
+          <div className="bg-gradient-to-l from-indigo-50 to-white rounded-2xl p-6 shadow-sm border border-indigo-200">
+            <p className="text-sm font-medium text-indigo-600 mb-2">🎯 הצעד הבא שלכם</p>
+            <h3 className="text-lg font-bold text-stone-800 mb-1">{topPriorityAction.title}</h3>
+            <p className="text-sm text-stone-500 mb-4">{topPriorityAction.description}</p>
+            <div className="flex items-center gap-3">
+              <Link href={topPriorityAction.actionPath || '/chat'}>
+                <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 transition-colors">
+                  טפל עכשיו
+                </button>
+              </Link>
+              {topPriorityAction.estimatedMinutes && (
+                <span className="text-xs text-stone-400">⏱ ~{topPriorityAction.estimatedMinutes} דקות</span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200 cursor-pointer hover:border-indigo-200 transition-colors" onClick={() => onNavigate('messages')}>
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-medium text-stone-500">הממונה שלכם</p>
+              {unreadMessages > 0 && (
+                <span className="bg-indigo-500 text-white text-xs font-bold px-2.5 py-1 rounded-full animate-pulse">
+                  {unreadMessages} הודעות חדשות
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
+                <User className="h-6 w-6 text-indigo-500" />
               </div>
-              <Link href={t.actionPath || '/chat'}>
-                <button className="px-5 py-2.5 bg-indigo-500 text-white rounded-xl text-sm font-semibold hover:bg-indigo-600 transition-colors whitespace-nowrap shadow-sm">
-                  {t.action} →
+              <div className="flex-1">
+                <p className="font-semibold text-stone-800">{DPO_CONFIG.name}</p>
+                <p className="text-sm text-stone-500">ממונה הגנת פרטיות</p>
+              </div>
+              <Link href="/chat">
+                <button className="px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium">
+                  שלח הודעה
                 </button>
               </Link>
             </div>
           </div>
-        )
-      })()}
+        )}
+      </div>
 
-      {/* Top Cards */}
-      <div className="grid md:grid-cols-2 gap-4">
-        {/* Score Card — with breakdown */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-medium text-stone-500">ציון ציות</p>
-            <span className={`px-2.5 py-1 ${scoreInfo.bg} ${scoreInfo.text} rounded-full text-xs font-medium`}>
-              {scoreInfo.label}
-            </span>
-          </div>
-          <div className="flex items-baseline gap-1 mb-4">
-            <span className="text-5xl font-bold text-stone-800">{complianceScore}</span>
-            <span className="text-stone-400 text-lg">/100</span>
-          </div>
-          {/* Progress bar */}
-          <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden mb-4">
-            <div 
-              className={`h-full rounded-full transition-all duration-500 ${
-                complianceScore >= 70 ? 'bg-emerald-500' : complianceScore >= 40 ? 'bg-amber-500' : 'bg-rose-500'
-              }`}
-              style={{ width: `${complianceScore}%` }}
-            />
-          </div>
-          {/* Breakdown items */}
+      {/* Done For You Section */}
+      {doneActions.length > 0 && (
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-200">
+          <h2 className="text-base font-semibold text-stone-700 mb-3 flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+            מה כבר בוצע עבורכם
+          </h2>
           <div className="space-y-2">
-            {scoreBreakdown.map((item, i) => (
-              <div key={i} className="flex items-center gap-2 text-sm">
-                {item.done ? (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                ) : (
-                  <div className="w-4 h-4 rounded-full border-2 border-stone-300 flex-shrink-0" />
-                )}
-                <span className={item.done ? 'text-stone-500 line-through' : 'text-stone-700'}>{item.label}</span>
-                <span className="text-xs text-stone-400 mr-auto">{item.points} נק׳</span>
-                {!item.done && item.action && (
-                  <Link href={`/chat?task=${item.action}&prompt=${encodeURIComponent(`אנא צור עבורי ${item.label} מלא ומוכן לשימוש עבור הארגון שלי`)}`}>
-                    <span className="text-xs text-indigo-600 hover:text-indigo-700 font-medium cursor-pointer">צור עכשיו →</span>
-                  </Link>
-                )}
+            {doneActions.map(action => (
+              <div key={action.id} className="flex items-center gap-3 py-2 px-3 bg-emerald-50/50 rounded-xl">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium text-stone-700">{action.title}</span>
+                  {action.resolvedNote && (
+                    <span className="text-xs text-emerald-600 mr-2">— {action.resolvedNote}</span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </div>
+      )}
 
-        {/* DPO Card */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200 cursor-pointer hover:border-indigo-200 transition-colors" onClick={() => onNavigate('messages')}>
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-medium text-stone-500">הממונה שלכם</p>
-            {unreadMessages > 0 && (
-              <span className="bg-indigo-500 text-white text-xs font-bold px-2.5 py-1 rounded-full animate-pulse">
-                {unreadMessages} הודעות חדשות
-              </span>
-            )}
+      {/* User Actions */}
+      {userActions.length > 0 && (
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-200">
+          <h2 className="text-base font-semibold text-stone-700 mb-3 flex items-center gap-2">
+            <ClipboardList className="h-5 w-5 text-amber-500" />
+            פעולות ממתינות לכם
+            <span className="text-xs font-normal bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{userActions.length}</span>
+          </h2>
+          <div className="space-y-2">
+            {userActions.map(action => {
+              const colors = getPriorityColor(action.priority)
+              return (
+                <div key={action.id} className={`flex items-center gap-3 py-3 px-4 rounded-xl border ${colors.bg} ${colors.border}`}>
+                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${colors.dot}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-stone-800">{action.title}</p>
+                    <p className="text-xs text-stone-500 truncate">{action.description}</p>
+                  </div>
+                  <Link href={action.actionPath || '/chat'}>
+                    <button className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600 transition-colors whitespace-nowrap">
+                      טפל →
+                    </button>
+                  </Link>
+                </div>
+              )
+            })}
           </div>
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
-              <User className="h-6 w-6 text-indigo-500" />
-            </div>
-            <div className="flex-1">
-              <p className="font-semibold text-stone-800">{DPO_CONFIG.name}</p>
-              <p className="text-sm text-stone-500">ממונה הגנת פרטיות</p>
-            </div>
-            <Link href="/chat">
-              <button className="px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium">
-                שלח הודעה
-              </button>
-            </Link>
+        </div>
+      )}
+
+      {/* DPO Pending */}
+      {dpoActions.length > 0 && (
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-200">
+          <h2 className="text-base font-semibold text-stone-700 mb-3 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-indigo-400" />
+            ממתין לאישור הממונה
+          </h2>
+          <div className="space-y-2">
+            {dpoActions.map(action => (
+              <div key={action.id} className="flex items-center gap-3 py-2.5 px-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
+                <Loader2 className="h-4 w-4 text-indigo-400 animate-spin flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <span className="text-sm font-medium text-stone-700">{action.title}</span>
+                </div>
+                <span className="text-xs text-indigo-400 whitespace-nowrap">48 שעות</span>
+              </div>
+            ))}
           </div>
+        </div>
+      )}
+
+      {/* Reporting Obligations */}
+      {reportingActions.length > 0 && (
+        <div className="bg-red-50 rounded-2xl p-5 shadow-sm border border-red-200">
+          <h2 className="text-base font-semibold text-red-800 mb-3 flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-red-500" />
+            חובות דיווח
+          </h2>
+          {reportingActions.map(action => (
+            <div key={action.id} className="flex items-center gap-3">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-800">{action.title}</p>
+                <p className="text-xs text-red-600">{action.description}</p>
+              </div>
+              <Link href={action.actionPath || '/chat'}>
+                <button className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors whitespace-nowrap">
+                  דווח עכשיו →
+                </button>
+              </Link>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* DPO Card — always visible */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-200 cursor-pointer hover:border-indigo-200 transition-colors" onClick={() => onNavigate('messages')}>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
+            <User className="h-6 w-6 text-indigo-500" />
+          </div>
+          <div className="flex-1">
+            <p className="font-semibold text-stone-800">{DPO_CONFIG.name}</p>
+            <p className="text-sm text-stone-500">ממונה הגנת פרטיות</p>
+          </div>
+          {unreadMessages > 0 && (
+            <span className="bg-indigo-500 text-white text-xs font-bold px-2.5 py-1 rounded-full animate-pulse">
+              {unreadMessages} חדשות
+            </span>
+          )}
+          <Link href="/chat">
+            <button className="px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium">
+              שלח הודעה
+            </button>
+          </Link>
         </div>
       </div>
 
-      {/* Stats */}
+      {/* Stats row */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-stone-200 flex items-center gap-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => onNavigate('documents')}>
           <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
@@ -848,66 +974,16 @@ function OverviewTab({
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-stone-200 flex items-center gap-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => onNavigate('tasks')}>
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-stone-200 flex items-center gap-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => onNavigate('incidents')}>
           <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-            <ClipboardList className="h-5 w-5 text-purple-600" />
+            <Shield className="h-5 w-5 text-purple-600" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-stone-800">{tasks.length}</p>
-            <p className="text-sm text-stone-500">משימות פתוחות</p>
+            <p className="text-2xl font-bold text-stone-800">{incidents.filter(i => !['resolved', 'closed'].includes(i.status)).length}</p>
+            <p className="text-sm text-stone-500">אירועים פתוחים</p>
           </div>
         </div>
       </div>
-
-      {/* Tasks Section */}
-      {tasks.length > 0 && (
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-stone-800">📋 מה הצעד הבא?</h2>
-            <button 
-              onClick={() => onNavigate('tasks')}
-              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
-            >
-              כל המשימות
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {tasks.slice(0, 3).map((task, index) => (
-              <div 
-                key={task.id} 
-                className={`flex items-center gap-4 p-3 rounded-xl border ${
-                  task.priority === 'high' 
-                    ? 'bg-rose-50 border-rose-100' 
-                    : task.priority === 'medium' 
-                    ? 'bg-amber-50 border-amber-100' 
-                    : 'bg-stone-50 border-stone-100'
-                }`}
-              >
-                <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                  task.priority === 'high' 
-                    ? 'bg-rose-200 text-rose-700' 
-                    : task.priority === 'medium' 
-                    ? 'bg-amber-200 text-amber-700' 
-                    : 'bg-stone-200 text-stone-700'
-                }`}>
-                  <span className="text-xs font-bold">{index + 1}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-stone-800">{task.title}</p>
-                  <p className="text-sm text-stone-500 truncate">{task.description}</p>
-                </div>
-                <Link href={task.actionPath || '/chat'}>
-                  <button className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 transition-colors">
-                    {task.action}
-                  </button>
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Upgrade Card */}
       {!hasSubscription && (
@@ -933,6 +1009,7 @@ function OverviewTab({
     </div>
   )
 }
+
 
 // ============================================
 // TASKS TAB
