@@ -961,8 +961,17 @@ function OnboardingContent() {
     setStatus('מנתחים את הנתונים שלכם...')
 
     try {
-      const businessName = v3Answers.bizName || 'עסק חדש'
-      const legacyAnswers = mapV3ToLegacyAnswers(v3Answers)
+      // Read business name from state, with localStorage fallback
+      let finalV3 = { ...v3Answers }
+      if (!finalV3.bizName) {
+        try {
+          const saved = JSON.parse(localStorage.getItem('dpo_v3_answers') || '{}')
+          if (saved.bizName) finalV3 = { ...finalV3, ...saved }
+        } catch {}
+      }
+      const businessName = finalV3.bizName || 'עסק חדש'
+      console.log('[Onboarding] Creating org:', { bizName: finalV3.bizName, companyId: finalV3.companyId, businessName })
+      const legacyAnswers = mapV3ToLegacyAnswers(finalV3)
 
       const autoTier = calculateRecommendedTier()
 
@@ -970,7 +979,7 @@ function OnboardingContent() {
       setStatus('מתאימים את רמת האבטחה...')
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
-        .insert({ name: businessName, business_id: v3Answers.companyId || '', tier: autoTier, status: 'active' })
+        .insert({ name: businessName, business_id: finalV3.companyId || '', tier: autoTier, status: 'active' })
         .select().single()
 
       if (orgError) throw new Error('שגיאה ביצירת הארגון: ' + orgError.message)
@@ -985,7 +994,7 @@ function OnboardingContent() {
         org_id: orgData.id,
         profile_data: { 
           answers: legacyAnswers, 
-          v3Answers: v3Answers,
+          v3Answers: finalV3,
           completedAt: new Date().toISOString() 
         }
       })
@@ -1003,14 +1012,14 @@ function OnboardingContent() {
           method: 'POST',
           headers: authHeaders,
           body: JSON.stringify({
-            orgId: orgData.id, orgName: businessName, businessId: v3Answers.companyId || '',
-            answers: legacyAnswers, v3Answers
+            orgId: orgData.id, orgName: businessName, businessId: finalV3.companyId || '',
+            answers: legacyAnswers, v3Answers: finalV3
           })
         })
         if (response.ok) { setGenerationProgress(95); setStatus('כמעט מוכן!') }
       } catch (docError) { console.log('Document generation skipped') }
 
-      localStorage.setItem('dpo_v3_answers', JSON.stringify(v3Answers))
+      localStorage.setItem('dpo_v3_answers', JSON.stringify(finalV3))
       localStorage.removeItem('dpo_v3_step')
       localStorage.setItem('dpo_recommended_tier', autoTier)
 
@@ -1278,7 +1287,11 @@ function OnboardingContent() {
                 <input
                   placeholder={card.placeholder}
                   value={textInput || v3Answers[card.id] || ''}
-                  onChange={e => setTextInput(e.target.value)}
+                  onChange={e => {
+                    setTextInput(e.target.value)
+                    // Also save to v3Answers immediately to prevent any state loss
+                    set(card.id, e.target.value)
+                  }}
                   className="w-full px-4 py-3 rounded-xl border-2 border-amber-300 text-base text-center outline-none focus:border-amber-400"
                   onKeyDown={e => {
                     if (e.key === 'Enter' && textInput) {
