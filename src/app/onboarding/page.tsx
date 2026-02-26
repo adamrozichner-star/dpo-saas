@@ -102,6 +102,7 @@ const PROCESSOR_OPTIONS = [
 
 interface V3Answers {
   bizName?: string
+  companyId?: string
   industry?: string
   industryOther?: string
   access?: string
@@ -193,7 +194,7 @@ function mapV3ToLegacyAnswers(v3: V3Answers): OnboardingAnswer[] {
   const push = (id: string, val: any) => { if (val !== undefined && val !== null) answers.push({ questionId: id, value: val }) }
 
   push('business_name', v3.bizName)
-  push('business_id', '')
+  push('business_id', v3.companyId)
 
   const industryMap: Record<string, string> = {
     health: 'healthcare', retail: 'retail', tech: 'technology',
@@ -721,7 +722,7 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
 
       <button
         onClick={onContinue}
-        className="w-full mt-4 py-3.5 rounded-xl border-none text-white text-base font-bold cursor-pointer"
+        className="w-full mt-4 mb-20 py-3.5 rounded-xl border-none text-white text-base font-bold cursor-pointer"
         style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
       >
         {isReview ? 'בחירת חבילה ותשלום' : 'הכירו את הממונה שלכם'}
@@ -758,6 +759,7 @@ function OnboardingContent() {
 
   const CARDS: CardDef[] = [
     { id: 'bizName', icon: '🏢', q: 'מה שם העסק?', type: 'text', placeholder: 'שם מלא של העסק' },
+    { id: 'companyId', icon: '🔢', q: 'מה מספר ח.פ / ע.מ?', type: 'text', placeholder: 'לדוגמה: 515000000' },
     { id: 'industry', icon: '🎯', q: 'מה התחום?', type: 'pick_other' },
     { id: 'access', icon: '👥', q: 'כמה אנשים ניגשים למידע אישי?', type: 'pick',
       hint: 'בעלי הרשאה = קריטריון סיווג בחוק. מעל 100 = רמה גבוהה',
