@@ -480,13 +480,14 @@ function NamedOwnerPicker({ options, value, onSelect, name, onNameChange, allowO
   )
 }
 
-function DBDetailCard({ dbType, animDir, onDone }: {
+function DBDetailCard({ dbType, animDir, onDone, existingDetail }: {
   dbType: string; animDir: string;
   onDone: (detail: { fields: string[]; size: string; retention: string | null }) => void
+  existingDetail?: { fields?: string[]; size?: string; retention?: string }
 }) {
-  const [fields, setFields] = useState<string[]>([])
-  const [size, setSize] = useState<string | null>(null)
-  const [retention, setRetention] = useState<string | null>(null)
+  const [fields, setFields] = useState<string[]>(existingDetail?.fields || [])
+  const [size, setSize] = useState<string | null>(existingDetail?.size || null)
+  const [retention, setRetention] = useState<string | null>(existingDetail?.retention || null)
   const dbInfo = DB_TYPES.find(d => d.v === dbType)
   const availableFields = DB_FIELDS[dbType] || []
   const toggle = (f: string) => setFields(p => p.includes(f) ? p.filter(x => x !== f) : [...p, f])
@@ -619,7 +620,8 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
         <div className="text-4xl mb-2">📊</div>
         <h2 className="text-xl font-extrabold text-gray-800 m-0">תוצאות סיווג המאגרים</h2>
         <p className="text-xs text-gray-500 mt-1">
-          {answers.bizName || 'העסק שלכם'} — {dbs.length + customDBs.length} מאגרים זוהו
+          <span>{dbs.length + customDBs.length} מאגרים זוהו</span>
+          {answers.bizName && <span> • <bdi>{answers.bizName}</bdi></span>}
         </p>
       </div>
 
@@ -1340,6 +1342,7 @@ function OnboardingContent() {
             key={currentDetailDB}
             dbType={currentDetailDB}
             animDir={animDir}
+            existingDetail={v3Answers.dbDetails?.[currentDetailDB]}
             onDone={detail => handleDBDetailDone(currentDetailDB, detail)}
           />
         )}
