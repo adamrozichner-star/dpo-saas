@@ -109,19 +109,11 @@ function DashboardContent() {
       setShowWelcome(true)
       window.history.replaceState({}, '', '/dashboard')
     }
-    // Also show on first-ever dashboard load (user just completed onboarding)
-    if (user && !searchParams.get('tab')) {
-      const welcomeKey = `dpo_welcomed_${user.id}`
-      if (!localStorage.getItem(welcomeKey)) {
-        setShowWelcome(true)
-        localStorage.setItem(welcomeKey, 'true')
-      }
-    }
     const tabParam = searchParams.get('tab')
     if (tabParam && ['overview','tasks','documents','incidents','messages','reminders','settings'].includes(tabParam)) {
       setActiveTab(tabParam as any)
     }
-  }, [searchParams, user])
+  }, [searchParams])
 
   useEffect(() => {
     if (user && supabase) {
@@ -243,6 +235,15 @@ function DashboardContent() {
           }
         } catch (e) {
           console.log('Messages loading skipped')
+        }
+
+        // Show welcome on first-ever successful dashboard load
+        if (user) {
+          const welcomeKey = `dpo_welcomed_${user.id}`
+          if (!localStorage.getItem(welcomeKey)) {
+            setShowWelcome(true)
+            localStorage.setItem(welcomeKey, 'true')
+          }
         }
       } else {
         // No organization — user needs onboarding
