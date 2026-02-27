@@ -990,59 +990,61 @@ function OnboardingContent() {
       // Build final answers: merge state with session overrides (ref is bulletproof)
       let finalV3 = { ...v3Answers, ...sessionAnswers.current }
       const businessName = finalV3.bizName || 'עסק חדש'
-      console.log('[Onboarding] Creating org:', { 
+      console.log('[Onboarding] handleComplete v8:', { 
         sessionBizName: sessionAnswers.current.bizName,
         stateBizName: v3Answers.bizName,
         finalBizName: finalV3.bizName,
         businessName 
       })
       const legacyAnswers = mapV3ToLegacyAnswers(finalV3)
-
       const autoTier = calculateRecommendedTier()
 
       setGenerationProgress(25)
-      setStatus('מתאימים את רמת האבטחה...')
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
-        .insert({ name: businessName, business_id: finalV3.companyId || '', tier: autoTier, status: 'active' })
-        .select().single()
+      setStatus('יוצרים את הארגון...')
 
-      if (orgError) throw new Error('שגיאה ביצירת הארגון: ' + orgError.message)
+      // === SERVER-SIDE ORG CREATION (bypasses RLS) ===
+      const { data: { session: sess } } = await supabase.auth.getSession()
+      const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (sess?.access_token) authHeaders['Authorization'] = `Bearer ${sess.access_token}`
 
-      setGenerationProgress(50)
-      setStatus('שומרים את פרופיל הארגון...')
-      await supabase.from('users').update({ org_id: orgData.id }).eq('auth_user_id', user.id)
-
-      setGenerationProgress(65)
-      setStatus('בוחרים את החבילה המומלצת...')
-      await supabase.from('organization_profiles').insert({
-        org_id: orgData.id,
-        profile_data: { 
-          answers: legacyAnswers, 
+      const orgRes = await fetch('/api/complete-onboarding', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({
+          userId: user.id,
+          userEmail: user.email,
           v3Answers: finalV3,
-          completedAt: new Date().toISOString() 
-        }
+          legacyAnswers,
+          tier: autoTier
+        })
       })
+      
+      const orgResult = await orgRes.json()
+      console.log('[Onboarding] Server response:', orgResult)
+      
+      if (!orgRes.ok || !orgResult.success) {
+        throw new Error(orgResult.error || 'שגיאה ביצירת הארגון')
+      }
 
-      setGenerationProgress(80)
-      setStatus('מכינים את סביבת העבודה...')
+      const orgId = orgResult.orgId
+      const orgName = orgResult.orgName
+
+      setGenerationProgress(60)
+      setStatus('מפיקים מסמכים...')
+
+      // Generate documents (also server-side)
       try {
-        // Get auth token for API call
-        const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-        if (supabase) {
-          const { data: { session: sess } } = await supabase.auth.getSession()
-          if (sess?.access_token) authHeaders['Authorization'] = `Bearer ${sess.access_token}`
-        }
-        const response = await fetch('/api/generate-documents', {
+        const docRes = await fetch('/api/generate-documents', {
           method: 'POST',
           headers: authHeaders,
           body: JSON.stringify({
-            orgId: orgData.id, orgName: businessName, businessId: finalV3.companyId || '',
+            orgId, orgName, businessId: finalV3.companyId || '',
             answers: legacyAnswers, v3Answers: finalV3
           })
         })
-        if (response.ok) { setGenerationProgress(95); setStatus('כמעט מוכן!') }
-      } catch (docError) { console.log('Document generation skipped') }
+        if (docRes.ok) { setGenerationProgress(90); setStatus('כמעט מוכן!') }
+        else console.log('[Onboarding] Doc generation failed:', await docRes.text())
+      } catch (docError) { console.log('[Onboarding] Doc generation skipped:', docError) }
 
       localStorage.setItem('dpo_v3_answers', JSON.stringify(finalV3))
       localStorage.removeItem('dpo_v3_step')
@@ -1057,13 +1059,14 @@ function OnboardingContent() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             template: 'welcome', to: user?.email,
-            data: { name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'משתמש', orgName: businessName }
+            data: { name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'משתמש', orgName }
           })
         })
       } catch (emailErr) { console.log('Welcome email skipped:', emailErr) }
 
       setTimeout(() => router.push('/subscribe'), 1500)
     } catch (err: any) {
+      console.error('[Onboarding] handleComplete error:', err)
       setError(err.message || 'אירעה שגיאה בתהליך ההרשמה')
       setIsGenerating(false)
     }
@@ -1237,7 +1240,7 @@ function OnboardingContent() {
             <p className="text-center text-[11px] text-gray-400 mt-3">
               המסמכים יופקו אוטומטית ויהיו זמינים בלוח הבקרה
             </p>
-            <p className="text-center text-[9px] text-gray-300 mt-1">v7</p>
+            <p className="text-center text-[9px] text-gray-300 mt-1">v8</p>
           </div>
         </div>
       </div>
