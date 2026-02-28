@@ -131,7 +131,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold mb-1">דוא"ל</h3>
-                    <p className="text-gray-600">support@dpo-pro.co.il</p>
+                    <p className="text-gray-600">support@mydpo.co.il</p>
                   </div>
                 </div>
               </CardContent>
