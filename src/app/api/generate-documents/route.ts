@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     // Get DPO details from database (fallback to config if not found)
     let dpoName = 'עו"ד דנה כהן'
     let dpoLicense = 'DPO-2025-001'
-    let dpoEmail = 'dpo@dpo-pro.co.il'
+    let dpoEmail = 'dpo@mydpo.co.il'
     let dpoPhone = '03-555-1234'
     
     const { data: dpoData } = await supabase
