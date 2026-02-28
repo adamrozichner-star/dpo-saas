@@ -31,7 +31,7 @@ async function sendRequesterConfirmationEmail(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: process.env.FROM_EMAIL || 'DPO-Pro <noreply@dpo-pro.co.il>',
+        from: process.env.FROM_EMAIL || 'MyDPO <noreply@mydpo.co.il>',
         to: email,
         subject: `אישור קבלת בקשה - ${data.requestNumber}`,
         html: `
@@ -60,7 +60,7 @@ async function sendRequesterConfirmationEmail(
     </p>
   </div>
   <div style="background: #1e293b; color: #94a3b8; padding: 15px; border-radius: 0 0 12px 12px; text-align: center; font-size: 12px;">
-    <p style="margin: 0;">DPO-Pro - מערכת ניהול פרטיות</p>
+    <p style="margin: 0;">MyDPO - מערכת ניהול פרטיות</p>
   </div>
 </body>
 </html>`,
@@ -108,7 +108,7 @@ async function sendOrgNotificationEmail(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: process.env.FROM_EMAIL || 'DPO-Pro <noreply@dpo-pro.co.il>',
+        from: process.env.FROM_EMAIL || 'MyDPO <noreply@mydpo.co.il>',
         to: adminEmail,
         subject: `⚠️ בקשת נושא מידע חדשה - ${data.requestNumber}`,
         html: `
@@ -145,7 +145,7 @@ async function sendOrgNotificationEmail(
     </div>
   </div>
   <div style="background: #1e293b; color: #94a3b8; padding: 15px; border-radius: 0 0 12px 12px; text-align: center; font-size: 12px;">
-    <p style="margin: 0;">DPO-Pro - מערכת ניהול פרטיות</p>
+    <p style="margin: 0;">MyDPO - מערכת ניהול פרטיות</p>
   </div>
 </body>
 </html>`,
@@ -411,7 +411,7 @@ ${details ? `פרטים נוספים:\n${details}` : ''}
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: process.env.FROM_EMAIL || 'DPO-Pro <noreply@dpo-pro.co.il>',
+            from: process.env.FROM_EMAIL || 'MyDPO <noreply@mydpo.co.il>',
             to: requestData.requester_email,
             subject: `עדכון לבקשה ${requestData.request_number} - ${statusLabels[status]}`,
             html: `
