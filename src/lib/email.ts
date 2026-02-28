@@ -3,8 +3,8 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'DPO-Pro <noreply@resend.dev>'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://dpo-pro.co.il'
+const FROM_EMAIL = process.env.FROM_EMAIL || 'MyDPO <noreply@resend.dev>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mydpo.co.il'
 
 interface EmailTemplate {
   subject: string
@@ -19,18 +19,18 @@ export function welcomeEmail(data: {
   dpoName: string
 }): EmailTemplate {
   return {
-    subject: `ברוכים הבאים ל-DPO-Pro! 🛡️`,
+    subject: `ברוכים הבאים ל-MyDPO! 🛡️`,
     html: `
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head><meta charset="UTF-8"></head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-    <h1 style="color: white; margin: 0; font-size: 28px;">🛡️ DPO-Pro</h1>
+    <h1 style="color: white; margin: 0; font-size: 28px;">🛡️ MyDPO</h1>
   </div>
   <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none;">
     <h2 style="color: #1e40af; margin-top: 0;">שלום ${data.userName}! 👋</h2>
-    <p>ברוכים הבאים ל-DPO-Pro!</p>
+    <p>ברוכים הבאים ל-MyDPO!</p>
     <p>הארגון <strong>${data.orgName}</strong> נרשם בהצלחה למערכת.</p>
     <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
       <h3 style="color: #059669; margin-top: 0;">✅ הממונה שלכם מונה!</h3>
@@ -41,11 +41,11 @@ export function welcomeEmail(data: {
     </div>
   </div>
   <div style="background: #1e293b; color: #94a3b8; padding: 20px; border-radius: 0 0 12px 12px; text-align: center; font-size: 12px;">
-    <p style="margin: 0;">DPO-Pro © ${new Date().getFullYear()}</p>
+    <p style="margin: 0;">MyDPO © ${new Date().getFullYear()}</p>
   </div>
 </body>
 </html>`,
-    text: `שלום ${data.userName}!\n\nברוכים הבאים ל-DPO-Pro!\nהארגון ${data.orgName} נרשם בהצלחה.\n${data.dpoName} מונה כממונה הגנת הפרטיות שלכם.\n\nכניסה: ${APP_URL}/dashboard`
+    text: `שלום ${data.userName}!\n\nברוכים הבאים ל-MyDPO!\nהארגון ${data.orgName} נרשם בהצלחה.\n${data.dpoName} מונה כממונה הגנת הפרטיות שלכם.\n\nכניסה: ${APP_URL}/dashboard`
   }
 }
 
@@ -64,7 +64,7 @@ export function newMessageEmail(data: {
 <head><meta charset="UTF-8"></head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: #3B82F6; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">🛡️ DPO-Pro</h1>
+    <h1 style="color: white; margin: 0; font-size: 24px;">🛡️ MyDPO</h1>
   </div>
   <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none;">
     <h2 style="color: #1e40af; margin-top: 0;">שלום ${data.userName},</h2>
@@ -78,7 +78,7 @@ export function newMessageEmail(data: {
     </div>
   </div>
   <div style="background: #1e293b; color: #94a3b8; padding: 15px; border-radius: 0 0 12px 12px; text-align: center; font-size: 12px;">
-    <p style="margin: 0;">DPO-Pro © ${new Date().getFullYear()}</p>
+    <p style="margin: 0;">MyDPO © ${new Date().getFullYear()}</p>
   </div>
 </body>
 </html>`,
@@ -144,7 +144,7 @@ export function trialEndingEmail(data: {
 <head><meta charset="UTF-8"></head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">🛡️ DPO-Pro</h1>
+    <h1 style="color: white; margin: 0; font-size: 24px;">🛡️ MyDPO</h1>
   </div>
   <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none;">
     <h2 style="color: #1e40af; margin-top: 0;">שלום ${data.userName},</h2>
