@@ -59,8 +59,8 @@ function generateEscalationResponseEmail(
   </div>
   
   <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 12px;">
-    <p style="margin: 0;">הודעה זו נשלחה באמצעות DPO-Pro</p>
-    <p style="margin: 5px 0 0 0;">© ${new Date().getFullYear()} DPO-Pro - שירותי ממונה הגנת פרטיות</p>
+    <p style="margin: 0;">הודעה זו נשלחה באמצעות MyDPO</p>
+    <p style="margin: 5px 0 0 0;">© ${new Date().getFullYear()} MyDPO - שירותי ממונה הגנת פרטיות</p>
   </div>
 </body>
 </html>
@@ -120,8 +120,8 @@ function generateDSRResponseEmail(
   </div>
   
   <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 12px;">
-    <p style="margin: 0;">הודעה זו נשלחה באמצעות DPO-Pro</p>
-    <p style="margin: 5px 0 0 0;">© ${new Date().getFullYear()} DPO-Pro - שירותי ממונה הגנת פרטיות</p>
+    <p style="margin: 0;">הודעה זו נשלחה באמצעות MyDPO</p>
+    <p style="margin: 5px 0 0 0;">© ${new Date().getFullYear()} MyDPO - שירותי ממונה הגנת פרטיות</p>
   </div>
 </body>
 </html>
@@ -138,7 +138,7 @@ async function sendResponseEmail(
   html: string
 ): Promise<boolean> {
   try {
-    // Use resend.dev for testing until dpo-pro.co.il is verified
+    // Use resend.dev for testing until mydpo.co.il is verified
     const { data, error } = await resend.emails.send({
       from: process.env.FROM_EMAIL || 'MyDPO <onboarding@resend.dev>',
       to: [to],
