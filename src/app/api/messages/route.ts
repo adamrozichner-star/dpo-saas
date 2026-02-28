@@ -188,7 +188,7 @@ ${additionalMessage}` : ''}
           .insert({
             thread_id: thread.id,
             sender_type: 'system',
-            sender_name: 'מערכת DPO-Pro',
+            sender_name: 'מערכת MyDPO',
             content: messageContent
           })
           .select()
