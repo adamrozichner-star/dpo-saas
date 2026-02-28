@@ -914,8 +914,38 @@ function OnboardingContent() {
   }, [user])
 
   const [textInput, setTextInput] = useState('')
+  const [validationError, setValidationError] = useState<string | null>(null)
+
+  const validateField = (cardId: string, value: any): string | null => {
+    switch (cardId) {
+      case 'bizName': {
+        const v = (value || '').trim()
+        if (!v) return 'נא להזין שם עסק'
+        if (v.length < 2) return 'שם עסק חייב להכיל לפחות 2 תווים'
+        return null
+      }
+      case 'companyId': {
+        const v = (value || '').trim()
+        if (!v) return 'נא להזין מספר ח.פ / ע.מ'
+        if (!/^\d+$/.test(v)) return 'מספר ח.פ / ע.מ חייב להכיל ספרות בלבד'
+        if (v.length < 5 || v.length > 9) return 'מספר ח.פ / ע.מ חייב להכיל 5-9 ספרות'
+        return null
+      }
+      default:
+        return null
+    }
+  }
 
   const advance = useCallback((key?: string, val?: any) => {
+    // Validate before advancing
+    if (key) {
+      const err = validateField(key, val)
+      if (err) {
+        setValidationError(err)
+        return
+      }
+      setValidationError(null)
+    }
     // Mark session as started — blocks ALL async overwrites
     sessionStarted.current = true
     if (key) {
@@ -924,7 +954,7 @@ function OnboardingContent() {
       sessionAnswers.current[key] = val
     }
     setAnimDir('out')
-    setTimeout(() => { setStep(s => s + 1); setAnimDir('in') }, 180)
+    setTimeout(() => { setStep(s => s + 1); setAnimDir('in'); setValidationError(null) }, 180)
   }, [set])
 
   useEffect(() => {
@@ -1217,6 +1247,7 @@ function OnboardingContent() {
                   sessionStarted.current = true
                   sessionAnswers.current.bizName = e.target.value
                   set('bizName', e.target.value)
+                  if (error) setError(null)
                 }}
                 className="w-full px-3 py-2 rounded-lg border border-indigo-200 text-center font-semibold text-gray-800 bg-white focus:outline-none focus:border-indigo-400"
                 placeholder="שם העסק"
@@ -1224,7 +1255,14 @@ function OnboardingContent() {
             </div>
 
             <button
-              onClick={handleComplete}
+              onClick={() => {
+                const name = (sessionAnswers.current.bizName || v3Answers.bizName || '').trim()
+                if (!name || name.length < 2) {
+                  setError('נא להזין שם עסק (לפחות 2 תווים)')
+                  return
+                }
+                handleComplete()
+              }}
               disabled={isGenerating}
               className="w-full py-3.5 rounded-xl border-none text-white text-base font-bold cursor-pointer disabled:opacity-60"
               style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}
@@ -1240,7 +1278,7 @@ function OnboardingContent() {
             <p className="text-center text-[11px] text-gray-400 mt-3">
               המסמכים יופקו אוטומטית ויהיו זמינים בלוח הבקרה
             </p>
-            <p className="text-center text-[9px] text-gray-300 mt-1">v9</p>
+            <p className="text-center text-[9px] text-gray-300 mt-1">v10</p>
           </div>
         </div>
       </div>
@@ -1336,25 +1374,28 @@ function OnboardingContent() {
                     setTextInput(e.target.value)
                     set(card.id, e.target.value)
                     sessionAnswers.current[card.id] = e.target.value
+                    if (validationError) setValidationError(null)
                   }}
-                  className="w-full px-4 py-3 rounded-xl border-2 border-amber-300 text-base text-center outline-none focus:border-amber-400"
+                  className={`w-full px-4 py-3 rounded-xl border-2 text-base text-center outline-none transition-colors ${validationError ? 'border-red-400 bg-red-50/50' : 'border-amber-300 focus:border-amber-400'}`}
                   onKeyDown={e => {
-                    if (e.key === 'Enter' && textInput) {
-                      advance(card.id, textInput)
-                      setTextInput('')
+                    if (e.key === 'Enter') {
+                      const val = textInput || v3Answers[card.id] || ''
+                      advance(card.id, val)
+                      if (!validateField(card.id, val)) setTextInput('')
                     }
                   }}
                   autoFocus
                 />
+                {validationError && (
+                  <p className="text-red-500 text-xs mt-1.5 text-center">{validationError}</p>
+                )}
                 <button 
                   onClick={() => {
-                    if (textInput || v3Answers[card.id]) {
-                      const val = textInput || v3Answers[card.id]
-                      advance(card.id, val)
-                      setTextInput('')
-                    }
+                    const val = textInput || v3Answers[card.id] || ''
+                    advance(card.id, val)
+                    if (!validateField(card.id, val)) setTextInput('')
                   }}
-                  className="w-full mt-3 py-2.5 rounded-xl border-none bg-amber-500 text-white text-sm font-semibold cursor-pointer hover:bg-amber-600"
+                  className={`w-full mt-3 py-2.5 rounded-xl border-none text-white text-sm font-semibold cursor-pointer ${!(textInput || v3Answers[card.id]) ? 'bg-gray-300 cursor-not-allowed' : 'bg-amber-500 hover:bg-amber-600'}`}
                 >
                   הבא ⬅
                 </button>
@@ -1369,14 +1410,26 @@ function OnboardingContent() {
             {card.type === 'pick_other' && (
               <>
                 <ChipPicker options={getOptions(card.id)} value={v3Answers[card.id]}
-                  onSelect={v => { if (v !== 'other') advance(card.id, v); else set(card.id, v) }}
+                  onSelect={v => { setValidationError(null); if (v !== 'other') advance(card.id, v); else set(card.id, v) }}
                   allowOther otherValue={v3Answers[card.id + 'Other']}
-                  onOtherChange={v => set(card.id + 'Other', v)} />
-                {v3Answers[card.id] === 'other' && v3Answers[card.id + 'Other'] && (
-                  <button onClick={() => advance(card.id, 'other')}
-                    className="mt-3 px-6 py-2.5 rounded-xl border-none bg-amber-500 text-white text-sm font-semibold cursor-pointer hover:bg-amber-600">
-                    הבא ⬅
-                  </button>
+                  onOtherChange={v => { set(card.id + 'Other', v); if (validationError) setValidationError(null) }} />
+                {v3Answers[card.id] === 'other' && (
+                  <>
+                    {validationError && (
+                      <p className="text-red-500 text-xs mt-1.5 text-center">{validationError}</p>
+                    )}
+                    <button onClick={() => {
+                      if (!v3Answers[card.id + 'Other']?.trim()) {
+                        setValidationError('נא להזין ערך')
+                        return
+                      }
+                      setValidationError(null)
+                      advance(card.id, 'other')
+                    }}
+                      className={`mt-3 px-6 py-2.5 rounded-xl border-none text-white text-sm font-semibold cursor-pointer ${!v3Answers[card.id + 'Other']?.trim() ? 'bg-gray-300' : 'bg-amber-500 hover:bg-amber-600'}`}>
+                      הבא ⬅
+                    </button>
+                  </>
                 )}
               </>
             )}
@@ -1431,15 +1484,27 @@ function OnboardingContent() {
               <>
                 <NamedOwnerPicker
                   options={OWNER_OPTIONS} value={v3Answers[card.id]}
-                  onSelect={v => { set(card.id, v); if (v === 'none') { setTempName(''); setTimeout(() => advance(card.id, v), 100) } }}
-                  name={tempName} onNameChange={setTempName}
+                  onSelect={v => { set(card.id, v); setValidationError(null); if (v === 'none') { setTempName(''); setTimeout(() => advance(card.id, v), 100) } }}
+                  name={tempName} onNameChange={v => { setTempName(v); if (validationError) setValidationError(null) }}
                   allowOther otherValue={v3Answers[card.id + 'Other']}
                   onOtherChange={v => set(card.id + 'Other', v)} />
                 {v3Answers[card.id] && v3Answers[card.id] !== 'none' && (
-                  <button onClick={() => { set(card.id + 'Name', tempName); setTempName(''); advance(card.id, v3Answers[card.id]) }}
-                    className="mt-3 px-6 py-2.5 rounded-xl border-none bg-amber-500 text-white text-sm font-semibold cursor-pointer hover:bg-amber-600">
-                    הבא ⬅
-                  </button>
+                  <>
+                    {validationError && (
+                      <p className="text-red-500 text-xs mt-1.5 text-center">{validationError}</p>
+                    )}
+                    <button onClick={() => {
+                      if (!tempName.trim()) {
+                        setValidationError('נא להזין שם האחראי')
+                        return
+                      }
+                      setValidationError(null)
+                      set(card.id + 'Name', tempName); setTempName(''); advance(card.id, v3Answers[card.id])
+                    }}
+                      className={`mt-3 px-6 py-2.5 rounded-xl border-none text-white text-sm font-semibold cursor-pointer ${!tempName.trim() ? 'bg-gray-300' : 'bg-amber-500 hover:bg-amber-600'}`}>
+                      הבא ⬅
+                    </button>
+                  </>
                 )}
               </>
             )}
