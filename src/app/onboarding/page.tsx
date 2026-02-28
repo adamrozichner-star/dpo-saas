@@ -1240,7 +1240,7 @@ function OnboardingContent() {
             <p className="text-center text-[11px] text-gray-400 mt-3">
               המסמכים יופקו אוטומטית ויהיו זמינים בלוח הבקרה
             </p>
-            <p className="text-center text-[9px] text-gray-300 mt-1">v8</p>
+            <p className="text-center text-[9px] text-gray-300 mt-1">v9</p>
           </div>
         </div>
       </div>
