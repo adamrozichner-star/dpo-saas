@@ -21,7 +21,7 @@ export default function Error({
       <div className="text-center">
         <Link href="/" className="flex items-center justify-center gap-2 mb-8">
           <Shield className="h-12 w-12 text-primary" />
-          <span className="font-bold text-3xl">DPO-Pro</span>
+          <span className="font-bold text-3xl">MyDPO</span>
         </Link>
         
         <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
