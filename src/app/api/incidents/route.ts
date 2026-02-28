@@ -169,7 +169,7 @@ async function sendDPOAlert(incident: any, orgName: string): Promise<boolean> {
 
   try {
     await resend.emails.send({
-      from: 'DPO-Pro <onboarding@resend.dev>',
+      from: 'MyDPO <onboarding@resend.dev>',
       to: [process.env.DPO_EMAIL || 'dpo@example.com'],
       subject: `🚨 אירוע אבטחה חדש - ${orgName} - ${incident.severity}`,
       html
