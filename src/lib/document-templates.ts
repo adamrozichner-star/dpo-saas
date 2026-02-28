@@ -1,4 +1,4 @@
-// Document Templates for DPO-Pro
+// Document Templates for MyDPO
 // Based on Amendment 13 to Israel's Privacy Protection Law
 // All templates in Hebrew with dynamic variable injection
 
@@ -278,7 +278,7 @@ ${vars.dpoPhone ? `טלפון: ${vars.dpoPhone}` : ''}
 
 ---
 
-*מסמך זה נוצר באופן אוטומטי על ידי מערכת DPO-Pro ואושר על ידי ממונה הגנת הפרטיות.*
+*מסמך זה נוצר באופן אוטומטי על ידי מערכת MyDPO ואושר על ידי ממונה הגנת הפרטיות.*
 `
 }
 
