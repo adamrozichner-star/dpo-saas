@@ -399,6 +399,41 @@ ${additionalMessage}` : ''}
           link: `/messages/${threadId}`
         })
 
+        // If DPO sent this, email the client
+        if (senderType === 'dpo') {
+          try {
+            const { data: orgUsers } = await supabase
+              .from('users')
+              .select('email, name')
+              .eq('org_id', thread.org_id)
+              .limit(1)
+              .maybeSingle()
+
+            if (orgUsers?.email) {
+              const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mydpo.co.il'
+              await fetch(`${baseUrl}/api/email`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-internal-key': process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+                },
+                body: JSON.stringify({
+                  to: orgUsers.email,
+                  template: 'dpo_message',
+                  data: {
+                    name: orgUsers.name || orgUsers.email.split('@')[0],
+                    dpoName: senderName || 'עו״ד דנה כהן',
+                    subject: thread.subject,
+                    preview: content.substring(0, 200)
+                  }
+                })
+              })
+            }
+          } catch (emailErr) {
+            console.log('[Messages] DPO message email skipped:', emailErr)
+          }
+        }
+
         // If user sent this, create dpo_queue entry so DPO sees it
         if (senderType !== 'dpo') {
           try {
