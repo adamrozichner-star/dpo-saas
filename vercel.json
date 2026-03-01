@@ -9,8 +9,12 @@
       "schedule": "0 6 * * *"
     },
     {
-      "path": "/api/cron/trial-reminders",
-      "schedule": "0 6 * * *"
+      "path": "/api/cron/email-sequence",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/monthly-digest",
+      "schedule": "0 9 1 * *"
     }
   ]
 }
