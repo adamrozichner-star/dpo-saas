@@ -68,6 +68,10 @@ export async function POST(request: NextRequest) {
       }
 
       console.log('[CompleteOnboarding] Updated existing org:', existingUser.org_id, 'name:', businessName)
+
+      // Send welcome email (non-blocking)
+      sendWelcomeEmail(userEmail, businessName).catch(e => console.error('[CompleteOnboarding] Email error:', e))
+
       return NextResponse.json({ 
         success: true, 
         orgId: existingUser.org_id, 
@@ -120,6 +124,9 @@ export async function POST(request: NextRequest) {
 
     console.log('[CompleteOnboarding] Complete! org:', orgData.id, 'name:', orgData.name, 'profile:', !profileError)
 
+    // Send welcome email (non-blocking)
+    sendWelcomeEmail(userEmail, orgData.name).catch(e => console.error('[CompleteOnboarding] Email error:', e))
+
     return NextResponse.json({ 
       success: true, 
       orgId: orgData.id, 
@@ -131,4 +138,23 @@ export async function POST(request: NextRequest) {
     console.error('[CompleteOnboarding] Unexpected error:', err)
     return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 })
   }
+}
+
+// Helper: send welcome email via internal API
+async function sendWelcomeEmail(email: string | undefined, orgName: string) {
+  if (!email) return
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mydpo.co.il'
+  const name = email.split('@')[0]
+  await fetch(`${baseUrl}/api/email`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-internal-key': process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    },
+    body: JSON.stringify({
+      to: email,
+      template: 'welcome',
+      data: { name, orgName }
+    })
+  })
 }
