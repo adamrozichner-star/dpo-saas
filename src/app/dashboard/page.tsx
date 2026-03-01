@@ -80,7 +80,7 @@ function DashboardContent() {
     if (options.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
     return fetch(url, { ...options, headers })
   }
-  const { isAuthorized, isChecking } = useSubscriptionGate()
+  const { isAuthorized, isChecking, isPaid: gateIsPaid } = useSubscriptionGate()
   
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'incidents' | 'messages' | 'reminders' | 'settings'>('overview')
   const [organization, setOrganization] = useState<any>(null)
@@ -792,6 +792,13 @@ function DashboardContent() {
 
         {/* Page Content */}
         <div className="p-4 lg:p-8 max-w-5xl mx-auto">
+          {/* Paywall Banner for unpaid users */}
+          {!gateIsPaid && (
+            <div className="mb-6">
+              <PaywallBanner complianceScore={complianceScore} orgName={organization?.name || 'הארגון שלכם'} />
+            </div>
+          )}
+
           {activeTab === 'overview' && (
             <OverviewTab 
               organization={organization}
@@ -805,25 +812,29 @@ function DashboardContent() {
               onNavigate={setActiveTab}
               onResolveAction={resolveAction}
               onUndoAction={undoAction}
+              isPaid={gateIsPaid}
             />
           )}
           {activeTab === 'tasks' && (
-            <TasksTab tasks={tasks} />
+            gateIsPaid ? <TasksTab tasks={tasks} /> : 
+            <LockedTabOverlay icon="📋" title="משימות ממתינות לביצוע" description="שלמו כדי לצפות ולבצע את רשימת הפעולות הנדרשות לציות לתיקון 13" />
           )}
           {activeTab === 'documents' && (
-            <DocumentsTab documents={documents} organization={organization} supabase={supabase} />
+            <DocumentsTab documents={documents} organization={organization} supabase={supabase} isPaid={gateIsPaid} />
           )}
           {activeTab === 'incidents' && (
-            <IncidentsTab incidents={incidents} orgId={organization?.id} />
+            gateIsPaid ? <IncidentsTab incidents={incidents} orgId={organization?.id} /> :
+            <LockedTabOverlay icon="⚠️" title="ניהול אירועי אבטחה" description="דווחו וטפלו באירועי אבטחת מידע עם ספירה לאחור של 72 שעות לדיווח לרשות" />
           )}
           {activeTab === 'messages' && (
-            <MessagesTab 
+            gateIsPaid ? <MessagesTab 
               threads={messageThreads} 
               orgId={organization?.id}
               onRefresh={loadAllData}
               supabase={supabase}
               tier={organization?.tier}
-            />
+            /> :
+            <LockedTabOverlay icon="💬" title="שיח עם הממונה" description="שלחו שאלות ישירות לממונה הגנת הפרטיות שלכם וקבלו תשובה מקצועית" />
           )}
           {activeTab === 'reminders' && (
             <RemindersTab orgProfile={orgProfile} documents={documents} />
@@ -877,6 +888,53 @@ function NavButton({
 // ============================================
 // OVERVIEW TAB — Data-driven from compliance engine
 // ============================================
+// ============================================
+// PAYWALL BANNER — shown for unpaid users
+// ============================================
+function PaywallBanner({ complianceScore, orgName }: { complianceScore: number, orgName: string }) {
+  return (
+    <div className="bg-gradient-to-l from-rose-50 via-amber-50 to-indigo-50 border border-amber-200 rounded-2xl p-5 shadow-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 rounded-xl bg-rose-100 border-2 border-rose-200 flex items-center justify-center flex-shrink-0">
+            <span className="text-2xl font-bold text-rose-600">{complianceScore}</span>
+          </div>
+          <div>
+            <p className="font-bold text-stone-800 text-base">⚠️ {orgName} חשופים לאכיפה</p>
+            <p className="text-sm text-stone-600 mt-0.5">ציון הציות שלכם <strong className="text-rose-600">{complianceScore}/100</strong> — המסמכים, הממונה והפעולות ממתינים להפעלה</p>
+          </div>
+        </div>
+        <Link href="/subscribe">
+          <button className="px-6 py-3 bg-gradient-to-l from-indigo-600 to-indigo-500 text-white rounded-xl text-sm font-bold hover:from-indigo-700 hover:to-indigo-600 transition-all shadow-md whitespace-nowrap">
+            הפעלת המערכת — ₪500/חודש ←
+          </button>
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// LOCKED TAB OVERLAY — covers tabs that need payment
+// ============================================
+function LockedTabOverlay({ title, description, icon }: { title: string, description: string, icon: string }) {
+  return (
+    <div className="bg-white rounded-2xl p-12 shadow-sm border border-stone-200 text-center relative">
+      <div className="w-16 h-16 rounded-full bg-stone-100 flex items-center justify-center mx-auto mb-4">
+        <span className="text-3xl">{icon}</span>
+      </div>
+      <h3 className="text-lg font-semibold text-stone-800 mb-2">{title}</h3>
+      <p className="text-stone-500 mb-6 max-w-md mx-auto">{description}</p>
+      <Link href="/subscribe">
+        <button className="px-6 py-3 bg-indigo-500 text-white rounded-xl text-sm font-bold hover:bg-indigo-600 transition-colors">
+          <Lock className="h-4 w-4 inline ml-2" />
+          הפעלת המערכת ←
+        </button>
+      </Link>
+    </div>
+  )
+}
+
 function OverviewTab({ 
   organization, 
   complianceScore, 
@@ -888,7 +946,8 @@ function OverviewTab({
   unreadMessages,
   onNavigate,
   onResolveAction,
-  onUndoAction
+  onUndoAction,
+  isPaid
 }: { 
   organization: any
   complianceScore: number
@@ -901,9 +960,9 @@ function OverviewTab({
   onNavigate: (tab: any) => void
   onResolveAction: (actionId: string, note?: string) => void
   onUndoAction: (actionId: string) => void
+  isPaid: boolean
 }) {
   const [confirmingAction, setConfirmingAction] = useState<string | null>(null)
-  const hasSubscription = organization?.subscription_status === 'active'
   const actions = complianceSummary?.actions || []
 
   // Group actions by category
@@ -999,11 +1058,20 @@ function OverviewTab({
                 <p className="font-semibold text-stone-800">{DPO_CONFIG.name}</p>
                 <p className="text-sm text-stone-500">ממונה הגנת פרטיות</p>
               </div>
-              <Link href="/chat">
-                <button className="px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium">
-                  שלח הודעה
-                </button>
-              </Link>
+              {isPaid ? (
+                <Link href="/chat">
+                  <button className="px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium">
+                    שלח הודעה
+                  </button>
+                </Link>
+              ) : (
+                <Link href="/subscribe">
+                  <button className="px-3 py-2 text-sm text-stone-400 bg-stone-100 rounded-lg font-medium flex items-center gap-1">
+                    <Lock className="h-3 w-3" />
+                    שלח הודעה
+                  </button>
+                </Link>
+              )}
             </div>
           </div>
         )}
@@ -1060,27 +1128,42 @@ function OverviewTab({
               return (
                 <div key={action.id} className={`rounded-xl border transition-all ${colors.bg} ${colors.border}`}>
                   <div className="flex items-center gap-3 py-3 px-4">
-                    <button
-                      onClick={() => setConfirmingAction(isConfirming ? null : action.id)}
-                      className="w-5 h-5 rounded-full border-2 border-stone-300 flex-shrink-0 hover:border-emerald-400 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center justify-center"
-                      title="סמן כבוצע"
-                    >
-                      {isConfirming && <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />}
-                    </button>
+                    {isPaid ? (
+                      <button
+                        onClick={() => setConfirmingAction(isConfirming ? null : action.id)}
+                        className="w-5 h-5 rounded-full border-2 border-stone-300 flex-shrink-0 hover:border-emerald-400 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center justify-center"
+                        title="סמן כבוצע"
+                      >
+                        {isConfirming && <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />}
+                      </button>
+                    ) : (
+                      <div className="w-5 h-5 rounded-full border-2 border-stone-200 flex-shrink-0 flex items-center justify-center bg-stone-50">
+                        <Lock className="h-2.5 w-2.5 text-stone-300" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-stone-800">{action.title}</p>
                       <p className="text-xs text-stone-500 truncate">{action.description}</p>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <Link href={action.actionPath || '/chat'}>
-                        <button className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600 transition-colors whitespace-nowrap">
-                          טפל →
-                        </button>
-                      </Link>
+                      {isPaid ? (
+                        <Link href={action.actionPath || '/chat'}>
+                          <button className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600 transition-colors whitespace-nowrap">
+                            טפל →
+                          </button>
+                        </Link>
+                      ) : (
+                        <Link href="/subscribe">
+                          <button className="px-3 py-1.5 bg-stone-200 text-stone-500 rounded-lg text-xs font-medium hover:bg-stone-300 transition-colors whitespace-nowrap flex items-center gap-1">
+                            <Lock className="h-3 w-3" />
+                            שלם לביצוע
+                          </button>
+                        </Link>
+                      )}
                     </div>
                   </div>
                   {/* Confirmation drawer */}
-                  {isConfirming && (
+                  {isPaid && isConfirming && (
                     <div className="px-4 pb-3 flex items-center gap-2 border-t border-stone-200/50 pt-2">
                       <span className="text-xs text-stone-500">ביצעת את הפעולה?</span>
                       <button
@@ -1205,7 +1288,7 @@ function OverviewTab({
       </div>
 
       {/* Upgrade Card */}
-      {!hasSubscription && (
+      {!isPaid && (
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -1317,7 +1400,7 @@ function TasksTab({ tasks }: { tasks: Task[] }) {
 // ============================================
 // DOCUMENTS TAB
 // ============================================
-function DocumentsTab({ documents, organization, supabase }: { documents: Document[], organization: any, supabase: any }) {
+function DocumentsTab({ documents, organization, supabase, isPaid }: { documents: Document[], organization: any, supabase: any, isPaid: boolean }) {
   const [viewMode, setViewMode] = useState<'grid'|'list'>('grid')
   const { toast } = useToast()
   const [filter, setFilter] = useState<string>('all')
@@ -1325,7 +1408,7 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
   const [isEditing, setIsEditing] = useState(false)
   const [editedContent, setEditedContent] = useState('')
   const [isSaving, setIsSaving] = useState(false)
-  const isPaid = organization?.subscription_status === 'active'
+  // isPaid is now passed as prop from useSubscriptionGate
 
   const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
     const headers = new Headers(options.headers)
@@ -1527,12 +1610,12 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
       {!isPaid && documents.length > 0 && (
         <div className="bg-gradient-to-l from-indigo-50 to-amber-50 rounded-xl p-4 border border-indigo-200 flex items-center justify-between flex-wrap gap-3">
           <div>
-            <p className="font-semibold text-stone-800">🔒 המסמכים שלכם מוכנים!</p>
-            <p className="text-sm text-stone-500">שלמו כדי לצפות, להוריד ולהשתמש במסמכים</p>
+            <p className="font-semibold text-stone-800">📄 {documents.length} מסמכים הופקו עבורכם</p>
+            <p className="text-sm text-stone-500">הפעילו את המערכת כדי לצפות, להוריד ולקבל אישור DPO</p>
           </div>
-          <Link href="/payment-required">
+          <Link href="/subscribe">
             <button className="px-5 py-2.5 bg-indigo-500 text-white rounded-xl text-sm font-semibold hover:bg-indigo-600 transition shadow-sm">
-              שלם ופתח מסמכים →
+              הפעלה — ₪500/חודש →
             </button>
           </Link>
         </div>
@@ -1581,7 +1664,7 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
           {filteredDocs.map(doc => (
             <div 
               key={doc.id} 
-              className="bg-white rounded-xl p-4 shadow-sm border border-stone-200 hover:border-stone-300 transition-colors"
+              className={`bg-white rounded-xl p-4 shadow-sm border border-stone-200 transition-colors ${isPaid ? 'hover:border-stone-300' : 'opacity-80'}`}
             >
               <div className="flex items-start gap-3">
                 <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
@@ -1630,7 +1713,7 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
                       </button>
                     </>
                   ) : (
-                    <Link href="/payment-required">
+                    <Link href="/subscribe">
                       <button 
                         className="px-2 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-medium hover:bg-indigo-100 transition-colors flex items-center gap-1"
                         title="שלם כדי לצפות ולהוריד מסמכים"
