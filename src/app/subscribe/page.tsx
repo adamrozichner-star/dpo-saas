@@ -202,9 +202,9 @@ function SubscribeContent() {
           </div>
           <span className="font-bold text-[#1e40af]">MyDPO</span>
         </div>
-        <Link href="/onboarding" className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
+        <Link href="/dashboard" className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
           <Eye className="h-3 w-3" />
-          חזרה לתוצאות
+          חזרה ללוח הבקרה
         </Link>
       </div>
 
