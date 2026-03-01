@@ -653,7 +653,8 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-stone-50 flex" dir="rtl">
       {/* Welcome Modal */}
-      {showWelcome && (() => {
+      {/* Welcome Modal — only for paid users (confirms DPO appointment + docs) */}
+      {showWelcome && gateIsPaid && (() => {
         // Use orgProfile v3Answers, fallback to localStorage (saved during onboarding)
         let v3 = orgProfile?.v3Answers
         if (!v3 || Object.keys(v3).length === 0) {
@@ -685,12 +686,21 @@ function DashboardContent() {
 
           {/* Chat Button */}
           <div className="px-4 pb-4">
-            <Link href="/chat">
-              <button className="w-full py-3 px-4 bg-teal-500 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-teal-600 transition-colors shadow-sm">
-                <Bot className="h-5 w-5" />
-                צ׳אט עם הממונה
-              </button>
-            </Link>
+            {gateIsPaid ? (
+              <Link href="/chat">
+                <button className="w-full py-3 px-4 bg-teal-500 text-white rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-teal-600 transition-colors shadow-sm">
+                  <Bot className="h-5 w-5" />
+                  צ׳אט עם הממונה
+                </button>
+              </Link>
+            ) : (
+              <Link href="/subscribe">
+                <button className="w-full py-3 px-4 bg-stone-300 text-stone-500 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors">
+                  <Lock className="h-4 w-4" />
+                  צ׳אט עם הממונה
+                </button>
+              </Link>
+            )}
           </div>
 
           {/* Navigation */}
@@ -1017,9 +1027,18 @@ function OverviewTab({
             />
           </div>
           <div className="flex items-center gap-4 text-xs text-stone-500">
-            <span>✅ {doneActions.length} בוצעו</span>
-            <span>⏳ {dpoActions.length} ממתין לממונה</span>
-            <span>📋 {userActions.length + reportingActions.length} ממתינים לכם</span>
+            {isPaid ? (
+              <>
+                <span>✅ {doneActions.length} בוצעו</span>
+                <span>⏳ {dpoActions.length} ממתין לממונה</span>
+                <span>📋 {userActions.length + reportingActions.length} ממתינים לכם</span>
+              </>
+            ) : (
+              <>
+                <span>📋 {userActions.length + reportingActions.length + dpoActions.length} פעולות נדרשות</span>
+                <span>🔒 ממתין להפעלה</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -1030,17 +1049,26 @@ function OverviewTab({
             <h3 className="text-lg font-bold text-stone-800 mb-1">{topPriorityAction.title}</h3>
             <p className="text-sm text-stone-500 mb-4">{topPriorityAction.description}</p>
             <div className="flex items-center gap-3">
-              <Link href={topPriorityAction.actionPath || '/chat'}>
-                <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 transition-colors">
-                  טפל עכשיו
-                </button>
-              </Link>
+              {isPaid ? (
+                <Link href={topPriorityAction.actionPath || '/chat'}>
+                  <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 transition-colors">
+                    טפל עכשיו
+                  </button>
+                </Link>
+              ) : (
+                <Link href="/subscribe">
+                  <button className="px-4 py-2 bg-stone-200 text-stone-500 rounded-lg text-sm font-medium hover:bg-stone-300 transition-colors flex items-center gap-1">
+                    <Lock className="h-3 w-3" />
+                    שלם לביצוע
+                  </button>
+                </Link>
+              )}
               {topPriorityAction.estimatedMinutes && (
                 <span className="text-xs text-stone-400">⏱ ~{topPriorityAction.estimatedMinutes} דקות</span>
               )}
             </div>
           </div>
-        ) : (
+        ) : isPaid ? (
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200 cursor-pointer hover:border-indigo-200 transition-colors" onClick={() => onNavigate('messages')}>
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm font-medium text-stone-500">הממונה שלכם</p>
@@ -1074,11 +1102,31 @@ function OverviewTab({
               )}
             </div>
           </div>
+        ) : (
+          /* Unpaid: DPO availability teaser */
+          <div className="bg-gradient-to-l from-indigo-50 to-white rounded-2xl p-6 shadow-sm border border-indigo-200">
+            <p className="text-sm font-medium text-indigo-500 mb-3">🛡️ ממונה מוסמך/ת מוכן/ה עבורכם</p>
+            <div className="flex items-center gap-4 mb-4">
+              <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
+                <User className="h-6 w-6 text-indigo-400" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-stone-800">{DPO_CONFIG.name}</p>
+                <p className="text-sm text-stone-400">ממתינה למינוי</p>
+              </div>
+            </div>
+            <p className="text-xs text-stone-500 mb-4">המינוי ייכנס לתוקף עם הפעלת המערכת — כולל כתב מינוי, סקירת מסמכים ודיווח לרשויות.</p>
+            <Link href="/subscribe">
+              <button className="w-full px-4 py-2.5 bg-indigo-500 text-white rounded-lg text-sm font-bold hover:bg-indigo-600 transition-colors">
+                הפעלה ומינוי DPO ←
+              </button>
+            </Link>
+          </div>
         )}
       </div>
 
-      {/* Done For You Section */}
-      {doneActions.length > 0 && (
+      {/* Done For You Section — only for paid (DPO not appointed for unpaid) */}
+      {isPaid && doneActions.length > 0 && (
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-200">
           <h2 className="text-base font-semibold text-stone-700 mb-3 flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-emerald-500" />
@@ -1223,17 +1271,28 @@ function OverviewTab({
                   <p className="text-xs text-red-600">{action.description}</p>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <Link href={action.actionPath || '/chat'}>
-                    <button className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors whitespace-nowrap">
-                      דווח עכשיו →
-                    </button>
-                  </Link>
-                  <button
-                    onClick={() => onResolveAction(action.id, 'דווח לרשות')}
-                    className="px-3 py-1.5 border border-red-300 text-red-700 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors whitespace-nowrap cursor-pointer"
-                  >
-                    ✓ דווח כבר
-                  </button>
+                  {isPaid ? (
+                    <>
+                      <Link href={action.actionPath || '/chat'}>
+                        <button className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors whitespace-nowrap">
+                          דווח עכשיו →
+                        </button>
+                      </Link>
+                      <button
+                        onClick={() => onResolveAction(action.id, 'דווח לרשות')}
+                        className="px-3 py-1.5 border border-red-300 text-red-700 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors whitespace-nowrap cursor-pointer"
+                      >
+                        ✓ דווח כבר
+                      </button>
+                    </>
+                  ) : (
+                    <Link href="/subscribe">
+                      <button className="px-3 py-1.5 bg-stone-200 text-stone-500 rounded-lg text-xs font-medium hover:bg-stone-300 transition-colors whitespace-nowrap flex items-center gap-1">
+                        <Lock className="h-3 w-3" />
+                        שלם לביצוע
+                      </button>
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
@@ -1241,7 +1300,8 @@ function OverviewTab({
         </div>
       )}
 
-      {/* DPO Card — always visible */}
+      {/* DPO Card — only for paid users (DPO is appointed) */}
+      {isPaid && (
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-200 cursor-pointer hover:border-indigo-200 transition-colors" onClick={() => onNavigate('messages')}>
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
@@ -1263,6 +1323,7 @@ function OverviewTab({
           </Link>
         </div>
       </div>
+      )}
 
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-4">
