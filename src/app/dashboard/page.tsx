@@ -35,6 +35,7 @@ import { useSubscriptionGate } from '@/lib/use-subscription-gate'
 import { DPO_CONFIG } from '@/lib/dpo-config'
 import { useToast } from '@/components/Toast'
 import WelcomeModal from '@/components/WelcomeModal'
+import UnpaidWelcomeModal from '@/components/UnpaidWelcomeModal'
 import { deriveComplianceActions, ComplianceSummary, ActionOverride } from '@/lib/compliance-engine'
 
 // ============================================
@@ -652,24 +653,23 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-stone-50 flex" dir="rtl">
-      {/* Welcome Modal */}
-      {/* Welcome Modal — only for paid users (confirms DPO appointment + docs) */}
-      {showWelcome && gateIsPaid && (() => {
-        // Use orgProfile v3Answers, fallback to localStorage (saved during onboarding)
-        let v3 = orgProfile?.v3Answers
-        if (!v3 || Object.keys(v3).length === 0) {
-          try { v3 = JSON.parse(localStorage.getItem('dpo_v3_answers') || '{}') } catch {}
-        }
-        return (
-          <WelcomeModal 
-            onClose={() => setShowWelcome(false)} 
-            orgName={organization?.name || ''} 
-            documentsCount={documents.length}
-            complianceScore={complianceScore}
-            v3Answers={v3}
-          />
-        )
-      })()}
+      {/* Welcome Modal — unpaid (orientation) or paid (celebration) */}
+      {showWelcome && !gateIsPaid && (
+        <UnpaidWelcomeModal
+          orgName={organization?.name || 'הארגון שלכם'}
+          complianceScore={complianceScore}
+          gapCount={complianceSummary?.actions?.filter(a => a.status !== 'completed').length || 0}
+          onClose={() => setShowWelcome(false)}
+        />
+      )}
+      {showWelcome && gateIsPaid && (
+        <WelcomeModal
+          onClose={() => setShowWelcome(false)}
+          orgName={organization?.name || ''}
+          documentsCount={documents.length}
+          complianceScore={complianceScore}
+        />
+      )}
 
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 right-0 z-50 w-64 bg-stone-100/80 backdrop-blur-sm border-l border-stone-200 transform transition-transform duration-200 ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0 lg:static`}>
