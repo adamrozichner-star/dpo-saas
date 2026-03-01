@@ -1,55 +1,29 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { 
-  Shield, CheckCircle2, X, Sparkles,
-  AlertTriangle, Database, ClipboardList
-} from 'lucide-react'
+import { Shield, X, CheckCircle2 } from 'lucide-react'
 
 interface WelcomeModalProps {
   orgName: string
   documentsCount: number
   complianceScore: number
+  dpoName?: string
+  topAction?: string
   onClose: () => void
-  v3Answers?: any
+  v3Answers?: any // kept for backward compat
 }
 
-export default function WelcomeModal({ 
-  orgName, documentsCount, complianceScore, onClose, v3Answers
+export default function WelcomeModal({
+  orgName,
+  documentsCount,
+  complianceScore,
+  dpoName = 'עו״ד דנה כהן',
+  topAction = 'חתימה על כתב מינוי DPO',
+  onClose,
 }: WelcomeModalProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
-  // Derive personalized data from v3Answers
-  const dbs = v3Answers?.databases || []
-  const customDbs = v3Answers?.customDatabases || []
-  const dbCount = dbs.length + customDbs.length
-  const processors = v3Answers?.processors || []
-  const customProcessors = v3Answers?.customProcessors || []
-  const processorCount = processors.length + customProcessors.length
-  const hasConsent = v3Answers?.hasConsent
-  const accessControl = v3Answers?.accessControl
-  const industry = v3Answers?.industry
-
-  // Determine security level
-  const SIZE_NUMS: Record<string, number> = { 'under100': 50, '100-1k': 500, '1k-10k': 5000, '10k-100k': 50000, '100k+': 150000 }
-  const totalRecords = Object.values(v3Answers?.dbDetails || {}).reduce((sum: number, d: any) => sum + (SIZE_NUMS[d?.size] || 50), 0)
-  const hasMedical = dbs.includes('medical')
-  const isHealthOrFinance = industry === 'health' || industry === 'finance'
-  const isHighSecurity = totalRecords >= 100000 || hasMedical || isHealthOrFinance
-  const securityLevel = isHighSecurity ? 'גבוהה' : totalRecords >= 10000 ? 'בינונית' : 'בסיסית'
-  const securityColor = isHighSecurity ? 'text-red-600' : totalRecords >= 10000 ? 'text-amber-600' : 'text-emerald-600'
-
-  // Reporting obligation
-  const needsReporting = isHighSecurity || totalRecords >= 100000
-
-  // Count pending user actions
-  const userActions: string[] = []
-  userActions.push('חתימה על כתב מינוי DPO')
-  if (hasConsent === 'no') userActions.push('הטמעת מנגנון הסכמה באתר')
-  if (processorCount > 0) userActions.push(`${processorCount} הסכמי עיבוד מידע לספקים`)
-  if (accessControl === 'all') userActions.push('הגדרת בקרת גישה למאגרים')
-
-  // Canvas confetti — dramatic burst
+  // Confetti
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -60,40 +34,33 @@ export default function WelcomeModal({
     canvas.height = window.innerHeight
 
     const colors = [
-      '#6366f1', '#8b5cf6', '#a855f7', '#ec4899', '#f43f5e',
-      '#f59e0b', '#10b981', '#06b6d4', '#3b82f6', '#84cc16',
-      '#fbbf24', '#34d399', '#818cf8', '#fb923c'
+      '#059669', '#10b981', '#34d399', '#6ee7b7',
+      '#3b82f6', '#6366f1', '#f59e0b', '#fbbf24',
+      '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16',
     ]
 
-    interface Particle {
+    interface P {
       x: number; y: number; vx: number; vy: number
-      w: number; h: number; color: string; rotation: number
-      rotSpeed: number; gravity: number; opacity: number
+      w: number; h: number; color: string; rot: number
+      rs: number; g: number; op: number
       shape: 'rect' | 'circle' | 'strip'
     }
 
-    const particles: Particle[] = []
-    const TOTAL = 200
-
-    // Burst from multiple origin points across top
-    for (let i = 0; i < TOTAL; i++) {
-      const burstX = canvas.width * (0.2 + Math.random() * 0.6)
-      const angle = Math.random() * Math.PI * 2
-      const speed = 4 + Math.random() * 12
-      const shapes: Particle['shape'][] = ['rect', 'circle', 'strip']
+    const particles: P[] = []
+    for (let i = 0; i < 150; i++) {
+      const bx = canvas.width * (0.2 + Math.random() * 0.6)
+      const a = Math.random() * Math.PI * 2
+      const s = 4 + Math.random() * 10
+      const shapes: P['shape'][] = ['rect', 'circle', 'strip']
       particles.push({
-        x: burstX,
-        y: canvas.height * 0.25 + Math.random() * canvas.height * 0.1,
-        vx: Math.cos(angle) * speed * (Math.random() > 0.5 ? 1 : -1),
-        vy: -Math.abs(Math.sin(angle) * speed) - Math.random() * 6,
-        w: 4 + Math.random() * 8,
-        h: 4 + Math.random() * 12,
+        x: bx, y: canvas.height * 0.25 + Math.random() * canvas.height * 0.1,
+        vx: Math.cos(a) * s * (Math.random() > 0.5 ? 1 : -1),
+        vy: -Math.abs(Math.sin(a) * s) - Math.random() * 5,
+        w: 4 + Math.random() * 7, h: 4 + Math.random() * 10,
         color: colors[Math.floor(Math.random() * colors.length)],
-        rotation: Math.random() * 360,
-        rotSpeed: (Math.random() - 0.5) * 12,
-        gravity: 0.12 + Math.random() * 0.08,
-        opacity: 1,
-        shape: shapes[Math.floor(Math.random() * shapes.length)]
+        rot: Math.random() * 360, rs: (Math.random() - 0.5) * 10,
+        g: 0.12 + Math.random() * 0.06, op: 1,
+        shape: shapes[Math.floor(Math.random() * shapes.length)],
       })
     }
 
@@ -102,29 +69,19 @@ export default function WelcomeModal({
     const animate = () => {
       elapsed++
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-
       let alive = 0
       for (const p of particles) {
-        p.vy += p.gravity
-        p.x += p.vx
-        p.y += p.vy
-        p.vx *= 0.99
-        p.rotation += p.rotSpeed
-
-        if (elapsed > 180) p.opacity -= 0.008
-        if (p.opacity <= 0 || p.y > canvas.height + 50) continue
+        p.vy += p.g; p.x += p.vx; p.y += p.vy; p.vx *= 0.99; p.rot += p.rs
+        if (elapsed > 150) p.op -= 0.01
+        if (p.op <= 0 || p.y > canvas.height + 50) continue
         alive++
-
         ctx.save()
         ctx.translate(p.x, p.y)
-        ctx.rotate((p.rotation * Math.PI) / 180)
-        ctx.globalAlpha = Math.max(0, p.opacity)
+        ctx.rotate((p.rot * Math.PI) / 180)
+        ctx.globalAlpha = Math.max(0, p.op)
         ctx.fillStyle = p.color
-
         if (p.shape === 'circle') {
-          ctx.beginPath()
-          ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2)
-          ctx.fill()
+          ctx.beginPath(); ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2); ctx.fill()
         } else if (p.shape === 'strip') {
           ctx.fillRect(-p.w / 2, -p.h, p.w * 0.6, p.h * 1.5)
         } else {
@@ -132,159 +89,166 @@ export default function WelcomeModal({
         }
         ctx.restore()
       }
-
-      if (alive > 0 && elapsed < 400) {
-        frame = requestAnimationFrame(animate)
-      }
+      if (alive > 0 && elapsed < 350) frame = requestAnimationFrame(animate)
     }
-
     frame = requestAnimationFrame(animate)
     return () => cancelAnimationFrame(frame)
   }, [])
 
+  const completed = [
+    'מינוי ממונה הגנת פרטיות',
+    `${documentsCount || 6} מסמכי ציות הופקו`,
+    'הפעלת ניטור ציות שוטף',
+    'ערוץ תקשורת עם הממונה',
+  ]
+
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" dir="rtl">
-      {/* Canvas confetti */}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      dir="rtl"
+      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+    >
       <canvas ref={canvasRef} className="absolute inset-0 pointer-events-none z-[60]" />
 
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl relative z-50 overflow-hidden"
-        style={{ animation: 'modal-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' }}>
-        <button onClick={onClose} className="absolute top-4 left-4 text-white/70 hover:text-white z-10">
+      <div
+        className="w-full relative z-50 overflow-hidden"
+        style={{
+          maxWidth: 440,
+          borderRadius: 24,
+          background: '#fff',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.2)',
+          border: '1px solid rgba(5,150,105,0.12)',
+          animation: 'modal-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+        }}
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-4 left-4 z-10 text-white/70 hover:text-white transition-colors"
+        >
           <X className="h-5 w-5" />
         </button>
 
-        {/* Header gradient with prominent company name */}
-        <div className="bg-gradient-to-l from-indigo-600 via-blue-600 to-violet-700 px-8 pt-7 pb-6 text-white text-center relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-28 h-28 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-          
-          <div className="relative w-16 h-16 mx-auto mb-3">
-            <div className="absolute inset-0 bg-white/20 rounded-full blur-xl animate-pulse" />
-            <div className="relative w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
-              <Shield className="h-8 w-8 text-white" />
-            </div>
-            <div className="absolute -bottom-1 -left-1 w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
-              <CheckCircle2 className="h-4 w-4 text-white" />
-            </div>
-            <Sparkles className="absolute -top-2 -right-2 h-5 w-5 text-yellow-300 animate-pulse" />
+        {/* Celebration header */}
+        <div
+          className="text-center relative overflow-hidden"
+          style={{
+            background: 'linear-gradient(160deg, #064e3b 0%, #065f46 50%, #059669 100%)',
+            padding: '28px 28px 36px',
+          }}
+        >
+          <div
+            className="absolute inset-0"
+            style={{
+              opacity: 0.04,
+              backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)',
+              backgroundSize: '20px 20px',
+            }}
+          />
+          <div className="relative z-[1]">
+            <div className="text-[44px] mb-1">🎉</div>
+            <h2 className="text-[22px] font-extrabold text-white mb-1">
+              המערכת פעילה!
+            </h2>
+            <p className="text-emerald-200/80 text-sm">
+              {orgName} מוגנת מעכשיו
+            </p>
           </div>
-          <h2 className="text-2xl font-bold mb-2">🎉 ברוכים הבאים ל-MyDPO!</h2>
-          <div className="inline-block bg-white/15 backdrop-blur-sm rounded-xl px-6 py-2.5">
-            <span className="text-xl font-bold text-white">{orgName}</span>
-          </div>
-          <p className="text-blue-200 text-sm mt-2">הממונה שלכם כבר עובדת — עו״ד דנה כהן</p>
         </div>
 
-        {/* Content — two columns on wide layout */}
-        <div className="px-8 py-5">
-          {/* Stats row — 4 across */}
-          <div className="mb-5">
-            <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-              <Database className="h-4 w-4 text-indigo-500" />
-              על בסיס הנתונים שהזנתם
-            </h3>
-            <div className="grid grid-cols-4 gap-2">
-              <div className="bg-indigo-50 rounded-xl p-3 text-center">
-                <div className="text-2xl font-bold text-indigo-700">{dbCount}</div>
-                <div className="text-[11px] text-indigo-600">מאגרי מידע</div>
-              </div>
-              <div className="bg-indigo-50 rounded-xl p-3 text-center">
-                <div className={`text-lg font-bold ${securityColor}`}>{securityLevel}</div>
-                <div className="text-[11px] text-gray-600">רמת אבטחה</div>
-              </div>
-              <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                <div className="text-2xl font-bold text-emerald-700">{documentsCount || 4}</div>
-                <div className="text-[11px] text-emerald-600">מסמכים נוצרו</div>
-              </div>
-              <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                <div className="text-2xl font-bold text-emerald-700">✓</div>
-                <div className="text-[11px] text-emerald-600">DPO ממונה</div>
-              </div>
+        {/* DPO + Docs cards */}
+        <div className="px-6 relative" style={{ marginTop: -18, zIndex: 2 }}>
+          <div className="grid grid-cols-2 gap-2.5">
+            <div
+              className="text-center"
+              style={{
+                background: '#fff', borderRadius: 14, padding: '16px 12px',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #d1fae5',
+              }}
+            >
+              <div className="text-[26px] mb-1">🛡️</div>
+              <div className="text-[13px] font-bold text-emerald-800">ממונה מונתה</div>
+              <div className="text-[12px] text-emerald-600">{dpoName}</div>
+            </div>
+            <div
+              className="text-center"
+              style={{
+                background: '#fff', borderRadius: 14, padding: '16px 12px',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1px solid #bfdbfe',
+              }}
+            >
+              <div className="text-[26px] mb-1">📄</div>
+              <div className="text-[13px] font-bold text-blue-800">{documentsCount || 6} מסמכים</div>
+              <div className="text-[12px] text-blue-600">הופקו ואושרו</div>
             </div>
           </div>
+        </div>
 
-          {/* Two column layout */}
-          <div className="grid grid-cols-2 gap-5 mb-4">
-            {/* Steps */}
-            <div>
-              <h3 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-indigo-500" />
-                3 צעדים לציות מלא
-              </h3>
-              <div className="space-y-2">
-                <div className="flex items-start gap-2.5 p-2.5 bg-emerald-50 rounded-xl border border-emerald-200">
-                  <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-white" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-sm text-emerald-800">מינוי ממונה</div>
-                    <div className="text-[11px] text-emerald-600">בוצע — עו״ד דנה כהן</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2.5 p-2.5 bg-amber-50 rounded-xl border border-amber-200">
-                  <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0 mt-0.5 text-white text-[11px] font-bold">2</div>
-                  <div>
-                    <div className="font-semibold text-sm text-amber-800">אישור מסמכים</div>
-                    <div className="text-[11px] text-amber-600">{documentsCount || 4} מסמכים — סקירה תוך 48 שעות</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2.5 p-2.5 bg-blue-50 rounded-xl border border-blue-200">
-                  <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 mt-0.5 text-white text-[11px] font-bold">3</div>
-                  <div>
-                    <div className="font-semibold text-sm text-blue-800">פעולות נדרשות</div>
-                    <div className="text-[11px] text-blue-600">{userActions.length} פעולות ממתינות בלוח הבקרה</div>
-                  </div>
-                </div>
+        {/* Completed checklist */}
+        <div className="px-6 pt-5">
+          <div className="text-[13px] font-bold text-gray-600 mb-2.5">הושלם עבורכם:</div>
+          {completed.map((item, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-2.5"
+              style={{
+                padding: '8px 0',
+                borderBottom: i < completed.length - 1 ? '1px solid #f1f5f9' : 'none',
+              }}
+            >
+              <div
+                className="flex-shrink-0 flex items-center justify-center"
+                style={{
+                  width: 22, height: 22, borderRadius: 7,
+                  background: '#ecfdf5', color: '#059669',
+                  fontSize: 12, fontWeight: 700,
+                }}
+              >
+                ✓
               </div>
+              <span className="text-[13px] text-gray-600 font-medium">{item}</span>
             </div>
+          ))}
+        </div>
 
-            {/* Right column: reporting + actions */}
-            <div className="flex flex-col gap-3">
-              {needsReporting && (
-                <div className="p-2.5 bg-red-50 rounded-xl border border-red-200 flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
-                  <div>
-                    <div className="text-sm font-semibold text-red-800">חובת דיווח לרשות</div>
-                    <div className="text-[11px] text-red-600 mt-0.5">קיימת חובת רישום. נכין עבורכם את הטפסים.</div>
-                  </div>
-                </div>
-              )}
-
-              {userActions.length > 0 && (
-                <div className="p-3 bg-gray-50 rounded-xl flex-1">
-                  <div className="text-xs font-semibold text-gray-500 mb-2">פעולות שממתינות לכם:</div>
-                  {userActions.slice(0, 4).map((action, i) => (
-                    <div key={i} className="text-xs text-gray-600 py-1 flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
-                      {action}
-                    </div>
-                  ))}
-                  {userActions.length > 4 && (
-                    <div className="text-xs text-gray-400 mt-1">+{userActions.length - 4} נוספות</div>
-                  )}
-                </div>
-              )}
+        {/* First action */}
+        <div className="px-6 pt-4">
+          <div
+            className="flex items-start gap-3"
+            style={{
+              background: 'linear-gradient(135deg, #fefce8, #fef9c3)',
+              borderRadius: 14, padding: '16px 18px', border: '1px solid #fde68a',
+            }}
+          >
+            <span className="text-[20px] flex-shrink-0">⚡</span>
+            <div>
+              <div className="text-[13px] font-bold text-amber-800 mb-0.5">
+                הצעד הראשון שלכם:
+              </div>
+              <div className="text-[13px] text-amber-700">
+                {topAction} — זה המסמך שהרשות מבקשת ראשון בביקורת.
+              </div>
             </div>
           </div>
         </div>
 
         {/* CTA */}
-        <div className="px-8 pb-6">
+        <div className="px-6 pt-4 pb-6">
           <button
             onClick={onClose}
-            className="w-full py-3.5 rounded-xl text-white text-base font-bold cursor-pointer border-none shadow-lg hover:shadow-xl transition-all"
-            style={{ background: 'linear-gradient(135deg, #4f46e5, #6366f1)' }}
+            className="w-full py-3.5 text-white text-[15px] font-bold rounded-xl border-none cursor-pointer transition-all hover:shadow-lg"
+            style={{
+              background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+              boxShadow: '0 4px 20px rgba(5,150,105,0.3)',
+            }}
           >
-            המשך ללוח הבקרה ←
+            בואו נתחיל ←
           </button>
         </div>
       </div>
 
       <style jsx global>{`
         @keyframes modal-pop {
-          0% { transform: scale(0.8); opacity: 0; }
+          0% { transform: scale(0.85); opacity: 0; }
           100% { transform: scale(1); opacity: 1; }
         }
       `}</style>
