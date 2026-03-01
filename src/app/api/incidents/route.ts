@@ -381,6 +381,41 @@ export async function POST(request: NextRequest) {
       // Send DPO alert
       await sendDPOAlert(incident, orgName)
 
+      // Send incident_acknowledged email to client (non-blocking)
+      try {
+        const { data: orgUsers } = await supabase
+          .from('users')
+          .select('email, name')
+          .eq('org_id', orgId)
+          .limit(1)
+          .maybeSingle()
+
+        if (orgUsers?.email) {
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mydpo.co.il'
+          const deadline = new Date(incident.authority_deadline)
+          await fetch(`${baseUrl}/api/email`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-internal-key': process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+            },
+            body: JSON.stringify({
+              to: orgUsers.email,
+              template: 'incident_acknowledged',
+              data: {
+                name: orgUsers.name || orgUsers.email.split('@')[0],
+                incidentType: incident.incident_type || 'אירוע אבטחה',
+                severity: incident.severity === 'critical' ? 'קריטי' : incident.severity === 'high' ? 'גבוהה' : incident.severity === 'medium' ? 'בינונית' : 'נמוכה',
+                reportedAt: new Date(incident.discovered_at).toLocaleDateString('he-IL'),
+                deadline: deadline.toLocaleDateString('he-IL') + ' ' + deadline.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })
+              }
+            })
+          })
+        }
+      } catch (emailErr) {
+        console.log('[Incidents] Acknowledged email skipped:', emailErr)
+      }
+
       // Trigger AI analysis in background
       setTimeout(async () => {
         try {
@@ -453,6 +488,49 @@ export async function POST(request: NextRequest) {
           action_description: notes,
           performed_by: 'dpo'
         })
+      }
+
+      // Send incident_resolved email when closed/resolved
+      if (status === 'resolved' || status === 'closed') {
+        try {
+          const { data: incident } = await supabase
+            .from('security_incidents')
+            .select('org_id, incident_type, authority_notified_at, dpo_notes')
+            .eq('id', incidentId)
+            .single()
+
+          if (incident) {
+            const { data: orgUsers } = await supabase
+              .from('users')
+              .select('email, name')
+              .eq('org_id', incident.org_id)
+              .limit(1)
+              .maybeSingle()
+
+            if (orgUsers?.email) {
+              const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mydpo.co.il'
+              await fetch(`${baseUrl}/api/email`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-internal-key': process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+                },
+                body: JSON.stringify({
+                  to: orgUsers.email,
+                  template: 'incident_resolved',
+                  data: {
+                    name: orgUsers.name || orgUsers.email.split('@')[0],
+                    incidentType: incident.incident_type || 'אירוע אבטחה',
+                    summary: incident.dpo_notes || notes || 'האירוע טופל ונסגר על ידי הממונה.',
+                    reportedToAuthority: !!incident.authority_notified_at
+                  }
+                })
+              })
+            }
+          }
+        } catch (emailErr) {
+          console.log('[Incidents] Resolved email skipped:', emailErr)
+        }
       }
 
       return NextResponse.json({ success: true })
