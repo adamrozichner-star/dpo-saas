@@ -1000,7 +1000,7 @@ function OnboardingContent() {
 
   const handleReportContinue = useCallback(() => {
     if (isReviewMode) {
-      router.push('/subscribe')
+      router.push('/dashboard')
     } else {
       setShowReport(false)
       setShowDpoIntro(true)
@@ -1094,7 +1094,7 @@ function OnboardingContent() {
         })
       } catch (emailErr) { console.log('Welcome email skipped:', emailErr) }
 
-      setTimeout(() => router.push('/subscribe'), 1500)
+      setTimeout(() => router.push('/dashboard?welcome=true'), 1500)
     } catch (err: any) {
       console.error('[Onboarding] handleComplete error:', err)
       setError(err.message || 'אירעה שגיאה בתהליך ההרשמה')
@@ -1291,9 +1291,9 @@ function OnboardingContent() {
         <div className="max-w-lg mx-auto">
           <div className="flex items-center justify-between mb-4">
               {isReviewMode ? (
-                <button onClick={() => router.push('/subscribe')}
+                <button onClick={() => router.push('/dashboard')}
                   className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm">
-                  <ArrowRight className="h-4 w-4" />חזרה לחבילות
+                  <ArrowRight className="h-4 w-4" />חזרה ללוח הבקרה
                 </button>
               ) : (
                 <button onClick={() => { setShowReport(false); setStep(0) }}
