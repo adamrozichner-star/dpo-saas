@@ -113,16 +113,7 @@ export default function AuthCallbackPage() {
             console.error('User insert error:', insertError);
           }
 
-          // Send welcome email (don't wait)
-          fetch('/api/email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              template: 'welcome',
-              to: session.user.email,
-              data: { name, orgName: 'הארגון שלך' }
-            })
-          }).catch(e => console.error('Email error:', e));
+          // Welcome email is sent from complete-onboarding (server-side with real org name)
 
           // New user - go to onboarding
           setStatus('מעביר לשאלון...');
