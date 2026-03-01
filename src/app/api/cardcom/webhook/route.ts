@@ -195,21 +195,59 @@ async function handleWebhook(lowProfileId: string | null, returnValue: string | 
         });
       }
 
-      // 4. Send confirmation email (non-blocking)
+      // 4. Send activation + payment confirmation emails (non-blocking)
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mydpo.co.il';
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://mydpo.co.il';
         const { data: org } = await supabase.from('organizations').select('name').eq('id', payment.org_id).single();
-        const { data: userData } = await supabase.auth.admin.getUserById(payment.user_id);
-        const email = userData?.user?.email;
+        const { data: userData } = await supabase.from('users').select('email, name').eq('auth_user_id', payment.user_id).maybeSingle();
+        const email = userData?.email;
+        const userName = userData?.name || email?.split('@')[0] || 'משתמש';
+        const orgName = org?.name || 'הארגון שלכם';
+
         if (email) {
+          const internalHeaders = {
+            'Content-Type': 'application/json',
+            'x-internal-key': process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+          };
+
+          // Count documents for this org
+          const { count: docsCount } = await supabase
+            .from('documents')
+            .select('id', { count: 'exact', head: true })
+            .eq('org_id', payment.org_id);
+
+          // Send activation_complete (DPO appointed + docs ready)
           await fetch(`${baseUrl}/api/email`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: internalHeaders,
             body: JSON.stringify({
               to: email,
-              template: 'payment_success',
-              data: { userName: org?.name || email.split('@')[0], plan: payment.plan, amount: payment.amount },
-            }),
+              template: 'activation_complete',
+              data: {
+                name: userName,
+                orgName,
+                dpoName: 'עו״ד דנה כהן',
+                docsCount: docsCount || 6
+              }
+            })
+          });
+
+          // Send payment_confirmation (receipt)
+          const nextBilling = new Date(subscriptionEnd);
+          await fetch(`${baseUrl}/api/email`, {
+            method: 'POST',
+            headers: internalHeaders,
+            body: JSON.stringify({
+              to: email,
+              template: 'payment_confirmation',
+              data: {
+                name: userName,
+                orgName,
+                planName: dbTier === 'basic' ? 'בסיסית' : dbTier === 'extended' ? 'מורחבת' : 'עסקית',
+                amount: `₪${payment.amount}`,
+                nextBillingDate: nextBilling.toLocaleDateString('he-IL')
+              }
+            })
           });
         }
       } catch (e) {
