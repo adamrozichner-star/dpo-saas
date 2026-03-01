@@ -1,44 +1,36 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
-export const dynamic = 'force-dynamic';
-export const maxDuration = 60; // 60 seconds max for cron job
+export const dynamic = 'force-dynamic'
+export const maxDuration = 60
 
-// Email sequence timing
+// Post-signup nurture sequence for users who completed onboarding but haven't paid
 const SEQUENCE = [
-  { day: 0, template: 'welcome' },
-  { day: 2, template: 'value_reminder' },
-  { day: 4, template: 'how_to_guide' },
-  { day: 6, template: 'social_proof' },
-  { day: 11, template: 'trial_ending' },
-  { day: 13, template: 'last_chance' },
-];
-
-const TRIAL_DAYS = 14;
+  { day: 1, template: 'gap_analysis' },
+  { day: 3, template: 'audit_simulation' },
+  { day: 7, template: 'urgency_reminder' },
+]
 
 export async function GET(request: NextRequest) {
-  // Verify cron secret (Vercel Cron sends this)
-  const authHeader = request.headers.get('authorization');
+  const authHeader = request.headers.get('authorization')
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-  );
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!
+  const supabase = createClient(supabaseUrl, supabaseKey)
 
-  const now = new Date();
-  const results: any[] = [];
+  const now = new Date()
+  const results: any[] = []
 
   try {
-    // Get all trial users who haven't converted
+    // Get all orgs WITHOUT active subscription that have completed onboarding
     const { data: orgs, error } = await supabase
       .from('organizations')
       .select(`
         id,
         name,
-        subscription_status,
         created_at,
         users!inner (
           id,
@@ -47,94 +39,148 @@ export async function GET(request: NextRequest) {
           email_sequence_stage,
           last_email_sent
         ),
-        documents:documents(count)
+        organization_profiles!inner (
+          profile_data
+        )
       `)
-      .eq('subscription_status', 'trial')
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true })
 
     if (error) {
-      console.error('Error fetching organizations:', error);
-      return NextResponse.json({ error: 'Database error' }, { status: 500 });
+      console.error('[EmailCron] Org query error:', error)
+      return NextResponse.json({ error: 'Database error' }, { status: 500 })
     }
 
     for (const org of orgs || []) {
-      for (const user of org.users || []) {
-        const signupDate = new Date(org.created_at);
+      // Skip orgs with active subscription
+      const { data: sub } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('org_id', org.id)
+        .in('status', ['active', 'past_due'])
+        .maybeSingle()
+
+      if (sub) continue // Already paid — skip
+
+      const profile = (org as any).organization_profiles?.[0]?.profile_data
+      if (!profile?.v3Answers) continue // No onboarding data
+
+      for (const user of (org as any).users || []) {
+        const signupDate = new Date(org.created_at)
         const daysSinceSignup = Math.floor(
           (now.getTime() - signupDate.getTime()) / (1000 * 60 * 60 * 24)
-        );
+        )
 
-        // Find the next email to send
-        const currentStage = user.email_sequence_stage || 0;
+        const currentStage = user.email_sequence_stage || 0
         const nextEmail = SEQUENCE.find(
           (seq, index) => index === currentStage && seq.day <= daysSinceSignup
-        );
+        )
 
-        if (!nextEmail) continue;
+        if (!nextEmail) continue
 
-        // Check if we already sent today
+        // Don't send twice same day
         if (user.last_email_sent) {
-          const lastSent = new Date(user.last_email_sent);
-          if (lastSent.toDateString() === now.toDateString()) {
-            continue; // Already sent today
-          }
+          const lastSent = new Date(user.last_email_sent)
+          if (lastSent.toDateString() === now.toDateString()) continue
         }
 
-        // Calculate days left in trial
-        const daysLeft = Math.max(0, TRIAL_DAYS - daysSinceSignup);
+        // Build template data from profile
+        const v3 = profile.v3Answers
+        const actions = profile.complianceActions || []
+        const pendingActions = actions.filter((a: any) => a.category !== 'done')
+
+        let emailData: any = {}
+
+        switch (nextEmail.template) {
+          case 'gap_analysis':
+            emailData = {
+              name: user.name || user.email?.split('@')[0] || 'משתמש',
+              orgName: org.name,
+              score: profile.complianceScore || 15,
+              gapCount: pendingActions.length || 8,
+              topGaps: pendingActions.slice(0, 4).map((a: any) => a.title || a.description) || [
+                'אין ממונה הגנת פרטיות ממונה',
+                'חסרה מדיניות פרטיות מאושרת',
+                'אין נהלי אבטחת מידע',
+                'חסר כתב מינוי DPO'
+              ]
+            }
+            break
+
+          case 'audit_simulation':
+            emailData = {
+              name: user.name || user.email?.split('@')[0] || 'משתמש',
+              orgName: org.name,
+              missingItems: [
+                'כתב מינוי DPO — לא נמצא',
+                'מדיניות פרטיות — לא מאושרת',
+                'נהלי אבטחת מידע — לא קיימים',
+                'רישום מאגרי מידע — לא עודכן',
+                'הסכמי עיבוד מידע עם ספקים — חסרים',
+                'תיעוד הדרכות עובדים — לא נמצא'
+              ]
+            }
+            break
+
+          case 'urgency_reminder':
+            const industryMap: Record<string, string> = {
+              health: 'בריאות', education: 'חינוך', ecommerce: 'מסחר מקוון',
+              finance: 'פיננסים', tech: 'טכנולוגיה', retail: 'קמעונאות',
+              services: 'שירותים', manufacturing: 'תעשייה'
+            }
+            emailData = {
+              name: user.name || user.email?.split('@')[0] || 'משתמש',
+              orgName: org.name,
+              industry: industryMap[v3.industry] || 'עסקים קטנים ובינוניים'
+            }
+            break
+        }
 
         // Send the email
         try {
-          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mydpo.co.il';
-          const response = await fetch(`${baseUrl}/api/email`, {
+          const emailRes = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://mydpo.co.il'}/api/email`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'x-internal-key': supabaseKey
+            },
             body: JSON.stringify({
-              to: user.email,
               template: nextEmail.template,
-              data: {
-                userName: user.name,
-                organizationName: org.name,
-                daysLeft,
-                documentsCreated: org.documents?.[0]?.count || 0,
-              },
-            }),
-          });
+              to: user.email,
+              data: emailData
+            })
+          })
 
-          if (response.ok) {
-            // Update user's email stage
+          if (emailRes.ok) {
+            // Update user's sequence stage
             await supabase
               .from('users')
               .update({
                 email_sequence_stage: currentStage + 1,
-                last_email_sent: now.toISOString(),
+                last_email_sent: now.toISOString()
               })
-              .eq('id', user.id);
+              .eq('id', user.id)
 
             results.push({
-              userId: user.id,
               email: user.email,
               template: nextEmail.template,
-              status: 'sent',
-            });
+              day: nextEmail.day,
+              status: 'sent'
+            })
           } else {
             results.push({
-              userId: user.id,
               email: user.email,
               template: nextEmail.template,
               status: 'failed',
-              error: await response.text(),
-            });
+              error: await emailRes.text()
+            })
           }
-        } catch (error) {
-          console.error(`Error sending email to ${user.email}:`, error);
+        } catch (emailErr: any) {
           results.push({
-            userId: user.id,
             email: user.email,
             template: nextEmail.template,
-            status: 'failed',
-            error: String(error),
-          });
+            status: 'error',
+            error: emailErr.message
+          })
         }
       }
     }
@@ -143,13 +189,11 @@ export async function GET(request: NextRequest) {
       success: true,
       processed: results.length,
       results,
-      timestamp: now.toISOString(),
-    });
-  } catch (error) {
-    console.error('Email sequence cron error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process email sequence' },
-      { status: 500 }
-    );
+      timestamp: now.toISOString()
+    })
+
+  } catch (error: any) {
+    console.error('[EmailCron] Error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
