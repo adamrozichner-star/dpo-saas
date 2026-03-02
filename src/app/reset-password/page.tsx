@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Shield, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { PasswordStrength, validatePassword } from '@/components/PasswordStrength'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -29,8 +30,9 @@ export default function ResetPasswordPage() {
       return
     }
 
-    if (password.length < 6) {
-      setError('הסיסמה חייבת להכיל לפחות 6 תווים')
+    const { valid } = validatePassword(password)
+    if (!valid) {
+      setError('הסיסמה לא עומדת בדרישות החוזק')
       return
     }
 
@@ -97,8 +99,9 @@ export default function ResetPasswordPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
               />
+              <PasswordStrength password={password} />
             </div>
 
             <div className="space-y-2">
