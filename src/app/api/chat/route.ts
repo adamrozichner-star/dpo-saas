@@ -120,7 +120,10 @@ const DPO_SYSTEM_PROMPT = `אתה עוזר דיגיטלי מומחה בהגנת 
 - נקודות (•) לרשימות
 
 שמור על תשובות קצרות וממוקדות כשאפשר - 2-4 פסקאות מספיקות ברוב המקרים.
-בסיום כל תשובה - תן הצעה קונקרטית לפעולה הבאה או שאל שאלת המשך.`
+בסיום כל תשובה - תן הצעה קונקרטית לפעולה הבאה או שאל שאלת המשך.
+
+🚫 נושאים מחוץ לתחום:
+אם המשתמש שואל שאלה שאינה קשורה כלל לפרטיות, אבטחת מידע, או ציות רגולטורי (למשל: מתכונים, תיקון מכשירים, ספורט, בידור, טכנולוגיה כללית) — ענה בהומור קל בעברית, הזכר שאתה מתמחה רק בפרטיות ואבטחה, והצע לחפש בגוגל. שמור על טון חם. דוגמה: "הייתי שמח לעזור 🍳 אבל אני מומחה רק לפרטיות ואבטחת מידע! לזה — נסו גוגל. לשאלות פרטיות — אני כאן 🔒"`
 
 // ===========================================
 // INTENT DETECTION
@@ -172,6 +175,10 @@ function detectIntent(message: string): string {
   if (/\?|מה זה|איך |למה |מתי |האם |אפשר |מי צריך|צריך ל/.test(msg)) {
     return 'question'
   }
+  
+  // Off-topic: no privacy/security keywords and message is substantial
+  const privacyKeywords = /פרטיות|אבטח|מידע|מסמך|חוק|רגולצי|ציות|dpo|gdpr|breach|מאגר|הסכמ|מדיניות|נוהל|עובד|ספק|מצלמ|קטינ|dsar|ropa|דיווח|אירוע|הדרכ|סיכון|ביקורת|הגנ|תיקון 13|amendment|privacy|security|compliance|data|consent|processor|controller/
+  if (msg.length > 10 && !privacyKeywords.test(msg)) return 'off_topic'
   
   return 'general'
 }
@@ -337,7 +344,8 @@ export async function POST(request: NextRequest) {
 
 ${intent === 'incident' ? '\n⚠️ שים לב: זוהה אירוע אבטחה פוטנציאלי! וודא שהמשתמש מבין את הדחיפות (72 שעות לדיווח) והנחה אותו לתעד את האירוע.\n' : ''}
 ${intent === 'document' ? '\n📄 המשתמש מבקש מסמך - צור את המסמך המלא עצמו, לא הסבר על מה צריך להיות בו! השתמש ב-[DOCUMENT_GENERATED] בסוף.\n' : ''}
-${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה אנושי - הצע להעביר את הפנייה.\n' : ''}`
+${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה אנושי - הצע להעביר את הפנייה.\n' : ''}
+${intent === 'off_topic' ? '\n🚫 זוהתה שאלה שאינה בתחום הפרטיות. ענה בהומור קל קצר והפנה לחיפוש באינטרנט. אל תענה על השאלה עצמה.\n' : ''}`
 
       // Get AI response - use more tokens for documents
       const maxTokens = intent === 'document' ? 4000 : 1500
@@ -571,11 +579,40 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
       const orgId = auth.orgId
       
       try {
+        // Check quarterly credit limit
+        const now = new Date()
+        const qStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
+        
+        const { count: usedCount } = await supabase
+          .from('dpo_queue')
+          .select('*', { count: 'exact', head: true })
+          .eq('org_id', orgId)
+          .gte('created_at', qStart.toISOString())
+
+        const { data: orgData } = await supabase
+          .from('organizations')
+          .select('tier')
+          .eq('id', orgId)
+          .single()
+
+        const tier = orgData?.tier || 'basic'
+        const limitMap: Record<string, number> = { basic: 2, extended: 8, enterprise: 12 }
+        const limit = limitMap[tier] || 2
+        const used = usedCount || 0
+
+        if (used >= limit) {
+          return NextResponse.json({
+            success: false,
+            creditExhausted: true,
+            used, limit,
+            message: 'ניצלת את מכסת הפניות לממונה ברבעון זה.'
+          })
+        }
+
         // Extract a clean summary from raw chat context
         let cleanDescription = 'הלקוח ביקש להעביר לממונה אנושי'
         let lastUserMessage = ''
         if (context) {
-          // context is "role: content\nrole: content" — extract last user message
           const lines = context.split('\n')
           const userLines = lines.filter((l: string) => l.startsWith('user:'))
           if (userLines.length > 0) {
@@ -600,8 +637,7 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
         
         if (error) {
           console.error('Escalation error:', error)
-          // Still return success so user gets feedback
-          return NextResponse.json({ success: true, message: 'Escalation logged' })
+          return NextResponse.json({ success: true, used: used + 1, limit, message: 'Escalation logged' })
         }
         
         // Try to add system message
@@ -616,7 +652,7 @@ ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה
           console.log('Could not save escalation message')
         }
         
-        return NextResponse.json({ escalation, success: true })
+        return NextResponse.json({ escalation, success: true, used: used + 1, limit })
       } catch (e) {
         console.error('Escalation error:', e)
         return NextResponse.json({ success: true }) // Return success anyway for UX
