@@ -29,9 +29,9 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
-    const { orgId, orgName, businessId, answers, v3Answers } = await request.json()
+    const { orgId, orgName, businessId, answers, v3Answers, singleDocType } = await request.json()
 
-    console.log('Generating docs for:', orgName, 'orgId:', orgId)
+    console.log('Generating docs for:', orgName, 'orgId:', orgId, singleDocType ? `(single: ${singleDocType})` : '(all)')
     console.log('Answers received:', answers?.length || 0)
     console.log('V3 answers:', v3Answers ? 'present' : 'missing')
 
@@ -96,6 +96,76 @@ export async function POST(request: NextRequest) {
 
     // Merge all documents
     const allDocuments = [...documents, ...v3Docs]
+
+    // ── SINGLE DOC MODE ──────────────────────────────
+    // When singleDocType is specified, only save that one doc
+    if (singleDocType) {
+      const targetDoc = allDocuments.find(d => d.type === singleDocType)
+      if (!targetDoc) {
+        return NextResponse.json({ error: `Document type ${singleDocType} not found in templates` }, { status: 400 })
+      }
+
+      // Check if this type already exists
+      const { data: existing } = await supabase
+        .from('documents')
+        .select('id')
+        .eq('org_id', orgId)
+        .eq('type', singleDocType)
+        .eq('generated_by', 'system')
+
+      // If exists, update; otherwise insert
+      if (existing && existing.length > 0) {
+        await supabase
+          .from('documents')
+          .update({
+            title: targetDoc.title,
+            content: targetDoc.content,
+            version: 2,
+            status: singleDocType === 'dpo_appointment' ? 'pending_signature' : 'pending_review',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing[0].id)
+      } else {
+        await supabase
+          .from('documents')
+          .insert({
+            org_id: orgId,
+            type: targetDoc.type,
+            title: targetDoc.title,
+            content: targetDoc.content,
+            version: 1,
+            status: singleDocType === 'dpo_appointment' ? 'pending_signature' : 'pending_review',
+            generated_by: 'system',
+          })
+      }
+
+      // Audit log
+      try {
+        await supabase.from('audit_logs').insert({
+          org_id: orgId,
+          action: 'single_document_generated',
+          details: { docType: singleDocType, title: targetDoc.title }
+        })
+      } catch {}
+
+      // DPO queue
+      try {
+        await supabase.from('dpo_queue').insert({
+          org_id: orgId,
+          type: 'review',
+          title: `מסמך חדש: ${targetDoc.title}`,
+          status: 'pending',
+          ai_summary: `הלקוח יצר מסמך ${targetDoc.title} — נדרשת סקירת הממונה.`
+        })
+      } catch {}
+
+      return NextResponse.json({
+        success: true,
+        documents: [{ type: targetDoc.type, title: targetDoc.title }],
+        message: `Document ${singleDocType} generated`
+      })
+    }
+    // ── END SINGLE DOC MODE ──────────────────────────
 
     // Calculate compliance score
     const complianceScore = calculateComplianceScore(answers || [])
