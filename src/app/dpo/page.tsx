@@ -575,7 +575,7 @@ export default function DPODashboard() {
                         }).slice(0, 5).map(o => (
                           <div key={o.id} style={{ padding: '6px 0', borderBottom: '1px solid #f4f4f5', fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
                             <span style={{ fontWeight: 500 }}>{o.name}</span>
-                            <span style={{ color: '#a1a1aa', fontSize: 11 }}>{o.industry || '—'} · {o.compliance_score || 0}%</span>
+                            <span style={{ color: '#a1a1aa', fontSize: 11 }}>{o.pending_count > 0 ? o.pending_count + ' ממתינים' : '✓ תקין'} · {o.compliance_score || 0}%</span>
                           </div>
                         ))}
                       </div>
@@ -727,6 +727,7 @@ export default function DPODashboard() {
 
           {/* ORGS TAB */}
           {tab === 'orgs' && (
+            <div style={{ maxWidth: 860, margin: '0 auto', padding: '20px 16px 60px' }}>
             <section className="dpo-section">
               <input className="dpo-search" placeholder="🔍 חיפוש ארגון..." value={orgSearch} onChange={e => { setOrgSearch(e.target.value); setOrgPage(0) }} />
               <p className="dpo-org-count">{filteredOrgs.length} ארגונים{orgSearch ? ` (מסננים לפי "${orgSearch}")` : ''}</p>
@@ -1359,6 +1360,7 @@ export default function DPODashboard() {
                 </div>
               )}
             </section>
+            </div>
           )}
         </main>
       </div>
