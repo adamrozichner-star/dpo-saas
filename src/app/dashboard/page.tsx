@@ -38,6 +38,8 @@ import { useToast } from '@/components/Toast'
 import WelcomeModal from '@/components/WelcomeModal'
 import UnpaidWelcomeModal from '@/components/UnpaidWelcomeModal'
 import GuidelinesPanel from '@/components/GuidelinesPanel'
+import DocUploadAdapter from '@/components/DocUploadAdapter'
+import DocCreator from '@/components/DocCreator'
 import RightsTab from '@/components/RightsTab'
 import { deriveComplianceActions, ComplianceSummary, ActionOverride } from '@/lib/compliance-engine'
 
@@ -851,7 +853,7 @@ function DashboardContent() {
             <LockedTabOverlay icon="📋" title="משימות ממתינות לביצוע" description="שלמו כדי לצפות ולבצע את רשימת הפעולות הנדרשות לציות לתיקון 13" />
           )}
           {activeTab === 'documents' && (
-            <DocumentsTab documents={documents} organization={organization} supabase={supabase} isPaid={gateIsPaid} />
+            <DocumentsTab documents={documents} organization={organization} supabase={supabase} isPaid={gateIsPaid} orgProfile={orgProfile} onRefresh={loadAllData} />
           )}
           {activeTab === 'incidents' && (
             gateIsPaid ? <IncidentsTab incidents={incidents} orgId={organization?.id} /> :
@@ -1500,7 +1502,7 @@ function TasksTab({ tasks }: { tasks: Task[] }) {
 // ============================================
 // DOCUMENTS TAB
 // ============================================
-function DocumentsTab({ documents, organization, supabase, isPaid }: { documents: Document[], organization: any, supabase: any, isPaid: boolean }) {
+function DocumentsTab({ documents, organization, supabase, isPaid, orgProfile, onRefresh }: { documents: Document[], organization: any, supabase: any, isPaid: boolean, orgProfile: any, onRefresh: () => void }) {
   const [viewMode, setViewMode] = useState<'grid'|'list'>('grid')
   const { toast } = useToast()
   const [filter, setFilter] = useState<string>('all')
@@ -1508,7 +1510,7 @@ function DocumentsTab({ documents, organization, supabase, isPaid }: { documents
   const [isEditing, setIsEditing] = useState(false)
   const [editedContent, setEditedContent] = useState('')
   const [isSaving, setIsSaving] = useState(false)
-  // isPaid is now passed as prop from useSubscriptionGate
+  const [docSubTab, setDocSubTab] = useState<'docs' | 'upload' | 'create'>('docs')
 
   const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
     const headers = new Headers(options.headers)
@@ -1631,23 +1633,67 @@ function DocumentsTab({ documents, organization, supabase, isPaid }: { documents
           <h1 className="text-2xl font-semibold text-stone-800">📁 מסמכים</h1>
           <p className="text-stone-500 mt-1">כל המסמכים והמדיניות של הארגון</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex bg-stone-100 rounded-lg p-0.5">
-            <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`} title="תצוגת כרטיסים">
-              <svg className="h-4 w-4 text-stone-500" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
-            </button>
-            <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`} title="תצוגת רשימה">
-              <svg className="h-4 w-4 text-stone-500" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2.5" rx="1"/><rect x="1" y="6.75" width="14" height="2.5" rx="1"/><rect x="1" y="11.5" width="14" height="2.5" rx="1"/></svg>
-            </button>
+        {docSubTab === 'docs' && (
+          <div className="flex items-center gap-2">
+            <div className="flex bg-stone-100 rounded-lg p-0.5">
+              <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition cursor-pointer ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`} title="תצוגת כרטיסים">
+                <svg className="h-4 w-4 text-stone-500" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+              </button>
+              <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition cursor-pointer ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`} title="תצוגת רשימה">
+                <svg className="h-4 w-4 text-stone-500" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2.5" rx="1"/><rect x="1" y="6.75" width="14" height="2.5" rx="1"/><rect x="1" y="11.5" width="14" height="2.5" rx="1"/></svg>
+              </button>
+            </div>
           </div>
-          <Link href="/chat">
-            <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              מסמך חדש
-            </button>
-          </Link>
-        </div>
+        )}
       </div>
+
+      {/* Sub-tabs */}
+      <div className="flex gap-2 border-b border-stone-200 pb-0">
+        {[
+          { key: 'docs' as const, label: `המסמכים שלי (${documents.length})`, icon: '📄' },
+          { key: 'upload' as const, label: 'העלאה והתאמה', icon: '📤' },
+          { key: 'create' as const, label: 'מסמך חדש', icon: '✨' },
+        ].map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setDocSubTab(tab.key)}
+            className={`px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer border-b-2 -mb-[1px] ${
+              docSubTab === tab.key
+                ? 'border-indigo-500 text-indigo-600'
+                : 'border-transparent text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            {tab.icon} {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Upload & Adapt sub-tab */}
+      {docSubTab === 'upload' && (
+        <DocUploadAdapter
+          orgId={organization?.id}
+          orgName={organization?.name || ''}
+          supabase={supabase}
+          onDocumentCreated={() => { onRefresh(); setDocSubTab('docs') }}
+        />
+      )}
+
+      {/* Create New sub-tab */}
+      {docSubTab === 'create' && (
+        <DocCreator
+          orgId={organization?.id}
+          orgName={organization?.name || ''}
+          businessId={organization?.business_id}
+          v3Answers={orgProfile?.v3Answers || {}}
+          supabase={supabase}
+          isPaid={isPaid}
+          existingDocTypes={documents.map(d => d.type)}
+          onDocumentCreated={() => { onRefresh(); setDocSubTab('docs') }}
+        />
+      )}
+
+      {/* My Documents sub-tab (existing content) */}
+      {docSubTab === 'docs' && (<>
 
       {/* Status Filters */}
       <div className="flex gap-2 flex-wrap">
@@ -1727,13 +1773,15 @@ function DocumentsTab({ documents, organization, supabase, isPaid }: { documents
             <FileText className="h-8 w-8 text-stone-300" />
           </div>
           <h3 className="text-lg font-semibold text-stone-800 mb-2">אין מסמכים עדיין</h3>
-          <p className="text-stone-500 mb-4">התחילו ביצירת מדיניות פרטיות דרך הצ׳אט</p>
-          <Link href="/chat">
-            <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors">
-              <Bot className="h-4 w-4 inline ml-2" />
-              יצירת מסמך
+          <p className="text-stone-500 mb-4">צרו מסמך חדש או העלו מסמך קיים להתאמה</p>
+          <div className="flex gap-3 justify-center">
+            <button onClick={() => setDocSubTab('create')} className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors cursor-pointer">
+              ✨ מסמך חדש
             </button>
-          </Link>
+            <button onClick={() => setDocSubTab('upload')} className="px-4 py-2 bg-white text-stone-600 border border-stone-200 rounded-lg font-medium hover:bg-stone-50 transition-colors cursor-pointer">
+              📤 העלאה והתאמה
+            </button>
+          </div>
         </div>
       ) : viewMode === 'list' ? (
         /* LIST VIEW */
@@ -1829,6 +1877,8 @@ function DocumentsTab({ documents, organization, supabase, isPaid }: { documents
           ))}
         </div>
       )}
+
+      </>)}
 
       {/* Document View Modal */}
       {selectedDoc && (
