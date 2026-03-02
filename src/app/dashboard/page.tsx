@@ -299,7 +299,7 @@ function DashboardContent() {
 
         // Load open rights request count
         try {
-          const rightsRes = await fetch(`/api/rights?action=get_requests&orgId=${orgData.id}`)
+          const rightsRes = await fetch(`/api/rights?action=get_requests&orgId=${org.id}`)
           const rightsData = await rightsRes.json()
           if (rightsData.requests) {
             const openCount = rightsData.requests.filter((r: any) => r.status === 'pending' || r.status === 'in_progress').length
