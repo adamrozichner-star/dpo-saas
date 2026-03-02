@@ -36,6 +36,7 @@ import { DPO_CONFIG } from '@/lib/dpo-config'
 import { useToast } from '@/components/Toast'
 import WelcomeModal from '@/components/WelcomeModal'
 import UnpaidWelcomeModal from '@/components/UnpaidWelcomeModal'
+import GuidelinesPanel from '@/components/GuidelinesPanel'
 import { deriveComplianceActions, ComplianceSummary, ActionOverride } from '@/lib/compliance-engine'
 
 // ============================================
@@ -1124,6 +1125,16 @@ function OverviewTab({
           </div>
         )}
       </div>
+
+      {/* Regulatory Guidelines Panel */}
+      {complianceSummary?.guidelines && complianceSummary.guidelines.length > 0 && (
+        <GuidelinesPanel
+          guidelines={complianceSummary.guidelines}
+          isPaid={isPaid}
+          onResolve={onResolveAction}
+          onUndo={onUndoAction}
+        />
+      )}
 
       {/* Done For You Section — only for paid (DPO not appointed for unpaid) */}
       {isPaid && doneActions.length > 0 && (
