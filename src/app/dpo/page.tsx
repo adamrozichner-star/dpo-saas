@@ -132,7 +132,7 @@ export default function DPODashboard() {
   const [showAllPending, setShowAllPending] = useState(false)
   const [showAllResolved, setShowAllResolved] = useState(false)
   const [selectedOrg, setSelectedOrg] = useState<any>(null)
-  const [orgTab, setOrgTab] = useState<'overview'|'docs'|'messages'|'reminders'|'guidelines'|'activity'|'profile'>('overview')
+  const [orgTab, setOrgTab] = useState<'overview'|'docs'|'rights'|'messages'|'reminders'|'guidelines'|'activity'|'profile'>('overview')
   const [composeMsg, setComposeMsg] = useState('')
   const [composeSending, setComposeSending] = useState(false)
   const [composeSent, setComposeSent] = useState(false)
@@ -773,6 +773,7 @@ export default function DPODashboard() {
                       {[
                         { key: 'overview', label: '📊 סקירה' },
                         { key: 'docs', label: `📄 מסמכים (${selectedOrg.documents?.length || 0})` },
+                        { key: 'rights', label: `👤 זכויות (${selectedOrg.rights_requests?.length || 0})` },
                         { key: 'messages', label: '💬 הודעות' },
                         { key: 'reminders', label: '⏰ תזכורות' },
                         { key: 'guidelines', label: '📋 הנחיות' },
@@ -793,6 +794,7 @@ export default function DPODashboard() {
                           <div className="dpo-chips">
                             <span className="dpo-chip">ציון: {selectedOrg.organization?.compliance_score || 0}%</span>
                             <span className="dpo-chip">מסמכים: {selectedOrg.documents?.length || 0}</span>
+                            <span className="dpo-chip">בקשות זכויות: {selectedOrg.rights_requests?.length || 0}</span>
                             <span className="dpo-chip">{selectedOrg.organization?.tier === 'extended' ? '⭐ מורחבת' : 'בסיסית'}</span>
                           </div>
                           {selectedOrg.documents?.length > 0 && (
@@ -987,6 +989,61 @@ export default function DPODashboard() {
                               )
                             })
                           })()}
+                        </div>
+                      )}
+
+                      {/* RIGHTS REQUESTS */}
+                      {orgTab === 'rights' && (
+                        <div>
+                          {!selectedOrg.rights_requests?.length ? (
+                            <p style={{ color: '#71717a', textAlign: 'center', padding: 20 }}>אין בקשות זכויות נושאי מידע</p>
+                          ) : (
+                            <>
+                              <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                                <span className="dpo-chip" style={{ background: '#fef3c7', border: '1px solid #fde68a' }}>
+                                  ⏳ ממתין: {selectedOrg.rights_requests.filter((r: any) => r.status === 'pending').length}
+                                </span>
+                                <span className="dpo-chip" style={{ background: '#dbeafe', border: '1px solid #bfdbfe' }}>
+                                  🔄 בטיפול: {selectedOrg.rights_requests.filter((r: any) => r.status === 'in_progress').length}
+                                </span>
+                                <span className="dpo-chip" style={{ background: '#dcfce7', border: '1px solid #bbf7d0' }}>
+                                  ✓ הושלם: {selectedOrg.rights_requests.filter((r: any) => r.status === 'completed').length}
+                                </span>
+                              </div>
+                              {selectedOrg.rights_requests.map((req: any) => {
+                                const typeLabels: Record<string, string> = { access: 'עיון', rectification: 'תיקון', erasure: 'מחיקה', objection: 'התנגדות' }
+                                const statusColors: Record<string, string> = { pending: '#f59e0b', in_progress: '#3b82f6', completed: '#22c55e', rejected: '#ef4444' }
+                                const statusLabels: Record<string, string> = { pending: 'ממתין', in_progress: 'בטיפול', completed: 'הושלם', rejected: 'נדחה' }
+                                const daysLeft = req.deadline ? Math.ceil((new Date(req.deadline).getTime() - Date.now()) / 86400000) : null
+                                return (
+                                  <div key={req.id} style={{ padding: '12px 14px', background: '#fff', border: '1px solid #e4e4e7', borderRadius: 8, marginBottom: 6 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                      <div>
+                                        <span style={{ fontSize: 14, fontWeight: 600 }}>{req.requester_name || 'לא צוין'}</span>
+                                        <span style={{ fontSize: 12, color: '#71717a', marginRight: 8 }}>{req.requester_email}</span>
+                                      </div>
+                                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: (statusColors[req.status] || '#71717a') + '15', color: statusColors[req.status] || '#71717a' }}>
+                                          {statusLabels[req.status] || req.status}
+                                        </span>
+                                        {daysLeft !== null && req.status !== 'completed' && req.status !== 'rejected' && (
+                                          <span style={{ fontSize: 10, fontWeight: 700, color: daysLeft <= 7 ? '#ef4444' : daysLeft <= 14 ? '#f59e0b' : '#22c55e' }}>
+                                            {daysLeft > 0 ? `${daysLeft} ימים` : `חריגה ${Math.abs(daysLeft)} ימים`}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div style={{ marginTop: 6, display: 'flex', gap: 8, fontSize: 12, color: '#71717a', flexWrap: 'wrap' }}>
+                                      <span>סוג: {typeLabels[req.request_type] || req.request_type}</span>
+                                      <span>מס׳: {req.request_number}</span>
+                                      <span>{new Date(req.created_at).toLocaleDateString('he-IL')}</span>
+                                    </div>
+                                    {req.details && <p style={{ fontSize: 12, color: '#52525b', marginTop: 4, lineHeight: 1.5 }}>{(req.details || '').slice(0, 200)}</p>}
+                                  </div>
+                                )
+                              })}
+                            </>
+                          )}
                         </div>
                       )}
 
