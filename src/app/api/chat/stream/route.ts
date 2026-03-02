@@ -52,7 +52,10 @@ const DPO_SYSTEM_PROMPT = `אתה עוזר דיגיטלי מומחה בהגנת 
 כשמבקשים ממך ליצור מסמך - צור את המסמך המלא עצמו, מוכן לשימוש. לא הסבר על מה צריך להיות בו!
 בסוף מסמך הוסף: [DOCUMENT_GENERATED]
 
-🎨 סגנון: חם ונגיש, מקצועי אבל לא יבש. פסקאות קצרות. הצעה לפעולה בסוף כל תשובה.`
+🎨 סגנון: חם ונגיש, מקצועי אבל לא יבש. פסקאות קצרות. הצעה לפעולה בסוף כל תשובה.
+
+🚫 נושאים מחוץ לתחום:
+אם המשתמש שואל שאלה שאינה קשורה כלל לפרטיות, אבטחת מידע, או ציות רגולטורי (למשל: מתכונים, תיקון מכשירים, ספורט, בידור, טכנולוגיה כללית) — ענה בהומור קל בעברית, הזכר שאתה מתמחה רק בפרטיות ואבטחה, והצע לחפש בגוגל. שמור על טון חם. דוגמה: "הייתי שמח לעזור 🍳 אבל אני מומחה רק לפרטיות ואבטחת מידע! לזה — נסו גוגל. לשאלות פרטיות — אני כאן 🔒"`
 
 function detectIntent(message: string): string {
   const msg = message.toLowerCase()
@@ -63,6 +66,9 @@ function detectIntent(message: string): string {
   if (/לדבר עם|להעביר ל|ממונה אנושי|בן אדם|עזרה אישית|מסובך/.test(msg)) return 'escalate'
   if (/ropa|מאגר.*מידע|פעילו.*עיבוד|מפת עיבוד/.test(msg)) return 'ropa'
   if (/\?|מה זה|איך |למה |מתי |האם |אפשר |מי צריך|צריך ל/.test(msg)) return 'question'
+  // Off-topic: no privacy/security keywords and message is substantial
+  const privacyKeywords = /פרטיות|אבטח|מידע|מסמך|חוק|רגולצי|ציות|dpo|gdpr|breach|מאגר|הסכמ|מדיניות|נוהל|עובד|ספק|מצלמ|קטינ|dsar|ropa|דיווח|אירוע|הדרכ|סיכון|ביקורת|הגנ|תיקון 13|amendment|privacy|security|compliance|data|consent|processor|controller/
+  if (msg.length > 10 && !privacyKeywords.test(msg)) return 'off_topic'
   return 'general'
 }
 
@@ -185,7 +191,8 @@ export async function POST(request: NextRequest) {
 
 ${intent === 'incident' ? '\n⚠️ זוהה אירוע אבטחה פוטנציאלי! וודא שהמשתמש מבין את הדחיפות (72 שעות).\n' : ''}
 ${intent === 'document' ? '\n📄 המשתמש מבקש מסמך - צור את המסמך המלא עצמו! השתמש ב-[DOCUMENT_GENERATED] בסוף.\n' : ''}
-${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה אנושי.\n' : ''}`
+${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה אנושי.\n' : ''}
+${intent === 'off_topic' ? '\n🚫 זוהתה שאלה שאינה בתחום הפרטיות. ענה בהומור קל קצר והפנה לחיפוש באינטרנט. אל תענה על השאלה עצמה.\n' : ''}`
 
     const maxTokens = intent === 'document' ? 4000 : 1500
 
