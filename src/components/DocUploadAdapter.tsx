@@ -107,7 +107,7 @@ export default function DocUploadAdapter({ orgId, orgName, supabase, onDocumentC
       }
 
       // Add some "exists" items for context
-      const existsCount = Math.max(2, Math.min(5, lines.filter(l => l.trim().length > 20 && !l.includes('[נוסף]')).length))
+      const existsCount = Math.max(2, Math.min(5, lines.filter((l: string) => l.trim().length > 20 && !l.includes('[נוסף]')).length))
       let added = 0
       for (const line of lines) {
         if (added >= 3) break
