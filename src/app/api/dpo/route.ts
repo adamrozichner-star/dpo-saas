@@ -591,6 +591,14 @@ export async function GET(request: NextRequest) {
         .limit(1)
         .single()
 
+      // Get rights requests (DSAR)
+      const { data: rightsRequests } = await supabase
+        .from('data_subject_requests')
+        .select('*')
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: false })
+        .limit(50)
+
       return NextResponse.json({
         organization: org,
         compliance,
@@ -599,7 +607,8 @@ export async function GET(request: NextRequest) {
         time_this_month_minutes: Math.round(totalMinutesThisMonth),
         onboarding_context: onboarding?.answers || {},
         profile: orgProfile?.profile_data || null,
-        contact_email: orgUser?.email || null
+        contact_email: orgUser?.email || null,
+        rights_requests: rightsRequests || []
       })
     }
 
