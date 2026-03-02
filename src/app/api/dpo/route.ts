@@ -599,6 +599,21 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false })
         .limit(50)
 
+      // Get security incidents
+      const { data: incidents } = await supabase
+        .from('security_incidents')
+        .select('*')
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      // Get ROPA processing activities
+      const { data: ropaActivities } = await supabase
+        .from('processing_activities')
+        .select('*')
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: false })
+
       return NextResponse.json({
         organization: org,
         compliance,
@@ -608,7 +623,9 @@ export async function GET(request: NextRequest) {
         onboarding_context: onboarding?.answers || {},
         profile: orgProfile?.profile_data || null,
         contact_email: orgUser?.email || null,
-        rights_requests: rightsRequests || []
+        rights_requests: rightsRequests || [],
+        incidents: incidents || [],
+        ropa_activities: ropaActivities || []
       })
     }
 
