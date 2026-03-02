@@ -669,8 +669,8 @@ function DashboardContent() {
 
   return (
     <div className="min-h-screen bg-stone-50 flex" dir="rtl">
-      {/* Welcome Modal — unpaid (orientation) or paid (celebration) */}
-      {showWelcome && !gateIsPaid && (
+      {/* Welcome Modal — only show after subscription check is complete */}
+      {showWelcome && !isChecking && !gateIsPaid && (
         <UnpaidWelcomeModal
           orgName={organization?.name || 'הארגון שלכם'}
           complianceScore={complianceScore}
@@ -678,7 +678,7 @@ function DashboardContent() {
           onClose={() => setShowWelcome(false)}
         />
       )}
-      {showWelcome && gateIsPaid && (
+      {showWelcome && !isChecking && gateIsPaid && (
         <WelcomeModal
           onClose={() => setShowWelcome(false)}
           orgName={organization?.name || ''}
