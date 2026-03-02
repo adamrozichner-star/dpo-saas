@@ -2653,8 +2653,192 @@ function SettingsTab({ organization, user, orgProfile, supabase }: { organizatio
         </div>
       </div>
 
+      {/* MFA — Two-Factor Authentication */}
+      <MfaSection supabase={supabase} />
+
       {/* Audit Log */}
       <AuditLogSection orgId={organization?.id} supabase={supabase} />
+    </div>
+  )
+}
+
+// MFA Enrollment sub-component
+function MfaSection({ supabase }: { supabase: any }) {
+  const [mfaEnabled, setMfaEnabled] = useState<boolean | null>(null)
+  const [factorId, setFactorId] = useState<string | null>(null)
+  const [enrolling, setEnrolling] = useState(false)
+  const [qrUri, setQrUri] = useState('')
+  const [secret, setSecret] = useState('')
+  const [verifyCode, setVerifyCode] = useState('')
+  const [verifying, setVerifying] = useState(false)
+  const [unenrolling, setUnenrolling] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [err, setErr] = useState('')
+
+  // Check MFA status on mount
+  useEffect(() => {
+    if (!supabase) return
+    checkMfaStatus()
+  }, [supabase])
+
+  const checkMfaStatus = async () => {
+    try {
+      const { data } = await supabase.auth.mfa.listFactors()
+      const totp = data?.totp?.[0]
+      if (totp && totp.status === 'verified') {
+        setMfaEnabled(true)
+        setFactorId(totp.id)
+      } else {
+        setMfaEnabled(false)
+        setFactorId(null)
+      }
+    } catch {
+      setMfaEnabled(false)
+    }
+  }
+
+  const handleEnroll = async () => {
+    setEnrolling(true)
+    setErr('')
+    try {
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: 'totp',
+        friendlyName: 'MyDPO Authenticator'
+      })
+      if (error) throw error
+      setQrUri(data.totp.qr_code)
+      setSecret(data.totp.secret)
+      setFactorId(data.id)
+    } catch (e: any) {
+      setErr(e.message || 'שגיאה בהפעלת אימות דו-שלבי')
+      setEnrolling(false)
+    }
+  }
+
+  const handleVerifyEnroll = async () => {
+    if (!factorId || verifyCode.length !== 6) return
+    setVerifying(true)
+    setErr('')
+    try {
+      const { data: challenge, error: chErr } = await supabase.auth.mfa.challenge({ factorId })
+      if (chErr) throw chErr
+
+      const { error: vErr } = await supabase.auth.mfa.verify({
+        factorId,
+        challengeId: challenge.id,
+        code: verifyCode
+      })
+      if (vErr) throw vErr
+
+      setMfaEnabled(true)
+      setEnrolling(false)
+      setQrUri('')
+      setSecret('')
+      setVerifyCode('')
+      setMsg('אימות דו-שלבי הופעל בהצלחה ✓')
+      setTimeout(() => setMsg(''), 4000)
+    } catch (e: any) {
+      setErr(e.message?.includes('Invalid') ? 'קוד שגוי, נסו שוב' : (e.message || 'שגיאה באימות'))
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  const handleUnenroll = async () => {
+    if (!factorId) return
+    setUnenrolling(true)
+    setErr('')
+    try {
+      const { error } = await supabase.auth.mfa.unenroll({ factorId })
+      if (error) throw error
+      setMfaEnabled(false)
+      setFactorId(null)
+      setMsg('אימות דו-שלבי בוטל')
+      setTimeout(() => setMsg(''), 4000)
+    } catch (e: any) {
+      setErr(e.message || 'שגיאה בביטול')
+    } finally {
+      setUnenrolling(false)
+    }
+  }
+
+  if (mfaEnabled === null) return null
+
+  return (
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="font-semibold text-stone-800">🔐 אימות דו-שלבי (2FA)</h2>
+          <p className="text-sm text-stone-500 mt-1">
+            {mfaEnabled ? 'מופעל — החשבון שלכם מוגן' : 'הוסיפו שכבת אבטחה נוספת לחשבון'}
+          </p>
+        </div>
+        <span className={`px-3 py-1 rounded-full text-xs font-medium ${mfaEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+          {mfaEnabled ? '✓ מופעל' : 'לא מופעל'}
+        </span>
+      </div>
+
+      {msg && <p className="text-sm text-emerald-600 mb-3">{msg}</p>}
+      {err && <p className="text-sm text-red-600 mb-3">{err}</p>}
+
+      {mfaEnabled && !enrolling ? (
+        <button
+          onClick={handleUnenroll}
+          disabled={unenrolling}
+          className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 disabled:opacity-50"
+        >
+          {unenrolling ? 'מבטל...' : 'ביטול אימות דו-שלבי'}
+        </button>
+      ) : !enrolling ? (
+        <button
+          onClick={handleEnroll}
+          className="px-4 py-2 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600"
+        >
+          הפעל אימות דו-שלבי
+        </button>
+      ) : qrUri ? (
+        <div className="space-y-4">
+          <div className="bg-stone-50 rounded-xl p-4 text-center">
+            <p className="text-sm font-medium text-stone-700 mb-3">סרקו את הקוד באפליקציית האימות</p>
+            <img src={qrUri} alt="QR Code" className="mx-auto" style={{ width: 200, height: 200 }} />
+            <details className="mt-3">
+              <summary className="text-xs text-stone-400 cursor-pointer">הזנה ידנית</summary>
+              <code className="text-xs text-stone-600 block mt-1 font-mono break-all" dir="ltr">{secret}</code>
+            </details>
+          </div>
+          <div>
+            <label className="text-sm font-medium text-stone-700 block mb-1">הזינו את הקוד מהאפליקציה:</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={verifyCode}
+                onChange={e => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="000000"
+                className="flex-1 border border-stone-300 rounded-lg px-3 py-2 text-center text-lg font-mono tracking-widest focus:outline-none focus:border-indigo-400"
+                dir="ltr"
+                onKeyDown={(e) => { if (e.key === 'Enter' && verifyCode.length === 6) handleVerifyEnroll() }}
+              />
+              <button
+                onClick={handleVerifyEnroll}
+                disabled={verifyCode.length !== 6 || verifying}
+                className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 disabled:opacity-50"
+              >
+                {verifying ? '...' : 'אמת'}
+              </button>
+            </div>
+          </div>
+          <button
+            onClick={() => { setEnrolling(false); setQrUri(''); setSecret(''); setVerifyCode('') }}
+            className="text-sm text-stone-500 hover:text-stone-700"
+          >
+            ביטול
+          </button>
+        </div>
+      ) : (
+        <p className="text-sm text-stone-500">טוען...</p>
+      )}
     </div>
   )
 }
