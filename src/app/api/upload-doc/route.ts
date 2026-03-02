@@ -38,8 +38,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File too short or unreadable' }, { status: 400 })
     }
 
-    if (fileText.length > 100000) {
-      return NextResponse.json({ error: 'File too large (max 100KB text)' }, { status: 400 })
+    if (fileText.length > 500000) {
+      return NextResponse.json({ error: 'File too large (max 500KB text)' }, { status: 400 })
     }
 
     // Get org profile for context
