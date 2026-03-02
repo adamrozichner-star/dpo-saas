@@ -33,8 +33,21 @@ export interface ActionOverride {
   note?: string
 }
 
+export interface ComplianceGuideline {
+  id: string
+  title: string
+  description: string
+  legalBasis: string
+  status: 'resolved' | 'required' | 'not_required' | 'info'
+  resolvedReason?: string
+  actionIds: string[]  // links to ComplianceAction ids this resolves
+  priority: 'critical' | 'high' | 'medium' | 'low'
+  icon: string  // emoji
+}
+
 export interface ComplianceSummary {
   actions: ComplianceAction[]
+  guidelines: ComplianceGuideline[]
   score: number
   securityLevel: 'basic' | 'medium' | 'high'
   securityLevelHe: string
@@ -439,8 +452,216 @@ export function deriveComplianceActions(
 
   const score = totalWeight > 0 ? Math.round((earnedWeight / totalWeight) * 100) : 0
 
+  // ═══════════════════════════════════════════════════
+  // REGULATORY GUIDELINES DERIVATION
+  // High-level determinations about what the law requires
+  // ═══════════════════════════════════════════════════
+  const guidelines: ComplianceGuideline[] = []
+
+  // 1. DPO Appointment — always resolved by MyDPO
+  guidelines.push({
+    id: 'gl-dpo-required',
+    title: 'חובת מינוי ממונה הגנת פרטיות (DPO)',
+    description: 'תיקון 13 מחייב מינוי ממונה הגנת פרטיות. הממונה שלכם מונתה באמצעות MyDPO.',
+    legalBasis: 'תיקון 13, סעיף 17ב',
+    status: 'resolved',
+    resolvedReason: 'עו״ד דנה כהן מונתה כממונה',
+    actionIds: ['dpo-appointed', 'dpo-letter-sign'],
+    priority: 'critical',
+    icon: '🛡️',
+  })
+
+  // 2. Reporting obligation to Privacy Authority
+  guidelines.push({
+    id: 'gl-reporting',
+    title: 'חובת דיווח לרשם מאגרי מידע',
+    description: needsReporting
+      ? `הארגון חייב בדיווח לרשות: ${reportingReasons.join(', ')}`
+      : 'על בסיס הנתונים שהוזנו, לא נמצאה חובת דיווח לרשות.',
+    legalBasis: 'חוק הגנת הפרטיות, סעיף 8',
+    status: needsReporting ? 'required' : 'not_required',
+    actionIds: ['reporting-obligation'],
+    priority: needsReporting ? 'critical' : 'low',
+    icon: '📋',
+  })
+
+  // 3. CISO requirement
+  guidelines.push({
+    id: 'gl-ciso',
+    title: 'צורך בממונה אבטחת מידע (CISO)',
+    description: needsCiso
+      ? (cisoReason || 'נדרש מינוי CISO בנוסף לממונה פרטיות')
+      : securityOwner && securityOwner !== 'none'
+        ? `אחראי אבטחה קיים בארגון. ה-CISO יכול לשמש גם כ-DPO רק אם אין ניגוד עניינים.`
+        : 'על בסיס היקף הפעילות, אין חובה למנות CISO בנפרד.',
+    legalBasis: 'תיקון 13, סעיף 17ג',
+    status: needsCiso
+      ? (securityOwner && securityOwner !== 'none' ? 'resolved' : 'required')
+      : 'not_required',
+    resolvedReason: securityOwner && securityOwner !== 'none' ? 'אחראי אבטחה קיים' : undefined,
+    actionIds: ['ciso-check'],
+    priority: needsCiso ? 'high' : 'low',
+    icon: '🔐',
+  })
+
+  // 4. Consent mechanisms
+  const needsConsent = hasWebLeads || (hasConsent === 'no')
+  guidelines.push({
+    id: 'gl-consent',
+    title: 'חובת הסכמה מדעת לאיסוף מידע',
+    description: needsConsent
+      ? 'הארגון אוסף מידע אישי — נדרש מנגנון הסכמה מפורש בטפסים ובאתר.'
+      : hasConsent === 'yes'
+        ? 'מנגנון הסכמה קיים. וודאו שנוסח ההסכמה עומד בדרישות תיקון 13.'
+        : 'על בסיס הנתונים שהוזנו, אין איסוף מידע ישיר הדורש הסכמה.',
+    legalBasis: 'תיקון 13, חובת יידוע מורחב',
+    status: needsConsent && hasConsent !== 'yes' ? 'required' : hasConsent === 'yes' ? 'resolved' : 'not_required',
+    resolvedReason: hasConsent === 'yes' ? 'מנגנון הסכמה מדווח כקיים' : undefined,
+    actionIds: ['consent-form', 'consent-implementation'],
+    priority: needsConsent ? 'high' : 'low',
+    icon: '✋',
+  })
+
+  // 5. Data Processing Agreements
+  guidelines.push({
+    id: 'gl-dpa',
+    title: 'הסכמי עיבוד מידע עם ספקים חיצוניים',
+    description: allProcessors.length > 0
+      ? `זוהו ${allProcessors.length} ספקים חיצוניים המעבדים מידע — נדרש הסכם בכתב עם כל אחד.`
+      : 'לא דווחו ספקים חיצוניים המעבדים מידע אישי.',
+    legalBasis: 'תיקון 13, חובת הסדרה חוזית',
+    status: allProcessors.length > 0 ? 'required' : 'not_required',
+    actionIds: ['processor-agreements'],
+    priority: allProcessors.length > 0 ? 'medium' : 'low',
+    icon: '📝',
+  })
+
+  // 6. Access control
+  guidelines.push({
+    id: 'gl-access-control',
+    title: 'בקרת גישה למאגרי מידע',
+    description: accessControl === 'all'
+      ? 'כל העובדים רואים את כל המידע — חובה להגדיר הרשאות גישה לפי תפקיד.'
+      : accessControl === 'role'
+        ? 'קיימת בקרת גישה לפי תפקיד. וודאו שהיא מתועדת ומעודכנת.'
+        : 'וודאו שרק מורשים ניגשים למידע אישי.',
+    legalBasis: 'תקנות אבטחת מידע 2017, סעיף 5',
+    status: accessControl === 'all' ? 'required' : accessControl === 'role' ? 'resolved' : 'info',
+    resolvedReason: accessControl === 'role' ? 'בקרת גישה לפי תפקיד מוגדרת' : undefined,
+    actionIds: ['access-control'],
+    priority: accessControl === 'all' ? 'high' : 'low',
+    icon: '🔑',
+  })
+
+  // 7. CV deletion policy
+  if (hasCvs) {
+    const cvsRetention = dbDetails?.cvs?.retention
+    const hasPolicy = cvsRetention === 'quarterly' || cvsRetention === 'policy'
+    guidelines.push({
+      id: 'gl-cv-deletion',
+      title: 'מדיניות שמירה ומחיקה של קורות חיים',
+      description: hasPolicy
+        ? 'קיימת מדיניות מחיקה. וודאו שהיא מיושמת בפועל.'
+        : 'חובה למחוק קורות חיים תוך 3 חודשים ממועד הקבלה (עד שנתיים לצורך מקצועי מתועד).',
+      legalBasis: 'חוק הגנת הפרטיות, תקנות שמירת מידע',
+      status: hasPolicy ? 'resolved' : 'required',
+      resolvedReason: hasPolicy ? 'מדיניות מחיקה מדווחת כקיימת' : undefined,
+      actionIds: ['cv-deletion'],
+      priority: hasPolicy ? 'low' : 'high',
+      icon: '📄',
+    })
+  }
+
+  // 8. Employee training
+  if (maxAccess > 10) {
+    guidelines.push({
+      id: 'gl-training',
+      title: 'הדרכת עובדים בנושא הגנת פרטיות',
+      description: 'עובדים עם גישה למידע אישי חייבים לעבור הדרכה. מומלץ לתעד את ההדרכה.',
+      legalBasis: 'תקנות אבטחת מידע 2017, סעיף 10',
+      status: 'required',
+      actionIds: ['employee-training'],
+      priority: 'medium',
+      icon: '🎓',
+    })
+  }
+
+  // 9. CCTV oversight
+  if (hasCameras) {
+    const hasOfficer = !!v3Answers?.cameraOwnerName
+    guidelines.push({
+      id: 'gl-cameras',
+      title: 'מינוי אחראי מצלמות אבטחה',
+      description: hasOfficer
+        ? `אחראי מצלמות: ${v3Answers.cameraOwnerName}. וודאו שמונה בכתב.`
+        : 'הארגון מפעיל מצלמות — חובה למנות אחראי מצלמות בכתב.',
+      legalBasis: 'חוק הגנת הפרטיות, סעיף 7',
+      status: hasOfficer ? 'resolved' : 'required',
+      resolvedReason: hasOfficer ? `${v3Answers.cameraOwnerName} מונה` : undefined,
+      actionIds: ['camera-officer'],
+      priority: hasOfficer ? 'low' : 'medium',
+      icon: '📹',
+    })
+  }
+
+  // 10. Data breach procedures — auto-resolved (incident module)
+  guidelines.push({
+    id: 'gl-breach-procedures',
+    title: 'נוהל טיפול באירועי אבטחה',
+    description: 'מערכת MyDPO כוללת מודול ניהול אירועי אבטחה עם ספירה לאחור של 72 שעות לדיווח לרשות.',
+    legalBasis: 'תיקון 13, חובת דיווח אירוע אבטחה',
+    status: 'resolved',
+    resolvedReason: 'מובנה במערכת MyDPO',
+    actionIds: [],
+    priority: 'high',
+    icon: '🚨',
+  })
+
+  // 11. Data subject rights handling — auto-resolved (rights module)
+  guidelines.push({
+    id: 'gl-subject-rights',
+    title: 'טיפול בבקשות פרטיות של נושאי מידע',
+    description: 'מערכת MyDPO כוללת טופס ציבורי לבקשות פרטיות עם מעקב ולוחות זמנים (30 יום).',
+    legalBasis: 'תיקון 13, זכויות נושא המידע',
+    status: 'resolved',
+    resolvedReason: 'מובנה במערכת MyDPO',
+    actionIds: [],
+    priority: 'high',
+    icon: '👤',
+  })
+
+  // 12. ROPA maintenance — auto-resolved
+  guidelines.push({
+    id: 'gl-ropa',
+    title: 'תחזוקת מפת עיבוד נתונים (ROPA)',
+    description: `המערכת מייצרת ומתחזקת מפת עיבוד מ-${dbCount} מאגרים ו-${allProcessors.length} ספקים.`,
+    legalBasis: 'תיקון 13, חובת תיעוד פעילויות עיבוד',
+    status: 'resolved',
+    resolvedReason: 'מובנה במערכת MyDPO',
+    actionIds: ['ropa'],
+    priority: 'medium',
+    icon: '🗺️',
+  })
+
+  // Apply overrides to guidelines too
+  if (actionOverrides) {
+    for (const gl of guidelines) {
+      if (gl.status === 'required' && gl.actionIds.length > 0) {
+        const allResolved = gl.actionIds.every(aid => {
+          const override = actionOverrides[aid]
+          return override?.status === 'completed'
+        })
+        if (allResolved) {
+          gl.status = 'resolved'
+          gl.resolvedReason = 'סומן כבוצע על ידי המשתמש'
+        }
+      }
+    }
+  }
+
   return {
     actions,
+    guidelines,
     score,
     securityLevel,
     securityLevelHe,
