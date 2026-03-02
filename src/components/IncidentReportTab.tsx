@@ -20,6 +20,12 @@ export default function IncidentReportTab({ orgId, incidents, onRefresh }: Incid
   const [submitted, setSubmitted] = useState(false)
   const [expandedIncident, setExpandedIncident] = useState<string | null>(null)
   
+  // Status update state
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [updateStatus, setUpdateStatus] = useState('')
+  const [updateNotes, setUpdateNotes] = useState('')
+  const [isUpdating, setIsUpdating] = useState(false)
+  
   // Form state
   const [formData, setFormData] = useState({
     title: '',
@@ -146,6 +152,45 @@ export default function IncidentReportTab({ orgId, incidents, onRefresh }: Incid
       setIsSubmitting(false)
     }
   }
+
+  const handleStatusUpdate = async (incidentId: string) => {
+    if (!updateStatus) return
+    setIsUpdating(true)
+    try {
+      const response = await fetch('/api/incidents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_status',
+          incidentId,
+          status: updateStatus,
+          notes: updateNotes || undefined
+        })
+      })
+      if (response.ok) {
+        setUpdatingId(null)
+        setUpdateStatus('')
+        setUpdateNotes('')
+        onRefresh()
+      } else {
+        alert('שגיאה בעדכון הסטטוס')
+      }
+    } catch (err) {
+      console.error('Status update error:', err)
+      alert('שגיאה בעדכון')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const statusFlow = [
+    { value: 'investigating', label: 'בבדיקה', icon: '🔍' },
+    { value: 'contained', label: 'הוכל', icon: '🛡️' },
+    { value: 'notified_authority', label: 'דווח לרשות', icon: '📤' },
+    { value: 'notified_individuals', label: 'הודעה לנפגעים', icon: '👥' },
+    { value: 'resolved', label: 'נפתר', icon: '✅' },
+    { value: 'closed', label: 'נסגר', icon: '🔒' },
+  ]
 
   return (
     <div className="space-y-6">
@@ -493,6 +538,72 @@ export default function IncidentReportTab({ orgId, incidents, onRefresh }: Incid
                     <div className="bg-blue-50 rounded p-3 mt-2">
                       <label className="text-xs text-blue-600 font-medium">סיכום AI:</label>
                       <p className="text-sm text-blue-800">{incident.ai_summary}</p>
+                    </div>
+                  )}
+
+                  {/* Status Update — inline */}
+                  {!['resolved', 'closed'].includes(incident.status) && (
+                    <div className="border-t pt-3 mt-3">
+                      {updatingId === incident.id ? (
+                        <div className="bg-white rounded-lg border p-3 space-y-3">
+                          <label className="text-xs font-medium text-gray-600">עדכון סטטוס:</label>
+                          <div className="flex flex-wrap gap-2">
+                            {statusFlow
+                              .filter(s => {
+                                // Only show statuses that come after current
+                                const order = ['new', 'reported', 'investigating', 'contained', 'notified_authority', 'notified_individuals', 'resolved', 'closed']
+                                return order.indexOf(s.value) > order.indexOf(incident.status)
+                              })
+                              .map(s => (
+                                <button
+                                  key={s.value}
+                                  onClick={() => setUpdateStatus(s.value)}
+                                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+                                    updateStatus === s.value 
+                                      ? 'bg-indigo-100 border-indigo-400 text-indigo-700' 
+                                      : 'bg-gray-50 border-gray-200 hover:bg-gray-100 text-gray-700'
+                                  }`}
+                                >
+                                  {s.icon} {s.label}
+                                </button>
+                              ))
+                            }
+                          </div>
+                          <textarea
+                            value={updateNotes}
+                            onChange={e => setUpdateNotes(e.target.value)}
+                            placeholder="הערות (אופציונלי)..."
+                            rows={2}
+                            className="w-full border rounded-lg p-2 text-sm"
+                          />
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => { setUpdatingId(null); setUpdateStatus(''); setUpdateNotes('') }}
+                              className="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50"
+                            >
+                              ביטול
+                            </button>
+                            <button
+                              onClick={() => handleStatusUpdate(incident.id)}
+                              disabled={!updateStatus || isUpdating}
+                              className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-1"
+                            >
+                              {isUpdating ? (
+                                <><div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> מעדכן...</>
+                              ) : (
+                                '✓ עדכן'
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setUpdatingId(incident.id); setUpdateStatus(''); setUpdateNotes('') }}
+                          className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg text-sm font-medium hover:bg-indigo-100 transition-colors flex items-center gap-2 border border-indigo-200"
+                        >
+                          📝 עדכן סטטוס
+                        </button>
+                      )}
                     </div>
                   )}
 
