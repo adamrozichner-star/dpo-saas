@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
-    const { orgId, orgName, businessId, answers, v3Answers, singleDocType } = await request.json()
+    let { orgId, orgName, businessId, answers, v3Answers, singleDocType } = await request.json()
 
     console.log('Generating docs for:', orgName, 'orgId:', orgId, singleDocType ? `(single: ${singleDocType})` : '(all)')
     console.log('Answers received:', answers?.length || 0)
@@ -37,6 +37,29 @@ export async function POST(request: NextRequest) {
 
     if (!orgId || !orgName) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    // Auto-fetch stored answers if not provided (e.g. from DocCreator)
+    if ((!answers || answers.length === 0) || (!v3Answers || Object.keys(v3Answers).length === 0)) {
+      const { data: storedProfile } = await supabase
+        .from('organization_profiles')
+        .select('profile_data')
+        .eq('org_id', orgId)
+        .single()
+
+      if (storedProfile?.profile_data) {
+        if (!answers || answers.length === 0) {
+          answers = storedProfile.profile_data.answers || []
+          console.log('Loaded stored answers:', answers.length)
+        }
+        if (!v3Answers || Object.keys(v3Answers).length === 0) {
+          v3Answers = storedProfile.profile_data.v3Answers || {}
+          console.log('Loaded stored v3Answers:', Object.keys(v3Answers).length, 'keys')
+        }
+        if (!businessId) {
+          businessId = storedProfile.profile_data.businessId || ''
+        }
+      }
     }
 
     // Get DPO details from database (fallback to config if not found)
