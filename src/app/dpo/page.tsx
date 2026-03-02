@@ -132,7 +132,7 @@ export default function DPODashboard() {
   const [showAllPending, setShowAllPending] = useState(false)
   const [showAllResolved, setShowAllResolved] = useState(false)
   const [selectedOrg, setSelectedOrg] = useState<any>(null)
-  const [orgTab, setOrgTab] = useState<'overview'|'docs'|'rights'|'messages'|'reminders'|'guidelines'|'activity'|'profile'>('overview')
+  const [orgTab, setOrgTab] = useState<'overview'|'docs'|'rights'|'incidents'|'ropa'|'messages'|'reminders'|'guidelines'|'activity'|'profile'>('overview')
   const [composeMsg, setComposeMsg] = useState('')
   const [composeSending, setComposeSending] = useState(false)
   const [composeSent, setComposeSent] = useState(false)
@@ -140,6 +140,9 @@ export default function DPODashboard() {
   // NEW: collapsible sections
   const [pendingCollapsed, setPendingCollapsed] = useState(false)
   const [resolvedCollapsed, setResolvedCollapsed] = useState(false)
+
+  // NEW: full-screen org modal
+  const [modalFullScreen, setModalFullScreen] = useState(false)
 
   // NEW: type filter for inbox
   const [typeFilter, setTypeFilter] = useState<string>('all')
@@ -207,6 +210,7 @@ export default function DPODashboard() {
       setOrgTab('overview')
       setComposeMsg(''); setComposeSent(false)
       setModalEditDoc(null)
+      setModalFullScreen(false)
     } catch {}
   }
 
@@ -752,8 +756,8 @@ export default function DPODashboard() {
 
               {/* ORG DETAIL MODAL — 7 TABS */}
               {selectedOrg && (
-                <div className="dpo-modal-overlay" onClick={() => setSelectedOrg(null)}>
-                  <div className="dpo-modal dpo-modal-wide" onClick={e => e.stopPropagation()}>
+                <div className="dpo-modal-overlay" onClick={() => { setSelectedOrg(null); setModalFullScreen(false) }}>
+                  <div className={`dpo-modal ${modalFullScreen ? 'dpo-modal-fullscreen' : 'dpo-modal-wide'}`} onClick={e => e.stopPropagation()}>
                     <div className="dpo-modal-head">
                       <div>
                         <h3>{selectedOrg.organization?.name}</h3>
@@ -765,7 +769,12 @@ export default function DPODashboard() {
                           </span>
                         </div>
                       </div>
-                      <button className="dpo-btn-sm" onClick={() => setSelectedOrg(null)}>✕</button>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <button className="dpo-btn-sm" onClick={() => setModalFullScreen(!modalFullScreen)} title={modalFullScreen ? 'מצב רגיל' : 'מסך מלא'}>
+                          {modalFullScreen ? '⊡' : '⬜'}
+                        </button>
+                        <button className="dpo-btn-sm" onClick={() => { setSelectedOrg(null); setModalFullScreen(false) }}>✕</button>
+                      </div>
                     </div>
                     
                     {/* 7 Tabs */}
@@ -774,6 +783,8 @@ export default function DPODashboard() {
                         { key: 'overview', label: '📊 סקירה' },
                         { key: 'docs', label: `📄 מסמכים (${selectedOrg.documents?.length || 0})` },
                         { key: 'rights', label: `👤 זכויות (${selectedOrg.rights_requests?.length || 0})` },
+                        { key: 'incidents', label: `🚨 אירועים (${selectedOrg.incidents?.length || 0})` },
+                        { key: 'ropa', label: `📊 ROPA (${selectedOrg.ropa_activities?.length || 0})` },
                         { key: 'messages', label: '💬 הודעות' },
                         { key: 'reminders', label: '⏰ תזכורות' },
                         { key: 'guidelines', label: '📋 הנחיות' },
@@ -791,28 +802,82 @@ export default function DPODashboard() {
                       {/* OVERVIEW */}
                       {orgTab === 'overview' && (
                         <>
-                          <div className="dpo-chips">
-                            <span className="dpo-chip">ציון: {selectedOrg.organization?.compliance_score || 0}%</span>
-                            <span className="dpo-chip">מסמכים: {selectedOrg.documents?.length || 0}</span>
-                            <span className="dpo-chip">בקשות זכויות: {selectedOrg.rights_requests?.length || 0}</span>
-                            <span className="dpo-chip">{selectedOrg.organization?.tier === 'extended' ? '⭐ מורחבת' : 'בסיסית'}</span>
-                          </div>
-                          {selectedOrg.documents?.length > 0 && (
-                            <div style={{ marginTop: 12 }}>
-                              <span className="dpo-sub">📄 מסמכים</span>
-                              {selectedOrg.documents.map((d: any) => (
-                                <div key={d.id} className="dpo-done-row">
-                                  <span style={{ color: d.status === 'active' ? '#22c55e' : '#4f46e5' }}>
-                                    {d.status === 'active' ? '✓' : '⏳'}
-                                  </span>
-                                  <span className="dpo-done-title">{d.title || DOC_LABELS[d.type] || d.type}</span>
-                                  <span className="dpo-done-meta">
-                                    {d.status === 'active' ? 'פעיל' : d.status === 'pending_review' ? 'ממתין' : d.status}
-                                  </span>
+                          {/* Compliance Score Gauge */}
+                          {(() => {
+                            const score = selectedOrg.organization?.compliance_score || 0
+                            const scoreColor = score >= 70 ? '#22c55e' : score >= 40 ? '#f59e0b' : '#ef4444'
+                            const scoreLabel = score >= 70 ? 'תקין' : score >= 40 ? 'חלקי' : 'נמוך'
+                            const activeDocs = selectedOrg.documents?.filter((d: any) => d.status === 'active').length || 0
+                            const pendingDocs = selectedOrg.documents?.filter((d: any) => d.status !== 'active').length || 0
+                            const activeIncidents = selectedOrg.incidents?.filter((i: any) => !['resolved', 'closed'].includes(i.status)).length || 0
+                            const openRights = selectedOrg.rights_requests?.filter((r: any) => r.status === 'pending' || r.status === 'in_progress').length || 0
+                            const ropaCount = selectedOrg.ropa_activities?.length || 0
+
+                            return (
+                              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 16 }}>
+                                {/* Score card */}
+                                <div style={{ flex: '1 1 140px', minWidth: 140, background: `linear-gradient(135deg, ${scoreColor}08, ${scoreColor}15)`, border: `1px solid ${scoreColor}30`, borderRadius: 12, padding: '16px 14px', textAlign: 'center' }}>
+                                  <div style={{ fontSize: 36, fontWeight: 900, color: scoreColor, lineHeight: 1 }}>{score}%</div>
+                                  <div style={{ fontSize: 11, color: scoreColor, fontWeight: 600, marginTop: 4 }}>ציון ציות — {scoreLabel}</div>
+                                  <div style={{ marginTop: 8, height: 6, background: '#e4e4e7', borderRadius: 3, overflow: 'hidden' }}>
+                                    <div style={{ width: `${score}%`, height: '100%', background: scoreColor, borderRadius: 3, transition: 'width .3s' }} />
+                                  </div>
                                 </div>
-                              ))}
-                            </div>
-                          )}
+
+                                {/* Quick stats grid */}
+                                <div style={{ flex: '2 1 280px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 8 }}>
+                                  {[
+                                    { num: activeDocs, label: 'מסמכים פעילים', color: '#22c55e', icon: '📄' },
+                                    { num: pendingDocs, label: 'ממתינים', color: pendingDocs > 0 ? '#f59e0b' : '#a1a1aa', icon: '⏳' },
+                                    { num: activeIncidents, label: 'אירועים פתוחים', color: activeIncidents > 0 ? '#ef4444' : '#22c55e', icon: '🚨' },
+                                    { num: openRights, label: 'בקשות פתוחות', color: openRights > 0 ? '#3b82f6' : '#a1a1aa', icon: '👤' },
+                                    { num: ropaCount, label: 'פעילויות ROPA', color: '#8b5cf6', icon: '📊' },
+                                    { num: selectedOrg.time_this_month_minutes || 0, label: 'דקות DPO החודש', color: '#71717a', icon: '⏱️' },
+                                  ].map((s, i) => (
+                                    <div key={i} style={{ padding: '10px 8px', background: '#fff', border: '1px solid #f0f0f0', borderRadius: 8, textAlign: 'center' }}>
+                                      <div style={{ fontSize: 11 }}>{s.icon}</div>
+                                      <div style={{ fontSize: 20, fontWeight: 800, color: s.color, lineHeight: 1.1, marginTop: 2 }}>{s.num}</div>
+                                      <div style={{ fontSize: 10, color: '#a1a1aa', marginTop: 2 }}>{s.label}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          })()}
+
+                          {/* Recent activity timeline */}
+                          <div style={{ marginTop: 4 }}>
+                            <span className="dpo-sub">📜 פעילות אחרונה</span>
+                            {(() => {
+                              // Merge all activity into single timeline
+                              const events: { date: string; icon: string; text: string; color: string }[] = []
+
+                              selectedOrg.queue_history?.slice(0, 5).forEach((q: any) => {
+                                const cfg = TYPE_MAP[q.type] || { emoji: '📌', label: q.type }
+                                events.push({ date: q.resolved_at || q.created_at, icon: cfg.emoji, text: `${cfg.label}: ${q.title}`, color: q.status === 'resolved' ? '#22c55e' : '#f59e0b' })
+                              })
+
+                              selectedOrg.incidents?.slice(0, 3).forEach((i: any) => {
+                                events.push({ date: i.created_at, icon: '🚨', text: `אירוע: ${i.title}`, color: '#ef4444' })
+                              })
+
+                              selectedOrg.rights_requests?.slice(0, 3).forEach((r: any) => {
+                                events.push({ date: r.created_at, icon: '👤', text: `בקשת ${r.request_type}: ${r.requester_name || r.requester_email}`, color: '#3b82f6' })
+                              })
+
+                              events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+                              if (events.length === 0) return <p style={{ color: '#a1a1aa', fontSize: 13, padding: 10 }}>אין פעילות</p>
+
+                              return events.slice(0, 8).map((ev, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #f4f4f5', fontSize: 13 }}>
+                                  <span style={{ color: ev.color, fontWeight: 700 }}>{ev.icon}</span>
+                                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.text}</span>
+                                  <span style={{ fontSize: 11, color: '#a1a1aa', flexShrink: 0 }}>{timeAgo(ev.date)}</span>
+                                </div>
+                              ))
+                            })()}
+                          </div>
                         </>
                       )}
 
@@ -1047,6 +1112,136 @@ export default function DPODashboard() {
                         </div>
                       )}
 
+                      {/* INCIDENTS */}
+                      {orgTab === 'incidents' && (
+                        <div>
+                          {!selectedOrg.incidents?.length ? (
+                            <p style={{ color: '#71717a', textAlign: 'center', padding: 20 }}>אין אירועי אבטחה</p>
+                          ) : (() => {
+                            const active = selectedOrg.incidents.filter((i: any) => !['resolved', 'closed'].includes(i.status))
+                            const closed = selectedOrg.incidents.filter((i: any) => ['resolved', 'closed'].includes(i.status))
+                            const sevColors: Record<string, string> = { critical: '#dc2626', high: '#ef4444', medium: '#f59e0b', low: '#22c55e' }
+                            const sevLabels: Record<string, string> = { critical: 'קריטי', high: 'גבוה', medium: 'בינוני', low: 'נמוך' }
+                            const statLabels: Record<string, string> = { new: 'חדש', investigating: 'בבדיקה', contained: 'נבלם', resolved: 'טופל', closed: 'סגור' }
+
+                            const renderIncident = (inc: any) => {
+                              const isActive = !['resolved', 'closed'].includes(inc.status)
+                              const deadline = inc.authority_deadline ? new Date(inc.authority_deadline) : null
+                              const hoursLeft = deadline ? Math.floor((deadline.getTime() - Date.now()) / 3600000) : null
+                              return (
+                                <div key={inc.id} style={{ padding: '12px 14px', background: '#fff', border: `1px solid ${isActive ? '#fecaca' : '#e4e4e7'}`, borderRadius: 8, marginBottom: 6, borderRight: `3px solid ${sevColors[inc.severity] || '#71717a'}` }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                                    <span style={{ fontSize: 14, fontWeight: 600 }}>{inc.title}</span>
+                                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4, background: (sevColors[inc.severity] || '#71717a') + '15', color: sevColors[inc.severity] || '#71717a' }}>
+                                        {sevLabels[inc.severity] || inc.severity}
+                                      </span>
+                                      <span style={{ fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 4, background: isActive ? '#fef3c7' : '#f0fdf4', color: isActive ? '#92400e' : '#166534' }}>
+                                        {statLabels[inc.status] || inc.status}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  {inc.description && <p style={{ fontSize: 12, color: '#52525b', marginTop: 4, lineHeight: 1.5 }}>{(inc.description || '').slice(0, 200)}</p>}
+                                  <div style={{ marginTop: 6, display: 'flex', gap: 10, fontSize: 11, color: '#a1a1aa', flexWrap: 'wrap' }}>
+                                    <span>{new Date(inc.created_at).toLocaleDateString('he-IL')}</span>
+                                    {inc.incident_type && <span>{inc.incident_type}</span>}
+                                    {hoursLeft !== null && isActive && (
+                                      <span style={{ fontWeight: 700, color: hoursLeft < 24 ? '#dc2626' : hoursLeft < 48 ? '#f59e0b' : '#22c55e' }}>
+                                        ⏰ {hoursLeft > 0 ? `${hoursLeft} שעות לדיווח` : 'חריגת זמן!'}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            }
+
+                            return (
+                              <>
+                                <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                                  <span className="dpo-chip" style={{ background: active.length > 0 ? '#fee2e2' : '#dcfce7', border: `1px solid ${active.length > 0 ? '#fecaca' : '#bbf7d0'}`, fontWeight: 600 }}>
+                                    {active.length > 0 ? `🔴 ${active.length} פעילים` : '✅ אין אירועים פתוחים'}
+                                  </span>
+                                  <span className="dpo-chip">{closed.length} סגורים</span>
+                                </div>
+                                {active.length > 0 && (
+                                  <div style={{ marginBottom: 16 }}>
+                                    <span className="dpo-sub">🚨 אירועים פעילים</span>
+                                    {active.map(renderIncident)}
+                                  </div>
+                                )}
+                                {closed.length > 0 && (
+                                  <div>
+                                    <span className="dpo-sub">✅ אירועים שנסגרו</span>
+                                    {closed.map(renderIncident)}
+                                  </div>
+                                )}
+                              </>
+                            )
+                          })()}
+                        </div>
+                      )}
+
+                      {/* ROPA — Processing Activities */}
+                      {orgTab === 'ropa' && (
+                        <div>
+                          {!selectedOrg.ropa_activities?.length ? (
+                            <p style={{ color: '#71717a', textAlign: 'center', padding: 20 }}>אין פעילויות עיבוד מתועדות</p>
+                          ) : (
+                            <>
+                              <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                                <span className="dpo-chip" style={{ fontWeight: 600 }}>📊 {selectedOrg.ropa_activities.length} פעילויות</span>
+                                {(() => {
+                                  const bases = new Set(selectedOrg.ropa_activities.map((a: any) => a.legal_basis).filter(Boolean))
+                                  return <span className="dpo-chip">{bases.size} בסיסים משפטיים</span>
+                                })()}
+                              </div>
+                              <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                                  <thead>
+                                    <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e4e4e7' }}>
+                                      {['פעילות', 'מטרה', 'בסיס משפטי', 'רגישות', 'מעודכן'].map(h => (
+                                        <th key={h} style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>{h}</th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {selectedOrg.ropa_activities.map((act: any) => {
+                                      const riskColors: Record<string, string> = { high: '#dc2626', medium: '#f59e0b', low: '#22c55e' }
+                                      const riskLabels: Record<string, string> = { high: 'גבוהה', medium: 'בינונית', low: 'נמוכה' }
+                                      const basisLabels: Record<string, string> = {
+                                        consent: 'הסכמה', contract: 'חוזה', legal_obligation: 'חובה חוקית',
+                                        vital_interest: 'אינטרס חיוני', public_interest: 'אינטרס ציבורי', legitimate_interest: 'אינטרס לגיטימי'
+                                      }
+                                      return (
+                                        <tr key={act.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                                          <td style={{ padding: '8px 10px', fontWeight: 500, color: '#1e293b' }}>{act.name || act.activity_name || '-'}</td>
+                                          <td style={{ padding: '8px 10px', color: '#64748b', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {act.purpose || '-'}
+                                          </td>
+                                          <td style={{ padding: '8px 10px' }}>
+                                            <span style={{ fontSize: 10, padding: '2px 6px', borderRadius: 4, background: '#eef2ff', color: '#4338ca' }}>
+                                              {basisLabels[act.legal_basis] || act.legal_basis || '-'}
+                                            </span>
+                                          </td>
+                                          <td style={{ padding: '8px 10px' }}>
+                                            <span style={{ fontSize: 10, fontWeight: 600, color: riskColors[act.sensitivity_level || act.risk_level] || '#71717a' }}>
+                                              {riskLabels[act.sensitivity_level || act.risk_level] || '-'}
+                                            </span>
+                                          </td>
+                                          <td style={{ padding: '8px 10px', color: '#a1a1aa', whiteSpace: 'nowrap' }}>
+                                            {act.updated_at ? new Date(act.updated_at).toLocaleDateString('he-IL') : new Date(act.created_at).toLocaleDateString('he-IL')}
+                                          </td>
+                                        </tr>
+                                      )
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
+
                       {/* MESSAGES — compose + send */}
                       {orgTab === 'messages' && (
                         <div>
@@ -1185,9 +1380,9 @@ const CSS = `
 .dpo-page{font-family:'Heebo',sans-serif;background:#fafafa;min-height:100vh;color:#18181b}
 
 /* NAV */
-.dpo-nav{display:flex;align-items:center;justify-content:space-between;padding:8px 24px;border-bottom:1px solid #e4e4e7;background:#fff;position:sticky;top:0;z-index:10;gap:8px;flex-wrap:wrap}
+.dpo-nav{display:flex;align-items:center;justify-content:space-between;padding:8px 24px;border-bottom:1px solid #e4e4e7;background:linear-gradient(180deg,#fff 0%,#fafafa 100%);position:sticky;top:0;z-index:10;gap:8px;flex-wrap:wrap}
 .dpo-nav-right{display:flex;align-items:center;gap:10px}
-.dpo-logo{font-size:16px;font-weight:800;color:#18181b}
+.dpo-logo{font-size:16px;font-weight:900;background:linear-gradient(135deg,#4f46e5,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 .dpo-nav-sep{color:#d4d4d8}
 .dpo-nav-name{font-size:13px;color:#71717a}
 .dpo-nav-left{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
@@ -1210,10 +1405,10 @@ const CSS = `
 .dpo-main{max-width:860px;margin:0 auto;padding:20px 16px 60px}
 
 /* KPIs */
-.dpo-kpis{display:flex;gap:16px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #e4e4e7;overflow-x:auto}
-.dpo-kpi{text-align:center;flex:1;min-width:70px}
-.dpo-kpi-num{font-size:22px;font-weight:900;line-height:1.1}
-.dpo-kpi-label{font-size:11px;color:#71717a;margin-top:2px}
+.dpo-kpis{display:flex;gap:12px;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #e4e4e7;overflow-x:auto}
+.dpo-kpi{text-align:center;flex:1;min-width:70px;background:#fff;border:1px solid #f0f0f0;border-radius:10px;padding:12px 8px}
+.dpo-kpi-num{font-size:24px;font-weight:900;line-height:1.1}
+.dpo-kpi-label{font-size:11px;color:#71717a;margin-top:3px}
 
 /* Section — collapsible */
 .dpo-section{margin-bottom:24px}
@@ -1223,8 +1418,9 @@ const CSS = `
 .dpo-collapse-icon{font-size:12px;color:#a1a1aa;transition:color .15s}
 
 /* Card */
-.dpo-card{background:#fff;border-radius:10px;border:1px solid #e4e4e7;margin-bottom:8px;overflow:hidden;transition:box-shadow .15s}
-.dpo-card.open{box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.dpo-card{background:#fff;border-radius:10px;border:1px solid #e4e4e7;margin-bottom:8px;overflow:hidden;transition:all .15s}
+.dpo-card:hover{border-color:#d4d4d8;box-shadow:0 1px 6px rgba(0,0,0,.04)}
+.dpo-card.open{box-shadow:0 2px 12px rgba(0,0,0,.06);border-color:#c7d2fe}
 .dpo-card-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;cursor:pointer}
 .dpo-card-info{flex:1;min-width:0}
 .dpo-card-tag{font-size:11px;font-weight:600;display:inline-block;margin-bottom:3px}
@@ -1324,13 +1520,15 @@ const CSS = `
 .dpo-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px}
 .dpo-modal{background:#fff;border-radius:12px;padding:20px;max-width:560px;width:100%;max-height:85vh;overflow-y:auto}
 .dpo-modal-wide{max-width:780px}
-.dpo-org-tabs{display:flex;gap:2px;border-bottom:1px solid #e4e4e7;margin:12px -20px 0;padding:0 20px;overflow-x:auto}
-.dpo-org-tab{padding:8px 12px;font-size:12px;font-weight:500;color:#71717a;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;font-family:inherit}
-.dpo-org-tab.active{color:#4f46e5;border-bottom-color:#4f46e5;font-weight:600}
-.dpo-org-tab:hover{color:#27272a}
+.dpo-modal-fullscreen{position:fixed;inset:16px;max-width:none;max-height:none;border-radius:14px;z-index:110;box-shadow:0 8px 40px rgba(0,0,0,.15)}
+.dpo-org-tabs{display:flex;gap:2px;border-bottom:1px solid #e4e4e7;margin:12px -20px 0;padding:0 20px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.dpo-org-tab{padding:8px 12px;font-size:12px;font-weight:500;color:#71717a;border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;font-family:inherit;position:relative}
+.dpo-org-tab.active{color:#4f46e5;border-bottom-color:#4f46e5;font-weight:700;background:#eef2ff;border-radius:6px 6px 0 0}
+.dpo-org-tab:hover{color:#27272a;background:#f8fafc}
 .dpo-modal-body{padding-top:16px;max-height:60vh;overflow-y:auto}
-.dpo-modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
-.dpo-modal-head h3{font-size:18px;font-weight:700}
+.dpo-modal-fullscreen .dpo-modal-body{max-height:calc(100vh - 180px)}
+.dpo-modal-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;padding-bottom:10px;border-bottom:1px solid #f0f0f0}
+.dpo-modal-head h3{font-size:18px;font-weight:800;color:#1e293b}
 
 /* Spinner */
 .dpo-loading{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#71717a}
@@ -1355,6 +1553,7 @@ const CSS = `
   .dpo-done-row{flex-wrap:wrap}
   .dpo-done-meta{width:100%;text-align:left}
   .dpo-modal-wide{max-width:95vw;padding:14px}
+  .dpo-modal-fullscreen{inset:4px;padding:12px;border-radius:10px}
   .dpo-org-tabs{gap:0;overflow-x:auto}
   .dpo-org-tab{font-size:11px;padding:6px 8px}
   .dpo-modal-body{max-height:50vh}
