@@ -28,7 +28,8 @@ import {
   X,
   Copy,
   Edit3,
-  Save
+  Save,
+  Users
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useSubscriptionGate } from '@/lib/use-subscription-gate'
@@ -37,6 +38,7 @@ import { useToast } from '@/components/Toast'
 import WelcomeModal from '@/components/WelcomeModal'
 import UnpaidWelcomeModal from '@/components/UnpaidWelcomeModal'
 import GuidelinesPanel from '@/components/GuidelinesPanel'
+import RightsTab from '@/components/RightsTab'
 import { deriveComplianceActions, ComplianceSummary, ActionOverride } from '@/lib/compliance-engine'
 
 // ============================================
@@ -84,7 +86,7 @@ function DashboardContent() {
   }
   const { isAuthorized, isChecking, isPaid: gateIsPaid } = useSubscriptionGate()
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'incidents' | 'messages' | 'reminders' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'incidents' | 'messages' | 'rights' | 'reminders' | 'settings'>('overview')
   const [organization, setOrganization] = useState<any>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [incidents, setIncidents] = useState<any[]>([])
@@ -95,6 +97,7 @@ function DashboardContent() {
   const [complianceScore, setComplianceScore] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const [unreadMessages, setUnreadMessages] = useState(0)
+  const [openRightsCount, setOpenRightsCount] = useState(0)
   const [messageThreads, setMessageThreads] = useState<any[]>([])
   const [orgProfile, setOrgProfile] = useState<any>(null)
   const [complianceSummary, setComplianceSummary] = useState<ComplianceSummary | null>(null)
@@ -114,7 +117,7 @@ function DashboardContent() {
       window.history.replaceState({}, '', '/dashboard')
     }
     const tabParam = searchParams.get('tab')
-    if (tabParam && ['overview','tasks','documents','incidents','messages','reminders','settings'].includes(tabParam)) {
+    if (tabParam && ['overview','tasks','documents','incidents','messages','rights','reminders','settings'].includes(tabParam)) {
       setActiveTab(tabParam as any)
     }
   }, [searchParams, user])
@@ -291,6 +294,16 @@ function DashboardContent() {
         } catch (e) {
           console.log('Messages loading skipped')
         }
+
+        // Load open rights request count
+        try {
+          const rightsRes = await fetch(`/api/rights?action=get_requests&orgId=${orgData.id}`)
+          const rightsData = await rightsRes.json()
+          if (rightsData.requests) {
+            const openCount = rightsData.requests.filter((r: any) => r.status === 'pending' || r.status === 'in_progress').length
+            setOpenRightsCount(openCount)
+          }
+        } catch {}
 
         // Show welcome on first-ever successful dashboard load
         if (user) {
@@ -741,6 +754,13 @@ function DashboardContent() {
               badge={unreadMessages > 0 ? unreadMessages : undefined}
             />
             <NavButton 
+              icon={<Users className="h-5 w-5" />} 
+              label="בקשות פרטיות" 
+              active={activeTab === 'rights'} 
+              onClick={() => { setActiveTab('rights'); setMobileMenuOpen(false) }}
+              badge={openRightsCount > 0 ? openRightsCount : undefined}
+            />
+            <NavButton 
               icon={<Clock className="h-5 w-5" />} 
               label="תזכורות" 
               active={activeTab === 'reminders'} 
@@ -846,6 +866,14 @@ function DashboardContent() {
               tier={organization?.tier}
             /> :
             <LockedTabOverlay icon="💬" title="שיח עם הממונה" description="שלחו שאלות ישירות לממונה הגנת הפרטיות שלכם וקבלו תשובה מקצועית" />
+          )}
+          {activeTab === 'rights' && (
+            <RightsTab
+              orgId={organization?.id || ''}
+              orgName={organization?.name || ''}
+              isPaid={gateIsPaid}
+              supabase={supabase}
+            />
           )}
           {activeTab === 'reminders' && (
             <RemindersTab orgProfile={orgProfile} documents={documents} />
