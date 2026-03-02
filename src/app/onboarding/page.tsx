@@ -482,7 +482,7 @@ function NamedOwnerPicker({ options, value, onSelect, name, onNameChange, allowO
         <input
           value={name || ''}
           onChange={e => onNameChange(e.target.value)}
-          placeholder="שם האחראי (אופציונלי)"
+          placeholder="שם האחראי (מומלץ)"
           className="mt-2 w-full px-3 py-2 rounded-lg border border-gray-300 text-sm text-center outline-none focus:border-amber-400"
         />
       )}
