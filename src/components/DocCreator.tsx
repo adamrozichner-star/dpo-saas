@@ -26,12 +26,12 @@ interface DocTypeOption {
 
 const DOC_TYPE_OPTIONS: DocTypeOption[] = [
   { type: 'privacy_policy', label: 'מדיניות פרטיות', description: 'מדיניות הגנת פרטיות מלאה בהתאם לתיקון 13', icon: Shield, iconColor: 'text-blue-600', iconBg: 'bg-blue-50' },
-  { type: 'security_policy', label: 'מדיניות אבטחת מידע', description: 'נהלי אבטחה בהתאם לתקנות אבטחת מידע 2017', icon: LockIcon, iconColor: 'text-red-600', iconBg: 'bg-red-50' },
+  { type: 'security_procedures', label: 'מדיניות אבטחת מידע', description: 'נהלי אבטחה בהתאם לתקנות אבטחת מידע 2017', icon: LockIcon, iconColor: 'text-red-600', iconBg: 'bg-red-50' },
   { type: 'dpo_appointment', label: 'כתב מינוי DPO', description: 'כתב מינוי ממונה הגנת פרטיות', icon: FileCheck, iconColor: 'text-indigo-600', iconBg: 'bg-indigo-50' },
   { type: 'database_definition', label: 'הגדרת מאגרי מידע', description: 'תיעוד מפורט של מאגרי המידע בארגון', icon: ClipboardList, iconColor: 'text-emerald-600', iconBg: 'bg-emerald-50' },
   { type: 'consent_form', label: 'טופס הסכמה', description: 'טופס הסכמה מדעת לאיסוף מידע', icon: Users, iconColor: 'text-amber-600', iconBg: 'bg-amber-50' },
   { type: 'ropa', label: 'מפת עיבוד נתונים (ROPA)', description: 'תיעוד פעילויות עיבוד מידע', icon: BookOpen, iconColor: 'text-purple-600', iconBg: 'bg-purple-50' },
-  { type: 'dpa', label: 'הסכם עיבוד מידע (DPA)', description: 'הסכם עם ספקים חיצוניים המעבדים מידע', icon: FileText, iconColor: 'text-stone-600', iconBg: 'bg-stone-100' },
+  { type: 'processor_agreement', label: 'הסכם עיבוד מידע (DPA)', description: 'הסכם עם ספקים חיצוניים המעבדים מידע', icon: FileText, iconColor: 'text-stone-600', iconBg: 'bg-stone-100' },
 ]
 
 export default function DocCreator({ orgId, orgName, businessId, v3Answers, supabase, isPaid, existingDocTypes, onDocumentCreated }: DocCreatorProps) {
