@@ -138,7 +138,7 @@ async function sendOrgNotificationEmail(
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://dpo-saas.vercel.app'}/dashboard?tab=requests" 
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://dpo-saas.vercel.app'}/dashboard?tab=rights" 
          style="background: #F59E0B; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
         טיפול בבקשה ←
       </a>
@@ -287,6 +287,22 @@ export async function POST(request: NextRequest) {
 
     // Create notification for organization (message thread)
     try {
+      // Audit log for new request
+      await supabase.from('audit_logs').insert({
+        org_id: orgId,
+        action: 'rights_request_received',
+        details: {
+          requestId: newRequest?.id,
+          requestNumber,
+          requestType,
+          requesterName: fullName,
+          requesterEmail: email,
+          deadline: deadlineStr,
+        }
+      })
+    } catch {}
+
+    try {
       const requestTypeLabels: Record<string, string> = {
         access: 'עיון במידע',
         rectification: 'תיקון מידע',
@@ -395,6 +411,22 @@ ${details ? `פרטים נוספים:\n${details}` : ''}
     if (error) {
       return NextResponse.json({ error: 'Failed to update request' }, { status: 500 })
     }
+
+    // Audit log
+    try {
+      await supabase.from('audit_logs').insert({
+        org_id: requestData?.org_id,
+        action: 'rights_request_updated',
+        details: {
+          requestId,
+          requestNumber: requestData?.request_number,
+          previousStatus: requestData?.status,
+          newStatus: status,
+          hasResponse: !!response,
+          respondedBy: respondedBy || null,
+        }
+      })
+    } catch {}
 
     // Send email to requester when request is completed or rejected
     if (requestData && (status === 'completed' || status === 'rejected') && process.env.RESEND_API_KEY) {
