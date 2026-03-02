@@ -11,7 +11,7 @@ interface AuthContextType {
   session: Session | null
   supabase: SupabaseClient | null
   signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>
+  signIn: (email: string, password: string) => Promise<{ error: Error | null; mfaRequired?: boolean }>
   signInWithGoogle: () => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   loading: boolean
@@ -108,7 +108,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email,
       password
     })
-    return { error: error as Error | null }
+    if (error) return { error: error as Error | null }
+
+    // Check if MFA is required
+    try {
+      const { data } = await supabaseClient.auth.mfa.getAuthenticatorAssuranceLevel()
+      if (data && data.currentLevel === 'aal1' && data.nextLevel === 'aal2') {
+        return { error: null, mfaRequired: true }
+      }
+    } catch (e) {
+      // MFA check failed — proceed without MFA
+    }
+
+    return { error: null }
   }
 
   const signInWithGoogle = async () => {
