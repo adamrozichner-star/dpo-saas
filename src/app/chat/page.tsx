@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useSubscriptionGate } from '@/lib/use-subscription-gate'
+import { DPO_CONFIG } from '@/lib/dpo-config'
 
 interface Message {
   id: string
@@ -106,6 +107,7 @@ export default function ChatPage() {
   const [isGeneratingDoc, setIsGeneratingDoc] = useState(false)
   const [showUpsellBanner, setShowUpsellBanner] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+  const [dpoCredits, setDpoCredits] = useState({ used: 0, limit: 2 })
   
   // Sidebar state
   const [sidebarOpen, setSidebarOpen] = useState(false) // Closed by default, visible on lg via CSS
@@ -176,6 +178,21 @@ export default function ChatPage() {
         setOrganization(userData.organizations)
         setComplianceScore(userData.organizations.compliance_score || 0)
         
+        // Load DPO credit usage for this quarter
+        try {
+          const tier = userData.organizations.tier || 'basic'
+          const limitMap: Record<string, number> = { basic: 2, extended: 8, enterprise: 12 }
+          const creditLimit = limitMap[tier] || 2
+          const qStart = new Date()
+          qStart.setMonth(Math.floor(qStart.getMonth() / 3) * 3, 1)
+          qStart.setHours(0, 0, 0, 0)
+          const { count } = await supabase!.from('dpo_queue')
+            .select('*', { count: 'exact', head: true })
+            .eq('org_id', userData.organizations.id)
+            .gte('created_at', qStart.toISOString())
+          setDpoCredits({ used: count || 0, limit: creditLimit })
+        } catch { /* credits default to 0/2 */ }
+        
         // Check if this is first visit after onboarding
         const urlParams = new URLSearchParams(window.location.search)
         const isWelcome = urlParams.get('welcome') === 'true'
@@ -204,6 +221,15 @@ export default function ChatPage() {
     } finally {
       setOrgLoading(false)
     }
+  }
+
+  // Refresh compliance score from DB (call after actions that may change it)
+  const refreshScore = async () => {
+    if (!organization?.id || !supabase) return
+    try {
+      const { data } = await supabase.from('organizations').select('compliance_score').eq('id', organization.id).single()
+      if (data) setComplianceScore(data.compliance_score || 0)
+    } catch {}
   }
 
   const loadChatHistory = async (orgId: string) => {
@@ -603,6 +629,14 @@ export default function ChatPage() {
           { icon: '🚨', text: 'יש אירוע אבטחה' },
         ])
         break
+      case 'off_topic':
+        setSuggestions([
+          { icon: '📄', text: 'צריך מדיניות פרטיות' },
+          { icon: '🚨', text: 'יש אירוע אבטחה' },
+          { icon: '📊', text: 'מה הסטטוס שלי?' },
+          { icon: '❓', text: 'שאלה על תיקון 13' },
+        ])
+        break
       default:
         // Return to default suggestions
         setSuggestions(defaultSuggestions)
@@ -651,6 +685,7 @@ export default function ChatPage() {
             { icon: '📋', text: 'צריך תבנית לדיווח לרשות' },
             { icon: '👤', text: 'רוצה לדבר עם הממונה' },
           ])
+          refreshScore()
         } else {
           throw new Error(data.error || 'Failed to create incident')
         }
@@ -678,6 +713,17 @@ export default function ChatPage() {
     }
 
     if (buttonId === 'escalate_now') {
+      // Check credit limit client-side first
+      if (dpoCredits.used >= dpoCredits.limit) {
+        setMessages(prev => [...prev, {
+          id: `credit-limit-${Date.now()}`,
+          role: 'assistant',
+          content: `⚠️ ניצלת את ${dpoCredits.limit} הפניות לממונה ברבעון זה.\n\nלפניות נוספות — שדרג לחבילה מורחבת.\nבינתיים, אני כאן לכל שאלה! 🤖`,
+          created_at: new Date().toISOString()
+        }])
+        return
+      }
+
       setIsLoading(true)
       const context = messages.slice(-5).map(m => `${m.role}: ${m.content}`).join('\n')
       
@@ -693,11 +739,23 @@ export default function ChatPage() {
         })
         
         const data = await response.json()
-        if (data.success) {
+        if (data.creditExhausted) {
+          setDpoCredits({ used: data.used, limit: data.limit })
+          setMessages(prev => [...prev, {
+            id: `credit-limit-${Date.now()}`,
+            role: 'assistant',
+            content: `⚠️ ניצלת את ${data.limit} הפניות לממונה ברבעון זה.\n\nלפניות נוספות — שדרג לחבילה מורחבת.\nבינתיים, אני כאן לכל שאלה! 🤖`,
+            created_at: new Date().toISOString()
+          }])
+        } else if (data.success) {
+          // Update credit counter
+          if (data.used !== undefined) setDpoCredits({ used: data.used, limit: data.limit || dpoCredits.limit })
+          else setDpoCredits(prev => ({ ...prev, used: prev.used + 1 }))
+
           setMessages(prev => [...prev, {
             id: `escalate-${Date.now()}`,
             role: 'assistant',
-            content: '📞 הפנייה הועברה לממונה האנושי!\n\nהממונה יחזור אליך בהקדם (בדרך כלל תוך יום עסקים אחד).\n\nבינתיים, אפשר להמשיך לשאול אותי שאלות.',
+            content: `📞 הפנייה הועברה לממונה האנושי!\n\nהממונה יחזור אליך בהקדם (בדרך כלל תוך יום עסקים אחד).\n\n${data.used !== undefined ? `נותרו ${data.limit - data.used} פניות ברבעון.` : ''}\n\nבינתיים, אפשר להמשיך לשאול אותי שאלות.`,
             created_at: new Date().toISOString()
           }])
         }
@@ -758,6 +816,7 @@ export default function ChatPage() {
           created_at: new Date().toISOString()
         }])
         setCurrentDocument(null)
+        refreshScore()
       }
     } catch (error) {
       console.error('Failed to save document:', error)
@@ -1175,6 +1234,9 @@ ${summaryText}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{conv.title}</p>
                       <p className="text-xs text-stone-400 truncate mt-0.5">{conv.preview}</p>
+                      {currentConversationId === conv.id && (
+                        <span className="text-[10px] text-indigo-500 font-medium mt-0.5">שיחה נוכחית</span>
+                      )}
                     </div>
                   </div>
                 </button>
@@ -1212,7 +1274,7 @@ ${summaryText}
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="text-white flex-shrink-0" style={{background: 'linear-gradient(to left, #1e3a5f, #1e40af)'}}>
+        <header className="text-white flex-shrink-0" style={{background: 'linear-gradient(135deg, #312e81, #4f46e5)'}}>
           <div className="px-4 py-3 flex items-center gap-3">
             {!sidebarOpen && (
               <button 
@@ -1248,6 +1310,23 @@ ${summaryText}
               <p className={`text-2xl font-bold ${getScoreColor(complianceScore)}`}>{complianceScore}%</p>
               <p className="text-xs text-indigo-200">ציות</p>
             </div>
+            
+            <div className="hidden sm:flex flex-col items-center gap-1 bg-white/10 backdrop-blur rounded-xl px-3 py-2 border border-white/10">
+              <div className="flex items-center gap-1">
+                <span className="text-xs">👤</span>
+                {Array.from({ length: dpoCredits.limit }).map((_, i) => (
+                  <div key={i} className={`w-2 h-2 rounded-full ${i < dpoCredits.used ? 'bg-indigo-300' : 'bg-white/20'}`} />
+                ))}
+              </div>
+              <p className="text-[10px] text-indigo-200">{dpoCredits.used}/{dpoCredits.limit} פניות</p>
+            </div>
+
+            {organization?.tier && organization.tier !== 'basic' && (
+              <div className="hidden sm:flex items-center gap-1.5 bg-white/10 backdrop-blur rounded-xl px-2.5 py-2 border border-white/10">
+                <Phone className="w-3 h-3 text-indigo-200" />
+                <span className="text-xs text-indigo-200" dir="ltr">{DPO_CONFIG.phone}</span>
+              </div>
+            )}
           </div>
           
           {/* Alert Bar */}
@@ -1309,6 +1388,15 @@ ${summaryText}
                 }`}
                 style={msg.role === 'user' ? {backgroundColor: '#4f46e5'} : {}}
               >
+                {/* Source Label: AI vs DPO */}
+                {msg.role === 'assistant' && msg.id !== 'initial-welcome' && msg.id !== 'welcome-1' && msg.id !== 'welcome-error' && (
+                  <div className="flex items-center gap-1.5 px-4 pt-2.5 pb-0">
+                    <span className="text-[11px]">{msg.intent === 'escalate' || msg.intent === 'system' ? '👤' : '🤖'}</span>
+                    <span className="text-[11px] text-stone-400 font-medium">
+                      {msg.intent === 'escalate' || msg.intent === 'system' ? DPO_CONFIG.name : 'עוזר AI'}
+                    </span>
+                  </div>
+                )}
                 {/* Message Content */}
                 <div className="px-4 py-3">
                   <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
