@@ -60,8 +60,8 @@ export default function DocUploadAdapter({ orgId, orgName, supabase, onDocumentC
       setError('הקובץ קצר מדי או לא קריא')
       return
     }
-    if (text.length > 100000) {
-      setError('הקובץ גדול מדי (מקסימום 100KB טקסט)')
+    if (text.length > 500000) {
+      setError('הקובץ גדול מדי (מקסימום 500KB טקסט)')
       return
     }
 
