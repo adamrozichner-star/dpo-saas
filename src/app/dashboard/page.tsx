@@ -41,6 +41,7 @@ import GuidelinesPanel from '@/components/GuidelinesPanel'
 import DocUploadAdapter from '@/components/DocUploadAdapter'
 import DocCreator from '@/components/DocCreator'
 import RightsTab from '@/components/RightsTab'
+import IncidentReportTab from '@/components/IncidentReportTab'
 import { deriveComplianceActions, ComplianceSummary, ActionOverride } from '@/lib/compliance-engine'
 
 // ============================================
@@ -856,7 +857,7 @@ function DashboardContent() {
             <DocumentsTab documents={documents} organization={organization} supabase={supabase} isPaid={gateIsPaid} orgProfile={orgProfile} onRefresh={loadAllData} />
           )}
           {activeTab === 'incidents' && (
-            gateIsPaid ? <IncidentsTab incidents={incidents} orgId={organization?.id} /> :
+            gateIsPaid ? <IncidentReportTab incidents={incidents} orgId={organization?.id} onRefresh={loadAllData} /> :
             <LockedTabOverlay icon="⚠️" title="ניהול אירועי אבטחה" description="דווחו וטפלו באירועי אבטחת מידע עם ספירה לאחור של 72 שעות לדיווח לרשות" />
           )}
           {activeTab === 'messages' && (
@@ -1953,175 +1954,6 @@ function DocumentsTab({ documents, organization, supabase, isPaid, orgProfile, o
                 </button>
               )}
             </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ============================================
-// INCIDENTS TAB
-// ============================================
-function IncidentsTab({ incidents, orgId }: { incidents: any[], orgId: string }) {
-  const activeIncidents = incidents.filter(i => !['resolved', 'closed'].includes(i.status))
-  const closedIncidents = incidents.filter(i => ['resolved', 'closed'].includes(i.status))
-
-  const getStatusStyle = (status: string) => {
-    const styles: Record<string, string> = {
-      new: 'bg-rose-100 text-rose-700',
-      investigating: 'bg-amber-100 text-amber-700',
-      contained: 'bg-indigo-100 text-indigo-700',
-      resolved: 'bg-emerald-100 text-emerald-700',
-      closed: 'bg-stone-100 text-stone-700'
-    }
-    return styles[status] || 'bg-stone-100 text-stone-700'
-  }
-
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      new: 'חדש',
-      investigating: 'בבדיקה',
-      contained: 'נבלם',
-      resolved: 'טופל',
-      closed: 'סגור'
-    }
-    return labels[status] || status
-  }
-
-  const getTimeRemaining = (deadline: string) => {
-    const now = new Date()
-    const dl = new Date(deadline)
-    const diff = dl.getTime() - now.getTime()
-    const hours = Math.floor(diff / (1000 * 60 * 60))
-    
-    if (hours < 0) return { text: 'עבר הדדליין!', urgent: true }
-    if (hours < 24) return { text: `${hours} שעות`, urgent: true }
-    const days = Math.floor(hours / 24)
-    return { text: `${days} ימים`, urgent: false }
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-stone-800">🚨 אירועי אבטחה</h1>
-          <p className="text-stone-500 mt-1">ניהול ותיעוד אירועי אבטחה ופרטיות</p>
-        </div>
-        <Link href={`/chat?prompt=${encodeURIComponent('אני רוצה לדווח על אירוע אבטחה חדש. מה הפרטים שאתה צריך?')}`}>
-          <button className="px-4 py-2 bg-rose-500 text-white rounded-lg font-medium hover:bg-rose-600 transition-colors flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" />
-            דיווח אירוע חדש
-          </button>
-        </Link>
-      </div>
-
-      {/* Active Incidents */}
-      {activeIncidents.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-            <h2 className="font-semibold text-stone-800">אירועים פעילים ({activeIncidents.length})</h2>
-          </div>
-          <div className="space-y-3">
-            {activeIncidents.map(incident => {
-              const timeLeft = incident.authority_deadline ? getTimeRemaining(incident.authority_deadline) : null
-              return (
-                <div 
-                  key={incident.id} 
-                  className="bg-white rounded-xl p-4 shadow-sm border border-rose-100"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-rose-100 flex items-center justify-center flex-shrink-0">
-                      <AlertTriangle className="h-5 w-5 text-rose-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium text-stone-800">{incident.title}</h3>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusStyle(incident.status)}`}>
-                          {getStatusLabel(incident.status)}
-                        </span>
-                      </div>
-                      <p className="text-sm text-stone-500">{incident.description?.slice(0, 100)}...</p>
-                      {timeLeft && (
-                        <p className={`text-sm mt-2 flex items-center gap-1 ${timeLeft.urgent ? 'text-rose-600 font-medium' : 'text-stone-500'}`}>
-                          <Clock className="h-4 w-4" />
-                          זמן לדיווח לרשות: {timeLeft.text}
-                        </p>
-                      )}
-                      {/* Next steps guidance */}
-                      <div className="mt-3 p-2.5 bg-amber-50 rounded-lg border border-amber-100">
-                        <p className="text-xs font-medium text-amber-700 mb-1">📋 הצעדים הבאים:</p>
-                        <div className="text-xs text-amber-600 space-y-0.5">
-                          {incident.status === 'new' && <>
-                            <p>1. תעדו את כל הפרטים הידועים על האירוע</p>
-                            <p>2. בדקו את היקף החשיפה (כמה נושאי מידע מושפעים)</p>
-                            <p>3. עדכנו סטטוס ל"בבדיקה" דרך הצ׳אט</p>
-                          </>}
-                          {incident.status === 'investigating' && <>
-                            <p>1. השלימו את חקירת האירוע ומפו את כל המידע שנחשף</p>
-                            <p>2. הכינו דוח לרשות להגנת הפרטיות</p>
-                            <p>3. שקלו הודעה לנושאי מידע שנפגעו</p>
-                          </>}
-                          {incident.status === 'contained' && <>
-                            <p>1. ודאו שהפרצה נסגרה לחלוטין</p>
-                            <p>2. דווחו לרשות אם נדרש (72 שעות מגילוי)</p>
-                            <p>3. הכינו תוכנית מניעה לעתיד</p>
-                          </>}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <Link href={`/chat?incident=${incident.id}`}>
-                        <button className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-sm font-medium hover:bg-rose-600 transition-colors w-full">
-                          טיפול
-                        </button>
-                      </Link>
-                      <Link href={`/chat?prompt=${encodeURIComponent(`צור עבורי דוח לרשות להגנת הפרטיות עבור אירוע האבטחה: ${incident.title}. כלול את כל הפרטים הנדרשים בהתאם לתיקון 13.`)}`}>
-                        <button className="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-medium hover:bg-amber-200 transition-colors w-full">
-                          📋 דוח לרשות
-                        </button>
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {incidents.length === 0 && (
-        <div className="bg-white rounded-2xl p-12 shadow-sm border border-stone-200 text-center">
-          <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-          </div>
-          <h3 className="text-lg font-semibold text-stone-800 mb-2">אין אירועי אבטחה</h3>
-          <p className="text-stone-500">לא דווחו אירועי אבטחה. המשיכו לשמור על הפרטיות! ✨</p>
-        </div>
-      )}
-
-      {/* Closed Incidents */}
-      {closedIncidents.length > 0 && (
-        <div>
-          <h2 className="font-semibold text-stone-500 mb-3">היסטוריה ({closedIncidents.length})</h2>
-          <div className="space-y-2">
-            {closedIncidents.slice(0, 5).map(incident => (
-              <div key={incident.id} className="bg-stone-50 rounded-lg p-3 border border-stone-100">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-stone-700">{incident.title}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusStyle(incident.status)}`}>
-                      {getStatusLabel(incident.status)}
-                    </span>
-                  </div>
-                  <span className="text-xs text-stone-400">
-                    {new Date(incident.created_at).toLocaleDateString('he-IL')}
-                  </span>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       )}
