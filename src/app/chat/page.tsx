@@ -1637,6 +1637,7 @@ ${summaryText}
                 placeholder="הקלד הודעה..."
                 className="flex-1 bg-transparent border-0 focus:outline-none py-3 text-stone-800"
                 value={input}
+                maxLength={2000}
                 onChange={(e) => {
                   const val = e.target.value
                   setInput(val)
@@ -1676,17 +1677,24 @@ ${summaryText}
             </button>
           </div>
 
-          {/* AI Disclaimer + Escalate to DPO */}
+          {/* AI Disclaimer + Char Counter + Escalate to DPO */}
           <div className="flex items-center justify-between px-2 pt-1.5 pb-0.5">
             <p className="text-[11px] text-stone-400">🤖 עוזר AI — תשובות אינן מהוות ייעוץ משפטי מחייב · 🔒 אל תזינו ת.ז או פרטי אשראי</p>
-            <button 
-              onClick={() => { 
-                sendMessage('רוצה לדבר עם הממונה')
-              }}
-              className="text-[11px] text-indigo-500 hover:text-indigo-700 font-semibold whitespace-nowrap bg-indigo-50 px-2 py-0.5 rounded-full"
-            >
-              👤 העבר לדנה
-            </button>
+            <div className="flex items-center gap-2">
+              {input.length > 1500 && (
+                <span className={`text-[11px] font-mono ${input.length > 1900 ? 'text-red-500 font-semibold' : input.length > 1500 ? 'text-amber-500' : 'text-stone-400'}`}>
+                  {input.length}/2000
+                </span>
+              )}
+              <button 
+                onClick={() => { 
+                  sendMessage('רוצה לדבר עם הממונה')
+                }}
+                className="text-[11px] text-indigo-500 hover:text-indigo-700 font-semibold whitespace-nowrap bg-indigo-50 px-2 py-0.5 rounded-full"
+              >
+                👤 העבר לדנה
+              </button>
+            </div>
           </div>
 
           <input
