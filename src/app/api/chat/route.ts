@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { authenticateRequest, unauthorizedResponse, forbiddenResponse, verifyOrgAccess } from '@/lib/api-auth'
+import { maskPII, unmaskPII } from '@/lib/pii-guard'
+import { checkRateLimit, RATE_LIMITS, rateLimitKey, isDuplicateAbuse, isRapidFire } from '@/lib/rate-limiter'
+import { validateInput, VALIDATION_CONFIGS } from '@/lib/input-validator'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -233,6 +236,34 @@ export async function GET(request: NextRequest) {
       .select('name, compliance_score')
       .eq('id', orgId)
       .single()
+
+      // Get org profile for doc context
+      let profileContext = ''
+      try {
+        const { data: profile } = await supabase
+          .from('organization_profiles')
+          .select('profile_data')
+          .eq('org_id', orgId)
+          .single()
+        if (profile?.profile_data?.answers) {
+          const answers = profile.profile_data.answers
+          const parts = []
+          const fields = [
+            ['data_types', '\u05E1\u05D5\u05D2\u05D9 \u05DE\u05D9\u05D3\u05E2'],
+            ['data_sources', '\u05DE\u05E7\u05D5\u05E8\u05D5\u05EA'],
+            ['shares_data', '\u05DE\u05E9\u05EA\u05E3 \u05DE\u05D9\u05D3\u05E2'],
+            ['suppliers_count', '\u05E1\u05E4\u05E7\u05D9\u05DD'],
+          ]
+          for (const [qId, label] of fields) {
+            const val = answers.find((a: any) => a.questionId === qId)?.value
+            if (val) {
+              if (Array.isArray(val)) parts.push(label + ': ' + val.join(', '))
+              else parts.push(label + ': ' + val)
+            }
+          }
+          if (parts.length > 0) profileContext = '\n- ' + parts.join('\n- ')
+        }
+      } catch {} // profile may not exist
     
     // Get pending count
     const { count: pendingTasks } = await supabase
@@ -279,8 +310,53 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
       }
       
-      // Detect intent
-      const intent = detectIntent(message)
+      // --- SECURITY LAYER ---
+      // Rate limit
+      const rl = checkRateLimit(rateLimitKey(orgId, 'chat'), RATE_LIMITS.chat)
+      if (!rl.allowed) {
+        return NextResponse.json({ 
+          error: 'rate_limited', 
+          message: 'יותר מדי הודעות. נסה שוב בעוד דקה.',
+          resetInMs: rl.resetInMs 
+        }, { status: 429 })
+      }
+      
+      // Rapid-fire detection
+      if (isRapidFire(orgId)) {
+        return NextResponse.json({ 
+          error: 'rate_limited', 
+          message: 'לאט לאט! נסה שוב בעוד כמה שניות.' 
+        }, { status: 429 })
+      }
+      
+      // Duplicate abuse
+      if (isDuplicateAbuse(orgId, message)) {
+        return NextResponse.json({ 
+          error: 'duplicate', 
+          message: 'ההודעה הזו כבר נשלחה. נסה לנסח אחרת.' 
+        }, { status: 429 })
+      }
+      
+      // Input validation
+      const validation = validateInput(message, VALIDATION_CONFIGS.chat)
+      if (!validation.valid) {
+        return NextResponse.json({ 
+          error: validation.reason, 
+          message: validation.reasonHe || 'הודעה לא תקינה' 
+        }, { status: 400 })
+      }
+      const cleanMessage = validation.sanitized
+      
+      // PII masking - mask before any processing
+      const piiResult = maskPII(cleanMessage)
+      if (piiResult.detectedTypes.length > 0) {
+        console.log(`[PII] Detected in org ${orgId}: ${piiResult.detectedTypes.join(', ')}`)
+      }
+      // --- END SECURITY LAYER ---
+      
+      // Detect intent (use original clean message for intent detection)
+      const intent = detectIntent(cleanMessage)
+      const isRevision = false
       
       // Generate conversation ID if not provided
       const convId = conversationId || `conv-${Date.now()}`
@@ -290,7 +366,7 @@ export async function POST(request: NextRequest) {
         id: `temp-${Date.now()}`,
         org_id: orgId,
         role: 'user',
-        content: message,
+        content: cleanMessage,
         intent,
         attachments,
         conversation_id: convId,
@@ -303,7 +379,7 @@ export async function POST(request: NextRequest) {
           .insert({
             org_id: orgId,
             role: 'user',
-            content: message,
+            content: cleanMessage,
             intent,
             attachments,
             conversation_id: convId
@@ -344,7 +420,7 @@ export async function POST(request: NextRequest) {
       
       // Add current message if not already in history
       if (conversationHistory.length === 0 || conversationHistory[conversationHistory.length - 1]?.content !== message) {
-        conversationHistory.push({ role: 'user', content: message })
+        conversationHistory.push({ role: 'user', content: piiResult.masked })
       }
       
       // Build context
@@ -354,18 +430,39 @@ export async function POST(request: NextRequest) {
 - שם: ${org?.name || 'לא ידוע'}
 - תחום: ${org?.industry || 'לא צוין'}
 - מספר עובדים: ${org?.employee_count || 'לא ידוע'}
-- ציון ציות: ${org?.compliance_score || 0}%
+- ציון ציות: ${org?.compliance_score || 0}%${profileContext}
 
 ${intent === 'incident' ? '\n⚠️ שים לב: זוהה אירוע אבטחה פוטנציאלי! וודא שהמשתמש מבין את הדחיפות (72 שעות לדיווח) והנחה אותו לתעד את האירוע.\n' : ''}
-${intent === 'document' ? '\n📄 המשתמש ביקש במפורש ליצור מסמך - צור את המסמך המלא! השתמש ב-[DOCUMENT_GENERATED] בסוף.\n' : ''}
+${intent === 'document' ? `
+📄 המשתמש ביקש ליצור מסמך. צור מסמך מלא ומוכן לשימוש!
+
+📋 מבנה מחייב לכל מסמך:
+1. כותרת + גרסה + תאריך
+2. מבוא ומטרה
+3. הגדרות
+4. תחולה
+5-8. סעיפים מרכזיים מותאמים לסוג המסמך
+9. אחריות ופיקוח
+10. תוקף ועדכונים
+
+דרישות איכות:
+• נסח בעברית משפטית מקצועית
+• כלל את כל הסעיפים הנדרשים בתיקון 13
+• התאם לתחום הארגון (שם, תחום, סוגי מידע, עובדים)
+• מוכן לשימוש מיידי ללא עריכה
+
+בסוף המסמך הוסף: [DOCUMENT_GENERATED]
+` : ''}
 ${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה אנושי - הצע להעביר את הפנייה.\n' : ''}
 ${intent === 'off_topic' ? '\n🚫 זוהתה שאלה שאינה בתחום הפרטיות. ענה בהומור קל קצר והפנה לחיפוש באינטרנט. אל תענה על השאלה עצמה.\n' : ''}`
 
       // Get AI response - use more tokens for documents
-      const maxTokens = intent === 'document' ? 4000 : 1500
+      const maxTokens = (intent === 'document' || isRevision) ? 4000 : 1500
+      
+      const aiModel = (intent === 'document' || isRevision) ? 'claude-sonnet-4-20250514' : 'claude-3-haiku-20240307'
       
       const response = await anthropic.messages.create({
-        model: 'claude-3-haiku-20240307',
+        model: aiModel,
         max_tokens: maxTokens,
         system: contextPrompt,
         messages: conversationHistory
@@ -383,6 +480,11 @@ ${intent === 'off_topic' ? '\n🚫 זוהתה שאלה שאינה בתחום ה�
         .replace(/```[a-z]*\n?/g, '')        // Remove code blocks
         .replace(/`([^`]+)`/g, '$1')         // Remove inline code
         .trim()
+      
+      // Unmask PII in AI response
+      if (piiResult.map.size > 0) {
+        aiText = unmaskPII(aiText, piiResult.map)
+      }
       
       // Check for document generation
       let generatedDoc = null
