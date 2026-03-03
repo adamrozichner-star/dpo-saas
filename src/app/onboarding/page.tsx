@@ -11,7 +11,6 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { OnboardingAnswer } from '@/types'
-import ContextualChat from '@/components/ContextualChat'
 
 // ═══════════════════════════════════════════════════════
 // CARD DATA CONSTANTS
@@ -1535,8 +1534,6 @@ export default function OnboardingPage() {
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      
-      <ContextualChat context="onboarding" orgId={orgId || ''} />
     </div>
     }>
       <OnboardingContent />
