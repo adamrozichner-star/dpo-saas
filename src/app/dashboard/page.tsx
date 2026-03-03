@@ -29,7 +29,8 @@ import {
   Copy,
   Edit3,
   Save,
-  Users
+  Users,
+  Database
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useSubscriptionGate } from '@/lib/use-subscription-gate'
@@ -43,6 +44,7 @@ import DocUploadAdapter from '@/components/DocUploadAdapter'
 import DocCreator from '@/components/DocCreator'
 import RightsTab from '@/components/RightsTab'
 import IncidentReportTab from '@/components/IncidentReportTab'
+import ROPATab from '@/components/ROPATab'
 import { deriveComplianceActions, ComplianceSummary, ActionOverride } from '@/lib/compliance-engine'
 
 // ============================================
@@ -90,7 +92,7 @@ function DashboardContent() {
   }
   const { isAuthorized, isChecking, isPaid: gateIsPaid } = useSubscriptionGate()
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'incidents' | 'messages' | 'rights' | 'reminders' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'databases' | 'incidents' | 'messages' | 'rights' | 'reminders' | 'settings'>('overview')
   const [organization, setOrganization] = useState<any>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [incidents, setIncidents] = useState<any[]>([])
@@ -744,6 +746,12 @@ function DashboardContent() {
               badge={documents.filter(d => d.status === 'pending_review').length > 0 ? documents.filter(d => d.status === 'pending_review').length : undefined}
             />
             <NavButton 
+              icon={<Database className="h-5 w-5" />} 
+              label="מאגרי מידע" 
+              active={activeTab === 'databases'} 
+              onClick={() => { setActiveTab('databases'); setMobileMenuOpen(false) }}
+            />
+            <NavButton 
               icon={<AlertTriangle className="h-5 w-5" />} 
               label="אירועי אבטחה" 
               active={activeTab === 'incidents'} 
@@ -857,6 +865,10 @@ function DashboardContent() {
           {activeTab === 'documents' && (
             <DocumentsTab documents={documents} organization={organization} supabase={supabase} isPaid={gateIsPaid} orgProfile={orgProfile} onRefresh={loadAllData} />
           )}
+          {activeTab === 'databases' && (
+            gateIsPaid && organization?.id ? <ROPATab orgId={organization.id} /> :
+            <LockedTabOverlay icon="📊" title="מאגרי מידע (ROPA)" description="צפו, ערכו והוסיפו מאגרי מידע אישי. נדרש לציות לתיקון 13." />
+          )}
           {activeTab === 'incidents' && (
             gateIsPaid ? <IncidentReportTab incidents={incidents} orgId={organization?.id} onRefresh={loadAllData} /> :
             <LockedTabOverlay icon="⚠️" title="ניהול אירועי אבטחה" description="דווחו וטפלו באירועי אבטחת מידע עם ספירה לאחור של 72 שעות לדיווח לרשות" />
@@ -893,6 +905,7 @@ function DashboardContent() {
           context={
             activeTab === 'documents' ? 'documents' :
             activeTab === 'incidents' ? 'incidents' :
+            activeTab === 'databases' ? 'ropa' :
             activeTab === 'settings' ? 'settings' :
             'dashboard'
           }
@@ -1382,7 +1395,7 @@ function OverviewTab({
       )}
 
       {/* Stats row */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-stone-200 flex items-center gap-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => onNavigate('documents')}>
           <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
             <FileText className="h-5 w-5 text-indigo-600" />
@@ -1390,6 +1403,16 @@ function OverviewTab({
           <div>
             <p className="text-2xl font-bold text-stone-800">{documents.length}</p>
             <p className="text-sm text-stone-500">מסמכים</p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-stone-200 flex items-center gap-4 cursor-pointer hover:border-indigo-300 transition-colors" onClick={() => onNavigate('databases')}>
+          <div className="w-10 h-10 rounded-lg bg-violet-100 flex items-center justify-center">
+            <Database className="h-5 w-5 text-violet-600" />
+          </div>
+          <div>
+            <p className="text-lg font-bold text-stone-800">מאגרי מידע</p>
+            <p className="text-sm text-violet-600 font-medium">צפה וערוך →</p>
           </div>
         </div>
 
