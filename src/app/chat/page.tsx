@@ -63,14 +63,12 @@ export default function ChatPage() {
   
   // Default suggestions - show immediately
   const defaultSuggestions: Suggestion[] = [
-    { icon: '📄', text: 'צריך מדיניות פרטיות' },
-    { icon: '❓', text: 'עובד שאל על פרטיות' },
+    { icon: '📈', text: 'איך משפרים את ציון הציות?' },
+    { icon: '🗺️', text: 'בוא נמפה את פעילויות העיבוד' },
     { icon: '🚨', text: 'יש אירוע אבטחה' },
     { icon: '📊', text: 'מה הסטטוס שלי?' },
-    { icon: '📋', text: 'צריך טופס הסכמה' },
-    { icon: '🔒', text: 'נוהל אבטחת מידע' },
-    { icon: '👤', text: 'בקשת מחיקה מלקוח' },
-    { icon: '📝', text: 'הסכם עיבוד לספק' },
+    { icon: '❓', text: 'עובד שאל על פרטיות' },
+    { icon: '🔒', text: 'איך לפרסם את המדיניות?' },
   ]
 
   // Conversation history type
@@ -1600,21 +1598,6 @@ ${summaryText}
             </div>
           )}
 
-          {/* Escalation banner */}
-          <div className="flex items-center justify-between mb-2 px-1">
-            <p className="text-[11px] text-stone-400">🤖 עוזר AI — לא ייעוץ משפטי מחייב</p>
-            <button 
-              onClick={() => {
-                const msg = 'רוצה לדבר עם הממונה'
-                setInput(msg)
-                setTimeout(() => sendMessage(msg), 100)
-              }}
-              className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full transition"
-            >
-              👤 העבר לדנה (הממונה)
-            </button>
-          </div>
-
           <div className="flex items-end gap-2">
             <button 
               onClick={() => setShowQuickActions(!showQuickActions)}
@@ -1685,7 +1668,7 @@ ${summaryText}
               e.target.value = ''
             }}
           />
-          <p className="text-center text-[10px] text-stone-400 mt-1 px-2">⚠️ עוזר AI — התשובות הן המלצה בלבד ואינן מהוות ייעוץ משפטי מחייב</p>
+          <p className="text-center text-[10px] text-stone-400 mt-1 px-2"></p>
         </div>
       </div>
 
