@@ -351,6 +351,16 @@ export async function POST(request: NextRequest) {
       const piiResult = maskPII(cleanMessage)
       if (piiResult.detectedTypes.length > 0) {
         console.log(`[PII] Detected in org ${orgId}: ${piiResult.detectedTypes.join(', ')}`)
+        // Fire-and-forget audit log — don't block chat for this
+        supabase.from('audit_logs').insert({
+          event_type: 'pii_detected',
+          user_id: auth.userId,
+          org_id: orgId,
+          details: { types: piiResult.detectedTypes, action: 'masked' },
+          ip_address: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown',
+          user_agent: request.headers.get('user-agent') || 'unknown',
+          created_at: new Date().toISOString()
+        }).then(() => {}).catch(() => {})
       }
       // --- END SECURITY LAYER ---
       
