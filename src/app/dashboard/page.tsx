@@ -886,6 +886,19 @@ function DashboardContent() {
             <SettingsTab organization={organization} user={user} orgProfile={orgProfile} supabase={supabase} />
           )}
         </div>
+
+      {/* Contextual Chat Widget */}
+      {organization?.id && (
+        <ContextualChat
+          context={
+            activeTab === 'documents' ? 'documents' :
+            activeTab === 'incidents' ? 'incidents' :
+            activeTab === 'settings' ? 'settings' :
+            'dashboard'
+          }
+          orgId={organization.id}
+        />
+      )}
       </main>
     </div>
   )
@@ -2913,18 +2926,6 @@ function AuditLogSection({ orgId, supabase }: { orgId: string, supabase: any }) 
         </div>
       )}
 
-      {/* Contextual Chat Widget */}
-      {organization?.id && (
-        <ContextualChat
-          context={
-            activeTab === 'documents' ? 'documents' :
-            activeTab === 'incidents' ? 'incidents' :
-            activeTab === 'settings' ? 'settings' :
-            'dashboard'
-          }
-          orgId={organization.id}
-        />
-      )}
     </div>
   )
 }
