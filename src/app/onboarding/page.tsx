@@ -10,6 +10,7 @@ import {
   Mail
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import ContextualChat from '@/components/ContextualChat'
 import { OnboardingAnswer } from '@/types'
 
 // ═══════════════════════════════════════════════════════
@@ -1525,6 +1526,11 @@ function OnboardingContent() {
           {isDBPhase ? `פירוט מאגר ${currentDBIdx + 1} מתוך ${totalDBs}` : `שאלה ${step + 1} מתוך ${mainLen}`} • נשמר אוטומטית
         </p>
       </div>
+
+      {/* Contextual Chat — orgId from auth token, user.id just keeps it truthy */}
+      {user?.id && (
+        <ContextualChat context="onboarding" orgId={user.id} />
+      )}
     </div>
   )
 }
