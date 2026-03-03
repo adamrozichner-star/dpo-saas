@@ -2,6 +2,10 @@ import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { authenticateRequest, unauthorizedResponse } from '@/lib/api-auth'
+import { maskPII, unmaskPII } from '@/lib/pii-guard'
+import { checkRateLimit, RATE_LIMITS, rateLimitKey, isDuplicateAbuse, isRapidFire } from '@/lib/rate-limiter'
+import { validateInput, VALIDATION_CONFIGS } from '@/lib/input-validator'
+import { assembleContext, formatContextForPrompt, maybeUpdateSummary, extractAndSaveFacts } from '@/lib/chat-memory'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -79,6 +83,39 @@ function detectIntent(message: string): string {
   return 'general'
 }
 
+// Revision detection: user wants to edit the last generated document
+function isRevisionRequest(message: string): boolean {
+  const msg = message.toLowerCase();
+  const revisionPatterns = [
+    /שנה|שני/, // שנה/שני
+    /תתקן|תקן/, // תתקן/תקן
+    /עדכן|עדכנ/, // עדכן
+    /הוסף.*סעיף/, // הוסף סעיף
+    /הסר.*סעיף/, // הסר סעיף
+    /החלף.*ב/, // החלף ב
+    /תוסיף/, // תוסיף
+    /תחליף/, // תחליף
+    /ערוך|עריכה/, // ערוך/עריכה
+    /revise|revision|edit.*doc|change.*doc|modify/,
+    /תעשה שינוי/, // תעשה שינוי
+    /במקום/, // במקום (instead of)
+    /אפשר לשנות/, // אפשר לשנות
+  ];
+  return revisionPatterns.some(function(p) { return p.test(msg); });
+}
+
+// Track revision count per conversation (in-memory, resets on cold start)
+const revisionCounters = new Map<string, number>();
+const MAX_REVISIONS = 10;
+
+function checkRevisionLimit(convId: string) {
+  const count = revisionCounters.get(convId) || 0;
+  if (count >= MAX_REVISIONS) return { allowed: false, count: count };
+  revisionCounters.set(convId, count + 1);
+  return { allowed: true, count: count + 1 };
+}
+
+
 function detectDocType(message: string): string {
   const msg = message.toLowerCase()
   if (msg.includes('מדיניות פרטיות') || msg.includes('privacy policy')) return 'privacy_policy'
@@ -113,15 +150,37 @@ export async function POST(request: NextRequest) {
       return new Response(JSON.stringify({ error: 'Missing fields' }), { status: 400 })
     }
 
-    const intent = detectIntent(message)
+    // --- SECURITY LAYER ---
+    const rl = checkRateLimit(rateLimitKey(orgId, 'chat'), RATE_LIMITS.chat)
+    if (!rl.allowed) {
+      return new Response(JSON.stringify({ error: 'rate_limited', message: 'יותר מדי הודעות. נסה שוב בעוד דקה.' }), { status: 429 })
+    }
+    if (isRapidFire(orgId)) {
+      return new Response(JSON.stringify({ error: 'rate_limited', message: 'לאט לאט! נסה שוב בעוד כמה שניות.' }), { status: 429 })
+    }
+    if (isDuplicateAbuse(orgId, message)) {
+      return new Response(JSON.stringify({ error: 'duplicate', message: 'ההודעה כבר נשלחה.' }), { status: 429 })
+    }
+    const validation = validateInput(message, VALIDATION_CONFIGS.chat)
+    if (!validation.valid) {
+      return new Response(JSON.stringify({ error: validation.reason, message: validation.reasonHe }), { status: 400 })
+    }
+    const cleanMessage = validation.sanitized
+    const piiResult = maskPII(cleanMessage)
+    if (piiResult.detectedTypes.length > 0) {
+      console.log(`[PII-STREAM] Detected in org ${orgId}: ${piiResult.detectedTypes.join(', ')}`)
+    }
+    // --- END SECURITY LAYER ---
+
+    const intent = detectIntent(cleanMessage)
     const convId = conversationId || `conv-${Date.now()}`
 
-    // Save user message
+    // Save user message (original clean text, not masked)
     let userMsgId = `temp-${Date.now()}`
     try {
       const { data } = await supabase
         .from('chat_messages')
-        .insert({ org_id: orgId, role: 'user', content: message, intent, conversation_id: convId })
+        .insert({ org_id: orgId, role: 'user', content: cleanMessage, intent, conversation_id: convId })
         .select('id')
         .single()
       if (data) userMsgId = data.id
@@ -172,40 +231,67 @@ export async function POST(request: NextRequest) {
       }
     } catch {} // profile may not exist
 
-    // Get recent history
-    let conversationHistory: { role: 'user' | 'assistant', content: string }[] = []
-    try {
-      const { data: history } = await supabase
-        .from('chat_messages')
-        .select('role, content')
-        .eq('org_id', orgId)
-        .order('created_at', { ascending: false })
-        .limit(12)
-      conversationHistory = (history || []).reverse().map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }))
-    } catch (e) { /* no history */ }
+    // Assemble context (memory + summary + recent messages)
+    const memoryContext = await assembleContext(supabase, orgId, convId)
+    let conversationHistory = memoryContext.recentMessages
 
-    if (conversationHistory.length === 0 || conversationHistory[conversationHistory.length - 1]?.content !== message) {
-      conversationHistory.push({ role: 'user', content: message })
+    if (conversationHistory.length === 0 || conversationHistory[conversationHistory.length - 1]?.content !== piiResult.masked) {
+      conversationHistory.push({ role: 'user', content: piiResult.masked })
     }
 
-    const contextPrompt = `${DPO_SYSTEM_PROMPT}
+
+        // Check if this is a document revision request
+    const isRevision = isRevisionRequest(cleanMessage);
+    if (isRevision) {
+      const revCheck = checkRevisionLimit(convId);
+      if (!revCheck.allowed) {
+        return new Response(JSON.stringify({ 
+          error: 'revision_limit', 
+          message: 'הגעת למקסימום 10 עריכות למסמך. צור מסמך חדש או פנה לממונה.' 
+        }), { status: 429 });
+      }
+    }
+
+const contextPrompt = `${DPO_SYSTEM_PROMPT}
 
 📊 מידע על הארגון:
 - שם: ${org?.name || 'לא ידוע'}
 - תחום: ${org?.industry || 'לא צוין'}
 - מספר עובדים: ${org?.employee_count || 'לא ידוע'}
 - ציון ציות: ${org?.compliance_score || 0}%${profileContext}
+${formatContextForPrompt(memoryContext)}
 
 ${intent === 'incident' ? '\n⚠️ זוהה אירוע אבטחה פוטנציאלי! וודא שהמשתמש מבין את הדחיפות (72 שעות).\n' : ''}
-${intent === 'document' ? '\n📄 המשתמש ביקש במפורש ליצור מסמך - צור את המסמך המלא! השתמש ב-[DOCUMENT_GENERATED] בסוף.\n' : ''}
-${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה אנושי.\n' : ''}
-${intent === 'off_topic' ? '\n🚫 זוהתה שאלה שאינה בתחום הפרטיות. ענה בהומור קל קצר והפנה לחיפוש באינטרנט. אל תענה על השאלה עצמה.\n' : ''}`
+${intent === 'document' ? `
+📄 המשתמש ביקש ליצור מסמך. צור מסמך מלא ומוכן לשימוש!
 
-    const maxTokens = intent === 'document' ? 4000 : 1500
+📋 מבנה מחייב לכל מסמך:
+1. כותרת + גרסה + תאריך
+2. מבוא ומטרה
+3. הגדרות
+4. תחולה
+5-8. סעיפים מרכזיים מותאמים לסוג המסמך
+9. אחריות ופיקוח
+10. תוקף ועדכונים
+
+דרישות איכות:
+• נסח בעברית משפטית מקצועית
+• כלל את כל הסעיפים הנדרשים בתיקון 13
+• התאם לתחום הארגון (שם, תחום, סוגי מידע, עובדים)
+• מוכן לשימוש מיידי ללא עריכה
+
+בסוף המסמך הוסף: [DOCUMENT_GENERATED]
+` : ''}
+${intent === 'escalate' ? '\n👤 המשתמש רוצה לדבר עם ממונה אנושי.\n' : ''}
+${intent === 'off_topic' ? '\n🚫 זוהתה שאלה שאינה בתחום הפרטיות. ענה בהומור קל קצר והפנה לחיפוש באינטרנט. אל תענה על השאלה עצמה.\n' : ''}
+${isRevision ? '\n✏️ המשתמש מבקש לערוך מסמך קודם. בצע שינויים והחזר מסמך מלא מעודכן. הוסף [DOCUMENT_GENERATED] בסוף.\n' : ''}`
+
+    const maxTokens = (intent === 'document' || isRevision) ? 4000 : 1500
+    const aiModel = (intent === 'document' || isRevision) ? 'claude-sonnet-4-20250514' : 'claude-3-haiku-20240307'
 
     // Create streaming response
     const stream = await anthropic.messages.stream({
-      model: 'claude-3-haiku-20240307',
+      model: aiModel,
       max_tokens: maxTokens,
       system: contextPrompt,
       messages: conversationHistory
@@ -250,6 +336,11 @@ ${intent === 'off_topic' ? '\n🚫 זוהתה שאלה שאינה בתחום ה�
             .replace(/```[a-z]*\n?/g, '')
             .replace(/`([^`]+)`/g, '$1')
             .trim()
+
+          // Unmask PII in full response
+          if (piiResult.map.size > 0) {
+            fullText = unmaskPII(fullText, piiResult.map)
+          }
 
           // Check for generated document
           let generatedDoc = null
@@ -299,6 +390,13 @@ ${intent === 'off_topic' ? '\n🚫 זוהתה שאלה שאינה בתחום ה�
               .single()
             if (data) assistantMsgId = data.id
           } catch (e) { /* table may not exist */ }
+
+          // Fire-and-forget: extract facts + update summary
+          const msgCount = (memoryContext.recentMessages?.length || 0) + 2
+          Promise.all([
+            extractAndSaveFacts(supabase, orgId, cleanMessage, fullText).catch(() => {}),
+            maybeUpdateSummary(supabase, orgId, convId, msgCount).catch(() => {})
+          ]).catch(() => {})
 
           // Send final event with metadata
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
