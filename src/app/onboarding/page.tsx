@@ -1527,9 +1527,21 @@ function OnboardingContent() {
         </p>
       </div>
 
-      {/* Contextual Chat — orgId from auth token, user.id just keeps it truthy */}
+      {/* Contextual Chat — question-scoped context for the current step */}
       {user?.id && (
-        <ContextualChat context="onboarding" orgId={user.id} />
+        <ContextualChat 
+          context="onboarding" 
+          orgId={user.id}
+          extraContext={
+            isDBPhase && currentDetailDB
+              ? `המשתמש נמצא בשלב פירוט מאגר מידע: "${currentDetailDB}" (מאגר ${currentDBIdx + 1} מתוך ${totalDBs}). עזור לו להבין מה למלא עבור המאגר הזה.`
+              : card
+                ? `שאלה נוכחית (שלב ${step + 1} מתוך ${mainLen}): ${card.q}${card.hint ? `\nרמז: ${card.hint}` : ''}${card.lawRef ? `\nהפניה לחוק: ${card.lawRef}` : ''}`
+                : showReport
+                  ? 'המשתמש צופה בדוח סיכום האיפיון. עזור לו להבין את הממצאים.'
+                  : 'המשתמש סיים את השאלון.'
+          }
+        />
       )}
     </div>
   )
