@@ -38,6 +38,7 @@ import { useToast } from '@/components/Toast'
 import WelcomeModal from '@/components/WelcomeModal'
 import UnpaidWelcomeModal from '@/components/UnpaidWelcomeModal'
 import GuidelinesPanel from '@/components/GuidelinesPanel'
+import ContextualChat from '@/components/ContextualChat'
 import DocUploadAdapter from '@/components/DocUploadAdapter'
 import DocCreator from '@/components/DocCreator'
 import RightsTab from '@/components/RightsTab'
@@ -2910,6 +2911,19 @@ function AuditLogSection({ orgId, supabase }: { orgId: string, supabase: any }) 
             </div>
           )}
         </div>
+      )}
+
+      {/* Contextual Chat Widget */}
+      {organization?.id && (
+        <ContextualChat
+          context={
+            activeTab === 'documents' ? 'documents' :
+            activeTab === 'incidents' ? 'incidents' :
+            activeTab === 'settings' ? 'settings' :
+            'dashboard'
+          }
+          orgId={organization.id}
+        />
       )}
     </div>
   )
