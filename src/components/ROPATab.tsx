@@ -356,6 +356,7 @@ export default function ROPATab({ orgId }: ROPATabProps) {
                       title="עריכה"
                     >
                       <Edit className="w-4 h-4 text-blue-500" />
+                    </button>
                     <button
                       onClick={() => deleteActivity(activity.id)}
                       className="p-2 hover:bg-red-50 rounded"
