@@ -400,6 +400,34 @@ export async function POST(request: NextRequest) {
         .select('name, industry, employee_count, compliance_score')
         .eq('id', orgId)
         .single()
+
+      // Get org profile for richer context
+      let profileContext = ''
+      try {
+        const { data: profile } = await supabase
+          .from('organization_profiles')
+          .select('profile_data')
+          .eq('org_id', orgId)
+          .single()
+        if (profile?.profile_data?.answers) {
+          const answers = profile.profile_data.answers
+          const parts: string[] = []
+          const fields = [
+            ['data_types', 'סוגי מידע'],
+            ['data_sources', 'מקורות'],
+            ['shares_data', 'משתף מידע'],
+            ['suppliers_count', 'ספקים'],
+          ]
+          for (const [qId, label] of fields) {
+            const val = answers.find((a: any) => a.questionId === qId)?.value
+            if (val) {
+              if (Array.isArray(val)) parts.push(label + ': ' + val.join(', '))
+              else parts.push(label + ': ' + val)
+            }
+          }
+          if (parts.length > 0) profileContext = '\n- ' + parts.join('\n- ')
+        }
+      } catch {} // profile may not exist
       
       // Get recent history (if table exists)
       let conversationHistory: { role: 'user' | 'assistant', content: string }[] = []
