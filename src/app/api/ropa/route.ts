@@ -352,7 +352,8 @@ export async function POST(request: NextRequest) {
         org_id: orgId,
         processing_activity_id: activity.id,
         action: 'created',
-        performed_by_type: 'user'
+        performed_by: auth?.userId || 'dpo',
+        performed_by_type: isDpo ? 'dpo' : 'user'
       })
 
       return NextResponse.json({ success: true, activity })
@@ -387,7 +388,8 @@ export async function POST(request: NextRequest) {
         org_id: activity.org_id,
         processing_activity_id: activityId,
         action: 'updated',
-        performed_by_type: 'user'
+        performed_by: auth?.userId || 'dpo',
+        performed_by_type: isDpo ? 'dpo' : 'user'
       })
 
       return NextResponse.json({ success: true, activity })
@@ -540,7 +542,8 @@ export async function POST(request: NextRequest) {
           org_id: activity.org_id,
           action: 'deleted',
           old_value: activity.name,
-          performed_by_type: 'user'
+          performed_by: auth?.userId || 'dpo',
+          performed_by_type: isDpo ? 'dpo' : 'user'
         })
       }
 
