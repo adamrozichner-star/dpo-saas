@@ -13,6 +13,7 @@ import {
 import { useAuth } from '@/lib/auth-context'
 import { useSubscriptionGate } from '@/lib/use-subscription-gate'
 import { DPO_CONFIG } from '@/lib/dpo-config'
+import { detectPIITypes, piiTypeLabel } from '@/lib/pii-guard'
 
 interface Message {
   id: string
@@ -106,6 +107,7 @@ export default function ChatPage() {
   const [showUpsellBanner, setShowUpsellBanner] = useState(false)
   const [uploadProgress, setUploadProgress] = useState<number | null>(null)
   const [dpoCredits, setDpoCredits] = useState({ used: 0, limit: 2 })
+  const [piiWarning, setPiiWarning] = useState<string[] | null>(null)
   
   // Sidebar state
   const [sidebarOpen, setSidebarOpen] = useState(false) // Closed by default, visible on lg via CSS
@@ -424,6 +426,7 @@ export default function ChatPage() {
     }
 
     setInput('')
+    setPiiWarning(null)
     setIsLoading(true)
     setIsTyping(true)
     setActiveQuickAction(null)
@@ -465,6 +468,17 @@ export default function ChatPage() {
       })
 
       if (!response.ok || !response.body) {
+        if (response.status === 429 || response.status === 400) {
+          try {
+            const errData = await response.json()
+            setMessages(prev => prev.map(m => 
+              m.id === streamMsgId ? { ...m, content: `⚠️ ${errData.message || 'נסה שוב בעוד רגע.'}` } : m
+            ))
+            setIsLoading(false)
+            setIsTyping(false)
+            return
+          } catch {}
+        }
         throw new Error('Stream failed')
       }
 
@@ -1598,6 +1612,14 @@ ${summaryText}
             </div>
           )}
 
+          {/* PII Warning */}
+          {piiWarning && (
+            <div className="mx-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2 text-amber-700 text-xs">
+              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>{`זיהינו מידע רגיש (${piiWarning.join(', ')}). המידע יוסתר אוטומטית לפני עיבוד.`}</span>
+            </div>
+          )}
+
           <div className="flex items-end gap-2">
             <button 
               onClick={() => setShowQuickActions(!showQuickActions)}
@@ -1615,7 +1637,16 @@ ${summaryText}
                 placeholder="הקלד הודעה..."
                 className="flex-1 bg-transparent border-0 focus:outline-none py-3 text-stone-800"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setInput(val)
+                  if (val.length > 5) {
+                    const types = detectPIITypes(val)
+                    setPiiWarning(types.length > 0 ? types.map(t => piiTypeLabel(t)) : null)
+                  } else {
+                    setPiiWarning(null)
+                  }
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()
@@ -1647,7 +1678,7 @@ ${summaryText}
 
           {/* AI Disclaimer + Escalate to DPO */}
           <div className="flex items-center justify-between px-2 pt-1.5 pb-0.5">
-            <p className="text-[11px] text-stone-400">🤖 עוזר AI — תשובות אינן מהוות ייעוץ משפטי מחייב</p>
+            <p className="text-[11px] text-stone-400">🤖 עוזר AI — תשובות אינן מהוות ייעוץ משפטי מחייב · 🔒 אל תזינו ת.ז או פרטי אשראי</p>
             <button 
               onClick={() => { 
                 sendMessage('רוצה לדבר עם הממונה')
