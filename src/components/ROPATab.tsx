@@ -143,6 +143,7 @@ export default function ROPATab({ orgId }: ROPATabProps) {
   const [showWizard, setShowWizard] = useState(false)
   const [selectedActivity, setSelectedActivity] = useState<ProcessingActivity | null>(null)
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list')
+  const [editingActivity, setEditingActivity] = useState<ProcessingActivity | null>(null)
 
   // Load activities
   const loadActivities = async () => {
@@ -350,6 +351,12 @@ export default function ROPATab({ orgId }: ROPATabProps) {
                       <Eye className="w-4 h-4 text-gray-500" />
                     </button>
                     <button
+                      onClick={() => { setEditingActivity(activity); setShowWizard(true) }}
+                      className="p-2 hover:bg-blue-50 rounded"
+                      title="עריכה"
+                    >
+                      <Edit className="w-4 h-4 text-blue-500" />
+                    <button
                       onClick={() => deleteActivity(activity.id)}
                       className="p-2 hover:bg-red-50 rounded"
                       title="מחיקה"
@@ -368,8 +375,9 @@ export default function ROPATab({ orgId }: ROPATabProps) {
       {showWizard && (
         <ActivityWizard
           orgId={orgId}
-          onClose={() => setShowWizard(false)}
-          onSave={() => { setShowWizard(false); loadActivities() }}
+          editData={editingActivity || undefined}
+          onClose={() => { setShowWizard(false); setEditingActivity(null) }}
+          onSave={() => { setShowWizard(false); setEditingActivity(null); loadActivities() }}
         />
       )}
 
@@ -388,27 +396,27 @@ export default function ROPATab({ orgId }: ROPATabProps) {
 // =============================================
 // Activity Wizard Component
 // =============================================
-function ActivityWizard({ orgId, onClose, onSave }: { orgId: string; onClose: () => void; onSave: () => void }) {
+function ActivityWizard({ orgId, editData, onClose, onSave }: { orgId: string; editData?: ProcessingActivity; onClose: () => void; onSave: () => void }) {
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const totalSteps = 5
   
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    department: '',
-    purposes: [] as string[],
-    legal_basis: '',
+    name: editData?.name || '',
+    description: editData?.description || '',
+    department: editData?.department || '',
+    purposes: editData?.purposes || [] as string[],
+    legal_basis: editData?.legal_basis || '',
     legal_basis_details: '',
-    data_categories: [] as string[],
-    special_categories: [] as string[],
-    data_subject_categories: [] as string[],
-    estimated_records_count: '',
-    includes_minors: false,
-    international_transfers: false,
-    transfer_countries: [] as string[],
-    retention_period: '',
-    security_measures: [] as string[]
+    data_categories: editData?.data_categories || [] as string[],
+    special_categories: editData?.special_categories || [] as string[],
+    data_subject_categories: editData?.data_subject_categories || [] as string[],
+    estimated_records_count: editData?.estimated_records_count?.toString() || '',
+    includes_minors: editData?.includes_minors || false,
+    international_transfers: editData?.international_transfers || false,
+    transfer_countries: editData?.transfer_countries || [] as string[],
+    retention_period: editData?.retention_period || '',
+    security_measures: editData?.security_measures || [] as string[]
   })
 
   const toggleArrayItem = (field: keyof typeof formData, item: string) => {
@@ -427,8 +435,9 @@ function ActivityWizard({ orgId, onClose, onSave }: { orgId: string; onClose: ()
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'create',
+          action: editData ? 'update' : 'create',
           orgId,
+          ...(editData ? { activityId: editData.id } : {}),
           data: {
             ...formData,
             estimated_records_count: formData.estimated_records_count ? parseInt(formData.estimated_records_count) : null,
@@ -458,7 +467,7 @@ function ActivityWizard({ orgId, onClose, onSave }: { orgId: string; onClose: ()
         {/* Header */}
         <div className="bg-primary text-white p-4 flex items-center justify-between">
           <div>
-            <h2 className="font-bold text-lg">הוספת פעילות עיבוד חדשה</h2>
+            <h2 className="font-bold text-lg">{editData ? 'עריכת פעילות עיבוד' : 'הוספת פעילות עיבוד חדשה'}</h2>
             <p className="text-primary-foreground/80 text-sm">שלב {step} מתוך {totalSteps}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-white/20 rounded">
