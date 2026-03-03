@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
     const piiResult = maskPII(validation.sanitized)
     if (piiResult.detectedTypes.length > 0) {
       // Fire-and-forget audit log
-      supabase.from('audit_logs').insert({
+      Promise.resolve(supabase.from('audit_logs').insert({
         event_type: 'pii_detected',
         user_id: auth.userId,
         org_id: orgId,
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
         ip_address: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown',
         user_agent: request.headers.get('user-agent') || 'unknown',
         created_at: new Date().toISOString()
-      }).then(() => {}).catch(() => {})
+      })).catch(() => {})
     }
 
     // Get org name for context
