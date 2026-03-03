@@ -62,12 +62,12 @@ function cleanup() {
   lastCleanup = now
 
   const cutoff = now - 3_600_000 // Remove entries older than 1 hour
-  for (const [key, entry] of store) {
+  store.forEach((entry, key) => {
     entry.timestamps = entry.timestamps.filter(t => t > cutoff)
     if (entry.timestamps.length === 0) {
       store.delete(key)
     }
-  }
+  })
 }
 
 // =============================================
