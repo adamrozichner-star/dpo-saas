@@ -742,7 +742,7 @@ export default function DPODashboard() {
 
               {/* Charts row */}
               <div className="dp-charts">
-                {/* Compliance Distribution */}
+                {/* Compliance Distribution — shows first (right) in RTL */}
                 <div className="dp-chart-card">
                   <h3 className="dp-chart-title">התפלגות ציון ציות</h3>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -774,9 +774,9 @@ export default function DPODashboard() {
                   <h3 className="dp-chart-title">פריטים ממתינים לפי סוג</h3>
                   {queueByType.length > 0 ? (
                     <ResponsiveContainer width="100%" height={160}>
-                      <BarChart data={queueByType} layout="vertical" margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
+                      <BarChart data={queueByType} layout="vertical" margin={{ top: 0, right: 0, left: 10, bottom: 0 }}>
                         <XAxis type="number" hide />
-                        <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 12 }} />
+                        <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 12 }} orientation="right" />
                         <Tooltip formatter={(v: any) => [v, 'פריטים']} />
                         <Bar dataKey="count" radius={[0, 6, 6, 0]}>
                           {queueByType.map((d, i) => <Cell key={i} fill={d.fill} />)}
