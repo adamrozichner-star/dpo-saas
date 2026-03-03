@@ -206,12 +206,12 @@ export function maskPII(text: string): PIIMaskResult {
 export function unmaskPII(text: string, map: Map<string, string>): string {
   let unmasked = text
 
-  for (const [placeholder, original] of map) {
+  map.forEach((original, placeholder) => {
     // Replace all occurrences (AI might repeat placeholders)
     while (unmasked.includes(placeholder)) {
       unmasked = unmasked.replace(placeholder, original)
     }
-  }
+  })
 
   return unmasked
 }
