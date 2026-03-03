@@ -115,7 +115,7 @@ function SuccessContent() {
           </div>
 
           <Link
-            href="/dashboard"
+            href="/dashboard?payment=success"
             className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold text-lg transition-colors"
           >
             עבור ללוח הבקרה
