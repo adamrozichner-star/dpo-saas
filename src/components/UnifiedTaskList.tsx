@@ -520,7 +520,9 @@ export default function UnifiedTaskList({
         })
       })
       if (!res.ok) throw new Error('שגיאה ביצירת המסמך')
-      toast('המסמך נוצר בהצלחה!')
+      toast(`${task.title} — המסמך נוצר! עברו למסמכים לצפייה`)
+      // Auto-resolve: doc generated → pending DPO review
+      onResolve(task.id, 'מסמך הופק ונשמר — ממתין לאישור הממונה')
       onRefreshDocs?.()
     } catch (err: any) {
       toast(err.message || 'שגיאה', 'error')
@@ -545,7 +547,10 @@ export default function UnifiedTaskList({
         })
       })
       if (!res.ok) throw new Error('שגיאה ביצירת המסמך')
-      toast('המסמך נוצר בהצלחה!')
+      const supplierName = answers.supplierName || ''
+      toast(supplierName ? `הסכם עיבוד מידע נוצר עבור ${supplierName} — עברו למסמכים לצפייה` : 'המסמך נוצר בהצלחה! עברו ללשונית מסמכים לצפייה')
+      // Auto-resolve the wizard task
+      onResolve(wizardTask.id, supplierName ? `הסכם נוצר עבור ${supplierName}` : 'מסמך הופק ונשמר')
       setWizardTask(null)
       onRefreshDocs?.()
     } catch (err: any) {
