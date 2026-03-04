@@ -24,6 +24,7 @@ interface UnifiedTaskListProps {
   onResolve: (taskId: string, note?: string) => void
   onUndo: (taskId: string) => void
   onRefreshDocs?: () => void
+  onNavigateTab?: (tab: string) => void
 }
 
 // ═══════════════════════════════════════════════════════
@@ -175,7 +176,7 @@ function WizardModal({
             className="px-6 py-2.5 bg-indigo-500 text-white rounded-xl text-sm font-medium hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center gap-2"
           >
             {isSubmitting ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> מייצר מסמך...</>
+              <><Loader2 className="h-4 w-4 animate-spin" /> מייצר באמצעות AI...</>
             ) : isLast ? (
               <><Sparkles className="h-4 w-4" /> הפק מסמך</>
             ) : (
@@ -256,10 +257,14 @@ function TaskCard({
           <button
             onClick={(e) => { e.stopPropagation(); onGenerateDoc(task) }}
             disabled={isGenerating}
-            className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600 transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap"
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1 whitespace-nowrap ${
+              isGenerating 
+                ? 'bg-indigo-100 text-indigo-600 border border-indigo-200' 
+                : 'bg-indigo-500 text-white hover:bg-indigo-600'
+            }`}
           >
             {isGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-            {isGenerating ? 'מייצר...' : 'הפק מסמך'}
+            {isGenerating ? 'מייצר באמצעות AI...' : 'הפק מסמך'}
           </button>
         )
       case 'wizard':
@@ -481,6 +486,7 @@ export default function UnifiedTaskList({
   onResolve,
   onUndo,
   onRefreshDocs,
+  onNavigateTab,
 }: UnifiedTaskListProps) {
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set())
   const [generatingDocFor, setGeneratingDocFor] = useState<string | null>(null)
@@ -634,9 +640,25 @@ export default function UnifiedTaskList({
 
       {/* "See all" link in summary mode */}
       {mode === 'summary' && activeTasks.length > summaryLimit && (
-        <p className="text-xs text-indigo-600 font-medium">
-          + {activeTasks.length - summaryLimit} משימות נוספות בלשונית משימות
-        </p>
+        <button 
+          onClick={() => onNavigateTab?.('tasks')}
+          className="text-xs text-indigo-600 font-medium hover:text-indigo-800 cursor-pointer transition-colors"
+        >
+          + {activeTasks.length - summaryLimit} משימות נוספות →
+        </button>
+      )}
+
+      {/* Summary mode: completed count */}
+      {mode === 'summary' && completedTasks.length > 0 && (
+        <div className="flex items-center gap-2 text-xs text-emerald-600">
+          <CheckCircle2 className="h-3.5 w-3.5" />
+          <span>{completedTasks.length} משימות הושלמו</span>
+          {onNavigateTab && (
+            <button onClick={() => onNavigateTab('tasks')} className="text-indigo-500 hover:text-indigo-700 font-medium cursor-pointer transition-colors">
+              צפייה →
+            </button>
+          )}
+        </div>
       )}
 
       {/* Completed tasks (full mode only, grayed at bottom) */}
@@ -658,14 +680,24 @@ export default function UnifiedTaskList({
                     <span className="text-xs text-emerald-500 mr-2">— {task.resolvedNote}</span>
                   )}
                 </div>
-                {task.status === 'completed' && task.resolvedNote?.includes('סומן כבוצע') && isPaid && (
-                  <button
-                    onClick={() => onUndo(task.id)}
-                    className="opacity-0 group-hover:opacity-100 text-xs text-stone-400 hover:text-rose-500 transition-all cursor-pointer"
-                  >
-                    ↩ בטל
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {task.documentType && task.resolvedNote?.includes('מסמך הופק') && onNavigateTab && (
+                    <button
+                      onClick={() => onNavigateTab('documents')}
+                      className="text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                      צפייה במסמך →
+                    </button>
+                  )}
+                  {task.status === 'completed' && task.resolvedNote?.includes('סומן כבוצע') && isPaid && (
+                    <button
+                      onClick={() => onUndo(task.id)}
+                      className="opacity-0 group-hover:opacity-100 text-xs text-stone-400 hover:text-rose-500 transition-all cursor-pointer"
+                    >
+                      ↩ בטל
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
