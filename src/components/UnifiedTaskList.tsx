@@ -548,7 +548,10 @@ export default function UnifiedTaskList({
       })
       if (!res.ok) throw new Error('שגיאה ביצירת המסמך')
       const supplierName = answers.supplierName || ''
-      toast(supplierName ? `הסכם עיבוד מידע נוצר עבור ${supplierName} — עברו למסמכים לצפייה` : 'המסמך נוצר בהצלחה! עברו ללשונית מסמכים לצפייה')
+      const docTitle = wizardTask.title || 'מסמך'
+      toast(supplierName 
+        ? `הסכם עיבוד מידע נוצר עבור ${supplierName} — עברו למסמכים לצפייה` 
+        : `${docTitle} — המסמך נוצר! עברו ללשונית מסמכים לצפייה`)
       // Auto-resolve the wizard task
       onResolve(wizardTask.id, supplierName ? `הסכם נוצר עבור ${supplierName}` : 'מסמך הופק ונשמר')
       setWizardTask(null)
