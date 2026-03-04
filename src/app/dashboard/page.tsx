@@ -913,11 +913,12 @@ function OverviewTab({
             <p className="text-sm text-stone-500 mb-4">{topPriorityAction.description}</p>
             <div className="flex items-center gap-3">
               {isPaid ? (
-                <Link href={topPriorityAction.actionPath || '/chat'}>
-                  <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 transition-colors">
-                    טפל עכשיו
-                  </button>
-                </Link>
+                <button 
+                  onClick={() => onNavigate('tasks')}
+                  className="px-4 py-2 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 transition-colors cursor-pointer"
+                >
+                  טפל עכשיו
+                </button>
               ) : (
                 <Link href="/subscribe">
                   <button className="px-4 py-2 bg-stone-200 text-stone-500 rounded-lg text-sm font-medium hover:bg-stone-300 transition-colors flex items-center gap-1">
