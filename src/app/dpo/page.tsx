@@ -40,8 +40,11 @@ const TYPE_MAP: Record<string, { label: string; emoji: string; accent: string }>
 
 const DOC_LABELS: Record<string, string> = {
   privacy_policy: 'מדיניות פרטיות', security_policy: 'נוהל אבטחת מידע',
+  security_procedures: 'נוהל אבטחת מידע', database_definition: 'הגדרת מאגרי מידע',
   dpo_appointment: 'כתב מינוי DPO', database_registration: 'רישום מאגרי מידע',
   ropa: 'מפת עיבוד (ROPA)', consent_form: 'טופס הסכמה',
+  processor_agreement: 'הסכם עיבוד מידע (DPA)', employee_training: 'הדרכת עובדים',
+  camera_appointment: 'מינוי אחראי מצלמות', cv_retention_policy: 'מדיניות מחיקת קו"ח',
   procedure: 'נוהל', custom: 'מסמך מותאם'
 }
 
@@ -415,6 +418,7 @@ export default function DPODashboard() {
                 <span className={`dp-badge ${doc.status === 'active' ? 'green' : 'yellow'}`} style={{ marginRight: 8 }}>
                   {doc.status === 'active' ? '✓ אושר' : doc.status === 'draft' ? '📝 טיוטה' : '⏳ ממתין'}
                 </span>
+                {(doc as any).generated_by === 'system' && <span className="dp-badge" style={{ background: '#f5f3ff', color: '#6d28d9', border: '1px solid #ddd6fe', marginRight: 4 }}>🤖 נוצר אוטומטית</span>}
               </div>
               {doc.status !== 'active' && (
                 <div style={{ display: 'flex', gap: 4 }}>
@@ -650,6 +654,10 @@ export default function DPODashboard() {
                   <div style={{ fontSize: 40 }}>✅</div>
                   <h3>אין פריטים ממתינים</h3>
                   <p>הכל מטופל — יופי!</p>
+                  <div style={{ marginTop: 16, display: 'flex', gap: 8, justifyContent: 'center' }}>
+                    <button className="dp-btn" onClick={() => setTab('orgs')}>🏢 צפייה בארגונים</button>
+                    <button className="dp-btn" onClick={() => setTab('overview')}>📊 סקירה כללית</button>
+                  </div>
                 </div>
               )}
 
@@ -927,9 +935,13 @@ export default function DPODashboard() {
                   <div>
                     <h1 className="dp-org-name">{org.name}</h1>
                     <div className="dp-org-meta">
+                      {org.business_id && <span>🏢 {org.business_id}</span>}
                       {selectedOrg.contact_email && <span>📧 {selectedOrg.contact_email}</span>}
                       {org.phone && <span>📞 {org.phone}</span>}
-                      <span>{org.tier === 'extended' ? '⭐ מורחבת' : 'בסיסית'}</span>
+                      <span className="dp-badge" style={{ background: org.tier === 'extended' ? '#eef2ff' : '#f4f4f5', color: org.tier === 'extended' ? '#4f46e5' : '#71717a', border: org.tier === 'extended' ? '1px solid #c7d2fe' : '1px solid #e4e4e7' }}>
+                        {org.tier === 'extended' ? '⭐ חבילה מורחבת' : '📋 חבילה בסיסית'}
+                      </span>
+                      {org.status && <span style={{ fontSize: 11, color: org.status === 'active' ? '#16a34a' : '#f59e0b' }}>{org.status === 'active' ? '● פעיל' : '● ' + org.status}</span>}
                     </div>
                   </div>
                   <div className="dp-org-score-badge" style={{ borderColor: scoreColor(s) + '40', background: scoreColor(s) + '08' }}>
@@ -1011,6 +1023,22 @@ export default function DPODashboard() {
                   {/* DOCS - Full version management */}
                   {orgTab === 'docs' && (
                     <div>
+                      {selectedOrg.documents?.filter((d: any) => d.status !== 'active').length > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#fffbeb', border: '1px solid #fef08a', borderRadius: 10, marginBottom: 14 }}>
+                          <span style={{ fontSize: 13, color: '#854d0e', fontWeight: 600 }}>
+                            ⏳ {selectedOrg.documents.filter((d: any) => d.status !== 'active').length} מסמכים ממתינים לאישור
+                          </span>
+                          <button className="dp-btn dp-btn-g" disabled={modalDocBusy} onClick={async () => {
+                            setModalDocBusy(true)
+                            for (const d of selectedOrg.documents.filter((doc: any) => doc.status !== 'active')) {
+                              await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'approve_document', documentId: d.id }) })
+                            }
+                            toast('✅ כל המסמכים אושרו')
+                            loadOrgDetail(selectedOrg.organization.id)
+                            setModalDocBusy(false)
+                          }}>{modalDocBusy ? '...' : '✓ אשר הכל'}</button>
+                        </div>
+                      )}
                       {!selectedOrg.documents?.length ? (
                         <p className="dp-muted">אין מסמכים</p>
                       ) : (() => {
@@ -1035,6 +1063,7 @@ export default function DPODashboard() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                   <span style={{ fontWeight: 700, fontSize: 14 }}>{DOC_LABELS[type] || type}</span>
                                   <span style={{ fontSize: 11, color: '#a1a1aa' }}>{docs.length} {docs.length > 1 ? 'גרסאות' : 'גרסה'}</span>
+                                  {latest.generated_by === 'system' && <span style={{ fontSize: 10, color: '#7c3aed', background: '#f5f3ff', padding: '1px 6px', borderRadius: 4 }}>🤖 AI</span>}
                                 </div>
                                 {latest.status === 'active' && latest.version && (
                                   <span className="dp-badge green">🔒 v{latest.version}</span>
@@ -1362,7 +1391,54 @@ export default function DPODashboard() {
                   {/* PROFILE */}
                   {orgTab === 'profile' && (
                     <div>
-                      {selectedOrg.profile?.answers ? (
+                      {/* v3 Answers (detailed onboarding) */}
+                      {selectedOrg.profile?.v3Answers && Object.keys(selectedOrg.profile.v3Answers).length > 0 ? (() => {
+                        const v3 = selectedOrg.profile.v3Answers
+                        const V3_LABELS: Record<string, string> = {
+                          bizName: 'שם העסק', companyId: 'ח.פ / עוסק מורשה', industry: 'תחום פעילות',
+                          databases: 'מאגרי מידע', processors: 'ספקי עיבוד', customProcessors: 'ספקים נוספים',
+                          storage: 'אחסון מידע', accessControl: 'בקרת גישה', hasConsent: 'מנגנון הסכמה',
+                          securityOwner: 'אחראי אבטחה', securityOwnerName: 'שם אחראי אבטחה',
+                          hasCameras: 'מצלמות אבטחה', hasCvs: 'קורות חיים', hasEmployees: 'עובדים',
+                          customDatabases: 'מאגרים נוספים', customStorage: 'אחסון נוסף',
+                        }
+                        const DB_LABELS: Record<string, string> = {
+                          customers: 'לקוחות', employees: 'עובדים', suppliers: 'ספקים', leads: 'לידים',
+                          patients: 'מטופלים', students: 'סטודנטים', members: 'חברי מועדון',
+                          website: 'משתמשי אתר', cameras: 'מצלמות', cvs: 'קורות חיים'
+                        }
+                        const entries = Object.entries(v3).filter(([k]) => k !== 'dbDetails')
+                        return (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                            {entries.map(([key, val]) => (
+                              <div key={key} style={{ padding: '10px 12px', background: '#fafafa', borderRadius: 8 }}>
+                                <p style={{ fontSize: 11, color: '#71717a', marginBottom: 2 }}>{V3_LABELS[key] || key}</p>
+                                <p style={{ fontSize: 13, fontWeight: 500 }}>
+                                  {Array.isArray(val)
+                                    ? (val as string[]).map(v => key === 'databases' ? (DB_LABELS[v] || v) : v).join(', ')
+                                    : typeof val === 'boolean' ? (val ? 'כן' : 'לא')
+                                    : String(val || '-')}
+                                </p>
+                              </div>
+                            ))}
+                            {/* DB Details */}
+                            {v3.dbDetails && Object.keys(v3.dbDetails).length > 0 && (
+                              <div style={{ gridColumn: '1 / -1', padding: '10px 12px', background: '#f0f9ff', borderRadius: 8, border: '1px solid #bae6fd' }}>
+                                <p style={{ fontSize: 11, color: '#0369a1', marginBottom: 6, fontWeight: 700 }}>פרטי מאגרים</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8 }}>
+                                  {Object.entries(v3.dbDetails).map(([db, detail]: [string, any]) => (
+                                    <div key={db} style={{ padding: '6px 10px', background: '#fff', borderRadius: 6, fontSize: 12 }}>
+                                      <span style={{ fontWeight: 600 }}>{DB_LABELS[db] || db}</span>
+                                      {detail.size && <span style={{ color: '#71717a', marginRight: 6 }}>({detail.size})</span>}
+                                      {detail.fields?.length > 0 && <p style={{ fontSize: 11, color: '#71717a', marginTop: 2 }}>שדות: {detail.fields.join(', ')}</p>}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })() : selectedOrg.profile?.answers ? (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                           {selectedOrg.profile.answers.map((a: any) => (
                             <div key={a.questionId} style={{ padding: '10px 12px', background: '#fafafa', borderRadius: 8 }}>
