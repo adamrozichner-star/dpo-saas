@@ -216,6 +216,238 @@ ${serverLocation !== 'israel' ? `- **העברה בינלאומית:** בהתאם
         console.log(`Generated wizard-driven DPA for supplier: ${supplierName}`)
       }
 
+      // ── WIZARD-DRIVEN CAMERA OFFICER APPOINTMENT ──
+      if (wizardId === 'camera_officer' && wizardAnswers && singleDocType === 'camera_appointment') {
+        const officerName = wizardAnswers.officerName || ''
+        const officerRole = wizardAnswers.officerRole || ''
+        const cameraCount = wizardAnswers.cameraCount || ''
+        const cameraLocations = wizardAnswers.cameraLocations || ''
+        const date = new Date().toLocaleDateString('he-IL')
+
+        targetDoc = {
+          type: 'camera_appointment',
+          title: `כתב מינוי אחראי מצלמות — ${officerName}`,
+          content: `# כתב מינוי אחראי מצלמות אבטחה
+
+**${orgName}**
+${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
+
+**תאריך:** ${date}
+
+---
+
+## 1. מינוי
+
+הריני ממנה את **${officerName}**${officerRole ? `, ${officerRole}` : ''}, כאחראי/ת על מערכת המצלמות בארגון.
+
+## 2. פרטי מערכת המצלמות
+
+| פרט | ערך |
+|---|---|
+| **מספר מצלמות** | ${cameraCount || 'לא צוין'} |
+| **מיקומים** | ${cameraLocations || 'לא צוין'} |
+| **ממונה הגנת פרטיות** | ${dpoName} |
+
+## 3. תחומי אחריות
+
+האחראי/ת ידאג/תדאג ל:
+
+- **תחזוקה שוטפת** — וידוא תקינות המצלמות ומערכת ההקלטה
+- **בקרת גישה** — רק מורשים יוכלו לצפות בצילומים
+- **שמירת הקלטות** — הקלטות יישמרו לתקופה שלא תעלה על 30 יום, אלא אם נדרש אחרת בחוק
+- **מחיקת הקלטות** — הקלטות שחלף מועד שמירתן יימחקו באופן מאובטח
+- **שילוט** — הצבת שילוט ברור במקומות בהם מותקנות מצלמות, בהתאם לחוק
+- **טיפול בבקשות** — מענה לבקשות צפייה בצילומים מנושאי מידע, בתיאום עם הממונה על הגנת הפרטיות
+- **דיווח** — דיווח מיידי לממונה על כל אירוע חריג הקשור למערכת המצלמות
+
+## 4. הצהרה
+
+אני, ${officerName}, מאשר/ת כי קראתי את כתב המינוי ומבין/ה את תחומי האחריות המפורטים לעיל.
+
+---
+
+**חתימת הממנה:** ________________  תאריך: ${date}
+
+**חתימת הממונה:** ________________  תאריך: ________
+
+---
+*מסמך זה נוצר על ידי מערכת MyDPO בהתאם לדרישות חוק הגנת הפרטיות, סעיף 7.*
+`
+        }
+        console.log(`Generated camera officer appointment for: ${officerName}`)
+      }
+
+      // ── WIZARD-DRIVEN CV RETENTION POLICY ──
+      if (wizardId === 'cv_retention' && wizardAnswers && singleDocType === 'cv_retention_policy') {
+        const storageLocation = wizardAnswers.storageLocation || 'other'
+        const volume = wizardAnswers.volume || ''
+        const currentPractice = wizardAnswers.currentPractice || ''
+        const date = new Date().toLocaleDateString('he-IL')
+
+        const storageLabels: Record<string, string> = {
+          email: 'אימייל', drive: 'Google Drive / OneDrive', hr_system: 'מערכת HR', local: 'מחשב מקומי', other: 'אחר'
+        }
+        const volumeLabels: Record<string, string> = { '1-10': '1-10 בחודש', '10-50': '10-50 בחודש', '50+': 'מעל 50 בחודש' }
+        const practiceLabels: Record<string, string> = { nothing: 'לא נמחקים', sometimes: 'נמחקים לפעמים', manual: 'מחיקה ידנית' }
+
+        targetDoc = {
+          type: 'cv_retention_policy',
+          title: 'מדיניות שמירה ומחיקה של קורות חיים',
+          content: `# מדיניות שמירה ומחיקה של קורות חיים
+
+**${orgName}**
+${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
+
+**תאריך:** ${date} | **ממונה הגנת פרטיות:** ${dpoName}
+
+---
+
+## 1. מטרה
+
+מדיניות זו מגדירה את הכללים לשמירה, ניהול ומחיקה של קורות חיים (קו"ח) המתקבלים בארגון, בהתאם לחוק הגנת הפרטיות ותקנות שמירת מידע.
+
+## 2. מצב נוכחי
+
+| פרט | ערך |
+|---|---|
+| **מיקום אחסון** | ${storageLabels[storageLocation] || storageLocation} |
+| **היקף חודשי** | ${volumeLabels[volume] || 'לא צוין'} |
+| **פרקטיקה נוכחית** | ${practiceLabels[currentPractice] || 'לא צוין'} |
+
+## 3. כללי שמירה
+
+### 3.1 תקופת שמירה
+- **מועמדים שלא התקבלו:** קו"ח יישמרו **עד 3 חודשים** מתום הליך הגיוס
+- **הארכה:** ניתן להאריך **עד שנתיים** בלבד, בתנאי שיש צורך מקצועי מתועד ושהתקבלה הסכמת המועמד/ת
+- **מועמדים שהתקבלו:** קו"ח ישולבו בתיק העובד/ת ויהיו כפופים למדיניות שמירת מידע עובדים
+
+### 3.2 תנאים להארכת שמירה
+הארכה מעבר ל-3 חודשים תתאפשר רק אם:
+1. קיים צורך מקצועי ספציפי ומתועד (לדוגמה: משרה צפויה)
+2. המועמד/ת נתן/ה הסכמה מפורשת בכתב
+3. ההארכה אושרה על ידי מנהל/ת HR
+
+## 4. נוהל מחיקה
+
+### 4.1 מחיקה שוטפת
+- בכל **1 בחודש** יבוצע סריקה של קו"ח שחלפה תקופת שמירתם
+- קו"ח שעבר מועד השמירה יימחקו **מכל מקורות האחסון**: ${storageLabels[storageLocation] || 'כל המערכות'}
+
+### 4.2 אופן המחיקה
+- מחיקה מלאה מהמערכת (לא העברה לסל מיחזור)
+- ריקון סל מיחזור / פח אשפה
+- תיעוד פעולת המחיקה (תאריך, כמות, מבצע/ת)
+
+### 4.3 אחריות
+- **אחראי ביצוע:** מנהל/ת HR או מי שהוסמך/ה לכך
+- **אחראי פיקוח:** ממונה הגנת פרטיות (${dpoName})
+
+## 5. תיעוד
+
+יש לתעד בטבלה:
+
+| תאריך מחיקה | מספר קו"ח שנמחקו | מקור | מבצע/ת | הערות |
+|---|---|---|---|---|
+| | | | | |
+
+## 6. הפרות
+
+אי-עמידה במדיניות זו עלולה לגרור:
+- חשיפה רגולטורית מול הרשות להגנת הפרטיות
+- קנס כספי בהתאם לתיקון 13
+
+---
+*מסמך זה נוצר על ידי מערכת MyDPO. עודכן לאחרונה: ${date}*
+`
+        }
+        console.log('Generated CV retention policy')
+      }
+
+      // ── WIZARD-DRIVEN EMPLOYEE TRAINING ──
+      if (wizardId === 'employee_training' && wizardAnswers && singleDocType === 'employee_training') {
+        const employeeCount = wizardAnswers.employeeCount || ''
+        const departments = wizardAnswers.departments || ''
+        const lastTraining = wizardAnswers.lastTraining || 'never'
+        const format = wizardAnswers.format || 'document'
+        const date = new Date().toLocaleDateString('he-IL')
+
+        const lastLabels: Record<string, string> = { never: 'מעולם לא נערכה', year_plus: 'לפני יותר משנה', this_year: 'השנה' }
+
+        targetDoc = {
+          type: 'employee_training',
+          title: 'תכנית הדרכת פרטיות לעובדים',
+          content: `# תכנית הדרכת פרטיות לעובדים
+
+**${orgName}**
+${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
+
+**תאריך:** ${date} | **ממונה הגנת פרטיות:** ${dpoName}
+
+---
+
+## 1. רקע ומטרה
+
+בהתאם לתקנות אבטחת מידע 2017 (סעיף 10), ארגון המחזיק מאגרי מידע חייב לקיים הדרכות תקופתיות לעובדים בנושא הגנת פרטיות ואבטחת מידע.
+
+| פרט | ערך |
+|---|---|
+| **מספר עובדים** | ${employeeCount || 'לא צוין'} |
+| **מחלקות עיקריות** | ${departments || 'לא צוין'} |
+| **הדרכה אחרונה** | ${lastLabels[lastTraining] || 'לא ידוע'} |
+
+## 2. נושאי ההדרכה
+
+### 2.1 מבוא לפרטיות (15 דקות)
+- מהו מידע אישי? דוגמאות רלוונטיות לארגון
+- חוק הגנת הפרטיות — מה הוא דורש מאיתנו?
+- תיקון 13 — מה חדש ומה ההשלכות
+
+### 2.2 כללי עשה ואל תעשה (15 דקות)
+- **אל תשתפו** מידע אישי עם מי שלא מורשה
+- **אל תשלחו** מידע אישי במייל לא מוצפן
+- **אל תאחסנו** קבצים עם מידע אישי בשולחן העבודה
+- **כן תנעלו** מחשבים כשעוזבים את העמדה
+- **כן תדווחו** מיידית על כל חשד לדליפת מידע
+- **כן תמחקו** קבצים שאין בהם צורך
+
+### 2.3 זיהוי ודיווח על אירועי אבטחה (10 דקות)
+- מהו אירוע אבטחת מידע?
+- דוגמאות: מייל שנשלח בטעות, מחשב שנגנב, גישה לא מורשית
+- למי לדווח ותוך כמה זמן (מיידי → ${dpoName})
+- חובת דיווח תוך 72 שעות לרשות
+
+### 2.4 זכויות נושאי מידע (10 דקות)
+- מה לעשות אם לקוח מבקש "למחוק את המידע שלי"?
+- מה לעשות אם לקוח מבקש "לראות מה יש לכם עליי"?
+- תהליך: הפנו ל-${dpoName} (${dpoEmail})
+
+## 3. אישור השתתפות
+
+כל עובד/ת שהשתתף/ה בהדרכה חייב/ת לחתום:
+
+> אני, ____________, מאשר/ת כי השתתפתי בהדרכת פרטיות ואבטחת מידע בתאריך ________ ומבין/ה את חובותיי בנושא.
+>
+> חתימה: ____________ תאריך: ____________
+
+## 4. תיעוד
+
+| תאריך הדרכה | מספר משתתפים | מחלקה | מעביר/ת ההדרכה | הערות |
+|---|---|---|---|---|
+| | | | | |
+
+## 5. תדירות
+
+- **הדרכה שנתית** חובה לכל עובד/ת עם גישה למידע אישי
+- **הדרכת כניסה** לכל עובד/ת חדש/ה — תוך שבועיים מתחילת העבודה
+- **הדרכת רענון** בעקבות אירוע אבטחה או שינוי מדיניות
+
+---
+*מסמך זה נוצר על ידי מערכת MyDPO. עודכן לאחרונה: ${date}*
+`
+        }
+        console.log(`Generated employee training program (${employeeCount} employees, ${departments})`)
+      }
+
       // ── STANDARD SINGLE DOC ──
       if (!targetDoc) {
         targetDoc = allDocuments.find(d => d.type === singleDocType)
