@@ -30,22 +30,38 @@ const SYSTEM_PROMPT = `אתה עוזר קצר וממוקד של MyDPO - שירו
 
 export async function POST(request: NextRequest) {
   try {
-    const auth = await authenticateRequest(request, supabase)
-    if (!auth) return unauthorizedResponse()
+    // Auth: try full auth first, fall back to JWT-only for onboarding users without orgs
+    let auth = await authenticateRequest(request, supabase)
+    let userId = auth?.userId
+    let orgId = auth?.orgId
+
+    // If full auth fails, check if user has a valid JWT but no org yet (onboarding)
+    if (!auth) {
+      const authHeader = request.headers.get('authorization')
+      if (authHeader?.startsWith('Bearer ')) {
+        const token = authHeader.substring(7)
+        const { data: { user }, error } = await supabase.auth.getUser(token)
+        if (!error && user) {
+          userId = user.id
+          orgId = user.id // Use user.id as rate-limit key during onboarding
+        }
+      }
+    }
+
+    if (!userId) return unauthorizedResponse()
 
     const { message, context, contextHint, extraContext } = await request.json()
-    const orgId = auth.orgId
 
     if (!message) {
       return new Response(JSON.stringify({ error: 'Missing message' }), { status: 400 })
     }
 
     // Rate limit (contextual = 10/min)
-    const rl = checkRateLimit(rateLimitKey(orgId, 'contextual'), RATE_LIMITS.contextual)
+    const rl = checkRateLimit(rateLimitKey(orgId || userId, 'contextual'), RATE_LIMITS.contextual)
     if (!rl.allowed) {
       return new Response(JSON.stringify({ error: 'rate_limited', message: 'יותר מדי שאלות. נסה שוב בעוד דקה.' }), { status: 429 })
     }
-    if (isRapidFire(orgId)) {
+    if (isRapidFire(orgId || userId)) {
       return new Response(JSON.stringify({ error: 'rate_limited', message: 'לאט לאט!' }), { status: 429 })
     }
 
@@ -57,11 +73,11 @@ export async function POST(request: NextRequest) {
 
     // PII mask
     const piiResult = maskPII(validation.sanitized)
-    if (piiResult.detectedTypes.length > 0) {
-      // Fire-and-forget audit log
+    if (piiResult.detectedTypes.length > 0 && orgId && orgId !== userId) {
+      // Fire-and-forget audit log (only if real org exists)
       Promise.resolve(supabase.from('audit_logs').insert({
         event_type: 'pii_detected',
-        user_id: auth.userId,
+        user_id: userId,
         org_id: orgId,
         details: { types: piiResult.detectedTypes, action: 'masked', source: 'contextual_chat', context },
         ip_address: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown',
@@ -70,17 +86,23 @@ export async function POST(request: NextRequest) {
       })).catch(() => {})
     }
 
-    // Get org name for context
-    const { data: org } = await supabase
-      .from('organizations')
-      .select('name, industry')
-      .eq('id', orgId)
-      .single()
+    // Get org name for context (skip if no real org)
+    let orgName = 'ארגון חדש'
+    let orgIndustry = 'לא צוין'
+    if (auth?.orgId) {
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('name, industry')
+        .eq('id', auth.orgId)
+        .single()
+      orgName = org?.name || orgName
+      orgIndustry = org?.industry || orgIndustry
+    }
 
     // Build context-aware prompt
     const systemPrompt = `${SYSTEM_PROMPT}
 
-ארגון: ${org?.name || 'לא ידוע'} (${org?.industry || 'לא צוין'})
+ארגון: ${orgName} (${orgIndustry})
 ${contextHint ? `\nהקשר: ${contextHint}` : ''}
 ${extraContext ? `\nמידע נוסף: ${extraContext}` : ''}`
 
