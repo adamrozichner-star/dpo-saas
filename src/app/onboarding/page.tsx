@@ -524,7 +524,7 @@ function OnboardingHelper({
                 disabled={loading}
               />
               <button 
-                onClick={sendMessage}
+                onClick={() => sendMessage()}
                 disabled={!input.trim() || loading}
                 className="p-1.5 rounded-lg disabled:opacity-30 text-amber-600 hover:bg-amber-50 transition"
               >
