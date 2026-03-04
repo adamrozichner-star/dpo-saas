@@ -38,7 +38,7 @@ import { DPO_CONFIG } from '@/lib/dpo-config'
 import { useToast } from '@/components/Toast'
 import WelcomeModal from '@/components/WelcomeModal'
 import UnpaidWelcomeModal from '@/components/UnpaidWelcomeModal'
-import GuidelinesPanel from '@/components/GuidelinesPanel'
+import UnifiedTaskList from '@/components/UnifiedTaskList'
 import ContextualChat from '@/components/ContextualChat'
 import DocUploadAdapter from '@/components/DocUploadAdapter'
 import DocCreator from '@/components/DocCreator'
@@ -50,17 +50,6 @@ import { deriveComplianceActions, ComplianceSummary, ActionOverride } from '@/li
 // ============================================
 // TYPES
 // ============================================
-interface Task {
-  id: string
-  type: 'missing_doc' | 'dsar' | 'review' | 'incident' | 'periodic' | 'info' | 'action'
-  title: string
-  description: string
-  priority: 'high' | 'medium' | 'low'
-  deadline?: string
-  action: string
-  actionPath?: string
-}
-
 interface Document {
   id: string
   name?: string
@@ -96,7 +85,6 @@ function DashboardContent() {
   const [organization, setOrganization] = useState<any>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [incidents, setIncidents] = useState<any[]>([])
-  const [tasks, setTasks] = useState<Task[]>([])
   const [userName, setUserName] = useState('')
   const [showWelcome, setShowWelcome] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -284,9 +272,6 @@ function DashboardContent() {
             await supabase.from('organizations').update({ compliance_score: score }).eq('id', org.id)
           } catch {}
         }
-        
-        const generatedTasks = generateTasks(docs || [], incidentData || [], dsarData || [], { ...org, profile_data: profileData })
-        setTasks(generatedTasks)
 
         // Load message threads (DPO-User messaging)
         try {
@@ -455,208 +440,12 @@ function DashboardContent() {
     return Math.max(0, Math.min(100, score))
   }
 
-  const generateTasks = (docs: any[], incidents: any[], dsars: any[], org: any): Task[] => {
-    const tasks: Task[] = []
-    const docTypes = docs.map(d => d.type)
-    const activeDocs = docs.filter(d => d.status === 'active')
-    const pendingDocs = docs.filter(d => d.status === 'pending_review')
-
-    // 1. Pending review docs — DPO hasn't approved yet
-    if (pendingDocs.length > 0) {
-      tasks.push({
-        id: 'pending-review',
-        type: 'info',
-        title: `${pendingDocs.length} מסמכים ממתינים לאישור הממונה`,
-        description: 'הממונה יסקור ויאשר את המסמכים בהקדם. תקבלו הודעה במייל',
-        priority: 'low',
-        action: 'צפייה',
-        actionPath: '/dashboard?tab=documents'
-      })
-    }
-
-    // 2. Post-approval action items — what to DO with approved docs
-    if (activeDocs.some(d => d.type === 'privacy_policy')) {
-      tasks.push({
-        id: 'action-publish-privacy',
-        type: 'action',
-        title: 'פרסום מדיניות פרטיות באתר',
-        description: 'הורידו את המסמך ופרסמו באתר הארגון עם קישור בפוטר',
-        priority: 'medium',
-        action: 'לצפייה',
-        actionPath: '/dashboard?tab=documents'
-      })
-    }
-
-    if (activeDocs.some(d => d.type === 'dpo_appointment')) {
-      tasks.push({
-        id: 'action-sign-dpo',
-        type: 'action',
-        title: 'חתימה על כתב מינוי DPO',
-        description: 'הורידו, חתמו ושמרו עותק. יש להעביר עותק חתום לממונה',
-        priority: 'high',
-        action: 'לצפייה',
-        actionPath: '/dashboard?tab=documents'
-      })
-    }
-
-    if (activeDocs.some(d => d.type === 'security_policy')) {
-      tasks.push({
-        id: 'action-distribute-security',
-        type: 'action',
-        title: 'הפצת נוהל אבטחה לעובדים',
-        description: 'שלחו את נוהל האבטחה לכל העובדים ותעדו שקראו',
-        priority: 'medium',
-        action: 'לצפייה',
-        actionPath: '/dashboard?tab=documents'
-      })
-    }
-
-    // 3. Missing docs
-    if (!docTypes.includes('privacy_policy')) {
-      tasks.push({
-        id: 'missing-privacy',
-        type: 'missing_doc',
-        title: 'יצירת מדיניות פרטיות',
-        description: 'מדיניות פרטיות היא דרישה בסיסית בתיקון 13',
-        priority: 'high',
-        action: 'התחל',
-        actionPath: '/chat?task=privacy_policy&prompt=' + encodeURIComponent('אנא צור עבורי מדיניות פרטיות מלאה ומוכנה לשימוש עבור העסק שלי')
-      })
-    }
-
-    if (!docTypes.includes('security_policy') && !docTypes.includes('security_procedures')) {
-      tasks.push({
-        id: 'missing-security',
-        type: 'missing_doc',
-        title: 'יצירת נוהל אבטחת מידע',
-        description: 'נדרש נוהל אבטחה מתועד לארגון',
-        priority: 'high',
-        action: 'התחל',
-        actionPath: '/chat?task=security_policy&prompt=' + encodeURIComponent('אנא צור עבורי נוהל אבטחת מידע מלא ומוכן לשימוש עבור הארגון שלי')
-      })
-    }
-
-    if (!docTypes.includes('dpo_appointment')) {
-      tasks.push({
-        id: 'missing-dpo',
-        type: 'missing_doc',
-        title: 'כתב מינוי DPO',
-        description: 'יש להפיק כתב מינוי רשמי לממונה',
-        priority: 'medium',
-        action: 'התחל',
-        actionPath: '/chat?task=dpo_appointment&prompt=' + encodeURIComponent('אנא צור עבורי כתב מינוי רשמי לממונה הגנת פרטיות (DPO) מוכן לחתימה')
-      })
-    }
-
-    if (!docTypes.includes('ropa')) {
-      tasks.push({
-        id: 'missing-ropa',
-        type: 'missing_doc',
-        title: 'יצירת מפת עיבוד (ROPA)',
-        description: 'מפת עיבוד נתונים היא דרישה מרכזית בתיקון 13',
-        priority: 'medium',
-        action: 'צור עכשיו',
-        actionPath: '/chat?task=ropa&prompt=' + encodeURIComponent('אנא צור עבורי מפת עיבוד נתונים (ROPA) מלאה עבור הארגון שלי')
-      })
-    }
-
-    if (!docTypes.includes('consent_form')) {
-      tasks.push({
-        id: 'missing-consent',
-        type: 'missing_doc',
-        title: 'יצירת טופס הסכמה',
-        description: 'טופס הסכמה נדרש לאיסוף מידע אישי',
-        priority: 'medium',
-        action: 'צור עכשיו',
-        actionPath: '/chat?task=consent_form&prompt=' + encodeURIComponent('אנא צור עבורי טופס הסכמה לאיסוף מידע אישי מלקוחות')
-      })
-    }
-
-    // 3.5 CISO detection — if org handles sensitive data + >50 employees
-    const profileAnswers = (org as any)?.profile_data?.answers || []
-    const getAnswer = (qId: string) => {
-      // Try from profileAnswers or from answers array if passed differently
-      const a = profileAnswers.find?.((a: any) => a.questionId === qId) 
-      return a?.value
-    }
-    const empCount = getAnswer('employee_count')
-    const dataTypes = getAnswer('data_types') || []
-    const hasSensitive = Array.isArray(dataTypes) && (dataTypes.includes('health') || dataTypes.includes('biometric') || dataTypes.includes('financial'))
-    const isLargeOrg = empCount === '51-200' || empCount === '200+'
-    
-    if (hasSensitive && isLargeOrg) {
-      tasks.push({
-        id: 'ciso-needed',
-        type: 'info',
-        title: '⚠️ ייתכן שנדרש ממונה אבטחת מידע (CISO)',
-        description: 'בהתאם לתיקון 13, ארגון המעבד מידע רגיש עם מעל 50 עובדים עשוי לחייב מינוי CISO בנוסף ל-DPO',
-        priority: 'medium',
-        action: 'שאל את הממונה',
-        actionPath: '/chat?prompt=' + encodeURIComponent('האם הארגון שלי חייב למנות CISO בנוסף ל-DPO?')
-      })
-    }
-
-    // 3.6 Annual review — if org > 11 months old
-    if (org?.created_at) {
-      const monthsOld = (Date.now() - new Date(org.created_at).getTime()) / (30 * 24 * 60 * 60 * 1000)
-      if (monthsOld >= 11) {
-        tasks.push({
-          id: 'annual-review',
-          type: 'action',
-          title: '📅 סקירה שנתית — עדכון מסמכים ומדיניות',
-          description: 'עברה כמעט שנה מאז הקמת מערכת הציות. יש לבצע סקירה שנתית ולעדכן מסמכים',
-          priority: 'high',
-          action: 'בצע סקירה',
-          actionPath: '/chat?prompt=' + encodeURIComponent('אני רוצה לבצע סקירה שנתית של מסמכי הציות והמדיניות שלי')
-        })
-      }
-    }
-
-    // 4. Incidents
-    const openIncidents = incidents.filter(i => !['resolved', 'closed'].includes(i.status))
-    openIncidents.forEach(incident => {
-      const deadline = incident.authority_deadline ? new Date(incident.authority_deadline) : null
-      const isUrgent = deadline && (deadline.getTime() - Date.now()) < 24 * 60 * 60 * 1000
-
-      tasks.push({
-        id: `incident-${incident.id}`,
-        type: 'incident',
-        title: `טיפול באירוע: ${incident.title}`,
-        description: isUrgent ? 'פחות מ-24 שעות לדדליין!' : 'אירוע אבטחה פתוח דורש טיפול',
-        priority: isUrgent ? 'high' : 'medium',
-        deadline: deadline?.toLocaleDateString('he-IL'),
-        action: 'טפל',
-        actionPath: `/chat?incident=${incident.id}&prompt=` + encodeURIComponent(`יש לי אירוע אבטחה פתוח: ${incident.title}. מה עלי לעשות?`)
-      })
-    })
-
-    dsars.forEach(dsar => {
-      const requestTypeHebrew = dsar.request_type === 'access' ? 'עיון' : dsar.request_type === 'deletion' ? 'מחיקה' : 'תיקון'
-      tasks.push({
-        id: `dsar-${dsar.id}`,
-        type: 'dsar',
-        title: `בקשת ${requestTypeHebrew} ממידע`,
-        description: `מאת: ${dsar.requester_name || 'לא ידוע'}`,
-        priority: 'medium',
-        deadline: dsar.deadline,
-        action: 'טפל',
-        actionPath: `/chat?dsar=${dsar.id}&prompt=` + encodeURIComponent(`קיבלתי בקשת ${requestTypeHebrew} ממידע מאת ${dsar.requester_name || 'נושא מידע'}. איך לטפל בזה?`)
-      })
-    })
-
-    const priorityOrder = { high: 0, medium: 1, low: 2 }
-    tasks.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority])
-
-    return tasks
-  }
-
   const handleSignOut = async () => {
     await signOut()
     router.push('/login')
   }
 
   const activeIncidentsCount = incidents.filter(i => !['resolved', 'closed'].includes(i.status)).length
-  const urgentTasksCount = tasks.filter(t => t.priority === 'high').length
 
   if (loading || isLoading || isChecking || !isAuthorized) {
     return (
@@ -736,7 +525,7 @@ function DashboardContent() {
               label="משימות" 
               active={activeTab === 'tasks'} 
               onClick={() => { setActiveTab('tasks'); setMobileMenuOpen(false) }}
-              badge={tasks.length > 0 ? tasks.length : undefined}
+              badge={(complianceSummary?.tasks?.filter(t => t.status !== 'completed' && t.status !== 'auto_resolved' && t.status !== 'not_applicable').length || 0) > 0 ? complianceSummary?.tasks?.filter(t => t.status !== 'completed' && t.status !== 'auto_resolved' && t.status !== 'not_applicable').length : undefined}
             />
             <NavButton 
               icon={<FolderOpen className="h-5 w-5" />} 
@@ -848,7 +637,6 @@ function DashboardContent() {
               complianceScore={complianceScore}
               complianceSummary={complianceSummary}
               orgProfile={orgProfile}
-              tasks={tasks}
               documents={documents}
               incidents={incidents}
               unreadMessages={unreadMessages}
@@ -856,10 +644,24 @@ function DashboardContent() {
               onResolveAction={resolveAction}
               onUndoAction={undoAction}
               isPaid={gateIsPaid}
+              supabase={supabase}
+              onRefreshDocs={loadAllData}
             />
           )}
           {activeTab === 'tasks' && (
-            gateIsPaid ? <TasksTab tasks={tasks} /> : 
+            gateIsPaid ? (
+              <UnifiedTaskList
+                tasks={complianceSummary?.tasks || []}
+                isPaid={gateIsPaid}
+                mode="full"
+                orgId={organization?.id}
+                orgName={organization?.name}
+                supabase={supabase}
+                onResolve={resolveAction}
+                onUndo={undoAction}
+                onRefreshDocs={loadAllData}
+              />
+            ) : 
             <LockedTabOverlay icon="📋" title="משימות ממתינות לביצוע" description="שלמו כדי לצפות ולבצע את רשימת הפעולות הנדרשות לציות לתיקון 13" />
           )}
           {activeTab === 'documents' && (
@@ -1009,20 +811,20 @@ function OverviewTab({
   complianceScore, 
   complianceSummary,
   orgProfile,
-  tasks, 
   documents, 
   incidents,
   unreadMessages,
   onNavigate,
   onResolveAction,
   onUndoAction,
-  isPaid
+  isPaid,
+  supabase,
+  onRefreshDocs
 }: { 
   organization: any
   complianceScore: number
   complianceSummary: ComplianceSummary | null
   orgProfile: any
-  tasks: Task[]
   documents: Document[]
   incidents: any[]
   unreadMessages: number
@@ -1030,6 +832,8 @@ function OverviewTab({
   onResolveAction: (actionId: string, note?: string) => void
   onUndoAction: (actionId: string) => void
   isPaid: boolean
+  supabase: any
+  onRefreshDocs: () => void
 }) {
   const [confirmingAction, setConfirmingAction] = useState<string | null>(null)
   const actions = complianceSummary?.actions || []
@@ -1184,189 +988,20 @@ function OverviewTab({
         )}
       </div>
 
-      {/* Regulatory Guidelines Panel */}
-      {complianceSummary?.guidelines && complianceSummary.guidelines.length > 0 && (
-        <GuidelinesPanel
-          guidelines={complianceSummary.guidelines}
+      {/* Unified Task List — replaces GuidelinesPanel + action sections */}
+      {complianceSummary?.tasks && (
+        <UnifiedTaskList
+          tasks={complianceSummary.tasks}
           isPaid={isPaid}
+          mode="summary"
+          summaryLimit={8}
+          orgId={organization?.id}
+          orgName={organization?.name}
+          supabase={supabase}
           onResolve={onResolveAction}
           onUndo={onUndoAction}
+          onRefreshDocs={onRefreshDocs}
         />
-      )}
-
-      {/* Done For You Section — only for paid (DPO not appointed for unpaid) */}
-      {isPaid && doneActions.length > 0 && (
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-200">
-          <h2 className="text-base font-semibold text-stone-700 mb-3 flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-            מה כבר בוצע
-            <span className="text-xs font-normal bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{doneActions.length}</span>
-          </h2>
-          <div className="space-y-2">
-            {doneActions.map(action => {
-              const isUserResolved = action.status === 'completed' && action.resolvedNote?.includes('סומן כבוצע')
-              return (
-                <div key={action.id} className="flex items-center gap-3 py-2 px-3 bg-emerald-50/50 rounded-xl group">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-medium text-stone-700">{action.title}</span>
-                    {action.resolvedNote && (
-                      <span className="text-xs text-emerald-600 mr-2">— {action.resolvedNote}</span>
-                    )}
-                  </div>
-                  {isUserResolved && (
-                    <button
-                      onClick={() => onUndoAction(action.id)}
-                      className="opacity-0 group-hover:opacity-100 text-xs text-stone-400 hover:text-rose-500 transition-all cursor-pointer"
-                      title="ביטול סימון"
-                    >
-                      ↩ בטל
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* User Actions */}
-      {userActions.length > 0 && (
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-200">
-          <h2 className="text-base font-semibold text-stone-700 mb-3 flex items-center gap-2">
-            <ClipboardList className="h-5 w-5 text-amber-500" />
-            פעולות ממתינות לכם
-            <span className="text-xs font-normal bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{userActions.length}</span>
-          </h2>
-          <div className="space-y-2">
-            {userActions.map(action => {
-              const colors = getPriorityColor(action.priority)
-              const isConfirming = confirmingAction === action.id
-              return (
-                <div key={action.id} className={`rounded-xl border transition-all ${colors.bg} ${colors.border}`}>
-                  <div className="flex items-center gap-3 py-3 px-4">
-                    {isPaid ? (
-                      <button
-                        onClick={() => setConfirmingAction(isConfirming ? null : action.id)}
-                        className="w-5 h-5 rounded-full border-2 border-stone-300 flex-shrink-0 hover:border-emerald-400 hover:bg-emerald-50 transition-colors cursor-pointer flex items-center justify-center"
-                        title="סמן כבוצע"
-                      >
-                        {isConfirming && <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />}
-                      </button>
-                    ) : (
-                      <div className="w-5 h-5 rounded-full border-2 border-stone-200 flex-shrink-0 flex items-center justify-center bg-stone-50">
-                        <Lock className="h-2.5 w-2.5 text-stone-300" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-stone-800">{action.title}</p>
-                      <p className="text-xs text-stone-500 truncate">{action.description}</p>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {isPaid ? (
-                        <Link href={action.actionPath || '/chat'}>
-                          <button className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600 transition-colors whitespace-nowrap">
-                            טפל →
-                          </button>
-                        </Link>
-                      ) : (
-                        <Link href="/subscribe">
-                          <button className="px-3 py-1.5 bg-stone-200 text-stone-500 rounded-lg text-xs font-medium hover:bg-stone-300 transition-colors whitespace-nowrap flex items-center gap-1">
-                            <Lock className="h-3 w-3" />
-                            שלם לביצוע
-                          </button>
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                  {/* Confirmation drawer */}
-                  {isPaid && isConfirming && (
-                    <div className="px-4 pb-3 flex items-center gap-2 border-t border-stone-200/50 pt-2">
-                      <span className="text-xs text-stone-500">ביצעת את הפעולה?</span>
-                      <button
-                        onClick={() => { onResolveAction(action.id); setConfirmingAction(null) }}
-                        className="px-3 py-1 bg-emerald-500 text-white rounded-lg text-xs font-medium hover:bg-emerald-600 transition-colors cursor-pointer"
-                      >
-                        ✓ כן, בוצע
-                      </button>
-                      <button
-                        onClick={() => setConfirmingAction(null)}
-                        className="px-3 py-1 bg-stone-200 text-stone-600 rounded-lg text-xs font-medium hover:bg-stone-300 transition-colors cursor-pointer"
-                      >
-                        ביטול
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* DPO Pending */}
-      {dpoActions.length > 0 && (
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-200">
-          <h2 className="text-base font-semibold text-stone-700 mb-3 flex items-center gap-2">
-            <Clock className="h-5 w-5 text-indigo-400" />
-            ממתין לאישור הממונה
-          </h2>
-          <div className="space-y-2">
-            {dpoActions.map(action => (
-              <div key={action.id} className="flex items-center gap-3 py-2.5 px-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
-                <Loader2 className="h-4 w-4 text-indigo-400 animate-spin flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-stone-700">{action.title}</span>
-                </div>
-                <span className="text-xs text-indigo-400 whitespace-nowrap">48 שעות</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Reporting Obligations */}
-      {reportingActions.length > 0 && (
-        <div className="bg-red-50 rounded-2xl p-5 shadow-sm border border-red-200">
-          <h2 className="text-base font-semibold text-red-800 mb-3 flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-red-500" />
-            חובות דיווח
-          </h2>
-          {reportingActions.map(action => (
-            <div key={action.id} className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-red-800">{action.title}</p>
-                  <p className="text-xs text-red-600">{action.description}</p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {isPaid ? (
-                    <>
-                      <Link href={action.actionPath || '/chat'}>
-                        <button className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors whitespace-nowrap">
-                          דווח עכשיו →
-                        </button>
-                      </Link>
-                      <button
-                        onClick={() => onResolveAction(action.id, 'דווח לרשות')}
-                        className="px-3 py-1.5 border border-red-300 text-red-700 rounded-lg text-xs font-medium hover:bg-red-100 transition-colors whitespace-nowrap cursor-pointer"
-                      >
-                        ✓ דווח כבר
-                      </button>
-                    </>
-                  ) : (
-                    <Link href="/subscribe">
-                      <button className="px-3 py-1.5 bg-stone-200 text-stone-500 rounded-lg text-xs font-medium hover:bg-stone-300 transition-colors whitespace-nowrap flex items-center gap-1">
-                        <Lock className="h-3 w-3" />
-                        שלם לביצוע
-                      </button>
-                    </Link>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
       )}
 
       {/* DPO Card — only for paid users (DPO is appointed) */}
@@ -1452,90 +1087,6 @@ function OverviewTab({
   )
 }
 
-
-// ============================================
-// TASKS TAB
-// ============================================
-function TasksTab({ tasks }: { tasks: Task[] }) {
-  const getPriorityStyle = (priority: string) => {
-    const styles = {
-      high: { bg: 'bg-rose-50', border: 'border-rose-100', badge: 'bg-rose-100 text-rose-700', number: 'bg-rose-200 text-rose-700' },
-      medium: { bg: 'bg-amber-50', border: 'border-amber-100', badge: 'bg-amber-100 text-amber-700', number: 'bg-amber-200 text-amber-700' },
-      low: { bg: 'bg-stone-50', border: 'border-stone-100', badge: 'bg-stone-100 text-stone-700', number: 'bg-stone-200 text-stone-700' }
-    }
-    return styles[priority as keyof typeof styles] || styles.low
-  }
-
-  const getPriorityLabel = (priority: string) => {
-    const labels = { high: 'דחוף', medium: 'רגיל', low: 'נמוך' }
-    return labels[priority as keyof typeof labels] || priority
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-stone-800">📋 משימות</h1>
-          <p className="text-stone-500 mt-1">כל מה שצריך לעשות במקום אחד</p>
-        </div>
-        <Link href="/chat">
-          <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            משימה חדשה
-          </button>
-        </Link>
-      </div>
-
-      {tasks.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 shadow-sm border border-stone-200 text-center">
-          <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-            <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-          </div>
-          <h3 className="text-lg font-semibold text-stone-800 mb-2">מצוין! אין משימות פתוחות</h3>
-          <p className="text-stone-500">כל המשימות הושלמו. המשיכו כך! 🎉</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {tasks.map((task, index) => {
-            const style = getPriorityStyle(task.priority)
-            return (
-              <div 
-                key={task.id} 
-                className={`${style.bg} rounded-xl p-4 border ${style.border}`}
-              >
-                <div className="flex items-start gap-4">
-                  <div className={`w-8 h-8 rounded-full ${style.number} flex items-center justify-center flex-shrink-0`}>
-                    <span className="text-sm font-bold">{index + 1}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium text-stone-800">{task.title}</h3>
-                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${style.badge}`}>
-                        {getPriorityLabel(task.priority)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-stone-500">{task.description}</p>
-                    {task.deadline && (
-                      <p className="text-xs text-stone-400 mt-2 flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        דדליין: {task.deadline}
-                      </p>
-                    )}
-                  </div>
-                  <Link href={task.actionPath || '/chat'}>
-                    <button className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 transition-colors">
-                      {task.action}
-                    </button>
-                  </Link>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ============================================
 // DOCUMENTS TAB
