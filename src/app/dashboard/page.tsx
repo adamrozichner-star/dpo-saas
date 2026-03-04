@@ -866,7 +866,7 @@ function DashboardContent() {
             <DocumentsTab documents={documents} organization={organization} supabase={supabase} isPaid={gateIsPaid} orgProfile={orgProfile} onRefresh={loadAllData} />
           )}
           {activeTab === 'databases' && (
-            gateIsPaid && organization?.id ? <ROPATab orgId={organization.id} /> :
+            gateIsPaid && organization?.id ? <ROPATab orgId={organization.id} authFetch={authFetch} /> :
             <LockedTabOverlay icon="📊" title="מאגרי מידע (ROPA)" description="צפו, ערכו והוסיפו מאגרי מידע אישי. נדרש לציות לתיקון 13." />
           )}
           {activeTab === 'incidents' && (
