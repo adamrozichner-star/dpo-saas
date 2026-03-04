@@ -660,7 +660,7 @@ function DashboardContent() {
                 onResolve={resolveAction}
                 onUndo={undoAction}
                 onRefreshDocs={loadAllData}
-                onNavigateTab={setActiveTab}
+                onNavigateTab={(tab) => setActiveTab(tab as any)}
               />
             ) : 
             <LockedTabOverlay icon="📋" title="משימות ממתינות לביצוע" description="שלמו כדי לצפות ולבצע את רשימת הפעולות הנדרשות לציות לתיקון 13" />
@@ -1033,7 +1033,7 @@ function OverviewTab({
       )}
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         <div className="bg-white rounded-xl p-4 shadow-sm border border-stone-200 flex items-center gap-4 cursor-pointer hover:border-stone-300 transition-colors" onClick={() => onNavigate('documents')}>
           <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
             <FileText className="h-5 w-5 text-indigo-600" />
