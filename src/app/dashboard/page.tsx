@@ -660,6 +660,7 @@ function DashboardContent() {
                 onResolve={resolveAction}
                 onUndo={undoAction}
                 onRefreshDocs={loadAllData}
+                onNavigateTab={setActiveTab}
               />
             ) : 
             <LockedTabOverlay icon="📋" title="משימות ממתינות לביצוע" description="שלמו כדי לצפות ולבצע את רשימת הפעולות הנדרשות לציות לתיקון 13" />
@@ -1002,6 +1003,7 @@ function OverviewTab({
           onResolve={onResolveAction}
           onUndo={onUndoAction}
           onRefreshDocs={onRefreshDocs}
+          onNavigateTab={onNavigate}
         />
       )}
 
