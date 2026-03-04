@@ -7,10 +7,9 @@ import { Progress } from '@/components/ui/progress'
 import { 
   Shield, ArrowRight, CheckCircle2, Database,
   Lock, FileCheck, Loader2, AlertCircle, User, Sparkles,
-  Mail
+  Mail, MessageCircle, Send, ChevronDown, ChevronUp
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
-import ContextualChat from '@/components/ContextualChat'
 import { OnboardingAnswer } from '@/types'
 
 // ═══════════════════════════════════════════════════════
@@ -286,6 +285,258 @@ function mapV3ToLegacyAnswers(v3: V3Answers): OnboardingAnswer[] {
 // ═══════════════════════════════════════════════════════
 // CARD COMPONENTS
 // ═══════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════
+// QUESTION-SPECIFIC HELP TIPS
+// ═══════════════════════════════════════════════════════
+const QUESTION_TIPS: Record<string, { tip: string; why: string }> = {
+  bizName: {
+    tip: 'הזינו את שם העסק כפי שמופיע ברשם החברות או ברישיון העסק.',
+    why: 'השם ישמש במסמכי הציות ובדיווחים לרשות להגנת הפרטיות.'
+  },
+  companyId: {
+    tip: 'ח.פ = חברה פרטית (9 ספרות). ע.מ = עוסק מורשה.',
+    why: 'נדרש לזיהוי הארגון מול רשם מאגרי המידע.'
+  },
+  industry: {
+    tip: 'בחרו את התחום העיקרי של העסק. אם יש כמה — בחרו את הדומיננטי.',
+    why: 'התחום קובע את רמת הסיכון ואת סוג המאגרים שסביר שקיימים אצלכם.'
+  },
+  databases: {
+    tip: 'מאגר מידע = כל אוסף מאורגן של פרטים אישיים. למשל: רשימת לקוחות, רשימת עובדים, נתוני שכר.',
+    why: 'חוק הגנת הפרטיות מחייב רישום מאגרים שמכילים מעל 10,000 רשומות.'
+  },
+  totalSize: {
+    tip: 'חשבו על כל הרשומות בכל המאגרים ביחד — לקוחות, עובדים, ספקים, מנויים.',
+    why: 'מעל 10,000 רשומות = חובת רישום ומינוי DPO. זה קריטי לקביעת החובות שלכם.'
+  },
+  storage: {
+    tip: 'סמנו את כל המערכות בהן נשמר מידע אישי — גם אם זה רק אקסל או תיקיות בענן.',
+    why: 'מיפוי מערכות נדרש כדי להבין אילו אמצעי אבטחה צריך ליישם.'
+  },
+  securityOwner: {
+    tip: 'ממונה אבטחת מידע = האדם שאחראי על נהלי האבטחה בפועל בארגון.',
+    why: 'תיקון 13 מחייב מינוי ממונה. אם אין — אנחנו נעזור לכם למנות.'
+  },
+  cameraOwner: {
+    tip: 'אם יש לכם מצלמות אבטחה — חייב להיות אחראי מוגדר.',
+    why: 'מצלמות נחשבות מאגר מידע בפני עצמו ודורשות נהלי מחיקה ושמירה.'
+  },
+  accessControl: {
+    tip: 'עיקרון "הצורך לדעת" — כל עובד צריך לראות רק את המידע הרלוונטי לתפקידו.',
+    why: 'הגבלת גישה היא דרישה בסיסית של אבטחת מידע לפי תיקון 13.'
+  },
+  processors: {
+    tip: 'ספקים חיצוניים = כל גורם שמקבל גישה למידע אישי: רואה חשבון, חברת IT, שירות ענן, סליקה.',
+    why: 'חייב הסכם עיבוד מול כל ספק. בלי זה — יש חשיפה משפטית.'
+  },
+  hasConsent: {
+    tip: 'מנגנון הסכמה = באנר עוגיות, טופס הרשמה עם צ\'קבוקס, או מדיניות פרטיות באתר.',
+    why: 'חובת הסכמה מדעת קיימת בחוק. בלי מנגנון — יש הפרה פוטנציאלית.'
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// INLINE ONBOARDING HELPER (replaces floating widget)
+// ═══════════════════════════════════════════════════════
+function OnboardingHelper({ 
+  questionId, 
+  questionText,
+  isDBPhase,
+  dbName,
+  supabase 
+}: { 
+  questionId: string | null
+  questionText: string | null
+  isDBPhase: boolean
+  dbName: string | null
+  supabase: any
+}) {
+  const [chatOpen, setChatOpen] = useState(false)
+  const [messages, setMessages] = useState<{ role: 'user' | 'assistant'; text: string }[]>([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const chatEndRef = useRef<HTMLDivElement>(null)
+
+  // Reset chat when question changes
+  useEffect(() => {
+    setMessages([])
+    setChatOpen(false)
+    setInput('')
+  }, [questionId, dbName])
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const tip = questionId ? QUESTION_TIPS[questionId] : null
+
+  const sendMessage = async (directMsg?: string) => {
+    const userMsg = (directMsg || input).trim()
+    if (!userMsg || loading) return
+    setInput('')
+    setMessages(prev => [...prev, { role: 'user', text: userMsg }])
+    setLoading(true)
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`
+
+      const contextHint = isDBPhase && dbName
+        ? `המשתמש ממלא פרטים על מאגר "${dbName}". עזור לו.`
+        : questionText
+          ? `שאלה נוכחית: ${questionText}`
+          : ''
+
+      const res = await fetch('/api/chat/contextual', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ 
+          message: userMsg, 
+          context: 'onboarding',
+          contextHint,
+          extraContext: tip ? `טיפ רלוונטי: ${tip.tip}. הסיבה: ${tip.why}` : ''
+        })
+      })
+
+      if (!res.ok) throw new Error('API error')
+
+      const reader = res.body?.getReader()
+      if (!reader) throw new Error('No reader')
+
+      let fullText = ''
+      const decoder = new TextDecoder()
+
+      // Add empty assistant message
+      setMessages(prev => [...prev, { role: 'assistant', text: '' }])
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const chunk = decoder.decode(value)
+        const lines = chunk.split('\n').filter(l => l.startsWith('data: '))
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line.slice(6))
+            if (data.type === 'text') {
+              fullText += data.text
+              setMessages(prev => {
+                const copy = [...prev]
+                copy[copy.length - 1] = { role: 'assistant', text: fullText }
+                return copy
+              })
+            } else if (data.type === 'done') {
+              fullText = data.text
+              setMessages(prev => {
+                const copy = [...prev]
+                copy[copy.length - 1] = { role: 'assistant', text: fullText }
+                return copy
+              })
+            }
+          } catch {}
+        }
+      }
+    } catch {
+      setMessages(prev => [...prev, { role: 'assistant', text: 'שגיאה. נסו שוב.' }])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const helpContext = isDBPhase && dbName
+    ? `פירוט מאגר: ${dbName}`
+    : questionText || null
+
+  if (!helpContext && !tip) return null
+
+  return (
+    <div className="mt-3 space-y-2">
+      {/* Contextual tip */}
+      {tip && (
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-amber-100 shadow-sm">
+          <p className="text-sm text-stone-600 leading-relaxed">{tip.tip}</p>
+          <p className="text-xs text-stone-400 mt-1">📌 {tip.why}</p>
+        </div>
+      )}
+
+      {/* DB phase tip */}
+      {isDBPhase && dbName && (
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl px-4 py-3 border border-indigo-100 shadow-sm">
+          <p className="text-sm text-stone-600 leading-relaxed">
+            מלאו את הפרטים עבור מאגר <strong className="text-indigo-600">{dbName}</strong> — סוגי מידע, מספר רשומות, תקופת שמירה ומי יכול לגשת.
+          </p>
+          <p className="text-xs text-stone-400 mt-1">📌 כל מאגר נרשם בנפרד מול הרשות.</p>
+        </div>
+      )}
+
+      {/* Inline chat toggle + chat */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-xl border border-stone-200 shadow-sm overflow-hidden">
+        <button
+          onClick={() => setChatOpen(!chatOpen)}
+          className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-stone-500 hover:text-stone-700 hover:bg-stone-50 transition"
+        >
+          <span className="flex items-center gap-1.5">
+            <MessageCircle className="w-4 h-4" />
+            צריכים עזרה? שאלו אותי
+          </span>
+          {chatOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+
+        {chatOpen && (
+          <div className="border-t border-stone-100">
+            {/* Messages */}
+            {messages.length > 0 && (
+              <div className="max-h-48 overflow-y-auto px-4 py-3 space-y-2">
+                {messages.map((m, i) => (
+                  <div key={i} className={`text-sm leading-relaxed ${m.role === 'user' ? 'text-stone-800 bg-amber-50 px-3 py-2 rounded-lg' : 'text-stone-600 px-1'}`}>
+                    {m.text || (loading && i === messages.length - 1 ? '...' : '')}
+                  </div>
+                ))}
+                <div ref={chatEndRef} />
+              </div>
+            )}
+
+            {/* Quick suggestions */}
+            {messages.length === 0 && (
+              <div className="px-4 py-2 flex flex-wrap gap-1.5">
+                {[
+                  'מה זה אומר?',
+                  'למה זה חשוב?',
+                  'מה לבחור?'
+                ].map(s => (
+                  <button key={s} onClick={() => sendMessage(s)} 
+                    className="text-xs px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 hover:bg-amber-100 transition">
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Input */}
+            <div className="flex items-center gap-2 px-3 py-2 border-t border-stone-100">
+              <input
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') sendMessage() }}
+                placeholder="שאלו שאלה..."
+                className="flex-1 text-sm bg-transparent border-0 outline-none text-stone-800 placeholder-stone-400"
+                disabled={loading}
+              />
+              <button 
+                onClick={sendMessage}
+                disabled={!input.trim() || loading}
+                className="p-1.5 rounded-lg disabled:opacity-30 text-amber-600 hover:bg-amber-50 transition"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 function CardShell({ icon, question, hint, lawRef, animDir, children }: {
   icon: string; question: string; hint?: string; lawRef?: string;
@@ -1525,24 +1776,16 @@ function OnboardingContent() {
         <p className="text-center text-[11px] text-gray-400 mt-4">
           {isDBPhase ? `פירוט מאגר ${currentDBIdx + 1} מתוך ${totalDBs}` : `שאלה ${step + 1} מתוך ${mainLen}`} • נשמר אוטומטית
         </p>
-      </div>
 
-      {/* Contextual Chat — question-scoped context for the current step */}
-      {user?.id && (
-        <ContextualChat 
-          context="onboarding" 
-          orgId={user.id}
-          extraContext={
-            isDBPhase && currentDetailDB
-              ? `המשתמש נמצא בשלב פירוט מאגר מידע: "${currentDetailDB}" (מאגר ${currentDBIdx + 1} מתוך ${totalDBs}). עזור לו להבין מה למלא עבור המאגר הזה.`
-              : card
-                ? `שאלה נוכחית (שלב ${step + 1} מתוך ${mainLen}): ${card.q}${card.hint ? `\nרמז: ${card.hint}` : ''}${card.lawRef ? `\nהפניה לחוק: ${card.lawRef}` : ''}`
-                : showReport
-                  ? 'המשתמש צופה בדוח סיכום האיפיון. עזור לו להבין את הממצאים.'
-                  : 'המשתמש סיים את השאלון.'
-          }
+        {/* Inline help section — centered under questions */}
+        <OnboardingHelper
+          questionId={card?.id || null}
+          questionText={card?.q || null}
+          isDBPhase={isDBPhase}
+          dbName={currentDetailDB}
+          supabase={supabase}
         />
-      )}
+      </div>
     </div>
   )
 }
