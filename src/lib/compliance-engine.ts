@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════
-// COMPLIANCE ACTIONS ENGINE
-// Derives every action item from onboarding data
+// UNIFIED COMPLIANCE TASK ENGINE v2
+// Merges Actions + Guidelines into one task list
+// Each task has an actionType that determines UX
 // ═══════════════════════════════════════════════════════
 
 const ACCESS_RANGES = [
@@ -12,6 +13,100 @@ const SIZE_NUMS: Record<string, number> = {
   'under100': 50, '100-1k': 500, '1k-10k': 5000, '10k-100k': 50000, '100k+': 150000
 }
 
+const PROC_LABELS: Record<string, string> = {
+  crm_saas: 'CRM / מערכת ניהול', payroll: 'שכר / HR', marketing: 'שיווק / דיוור',
+  cloud_hosting: 'אחסון ענן', call_center: 'מוקד שירות', accounting: 'הנה"ח / רו"ח'
+}
+
+// ═══════════════════════════════════════════════════════
+// INTERFACES
+// ═══════════════════════════════════════════════════════
+
+export type TaskActionType = 
+  | 'auto_resolved'    // System handles it — green checkmark
+  | 'doc_review'       // Doc exists, awaiting DPO approval or user action post-approval
+  | 'generate_doc'     // User clicks → generates doc via API
+  | 'wizard'           // Opens modal wizard → collects info → generates doc
+  | 'external_guide'   // Step-by-step IRL instructions
+
+export type TaskStatus =
+  | 'completed'          // Done — grayed out at bottom
+  | 'auto_resolved'      // System handles — grayed out at bottom
+  | 'doc_approved'       // DPO approved doc → user needs to implement (auto-advanced)
+  | 'doc_pending_review' // Doc exists, DPO hasn't reviewed
+  | 'needs_generation'   // Doc doesn't exist yet — user should generate
+  | 'needs_enrichment'   // Doc exists but thin — needs wizard to enrich
+  | 'needs_action'       // External action required by user
+  | 'not_applicable'     // Doesn't apply to this org
+
+export interface ExternalGuideStep {
+  title: string
+  description: string
+  linkUrl?: string
+  linkLabel?: string
+}
+
+export interface WizardConfig {
+  wizardId: string
+  questions: WizardQuestion[]
+}
+
+export interface WizardQuestion {
+  id: string
+  label: string
+  type: 'text' | 'select' | 'multi_select' | 'number'
+  options?: { value: string; label: string }[]
+  placeholder?: string
+  required?: boolean
+}
+
+export interface SubTask {
+  id: string
+  label: string          // e.g. "CRM / מערכת ניהול"
+  processorKey: string   // e.g. "crm_saas"
+  status: TaskStatus
+  docId?: string         // if doc already generated
+}
+
+export interface ComplianceTask {
+  id: string
+  title: string
+  description: string
+  legalBasis: string
+  icon: string                  // emoji
+  priority: 'critical' | 'high' | 'medium' | 'low'
+  status: TaskStatus
+  actionType: TaskActionType
+  
+  // Doc linkage
+  documentType?: string         // links to documents table type
+  docId?: string                // specific document ID if exists
+  
+  // Post-approval action (auto-advance)
+  postApprovalAction?: string   // e.g. "פרסמו באתר"
+  postApprovalGuide?: ExternalGuideStep[]
+  
+  // For wizard type
+  wizardConfig?: WizardConfig
+  
+  // For external_guide type
+  guideSteps?: ExternalGuideStep[]
+  
+  // For per-supplier DPAs
+  subTasks?: SubTask[]
+  
+  // Completion tracking
+  resolvedNote?: string
+  resolvedAt?: string
+  
+  // Estimated effort
+  estimatedMinutes?: number
+  
+  // Sort helpers
+  sortOrder: number             // lower = higher in list
+}
+
+// Backward compat — old interfaces still exported for transition
 export interface ComplianceAction {
   id: string
   title: string
@@ -27,12 +122,6 @@ export interface ComplianceAction {
   resolvedNote?: string
 }
 
-export interface ActionOverride {
-  status: 'completed'
-  resolvedAt: string
-  note?: string
-}
-
 export interface ComplianceGuideline {
   id: string
   title: string
@@ -40,12 +129,20 @@ export interface ComplianceGuideline {
   legalBasis: string
   status: 'resolved' | 'required' | 'not_required' | 'info'
   resolvedReason?: string
-  actionIds: string[]  // links to ComplianceAction ids this resolves
+  actionIds: string[]
   priority: 'critical' | 'high' | 'medium' | 'low'
-  icon: string  // emoji
+  icon: string
+}
+
+export interface ActionOverride {
+  status: 'completed'
+  resolvedAt: string
+  note?: string
 }
 
 export interface ComplianceSummary {
+  tasks: ComplianceTask[]
+  // Legacy — kept for backward compat during transition
   actions: ComplianceAction[]
   guidelines: ComplianceGuideline[]
   score: number
@@ -59,17 +156,78 @@ export interface ComplianceSummary {
   cisoReason?: string
 }
 
+// ═══════════════════════════════════════════════════════
+// DOC READINESS GATE
+// ═══════════════════════════════════════════════════════
+
+export function checkDocReadiness(docType: string, v3Answers: any): { ready: boolean; missing: string[] } {
+  const missing: string[] = []
+  const dbs = v3Answers?.databases || []
+  const dbDetails = v3Answers?.dbDetails || {}
+  
+  switch (docType) {
+    case 'dpo_appointment':
+      // Always ready — static template
+      return { ready: true, missing: [] }
+    
+    case 'privacy_policy':
+      if (dbs.length === 0) missing.push('לא הוגדרו מאגרי מידע')
+      if (!v3Answers?.industry) missing.push('לא הוגדר סוג עסק')
+      return { ready: missing.length === 0, missing }
+    
+    case 'security_procedures':
+      // Ready if we have basic org info
+      return { ready: true, missing: [] }
+    
+    case 'database_definition':
+      if (dbs.length === 0) missing.push('לא הוגדרו מאגרי מידע')
+      if (Object.keys(dbDetails).length === 0) missing.push('חסרים פרטי מאגרים')
+      return { ready: missing.length === 0, missing }
+    
+    case 'ropa':
+      if (dbs.length === 0) missing.push('לא הוגדרו מאגרי מידע')
+      return { ready: missing.length === 0, missing }
+    
+    case 'consent_form':
+      if (dbs.length === 0) missing.push('לא הוגדרו מאגרי מידע')
+      return { ready: missing.length === 0, missing }
+    
+    case 'processor_agreement':
+      // Needs specific supplier name — never ready from auto-gen
+      missing.push('נדרש שם ספק ספציפי')
+      return { ready: false, missing }
+    
+    case 'access_control_policy':
+    case 'camera_appointment':
+    case 'ciso_appointment':
+    case 'employee_training':
+    case 'cv_retention_policy':
+    case 'tofes_17':
+      // These are never auto-generated
+      missing.push('מסמך זה דורש הפקה ידנית')
+      return { ready: false, missing }
+    
+    default:
+      return { ready: true, missing: [] }
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// MAIN ENGINE
+// ═══════════════════════════════════════════════════════
+
 export function deriveComplianceActions(
   v3Answers: any,
   documents: any[],
   incidents: any[],
   actionOverrides?: Record<string, ActionOverride>
 ): ComplianceSummary {
-  const actions: ComplianceAction[] = []
+  const tasks: ComplianceTask[] = []
   const docTypes = documents.map(d => d.type)
   const activeDocs = documents.filter(d => d.status === 'active')
   const activeDocTypes = activeDocs.map(d => d.type)
   const pendingDocs = documents.filter(d => ['pending_review', 'pending_signature'].includes(d.status))
+  const pendingDocTypes = pendingDocs.map(d => d.type)
 
   // Extract v3 data
   const dbs = v3Answers?.databases || []
@@ -119,309 +277,557 @@ export function deriveComplianceActions(
     ? 'ארגון המעבד מידע רגיש עם מעל 50 בעלי גישה עשוי לחייב מינוי CISO בנוסף ל-DPO'
     : undefined
 
+  // Helper: find doc by type
+  const findDoc = (type: string) => documents.find(d => d.type === type)
+  const isDocApproved = (type: string) => activeDocTypes.includes(type)
+  const isDocPending = (type: string) => pendingDocTypes.includes(type)
+  const hasDoc = (type: string) => docTypes.includes(type)
+
+  // Helper: resolve status for doc-linked tasks
+  function docTaskStatus(docType: string): TaskStatus {
+    if (isDocApproved(docType)) return 'doc_approved'
+    if (isDocPending(docType)) return 'doc_pending_review'
+    if (hasDoc(docType)) return 'doc_pending_review'
+    return 'needs_generation'
+  }
+
   // ═══════════════════════════════════════════════════
-  // ACTION DERIVATION RULES
+  // TASK DEFINITIONS
   // ═══════════════════════════════════════════════════
 
-  // 1. DPO Appointment — always auto-resolved
-  actions.push({
+  let sortOrder = 0
+
+  // ── 1. DPO Appointment (auto-resolved) ──
+  tasks.push({
     id: 'dpo-appointed',
     title: 'מינוי ממונה הגנת פרטיות',
-    description: 'עו״ד דנה כהן מונתה כממונה הגנת הפרטיות שלכם',
+    description: 'עו״ד דנה כהן מונתה כממונה הגנת הפרטיות שלכם באמצעות MyDPO.',
     legalBasis: 'תיקון 13, סעיף 17ב',
-    status: 'auto_resolved',
-    owner: 'system',
+    icon: '🛡️',
     priority: 'critical',
-    category: 'done',
+    status: 'auto_resolved',
+    actionType: 'auto_resolved',
     resolvedNote: 'בוצע אוטומטית — עו״ד דנה כהן',
-    documentType: 'dpo_appointment'
+    sortOrder: sortOrder++,
   })
 
-  // 2. DPO Appointment Letter — needs user signature
-  const hasDpoDoc = docTypes.includes('dpo_appointment')
-  const dpoDocApproved = activeDocTypes.includes('dpo_appointment')
-  actions.push({
-    id: 'dpo-letter-sign',
+  // ── 2. DPO Appointment Letter (sign + send) ──
+  const dpoLetterStatus = docTaskStatus('dpo_appointment')
+  tasks.push({
+    id: 'dpo-letter',
     title: 'חתימה על כתב מינוי DPO',
-    description: 'הורידו את כתב המינוי, חתמו ושמרו עותק. יש להעביר עותק חתום לממונה',
+    description: 'הורידו את כתב המינוי, חתמו ושמרו עותק. יש להעביר עותק חתום לממונה.',
     legalBasis: 'תיקון 13, סעיף 17ב',
-    status: dpoDocApproved ? 'completed' : hasDpoDoc ? 'pending_user' : 'pending_dpo',
-    owner: dpoDocApproved ? 'system' : 'user',
+    icon: '✍️',
     priority: 'high',
-    category: dpoDocApproved ? 'done' : hasDpoDoc ? 'user_action' : 'dpo_pending',
-    estimatedMinutes: 10,
+    status: dpoLetterStatus,
+    actionType: dpoLetterStatus === 'doc_approved' ? 'external_guide' : 'doc_review',
     documentType: 'dpo_appointment',
-    actionPath: '/dashboard?tab=documents'
+    docId: findDoc('dpo_appointment')?.id,
+    estimatedMinutes: 10,
+    postApprovalAction: 'הורידו, חתמו והעבירו עותק חתום לממונה',
+    guideSteps: [
+      { title: 'הורדת כתב המינוי', description: 'גשו ללשונית מסמכים והורידו את כתב המינוי כ-PDF' },
+      { title: 'חתימה', description: 'חתמו על המסמך (חתימה דיגיטלית או ידנית)' },
+      { title: 'שליחה לממונה', description: 'שלחו עותק חתום לממונה במייל — dpo@mydpo.co.il' },
+    ],
+    sortOrder: sortOrder++,
   })
 
-  // 3. Privacy Policy
-  const hasPrivacy = docTypes.includes('privacy_policy')
-  const privacyApproved = activeDocTypes.includes('privacy_policy')
-  actions.push({
+  // ── 3. Privacy Policy ──
+  const ppStatus = docTaskStatus('privacy_policy')
+  tasks.push({
     id: 'privacy-policy',
     title: 'מדיניות פרטיות',
-    description: privacyApproved
-      ? 'פרסמו את מדיניות הפרטיות באתר הארגון עם קישור בפוטר'
-      : hasPrivacy ? 'ממתין לאישור הממונה' : 'ייוצר אוטומטית',
-    legalBasis: 'תיקון 13, חובת יידוע',
-    status: privacyApproved ? 'pending_user' : hasPrivacy ? 'pending_dpo' : 'pending_dpo',
-    owner: privacyApproved ? 'user' : 'dpo',
+    description: ppStatus === 'doc_approved'
+      ? 'מדיניות הפרטיות מאושרת. יש לפרסם באתר הארגון.'
+      : ppStatus === 'doc_pending_review'
+        ? 'ממתינה לאישור הממונה.'
+        : 'מדיניות פרטיות תיוצר אוטומטית על בסיס נתוני הארגון.',
+    legalBasis: 'תיקון 13, חובת יידוע מורחב',
+    icon: '📜',
     priority: 'high',
-    category: privacyApproved ? 'user_action' : hasPrivacy ? 'dpo_pending' : 'dpo_pending',
-    estimatedMinutes: 15,
+    status: ppStatus,
+    actionType: ppStatus === 'doc_approved' ? 'external_guide' : ppStatus === 'needs_generation' ? 'generate_doc' : 'doc_review',
     documentType: 'privacy_policy',
-    actionPath: '/dashboard?tab=documents'
+    docId: findDoc('privacy_policy')?.id,
+    estimatedMinutes: 15,
+    postApprovalAction: 'פרסמו את מדיניות הפרטיות באתר הארגון',
+    guideSteps: [
+      { title: 'הורדת המדיניות', description: 'גשו ללשונית מסמכים והורידו את מדיניות הפרטיות' },
+      { title: 'פרסום באתר', description: 'העלו את המסמך לאתר הארגון — מומלץ להוסיף קישור בפוטר' },
+      { title: 'אימות', description: 'ודאו שהקישור נגיש מכל עמוד באתר' },
+    ],
+    sortOrder: sortOrder++,
   })
 
-  // 4. Security Procedures
-  const hasSecurity = docTypes.includes('security_procedures') || docTypes.includes('security_policy')
-  const securityApproved = activeDocTypes.includes('security_procedures') || activeDocTypes.includes('security_policy')
-  actions.push({
+  // ── 4. Security Procedures ──
+  const secStatus = docTaskStatus('security_procedures')
+  const secStatusAlt = hasDoc('security_policy') ? docTaskStatus('security_policy') : secStatus
+  const effectiveSecStatus = secStatusAlt === 'needs_generation' ? secStatus : secStatusAlt
+  tasks.push({
     id: 'security-procedures',
     title: 'נוהל אבטחת מידע',
-    description: securityApproved
-      ? 'שלחו את נוהל האבטחה לכל העובדים ותעדו שקראו'
-      : hasSecurity ? 'ממתין לאישור הממונה' : 'ייוצר אוטומטית',
+    description: effectiveSecStatus === 'doc_approved'
+      ? 'נוהל אבטחה מאושר. יש להפיץ לכל העובדים.'
+      : effectiveSecStatus === 'doc_pending_review'
+        ? 'ממתין לאישור הממונה.'
+        : 'נוהל אבטחת מידע ייוצר על בסיס נתוני הארגון.',
     legalBasis: 'תקנות אבטחת מידע 2017',
-    status: securityApproved ? 'pending_user' : hasSecurity ? 'pending_dpo' : 'pending_dpo',
-    owner: securityApproved ? 'user' : 'dpo',
+    icon: '🔒',
     priority: 'high',
-    category: securityApproved ? 'user_action' : hasSecurity ? 'dpo_pending' : 'dpo_pending',
-    estimatedMinutes: 15,
+    status: effectiveSecStatus,
+    actionType: effectiveSecStatus === 'doc_approved' ? 'external_guide' : effectiveSecStatus === 'needs_generation' ? 'generate_doc' : 'doc_review',
     documentType: 'security_procedures',
-    actionPath: '/dashboard?tab=documents'
+    docId: findDoc('security_procedures')?.id || findDoc('security_policy')?.id,
+    estimatedMinutes: 15,
+    postApprovalAction: 'שלחו את נוהל האבטחה לכל העובדים',
+    guideSteps: [
+      { title: 'הורדת הנוהל', description: 'גשו ללשונית מסמכים והורידו את נוהל אבטחת מידע' },
+      { title: 'הפצה לעובדים', description: 'שלחו את הנוהל במייל לכל העובדים — בקשו אישור קריאה' },
+      { title: 'תיעוד', description: 'שמרו רשימת עובדים שאישרו קריאה' },
+    ],
+    sortOrder: sortOrder++,
   })
 
-  // 5. Database Registration
-  const hasDbReg = docTypes.includes('database_registration') || docTypes.includes('database_definition')
-  const dbRegApproved = activeDocTypes.includes('database_registration') || activeDocTypes.includes('database_definition')
-  actions.push({
-    id: 'db-registration',
-    title: 'רישום מאגרי מידע',
-    description: dbRegApproved
+  // ── 5. Database Definition ──
+  const dbDefStatus = docTaskStatus('database_definition')
+  tasks.push({
+    id: 'db-definition',
+    title: 'הגדרת מאגרי מידע',
+    description: dbDefStatus === 'completed' || dbDefStatus === 'doc_approved'
       ? `${dbCount} מאגרים רשומים ומתועדים`
-      : `${dbCount} מאגרים זוהו — ממתין לאישור הממונה`,
+      : `${dbCount} מאגרים זוהו — ממתין לאישור`,
     legalBasis: 'חוק הגנת הפרטיות, סעיף 8',
-    status: dbRegApproved ? 'completed' : hasDbReg ? 'pending_dpo' : 'pending_dpo',
-    owner: dbRegApproved ? 'system' : 'dpo',
+    icon: '🗄️',
     priority: 'high',
-    category: dbRegApproved ? 'done' : 'dpo_pending',
-    estimatedMinutes: 10,
+    status: dbDefStatus,
+    actionType: dbDefStatus === 'needs_generation' ? 'generate_doc' : 'doc_review',
     documentType: 'database_definition',
-    actionPath: '/dashboard?tab=documents'
+    docId: findDoc('database_definition')?.id,
+    estimatedMinutes: 10,
+    sortOrder: sortOrder++,
   })
 
-  // 6. ROPA
-  const hasRopa = docTypes.includes('ropa')
-  const ropaApproved = activeDocTypes.includes('ropa')
-  actions.push({
+  // ── 6. ROPA ──
+  const ropaStatus = docTaskStatus('ropa')
+  tasks.push({
     id: 'ropa',
     title: 'מפת עיבוד נתונים (ROPA)',
-    description: ropaApproved
+    description: ropaStatus === 'doc_approved'
       ? 'מפת העיבוד מאושרת ומעודכנת'
-      : `נוצרה מ-${dbCount} מאגרים ו-${allProcessors.length} ספקים — ממתינה לאישור`,
+      : `נוצרה מ-${dbCount} מאגרים ו-${allProcessors.length} ספקים`,
     legalBasis: 'תיקון 13, חובת תיעוד פעילויות עיבוד',
-    status: ropaApproved ? 'completed' : hasRopa ? 'pending_dpo' : 'pending_dpo',
-    owner: ropaApproved ? 'system' : 'dpo',
+    icon: '🗺️',
     priority: 'medium',
-    category: ropaApproved ? 'done' : 'dpo_pending',
-    estimatedMinutes: 10,
+    status: ropaStatus,
+    actionType: ropaStatus === 'needs_generation' ? 'generate_doc' : 'doc_review',
     documentType: 'ropa',
-    actionPath: '/dashboard?tab=documents'
+    docId: findDoc('ropa')?.id,
+    estimatedMinutes: 10,
+    sortOrder: sortOrder++,
   })
 
-  // 7. Consent Form
-  const hasConsentDoc = docTypes.includes('consent_form')
-  const consentApproved = activeDocTypes.includes('consent_form')
-  actions.push({
+  // ── 7. Consent Form ──
+  const consentStatus = docTaskStatus('consent_form')
+  tasks.push({
     id: 'consent-form',
     title: 'טופס הסכמה לאיסוף מידע',
-    description: consentApproved
-      ? 'טופס ההסכמה מאושר ומוכן לשימוש'
-      : hasConsentDoc ? 'ממתין לאישור הממונה' : 'ייוצר אוטומטית',
+    description: consentStatus === 'doc_approved'
+      ? 'טופס ההסכמה מאושר — יש להטמיע באתר ובטפסים'
+      : consentStatus === 'doc_pending_review'
+        ? 'ממתין לאישור הממונה'
+        : 'טופס הסכמה מדעת ייוצר על בסיס סוגי המידע שאתם אוספים',
     legalBasis: 'תיקון 13, חובת הסכמה מדעת',
-    status: consentApproved ? 'completed' : hasConsentDoc ? 'pending_dpo' : 'pending_dpo',
-    owner: consentApproved ? 'system' : 'dpo',
+    icon: '✋',
     priority: 'medium',
-    category: consentApproved ? 'done' : 'dpo_pending',
+    status: consentStatus,
+    actionType: consentStatus === 'doc_approved' ? 'external_guide' : consentStatus === 'needs_generation' ? 'generate_doc' : 'doc_review',
     documentType: 'consent_form',
-    actionPath: '/dashboard?tab=documents'
+    docId: findDoc('consent_form')?.id,
+    postApprovalAction: 'הטמיעו את טופס ההסכמה בטפסים ובאתר',
+    guideSteps: [
+      { title: 'הורדת הטופס', description: 'גשו ללשונית מסמכים והעתיקו את נוסח ההסכמה' },
+      { title: 'הטמעה בטפסים', description: 'הוסיפו את נוסח ההסכמה לכל טופס שאוסף מידע אישי' },
+      { title: 'הוספה לאתר', description: 'הוסיפו checkbox הסכמה בטפסי יצירת קשר ורכישה' },
+    ],
+    sortOrder: sortOrder++,
   })
 
-  // 8. Consent mechanism implementation (if they said no)
+  // ── 8. Consent Implementation (if no consent mechanism) ──
   if (hasConsent === 'no' && hasWebLeads) {
-    actions.push({
+    tasks.push({
       id: 'consent-implementation',
       title: 'הטמעת מנגנון הסכמה באתר',
-      description: 'חובה להוסיף מנגנון הסכמה מדעת בטפסי האתר לפני איסוף מידע אישי',
+      description: 'האתר אוסף לידים ללא מנגנון הסכמה — חובה להוסיף הסכמה מדעת בטפסים',
       legalBasis: 'תיקון 13, סעיף יידוע מורחב',
-      status: 'pending_user',
-      owner: 'user',
+      icon: '🌐',
       priority: 'high',
-      category: 'user_action',
+      status: 'needs_action',
+      actionType: 'external_guide',
       estimatedMinutes: 60,
-      actionPath: '/chat?prompt=' + encodeURIComponent('איך מטמיעים מנגנון הסכמה (consent) באתר?')
+      guideSteps: [
+        { title: 'הכנת נוסח', description: 'השתמשו בטופס ההסכמה שנוצר במערכת (לשונית מסמכים)' },
+        { title: 'הוספה לטפסי האתר', description: 'הוסיפו checkbox עם נוסח ההסכמה לפני כפתור השליחה בכל טופס' },
+        { title: 'בדיקה', description: 'ודאו שלא ניתן לשלוח טופס ללא סימון ההסכמה' },
+      ],
+      sortOrder: sortOrder++,
     })
   }
 
-  // 9. Processor agreements (one per processor)
+  // ── 9. Processor Agreements (DPAs) — per supplier ──
   if (allProcessors.length > 0) {
-    const PROC_LABELS: Record<string, string> = {
-      crm_saas: 'CRM / מערכת ניהול', payroll: 'שכר / HR', marketing: 'שיווק / דיוור',
-      cloud_hosting: 'אחסון ענן', call_center: 'מוקד שירות', accounting: 'הנה"ח / רו"ח'
-    }
-    actions.push({
+    const subTasks: SubTask[] = allProcessors.map(p => {
+      const label = PROC_LABELS[p] || p
+      // Check if individual DPA exists for this processor
+      const existingDpa = documents.find(d => 
+        d.type === 'processor_agreement' && 
+        d.title?.includes(label)
+      )
+      return {
+        id: `dpa-${p}`,
+        label,
+        processorKey: p,
+        status: existingDpa 
+          ? (existingDpa.status === 'active' ? 'completed' : 'doc_pending_review')
+          : 'needs_generation',
+        docId: existingDpa?.id,
+      }
+    })
+
+    const allDone = subTasks.every(s => s.status === 'completed')
+    const someDone = subTasks.some(s => s.status === 'completed')
+
+    tasks.push({
       id: 'processor-agreements',
       title: `הסכמי עיבוד מידע — ${allProcessors.length} ספקים`,
-      description: `נדרש הסכם עיבוד מידע בכתב עם: ${allProcessors.map(p => PROC_LABELS[p] || p).join(', ')}`,
+      description: allDone
+        ? 'כל הסכמי העיבוד נחתמו ואושרו'
+        : `נדרש הסכם עיבוד מידע בכתב עם כל ספק המעבד מידע אישי`,
       legalBasis: 'תיקון 13, חובת הסדרה חוזית',
-      status: 'pending_user',
-      owner: 'user',
+      icon: '📝',
       priority: 'medium',
-      category: 'user_action',
-      estimatedMinutes: 30,
-      actionPath: '/chat?prompt=' + encodeURIComponent('אני צריך הסכם עיבוד מידע לספקים שלי')
+      status: allDone ? 'completed' : 'needs_generation',
+      actionType: 'wizard',
+      documentType: 'processor_agreement',
+      subTasks,
+      wizardConfig: {
+        wizardId: 'dpa',
+        questions: [
+          { id: 'supplierName', label: 'שם הספק (חברה)', type: 'text', placeholder: 'לדוגמה: Salesforce, חילן, מאנדיי', required: true },
+          { id: 'supplierService', label: 'סוג השירות', type: 'text', placeholder: 'לדוגמה: מערכת CRM, ניהול שכר', required: true },
+          { id: 'dataShared', label: 'אילו סוגי מידע משותפים עם הספק?', type: 'multi_select', options: [
+            { value: 'names', label: 'שמות ופרטי קשר' },
+            { value: 'ids', label: 'מספרי ת.ז' },
+            { value: 'financial', label: 'מידע פיננסי' },
+            { value: 'health', label: 'מידע רפואי' },
+            { value: 'behavioral', label: 'מידע התנהגותי' },
+            { value: 'employee', label: 'מידע על עובדים' },
+          ]},
+          { id: 'serverLocation', label: 'מיקום שרתי הספק', type: 'select', options: [
+            { value: 'israel', label: 'ישראל' },
+            { value: 'eu', label: 'אירופה (EU)' },
+            { value: 'us', label: 'ארה"ב' },
+            { value: 'other', label: 'אחר' },
+          ]},
+        ],
+      },
+      estimatedMinutes: 15,
+      sortOrder: sortOrder++,
     })
   }
 
-  // 10. Access control
+  // ── 10. Access Control ──
   if (accessControl === 'all') {
-    actions.push({
+    tasks.push({
       id: 'access-control',
       title: 'הגבלת גישה למאגרי מידע',
       description: 'כל העובדים רואים את כל המידע — נדרשת בקרת גישה לפי תפקיד',
       legalBasis: 'תקנות אבטחת מידע 2017, סעיף 5',
-      status: 'pending_user',
-      owner: 'user',
+      icon: '🔑',
       priority: 'high',
-      category: 'user_action',
+      status: 'needs_action',
+      actionType: 'external_guide',
       estimatedMinutes: 120,
-      actionPath: '/chat?prompt=' + encodeURIComponent('איך מגדירים בקרת גישה למאגרי מידע?')
+      guideSteps: [
+        { title: 'מיפוי תפקידים', description: 'רשמו את כל התפקידים בארגון ואילו מאגרי מידע כל תפקיד צריך' },
+        { title: 'הגדרת הרשאות', description: 'בכל מערכת (CRM, אימייל, שרתים) — הגדירו גישה לפי תפקיד' },
+        { title: 'ביטול גישת "כולם"', description: 'הסירו הרשאות admin/כללי ממי שלא צריך' },
+        { title: 'תיעוד', description: 'תעדו את מדיניות ההרשאות — ניתן ליצור מסמך מדיניות בקרת גישה' },
+      ],
+      sortOrder: sortOrder++,
     })
   }
 
-  // 11. Camera officer
+  // ── 11. Camera Officer ──
   if (hasCameras && !v3Answers?.cameraOwnerName) {
-    actions.push({
+    tasks.push({
       id: 'camera-officer',
-      title: 'מינוי אחראי מצלמות',
-      description: 'נדרש למנות אחראי מצלמות בכתב ולתעד את ההחלטה',
+      title: 'מינוי אחראי מצלמות אבטחה',
+      description: 'הארגון מפעיל מצלמות — חובה למנות אחראי מצלמות בכתב',
       legalBasis: 'חוק הגנת הפרטיות, סעיף 7',
-      status: 'pending_user',
-      owner: 'user',
+      icon: '📹',
       priority: 'medium',
-      category: 'user_action',
+      status: 'needs_generation',
+      actionType: 'wizard',
+      documentType: 'camera_appointment',
+      wizardConfig: {
+        wizardId: 'camera_officer',
+        questions: [
+          { id: 'officerName', label: 'שם אחראי המצלמות', type: 'text', required: true },
+          { id: 'officerRole', label: 'תפקיד בארגון', type: 'text', placeholder: 'לדוגמה: מנהל תפעול' },
+          { id: 'cameraCount', label: 'מספר מצלמות', type: 'number' },
+          { id: 'cameraLocations', label: 'מיקום המצלמות', type: 'text', placeholder: 'לדוגמה: כניסה ראשית, חניון, משרדים' },
+        ],
+      },
       estimatedMinutes: 15,
-      actionPath: '/chat?prompt=' + encodeURIComponent('איך ממנים אחראי מצלמות?')
+      sortOrder: sortOrder++,
     })
   }
 
-  // 12. CV deletion policy
+  // ── 12. CV Deletion Policy ──
   if (hasCvs) {
     const cvsRetention = dbDetails?.cvs?.retention
     const hasRetentionPolicy = cvsRetention === 'quarterly' || cvsRetention === 'policy'
     if (!hasRetentionPolicy) {
-      actions.push({
+      tasks.push({
         id: 'cv-deletion',
-        title: 'מדיניות מחיקת קו"ח',
-        description: 'חובה למחוק קו"ח כל 3 חודשים (עד שנתיים לצורך מקצועי)',
+        title: 'מדיניות מחיקת קורות חיים',
+        description: 'חובה למחוק קו"ח כל 3 חודשים (עד שנתיים לצורך מקצועי מתועד)',
         legalBasis: 'חוק הגנת הפרטיות, תקנות שמירת מידע',
-        status: 'pending_user',
-        owner: 'user',
+        icon: '📄',
         priority: 'high',
-        category: 'user_action',
+        status: 'needs_action',
+        actionType: 'wizard',
+        documentType: 'cv_retention_policy',
+        wizardConfig: {
+          wizardId: 'cv_retention',
+          questions: [
+            { id: 'storageLocation', label: 'איפה מאוחסנים קורות החיים?', type: 'select', options: [
+              { value: 'email', label: 'אימייל' },
+              { value: 'drive', label: 'Google Drive / OneDrive' },
+              { value: 'hr_system', label: 'מערכת HR' },
+              { value: 'local', label: 'מחשב מקומי' },
+              { value: 'other', label: 'אחר' },
+            ], required: true },
+            { id: 'volume', label: 'כמה קו"ח אתם מקבלים בחודש?', type: 'select', options: [
+              { value: '1-10', label: '1-10' },
+              { value: '10-50', label: '10-50' },
+              { value: '50+', label: 'מעל 50' },
+            ]},
+            { id: 'currentPractice', label: 'מה קורה היום עם קו"ח שלא רלוונטיים?', type: 'select', options: [
+              { value: 'nothing', label: 'נשארים לנצח' },
+              { value: 'sometimes', label: 'נמחקים לפעמים' },
+              { value: 'manual', label: 'נמחקים ידנית כשנזכרים' },
+            ]},
+          ],
+        },
         estimatedMinutes: 30,
-        actionPath: '/chat?prompt=' + encodeURIComponent('איך מיישמים מדיניות מחיקת קורות חיים?')
+        sortOrder: sortOrder++,
       })
     }
   }
 
-  // 13. CISO requirement
-  if (needsCiso) {
-    actions.push({
-      id: 'ciso-check',
-      title: 'בדיקת צורך בממונה אבטחת מידע (CISO)',
+  // ── 13. CISO Check ──
+  if (needsCiso && (!securityOwner || securityOwner === 'none')) {
+    tasks.push({
+      id: 'ciso-appointment',
+      title: 'מינוי ממונה אבטחת מידע (CISO)',
       description: cisoReason!,
       legalBasis: 'תיקון 13, סעיף 17ג',
-      status: securityOwner && securityOwner !== 'none' ? 'completed' : 'pending_user',
-      owner: 'user',
+      icon: '🔐',
       priority: 'medium',
-      category: securityOwner && securityOwner !== 'none' ? 'done' : 'user_action',
-      actionPath: '/chat?prompt=' + encodeURIComponent('האם הארגון שלי חייב למנות CISO?')
+      status: 'needs_action',
+      actionType: 'external_guide',
+      estimatedMinutes: 60,
+      guideSteps: [
+        { title: 'זיהוי מועמד', description: 'בחרו אדם בארגון עם רקע טכני / אבטחה — אסור שיהיה בניגוד עניינים עם ה-DPO' },
+        { title: 'מינוי רשמי', description: 'הפיקו כתב מינוי CISO (ניתן דרך המערכת)' },
+        { title: 'הגדרת תחומי אחריות', description: 'מפו את האחריות: ניטור, תגובה לאירועים, סקירות תקופתיות' },
+      ],
+      sortOrder: sortOrder++,
     })
   }
 
-  // 14. Employee training
+  // ── 14. Employee Training ──
   if (maxAccess > 10) {
-    actions.push({
+    tasks.push({
       id: 'employee-training',
       title: 'הדרכת עובדים בנושא פרטיות',
-      description: 'עובדים עם גישה למידע אישי חייבים לעבור הדרכה בנושא הגנת פרטיות',
+      description: 'עובדים עם גישה למידע אישי חייבים לעבור הדרכה. יש לתעד את ההדרכה.',
       legalBasis: 'תקנות אבטחת מידע 2017, סעיף 10',
-      status: 'pending_user',
-      owner: 'user',
-      priority: 'low',
-      category: 'user_action',
+      icon: '🎓',
+      priority: 'medium',
+      status: 'needs_action',
+      actionType: 'wizard',
+      documentType: 'employee_training',
+      wizardConfig: {
+        wizardId: 'employee_training',
+        questions: [
+          { id: 'employeeCount', label: 'מספר עובדים שנדרשת להם הדרכה', type: 'number', required: true },
+          { id: 'departments', label: 'מחלקות עיקריות עם גישה למידע', type: 'text', placeholder: 'לדוגמה: שירות לקוחות, כספים, HR' },
+          { id: 'lastTraining', label: 'מתי נערכה הדרכה אחרונה?', type: 'select', options: [
+            { value: 'never', label: 'מעולם' },
+            { value: 'year_plus', label: 'לפני יותר משנה' },
+            { value: 'this_year', label: 'השנה' },
+          ]},
+          { id: 'format', label: 'פורמט מועדף', type: 'select', options: [
+            { value: 'presentation', label: 'מצגת להעברה פרונטלית' },
+            { value: 'document', label: 'מסמך הדרכה לקריאה עצמאית' },
+            { value: 'both', label: 'שניהם' },
+          ]},
+        ],
+      },
       estimatedMinutes: 60,
-      actionPath: '/chat?prompt=' + encodeURIComponent('אני צריך חומרי הדרכה לעובדים בנושא פרטיות')
+      sortOrder: sortOrder++,
     })
   }
 
-  // 15. Reporting obligation
+  // ── 15. Reporting Obligation ──
   if (needsReporting) {
-    actions.push({
+    tasks.push({
       id: 'reporting-obligation',
       title: 'רישום מאגרים ברשות להגנת הפרטיות',
       description: `חובת דיווח: ${reportingReasons.join(', ')}`,
       legalBasis: 'חוק הגנת הפרטיות, סעיף 8',
-      status: 'pending_user',
-      owner: 'user',
+      icon: '📋',
       priority: 'critical',
-      category: 'reporting',
-      actionPath: '/chat?prompt=' + encodeURIComponent('איך מדווחים לרשות להגנת הפרטיות על מאגרי מידע?')
+      status: 'needs_action',
+      actionType: 'external_guide',
+      estimatedMinutes: 45,
+      guideSteps: [
+        { title: 'הורדת טופס 17', description: 'המערכת תפיק טופס מילוי מוקדם על בסיס מאגרי המידע שלכם' },
+        { title: 'כניסה לפורטל הרשות', description: 'גשו לאתר הרשות להגנת הפרטיות', linkUrl: 'https://www.gov.il/he/departments/topics/databases_registration', linkLabel: 'פורטל רישום מאגרים' },
+        { title: 'הגשת הטופס', description: 'מלאו את הטופס בפורטל והגישו — ניתן לצרף את טופס 17 שהופק' },
+        { title: 'שמירת אישור', description: 'שמרו את אישור ההגשה ועדכנו במערכת' },
+      ],
+      sortOrder: sortOrder++,
     })
   }
 
-  // 16. Open incidents
+  // ── 16. Open Incidents ──
   const openIncidents = incidents.filter(i => !['resolved', 'closed'].includes(i.status))
   if (openIncidents.length > 0) {
-    actions.push({
+    tasks.push({
       id: 'open-incidents',
       title: `${openIncidents.length} אירועי אבטחה פתוחים`,
-      description: 'יש לטפל באירועי אבטחה פתוחים בהקדם. דיווח לרשות תוך 72 שעות אם רלוונטי',
+      description: 'יש לטפל באירועי אבטחה פתוחים בהקדם. דיווח לרשות תוך 72 שעות אם רלוונטי.',
       legalBasis: 'תיקון 13, חובת דיווח אירוע אבטחה',
-      status: 'pending_user',
-      owner: 'user',
+      icon: '🚨',
       priority: 'critical',
-      category: 'user_action',
-      actionPath: '/dashboard?tab=incidents'
+      status: 'needs_action',
+      actionType: 'external_guide',
+      guideSteps: [
+        { title: 'סקירת אירועים', description: 'גשו ללשונית אירועי אבטחה וסקרו כל אירוע פתוח' },
+      ],
+      sortOrder: sortOrder++,
     })
   }
 
+  // ── 17. Breach Procedures (auto-resolved — system module) ──
+  tasks.push({
+    id: 'breach-procedures',
+    title: 'נוהל טיפול באירועי אבטחה',
+    description: 'מערכת MyDPO כוללת מודול ניהול אירועים עם ספירה לאחור של 72 שעות.',
+    legalBasis: 'תיקון 13, חובת דיווח אירוע אבטחה',
+    icon: '🚨',
+    priority: 'high',
+    status: 'auto_resolved',
+    actionType: 'auto_resolved',
+    resolvedNote: 'מובנה במערכת MyDPO',
+    sortOrder: sortOrder++,
+  })
+
+  // ── 18. Subject Rights Handling (auto-resolved — system module) ──
+  tasks.push({
+    id: 'subject-rights',
+    title: 'טיפול בבקשות פרטיות של נושאי מידע',
+    description: 'מערכת MyDPO כוללת טופס ציבורי לבקשות פרטיות עם מעקב ולוחות זמנים.',
+    legalBasis: 'תיקון 13, זכויות נושא המידע',
+    icon: '👤',
+    priority: 'high',
+    status: 'auto_resolved',
+    actionType: 'auto_resolved',
+    resolvedNote: 'מובנה במערכת MyDPO',
+    sortOrder: sortOrder++,
+  })
+
+  // ── 19. ROPA Maintenance (auto-resolved — system module) ──
+  tasks.push({
+    id: 'ropa-maintenance',
+    title: 'תחזוקת מפת עיבוד נתונים',
+    description: `המערכת מייצרת ומתחזקת מפת עיבוד מ-${dbCount} מאגרים ו-${allProcessors.length} ספקים.`,
+    legalBasis: 'תיקון 13, חובת תיעוד פעילויות עיבוד',
+    icon: '🗺️',
+    priority: 'medium',
+    status: 'auto_resolved',
+    actionType: 'auto_resolved',
+    resolvedNote: 'מובנה במערכת MyDPO',
+    sortOrder: sortOrder++,
+  })
+
   // ═══════════════════════════════════════════════════
-  // APPLY USER OVERRIDES (manually completed actions)
+  // APPLY USER OVERRIDES
   // ═══════════════════════════════════════════════════
   if (actionOverrides) {
-    for (const action of actions) {
-      const override = actionOverrides[action.id]
+    for (const task of tasks) {
+      const override = actionOverrides[task.id]
       if (override && override.status === 'completed') {
-        action.status = 'completed'
-        action.category = 'done'
-        action.owner = 'system'
-        action.resolvedNote = override.note || `סומן כבוצע — ${new Date(override.resolvedAt).toLocaleDateString('he-IL')}`
+        task.status = 'completed'
+        task.resolvedNote = override.note || `סומן כבוצע — ${new Date(override.resolvedAt).toLocaleDateString('he-IL')}`
+        task.resolvedAt = override.resolvedAt
+      }
+      // Also check sub-tasks
+      if (task.subTasks) {
+        for (const st of task.subTasks) {
+          const stOverride = actionOverrides[st.id]
+          if (stOverride && stOverride.status === 'completed') {
+            st.status = 'completed'
+          }
+        }
+        // If all sub-tasks completed, mark parent
+        if (task.subTasks.every(s => s.status === 'completed')) {
+          task.status = 'completed'
+          task.resolvedNote = 'כל הסכמי העיבוד הושלמו'
+        }
       }
     }
   }
+
+  // ═══════════════════════════════════════════════════
+  // SORT: active tasks by priority, completed at bottom
+  // ═══════════════════════════════════════════════════
+  const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 }
+  const statusOrder: Record<TaskStatus, number> = {
+    needs_action: 0,
+    needs_generation: 1,
+    needs_enrichment: 2,
+    doc_approved: 3,
+    doc_pending_review: 4,
+    completed: 10,
+    auto_resolved: 11,
+    not_applicable: 12,
+  }
+
+  tasks.sort((a, b) => {
+    const sa = statusOrder[a.status] ?? 5
+    const sb = statusOrder[b.status] ?? 5
+    if (sa !== sb) return sa - sb
+    const pa = priorityOrder[a.priority] ?? 9
+    const pb = priorityOrder[b.priority] ?? 9
+    if (pa !== pb) return pa - pb
+    return a.sortOrder - b.sortOrder
+  })
 
   // ═══════════════════════════════════════════════════
   // SCORE CALCULATION
   // ═══════════════════════════════════════════════════
   const weights: Record<string, number> = {
     'dpo-appointed': 10,
-    'dpo-letter-sign': 8,
+    'dpo-letter': 8,
     'privacy-policy': 10,
     'security-procedures': 10,
-    'db-registration': 8,
+    'db-definition': 8,
     'ropa': 8,
     'consent-form': 6,
     'consent-implementation': 5,
@@ -429,23 +835,27 @@ export function deriveComplianceActions(
     'access-control': 5,
     'camera-officer': 3,
     'cv-deletion': 4,
-    'ciso-check': 3,
+    'ciso-appointment': 3,
     'employee-training': 3,
     'reporting-obligation': 8,
     'open-incidents': 10,
+    'breach-procedures': 5,
+    'subject-rights': 5,
+    'ropa-maintenance': 3,
   }
 
   let totalWeight = 0
   let earnedWeight = 0
-  for (const action of actions) {
-    const w = weights[action.id] || 3
-    if (action.status !== 'not_applicable') {
+  for (const task of tasks) {
+    const w = weights[task.id] || 3
+    if (task.status !== 'not_applicable') {
       totalWeight += w
-      if (action.status === 'auto_resolved' || action.status === 'completed') {
+      if (task.status === 'completed' || task.status === 'auto_resolved') {
         earnedWeight += w
-      } else if (action.status === 'pending_dpo' && docTypes.includes(action.documentType || '')) {
-        // Doc exists but pending review — give partial credit
-        earnedWeight += w * 0.5
+      } else if (task.status === 'doc_approved') {
+        earnedWeight += w * 0.8  // approved but not yet implemented
+      } else if (task.status === 'doc_pending_review') {
+        earnedWeight += w * 0.5  // doc exists, pending review
       }
     }
   }
@@ -453,213 +863,51 @@ export function deriveComplianceActions(
   const score = totalWeight > 0 ? Math.round((earnedWeight / totalWeight) * 100) : 0
 
   // ═══════════════════════════════════════════════════
-  // REGULATORY GUIDELINES DERIVATION
-  // High-level determinations about what the law requires
+  // BUILD LEGACY INTERFACES (backward compat)
   // ═══════════════════════════════════════════════════
-  const guidelines: ComplianceGuideline[] = []
+  const actions: ComplianceAction[] = tasks.map(t => ({
+    id: t.id,
+    title: t.title,
+    description: t.description,
+    legalBasis: t.legalBasis,
+    status: t.status === 'auto_resolved' ? 'auto_resolved' as const
+      : t.status === 'completed' ? 'completed' as const
+      : t.status === 'doc_pending_review' ? 'pending_dpo' as const
+      : t.status === 'not_applicable' ? 'not_applicable' as const
+      : 'pending_user' as const,
+    owner: t.status === 'auto_resolved' ? 'system' as const
+      : t.status === 'doc_pending_review' ? 'dpo' as const
+      : 'user' as const,
+    priority: t.priority,
+    category: (t.status === 'completed' || t.status === 'auto_resolved') ? 'done' as const
+      : t.status === 'doc_pending_review' ? 'dpo_pending' as const
+      : t.id === 'reporting-obligation' ? 'reporting' as const
+      : 'user_action' as const,
+    estimatedMinutes: t.estimatedMinutes,
+    documentType: t.documentType,
+    actionPath: '/dashboard?tab=tasks',
+    resolvedNote: t.resolvedNote,
+  }))
 
-  // 1. DPO Appointment — always resolved by MyDPO
-  guidelines.push({
-    id: 'gl-dpo-required',
-    title: 'חובת מינוי ממונה הגנת פרטיות (DPO)',
-    description: 'תיקון 13 מחייב מינוי ממונה הגנת פרטיות. הממונה שלכם מונתה באמצעות MyDPO.',
-    legalBasis: 'תיקון 13, סעיף 17ב',
-    status: 'resolved',
-    resolvedReason: 'עו״ד דנה כהן מונתה כממונה',
-    actionIds: ['dpo-appointed', 'dpo-letter-sign'],
-    priority: 'critical',
-    icon: '🛡️',
-  })
-
-  // 2. Reporting obligation to Privacy Authority
-  guidelines.push({
-    id: 'gl-reporting',
-    title: 'חובת דיווח לרשם מאגרי מידע',
-    description: needsReporting
-      ? `הארגון חייב בדיווח לרשות: ${reportingReasons.join(', ')}`
-      : 'על בסיס הנתונים שהוזנו, לא נמצאה חובת דיווח לרשות.',
-    legalBasis: 'חוק הגנת הפרטיות, סעיף 8',
-    status: needsReporting ? 'required' : 'not_required',
-    actionIds: ['reporting-obligation'],
-    priority: needsReporting ? 'critical' : 'low',
-    icon: '📋',
-  })
-
-  // 3. CISO requirement
-  guidelines.push({
-    id: 'gl-ciso',
-    title: 'צורך בממונה אבטחת מידע (CISO)',
-    description: needsCiso
-      ? (cisoReason || 'נדרש מינוי CISO בנוסף לממונה פרטיות')
-      : securityOwner && securityOwner !== 'none'
-        ? `אחראי אבטחה קיים בארגון. ה-CISO יכול לשמש גם כ-DPO רק אם אין ניגוד עניינים.`
-        : 'על בסיס היקף הפעילות, אין חובה למנות CISO בנפרד.',
-    legalBasis: 'תיקון 13, סעיף 17ג',
-    status: needsCiso
-      ? (securityOwner && securityOwner !== 'none' ? 'resolved' : 'required')
-      : 'not_required',
-    resolvedReason: securityOwner && securityOwner !== 'none' ? 'אחראי אבטחה קיים' : undefined,
-    actionIds: ['ciso-check'],
-    priority: needsCiso ? 'high' : 'low',
-    icon: '🔐',
-  })
-
-  // 4. Consent mechanisms
-  const needsConsent = hasWebLeads || (hasConsent === 'no')
-  guidelines.push({
-    id: 'gl-consent',
-    title: 'חובת הסכמה מדעת לאיסוף מידע',
-    description: needsConsent
-      ? 'הארגון אוסף מידע אישי — נדרש מנגנון הסכמה מפורש בטפסים ובאתר.'
-      : hasConsent === 'yes'
-        ? 'מנגנון הסכמה קיים. וודאו שנוסח ההסכמה עומד בדרישות תיקון 13.'
-        : 'על בסיס הנתונים שהוזנו, אין איסוף מידע ישיר הדורש הסכמה.',
-    legalBasis: 'תיקון 13, חובת יידוע מורחב',
-    status: needsConsent && hasConsent !== 'yes' ? 'required' : hasConsent === 'yes' ? 'resolved' : 'not_required',
-    resolvedReason: hasConsent === 'yes' ? 'מנגנון הסכמה מדווח כקיים' : undefined,
-    actionIds: ['consent-form', 'consent-implementation'],
-    priority: needsConsent ? 'high' : 'low',
-    icon: '✋',
-  })
-
-  // 5. Data Processing Agreements
-  guidelines.push({
-    id: 'gl-dpa',
-    title: 'הסכמי עיבוד מידע עם ספקים חיצוניים',
-    description: allProcessors.length > 0
-      ? `זוהו ${allProcessors.length} ספקים חיצוניים המעבדים מידע — נדרש הסכם בכתב עם כל אחד.`
-      : 'לא דווחו ספקים חיצוניים המעבדים מידע אישי.',
-    legalBasis: 'תיקון 13, חובת הסדרה חוזית',
-    status: allProcessors.length > 0 ? 'required' : 'not_required',
-    actionIds: ['processor-agreements'],
-    priority: allProcessors.length > 0 ? 'medium' : 'low',
-    icon: '📝',
-  })
-
-  // 6. Access control
-  guidelines.push({
-    id: 'gl-access-control',
-    title: 'בקרת גישה למאגרי מידע',
-    description: accessControl === 'all'
-      ? 'כל העובדים רואים את כל המידע — חובה להגדיר הרשאות גישה לפי תפקיד.'
-      : accessControl === 'role'
-        ? 'קיימת בקרת גישה לפי תפקיד. וודאו שהיא מתועדת ומעודכנת.'
-        : 'וודאו שרק מורשים ניגשים למידע אישי.',
-    legalBasis: 'תקנות אבטחת מידע 2017, סעיף 5',
-    status: accessControl === 'all' ? 'required' : accessControl === 'role' ? 'resolved' : 'info',
-    resolvedReason: accessControl === 'role' ? 'בקרת גישה לפי תפקיד מוגדרת' : undefined,
-    actionIds: ['access-control'],
-    priority: accessControl === 'all' ? 'high' : 'low',
-    icon: '🔑',
-  })
-
-  // 7. CV deletion policy
-  if (hasCvs) {
-    const cvsRetention = dbDetails?.cvs?.retention
-    const hasPolicy = cvsRetention === 'quarterly' || cvsRetention === 'policy'
-    guidelines.push({
-      id: 'gl-cv-deletion',
-      title: 'מדיניות שמירה ומחיקה של קורות חיים',
-      description: hasPolicy
-        ? 'קיימת מדיניות מחיקה. וודאו שהיא מיושמת בפועל.'
-        : 'חובה למחוק קורות חיים תוך 3 חודשים ממועד הקבלה (עד שנתיים לצורך מקצועי מתועד).',
-      legalBasis: 'חוק הגנת הפרטיות, תקנות שמירת מידע',
-      status: hasPolicy ? 'resolved' : 'required',
-      resolvedReason: hasPolicy ? 'מדיניות מחיקה מדווחת כקיימת' : undefined,
-      actionIds: ['cv-deletion'],
-      priority: hasPolicy ? 'low' : 'high',
-      icon: '📄',
-    })
-  }
-
-  // 8. Employee training
-  if (maxAccess > 10) {
-    guidelines.push({
-      id: 'gl-training',
-      title: 'הדרכת עובדים בנושא הגנת פרטיות',
-      description: 'עובדים עם גישה למידע אישי חייבים לעבור הדרכה. מומלץ לתעד את ההדרכה.',
-      legalBasis: 'תקנות אבטחת מידע 2017, סעיף 10',
-      status: 'required',
-      actionIds: ['employee-training'],
-      priority: 'medium',
-      icon: '🎓',
-    })
-  }
-
-  // 9. CCTV oversight
-  if (hasCameras) {
-    const hasOfficer = !!v3Answers?.cameraOwnerName
-    guidelines.push({
-      id: 'gl-cameras',
-      title: 'מינוי אחראי מצלמות אבטחה',
-      description: hasOfficer
-        ? `אחראי מצלמות: ${v3Answers.cameraOwnerName}. וודאו שמונה בכתב.`
-        : 'הארגון מפעיל מצלמות — חובה למנות אחראי מצלמות בכתב.',
-      legalBasis: 'חוק הגנת הפרטיות, סעיף 7',
-      status: hasOfficer ? 'resolved' : 'required',
-      resolvedReason: hasOfficer ? `${v3Answers.cameraOwnerName} מונה` : undefined,
-      actionIds: ['camera-officer'],
-      priority: hasOfficer ? 'low' : 'medium',
-      icon: '📹',
-    })
-  }
-
-  // 10. Data breach procedures — auto-resolved (incident module)
-  guidelines.push({
-    id: 'gl-breach-procedures',
-    title: 'נוהל טיפול באירועי אבטחה',
-    description: 'מערכת MyDPO כוללת מודול ניהול אירועי אבטחה עם ספירה לאחור של 72 שעות לדיווח לרשות.',
-    legalBasis: 'תיקון 13, חובת דיווח אירוע אבטחה',
-    status: 'resolved',
-    resolvedReason: 'מובנה במערכת MyDPO',
-    actionIds: [],
-    priority: 'high',
-    icon: '🚨',
-  })
-
-  // 11. Data subject rights handling — auto-resolved (rights module)
-  guidelines.push({
-    id: 'gl-subject-rights',
-    title: 'טיפול בבקשות פרטיות של נושאי מידע',
-    description: 'מערכת MyDPO כוללת טופס ציבורי לבקשות פרטיות עם מעקב ולוחות זמנים (30 יום).',
-    legalBasis: 'תיקון 13, זכויות נושא המידע',
-    status: 'resolved',
-    resolvedReason: 'מובנה במערכת MyDPO',
-    actionIds: [],
-    priority: 'high',
-    icon: '👤',
-  })
-
-  // 12. ROPA maintenance — auto-resolved
-  guidelines.push({
-    id: 'gl-ropa',
-    title: 'תחזוקת מפת עיבוד נתונים (ROPA)',
-    description: `המערכת מייצרת ומתחזקת מפת עיבוד מ-${dbCount} מאגרים ו-${allProcessors.length} ספקים.`,
-    legalBasis: 'תיקון 13, חובת תיעוד פעילויות עיבוד',
-    status: 'resolved',
-    resolvedReason: 'מובנה במערכת MyDPO',
-    actionIds: ['ropa'],
-    priority: 'medium',
-    icon: '🗺️',
-  })
-
-  // Apply overrides to guidelines too
-  if (actionOverrides) {
-    for (const gl of guidelines) {
-      if (gl.status === 'required' && gl.actionIds.length > 0) {
-        const allResolved = gl.actionIds.every(aid => {
-          const override = actionOverrides[aid]
-          return override?.status === 'completed'
-        })
-        if (allResolved) {
-          gl.status = 'resolved'
-          gl.resolvedReason = 'סומן כבוצע על ידי המשתמש'
-        }
-      }
-    }
-  }
+  const guidelines: ComplianceGuideline[] = tasks
+    .filter(t => t.legalBasis)
+    .map(t => ({
+      id: `gl-${t.id}`,
+      title: t.title,
+      description: t.description,
+      legalBasis: t.legalBasis,
+      status: (t.status === 'completed' || t.status === 'auto_resolved' || t.status === 'doc_approved') 
+        ? 'resolved' as const
+        : t.status === 'not_applicable' ? 'not_required' as const
+        : 'required' as const,
+      resolvedReason: t.resolvedNote,
+      actionIds: [t.id],
+      priority: t.priority,
+      icon: t.icon,
+    }))
 
   return {
+    tasks,
     actions,
     guidelines,
     score,
@@ -670,6 +918,6 @@ export function deriveComplianceActions(
     needsReporting,
     reportingReasons,
     needsCiso,
-    cisoReason
+    cisoReason,
   }
 }
