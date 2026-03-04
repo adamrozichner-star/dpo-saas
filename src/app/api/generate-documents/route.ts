@@ -29,11 +29,12 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey)
-    let { orgId, orgName, businessId, answers, v3Answers, singleDocType } = await request.json()
+    let { orgId, orgName, businessId, answers, v3Answers, singleDocType, wizardAnswers, wizardId } = await request.json()
 
     console.log('Generating docs for:', orgName, 'orgId:', orgId, singleDocType ? `(single: ${singleDocType})` : '(all)')
     console.log('Answers received:', answers?.length || 0)
     console.log('V3 answers:', v3Answers ? 'present' : 'missing')
+    if (wizardAnswers) console.log('Wizard answers:', JSON.stringify(wizardAnswers))
 
     if (!orgId || !orgName) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -123,13 +124,126 @@ export async function POST(request: NextRequest) {
     // ── SINGLE DOC MODE ──────────────────────────────
     // When singleDocType is specified, only save that one doc
     if (singleDocType) {
-      const targetDoc = allDocuments.find(d => d.type === singleDocType)
+      let targetDoc: { type: string; title: string; content: string } | undefined
+
+      // ── WIZARD-DRIVEN DPA ──
+      // When wizard provides specific supplier data, generate a supplier-specific DPA
+      if (wizardId === 'dpa' && wizardAnswers && singleDocType === 'processor_agreement') {
+        const supplierName = wizardAnswers.supplierName || 'ספק'
+        const supplierService = wizardAnswers.supplierService || ''
+        const dataShared = Array.isArray(wizardAnswers.dataShared) ? wizardAnswers.dataShared : []
+        const serverLocation = wizardAnswers.serverLocation || 'israel'
+        const date = new Date().toLocaleDateString('he-IL')
+
+        const dataLabels: Record<string, string> = {
+          names: 'שמות ופרטי קשר', ids: 'מספרי ת.ז', financial: 'מידע פיננסי',
+          health: 'מידע רפואי', behavioral: 'מידע התנהגותי', employee: 'מידע על עובדים'
+        }
+        const locationLabels: Record<string, string> = {
+          israel: 'ישראל', eu: 'אירופה (EU)', us: 'ארה"ב', other: 'אחר'
+        }
+        const dataList = dataShared.map((d: string) => dataLabels[d] || d).join(', ')
+
+        const content = `# הסכם עיבוד מידע (DPA)
+## בין ${orgName} לבין ${supplierName}
+
+**תאריך:** ${date}
+
+---
+
+## 1. הצדדים להסכם
+
+| | פרטים |
+|---|---|
+| **מזמין (בעל המידע)** | ${orgName} |
+| **ח.פ / ע.מ** | ${businessId || '—'} |
+| **ממונה הגנת פרטיות** | ${dpoName} |
+| **אימייל ממונה** | ${dpoEmail} |
+| **מעבד (ספק)** | ${supplierName} |
+| **סוג השירות** | ${supplierService} |
+| **מיקום שרתים** | ${locationLabels[serverLocation] || serverLocation} |
+
+---
+
+## 2. סוגי המידע המועברים
+
+${dataList || 'לא צוין'}
+
+---
+
+## 3. מטרת העיבוד
+
+העיבוד מתבצע אך ורק לצורך מתן השירות "${supplierService}" כמפורט בהסכם השירות הראשי בין הצדדים.
+
+## 4. חובות המעבד (${supplierName})
+
+- **סודיות:** המעבד מתחייב לשמור על סודיות המידע ולהבטיח שכל עובדיו חתמו על הסכם סודיות
+- **אבטחת מידע:** המעבד יישם אמצעי אבטחה מתאימים בהתאם לסוג המידע ורגישותו, לרבות הצפנה, גיבוי, ובקרת גישה
+- **העברה הלאה:** המעבד לא יעביר את המידע לצד שלישי ללא אישור בכתב מראש מהמזמין
+- **סיום ההתקשרות:** בסיום ההסכם, המעבד ימחק או ישיב את כל המידע האישי בתוך 30 יום
+- **שיתוף פעולה:** המעבד ישתף פעולה עם בקשות זכויות נושאי מידע ועם בדיקות ציות
+${serverLocation !== 'israel' ? `- **העברה בינלאומית:** בהתאם לתקנות הגנת הפרטיות (העברת מידע אל מאגרי מידע שמחוץ לגבולות המדינה), 2001` : ''}
+
+## 5. חובות המזמין (${orgName})
+
+- העברת מידע למעבד אך ורק בהתאם לבסיס חוקי מתאים
+- יידוע נושאי המידע על השימוש במעבד, ככל שנדרש
+- פיקוח על עמידת המעבד בתנאי הסכם זה
+
+## 6. דיווח על אירוע אבטחה
+
+המעבד ידווח למזמין על כל אירוע אבטחת מידע **תוך 24 שעות** מרגע הגילוי, בציון:
+- תיאור האירוע
+- סוגי המידע שנפגעו
+- מספר נושאי המידע המושפעים
+- הצעדים שננקטו לטיפול
+
+## 7. תוקף ההסכם
+
+הסכם זה ייכנס לתוקף ביום חתימתו ויישאר בתוקף כל עוד המעבד מעבד מידע אישי עבור המזמין.
+
+---
+
+**חתימת המזמין:** ________________  תאריך: ${date}
+
+**חתימת המעבד:** ________________  תאריך: ________
+`
+        targetDoc = {
+          type: 'processor_agreement',
+          title: `הסכם עיבוד מידע — ${supplierName}`,
+          content
+        }
+        console.log(`Generated wizard-driven DPA for supplier: ${supplierName}`)
+      }
+
+      // ── STANDARD SINGLE DOC ──
+      if (!targetDoc) {
+        targetDoc = allDocuments.find(d => d.type === singleDocType)
+      }
+
       if (!targetDoc) {
         return NextResponse.json({ error: `Document type ${singleDocType} not found in templates` }, { status: 400 })
       }
 
-      // Check if this type already exists
-      const { data: existing } = await supabase
+      // Check if this type already exists (skip for wizard DPAs — each supplier gets its own)
+      const isWizardDPA = wizardId === 'dpa' && singleDocType === 'processor_agreement'
+      
+      if (isWizardDPA) {
+        // Always insert a new doc for each supplier
+        await supabase
+          .from('documents')
+          .insert({
+            org_id: orgId,
+            type: targetDoc.type,
+            title: targetDoc.title,
+            content: targetDoc.content,
+            version: 1,
+            status: 'pending_review',
+            generated_by: 'system',
+          })
+      } else {
+        // Standard: check if exists, update or insert
+        const { data: existing } = await supabase
         .from('documents')
         .select('id')
         .eq('org_id', orgId)
@@ -161,13 +275,14 @@ export async function POST(request: NextRequest) {
             generated_by: 'system',
           })
       }
+      } // end else (non-wizard)
 
       // Audit log
       try {
         await supabase.from('audit_logs').insert({
           org_id: orgId,
           action: 'single_document_generated',
-          details: { docType: singleDocType, title: targetDoc.title }
+          details: { docType: singleDocType, title: targetDoc.title, ...(wizardAnswers ? { wizardAnswers } : {}) }
         })
       } catch {}
 
