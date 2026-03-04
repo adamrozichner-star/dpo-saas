@@ -1266,7 +1266,7 @@ function OnboardingContent() {
     setIsGenerating(true)
     setError(null)
     setGenerationProgress(10)
-    setStatus('מנתחים את הנתונים שלכם...')
+    setStatus('סורקים את פרופיל הארגון...')
 
     try {
       // Build final answers: merge state with session overrides (ref is bulletproof)
@@ -1282,7 +1282,7 @@ function OnboardingContent() {
       const autoTier = calculateRecommendedTier()
 
       setGenerationProgress(25)
-      setStatus('יוצרים את הארגון...')
+      setStatus('מקימים את סביבת הציות שלכם...')
 
       // === SERVER-SIDE ORG CREATION (bypasses RLS) ===
       const { data: { session: sess } } = await supabase.auth.getSession()
@@ -1312,7 +1312,7 @@ function OnboardingContent() {
       const orgName = orgResult.orgName
 
       setGenerationProgress(60)
-      setStatus('מפיקים מסמכים...')
+      setStatus('מייצרים מדיניות, נהלים ומסמכים...')
 
       // Generate documents (also server-side)
       try {
@@ -1324,7 +1324,7 @@ function OnboardingContent() {
             answers: legacyAnswers, v3Answers: finalV3
           })
         })
-        if (docRes.ok) { setGenerationProgress(90); setStatus('כמעט מוכן!') }
+        if (docRes.ok) { setGenerationProgress(90); setStatus('בודקים שהכל תקין...') }
         else console.log('[Onboarding] Doc generation failed:', await docRes.text())
       } catch (docError) { console.log('[Onboarding] Doc generation skipped:', docError) }
 
@@ -1333,7 +1333,7 @@ function OnboardingContent() {
       localStorage.setItem('dpo_recommended_tier', autoTier)
 
       setGenerationProgress(100)
-      setStatus('הכל מוכן! מעבירים לחבילות...')
+      setStatus('הכל מוכן! מעבירים אתכם...')
 
       try {
         await fetch('/api/email', {
@@ -1383,34 +1383,113 @@ function OnboardingContent() {
   }
 
   if (isGenerating) {
+    const steps = [
+      { icon: '📊', label: 'ניתוח מאגרים', desc: 'מזהים את סוגי המידע', threshold: 15 },
+      { icon: '🔒', label: 'רמת אבטחה', desc: 'מעריכים חשיפה רגולטורית', threshold: 40 },
+      { icon: '📋', label: 'מסמכים', desc: 'מכינים מדיניות ונהלים', threshold: 65 },
+      { icon: '✅', label: 'הכל מוכן', desc: 'מעבירים ללוח הבקרה', threshold: 92 },
+    ]
+
     return (
-      <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
-        <Card className="w-full max-w-md text-center">
-          <CardContent className="pt-8 pb-8">
-            <div className="relative mb-6">
-              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                <Sparkles className="h-10 w-10 text-primary animate-pulse" />
+      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50/40 flex items-center justify-center p-4" dir="rtl">
+        <div className="w-full max-w-md">
+          {/* Logo */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
+                <Shield className="h-5 w-5 text-white" />
+              </div>
+              <span className="font-bold text-[#1e40af] text-lg">MyDPO</span>
+            </div>
+          </div>
+
+          {/* Main card */}
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-100 overflow-hidden">
+            {/* Animated gradient bar at top */}
+            <div className="h-1 bg-slate-100 relative overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-l from-blue-600 via-indigo-500 to-blue-400 transition-all duration-700 ease-out"
+                style={{ width: `${generationProgress}%` }}
+              />
+            </div>
+
+            <div className="px-6 py-8">
+              {/* Title */}
+              <div className="text-center mb-8">
+                <h2 className="text-xl font-bold text-slate-800 mb-1">מנתחים את העסק שלכם</h2>
+                <p className="text-sm text-slate-500">{status}</p>
+              </div>
+
+              {/* Steps */}
+              <div className="space-y-3">
+                {steps.map((step, i) => {
+                  const isComplete = generationProgress >= step.threshold
+                  const isCurrent = !isComplete && (i === 0 || generationProgress >= steps[i - 1].threshold) && generationProgress < 100
+
+                  return (
+                    <div 
+                      key={i}
+                      className={`flex items-center gap-3 rounded-xl px-4 py-3 transition-all duration-500 ${
+                        isComplete 
+                          ? 'bg-emerald-50 border border-emerald-100' 
+                          : isCurrent 
+                            ? 'bg-blue-50 border border-blue-100' 
+                            : 'bg-slate-50 border border-slate-100'
+                      }`}
+                      style={{ 
+                        opacity: generationProgress >= Math.max(0, step.threshold - 20) ? 1 : 0.4,
+                        transform: generationProgress >= Math.max(0, step.threshold - 20) ? 'translateX(0)' : 'translateX(-8px)',
+                        transition: `all 0.5s ease ${i * 0.1}s`
+                      }}
+                    >
+                      {/* Icon/check */}
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 text-base transition-all duration-300 ${
+                        isComplete 
+                          ? 'bg-emerald-500 text-white' 
+                          : isCurrent 
+                            ? 'bg-blue-100' 
+                            : 'bg-slate-100'
+                      }`}>
+                        {isComplete ? (
+                          <CheckCircle2 className="h-5 w-5" />
+                        ) : isCurrent ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                        ) : (
+                          <span>{step.icon}</span>
+                        )}
+                      </div>
+
+                      {/* Text */}
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-medium ${isComplete ? 'text-emerald-700' : isCurrent ? 'text-blue-700' : 'text-slate-500'}`}>
+                          {step.label}
+                        </p>
+                        <p className={`text-xs ${isComplete ? 'text-emerald-500' : isCurrent ? 'text-blue-500' : 'text-slate-400'}`}>
+                          {isComplete ? 'הושלם' : step.desc}
+                        </p>
+                      </div>
+
+                      {/* Status indicator */}
+                      {isComplete && (
+                        <span className="text-emerald-500 text-xs font-medium">✓</span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Progress percentage */}
+              <div className="mt-6 text-center">
+                <span className="text-2xl font-bold text-slate-700">{Math.round(generationProgress)}%</span>
               </div>
             </div>
-            <h2 className="text-2xl font-bold mb-2">מנתחים את העסק שלכם</h2>
-            <p className="text-gray-600 mb-6">{status}</p>
-            <Progress value={generationProgress} className="h-3 mb-4" />
-            <div className="grid grid-cols-4 gap-2 text-xs text-gray-500">
-              <div className={generationProgress >= 20 ? 'text-primary font-medium' : ''}>
-                <Database className="h-4 w-4 mx-auto mb-1" />ניתוח מאגרים
-              </div>
-              <div className={generationProgress >= 45 ? 'text-primary font-medium' : ''}>
-                <Shield className="h-4 w-4 mx-auto mb-1" />רמת אבטחה
-              </div>
-              <div className={generationProgress >= 70 ? 'text-primary font-medium' : ''}>
-                <Lock className="h-4 w-4 mx-auto mb-1" />התאמת חבילה
-              </div>
-              <div className={generationProgress >= 95 ? 'text-primary font-medium' : ''}>
-                <CheckCircle2 className="h-4 w-4 mx-auto mb-1" />הכל מוכן
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+
+          {/* Reassurance */}
+          <p className="text-center text-xs text-slate-400 mt-4">
+            🔒 הנתונים מאובטחים ומוצפנים
+          </p>
+        </div>
       </div>
     )
   }
