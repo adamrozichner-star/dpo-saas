@@ -55,6 +55,7 @@ interface ProcessingActivity {
 
 interface ROPATabProps {
   orgId: string
+  authFetch?: (url: string, options?: RequestInit) => Promise<Response>
 }
 
 // =============================================
@@ -136,7 +137,8 @@ const DEPARTMENTS = [
 // =============================================
 // Main Component
 // =============================================
-export default function ROPATab({ orgId }: ROPATabProps) {
+export default function ROPATab({ orgId, authFetch }: ROPATabProps) {
+  const apiFetch = authFetch || fetch
   const [activities, setActivities] = useState<ProcessingActivity[]>([])
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -149,7 +151,7 @@ export default function ROPATab({ orgId }: ROPATabProps) {
   const loadActivities = async () => {
     setLoading(true)
     try {
-      const response = await fetch(`/api/ropa?orgId=${orgId}`)
+      const response = await apiFetch(`/api/ropa?orgId=${orgId}`)
       const data = await response.json()
       setActivities(data.activities || [])
       setStats(data.stats)
@@ -188,7 +190,7 @@ export default function ROPATab({ orgId }: ROPATabProps) {
     if (!confirm('האם למחוק את פעילות העיבוד?')) return
     
     try {
-      await fetch('/api/ropa', {
+      await apiFetch('/api/ropa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', activityId: id })
@@ -379,6 +381,7 @@ export default function ROPATab({ orgId }: ROPATabProps) {
           editData={editingActivity || undefined}
           onClose={() => { setShowWizard(false); setEditingActivity(null) }}
           onSave={() => { setShowWizard(false); setEditingActivity(null); loadActivities() }}
+          apiFetch={apiFetch}
         />
       )}
 
@@ -388,6 +391,7 @@ export default function ROPATab({ orgId }: ROPATabProps) {
           activity={selectedActivity}
           onClose={() => { setSelectedActivity(null); setViewMode('list') }}
           onRefresh={loadActivities}
+          apiFetch={apiFetch}
         />
       )}
     </div>
@@ -397,7 +401,7 @@ export default function ROPATab({ orgId }: ROPATabProps) {
 // =============================================
 // Activity Wizard Component
 // =============================================
-function ActivityWizard({ orgId, editData, onClose, onSave }: { orgId: string; editData?: ProcessingActivity; onClose: () => void; onSave: () => void }) {
+function ActivityWizard({ orgId, editData, onClose, onSave, apiFetch }: { orgId: string; editData?: ProcessingActivity; onClose: () => void; onSave: () => void; apiFetch: (url: string, options?: RequestInit) => Promise<Response> }) {
   const [step, setStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const totalSteps = 5
@@ -432,7 +436,7 @@ function ActivityWizard({ orgId, editData, onClose, onSave }: { orgId: string; e
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
-      const response = await fetch('/api/ropa', {
+      const response = await apiFetch('/api/ropa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -833,14 +837,14 @@ function ActivityWizard({ orgId, editData, onClose, onSave }: { orgId: string; e
 // =============================================
 // Activity Detail Modal
 // =============================================
-function ActivityDetail({ activity: initialActivity, onClose, onRefresh }: { activity: ProcessingActivity; onClose: () => void; onRefresh: () => void }) {
+function ActivityDetail({ activity: initialActivity, onClose, onRefresh, apiFetch }: { activity: ProcessingActivity; onClose: () => void; onRefresh: () => void; apiFetch: (url: string, options?: RequestInit) => Promise<Response> }) {
   const [activity, setActivity] = useState(initialActivity)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
   const analyzeActivity = async () => {
     setIsAnalyzing(true)
     try {
-      const response = await fetch('/api/ropa', {
+      const response = await apiFetch('/api/ropa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'analyze', activityId: activity.id })
@@ -849,7 +853,7 @@ function ActivityDetail({ activity: initialActivity, onClose, onRefresh }: { act
       if (response.ok) {
         const data = await response.json()
         // Fetch the updated activity to show AI results
-        const activityResponse = await fetch(`/api/ropa?action=get&id=${activity.id}`)
+        const activityResponse = await apiFetch(`/api/ropa?action=get&id=${activity.id}`)
         if (activityResponse.ok) {
           const activityData = await activityResponse.json()
           setActivity(activityData.activity)
