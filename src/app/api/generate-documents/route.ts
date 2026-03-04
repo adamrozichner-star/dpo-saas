@@ -9,9 +9,10 @@ import {
 } from '@/lib/document-generator'
 import { DocumentVariables } from '@/lib/document-templates'
 import { generateV3Documents } from '@/lib/v3-document-templates'
+import { generateDocWithAI, AI_DOC_TYPES, OrgContext } from '@/lib/ai-doc-generator'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 120 // AI generation can take longer
 
 export async function POST(request: NextRequest) {
   console.log('Generate documents API called')
@@ -125,11 +126,28 @@ export async function POST(request: NextRequest) {
     // When singleDocType is specified, only save that one doc
     if (singleDocType) {
       let targetDoc: { type: string; title: string; content: string } | undefined
+      let usedAI = false
 
       // ── WIZARD-DRIVEN DPA ──
       // When wizard provides specific supplier data, generate a supplier-specific DPA
       if (wizardId === 'dpa' && wizardAnswers && singleDocType === 'processor_agreement') {
         const supplierName = wizardAnswers.supplierName || 'ספק'
+
+        // Try AI first for DPA (highest value doc)
+        const aiDPA = await generateDocWithAI('processor_agreement', {
+          orgName, businessId: businessId || '', dpoName, dpoEmail, dpoPhone, dpoLicense,
+          databases: v3Answers?.databases, dbDetails: v3Answers?.dbDetails,
+          processors: v3Answers?.processors, customProcessors: v3Answers?.customProcessors,
+          v3Answers, wizardAnswers,
+        })
+        if (aiDPA) {
+          targetDoc = { type: 'processor_agreement', title: `הסכם עיבוד מידע — ${supplierName}`, content: aiDPA.content }
+          usedAI = true
+          console.log(`AI-generated DPA for supplier: ${supplierName} (${aiDPA.content.length} chars)`)
+        }
+
+        // Template fallback
+        if (!targetDoc) {
         const supplierService = wizardAnswers.supplierService || ''
         const dataShared = Array.isArray(wizardAnswers.dataShared) ? wizardAnswers.dataShared : []
         const serverLocation = wizardAnswers.serverLocation || 'israel'
@@ -214,6 +232,7 @@ ${serverLocation !== 'israel' ? `- **העברה בינלאומית:** בהתאם
           content
         }
         console.log(`Generated wizard-driven DPA for supplier: ${supplierName}`)
+        } // end template fallback
       }
 
       // ── WIZARD-DRIVEN CAMERA OFFICER APPOINTMENT ──
@@ -365,6 +384,21 @@ ${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
 
       // ── WIZARD-DRIVEN EMPLOYEE TRAINING ──
       if (wizardId === 'employee_training' && wizardAnswers && singleDocType === 'employee_training') {
+        // Try AI first
+        const aiTraining = await generateDocWithAI('employee_training', {
+          orgName, businessId: businessId || '', dpoName, dpoEmail, dpoPhone, dpoLicense,
+          databases: v3Answers?.databases, dbDetails: v3Answers?.dbDetails,
+          v3Answers, wizardAnswers,
+          industry: v3Answers?.industry,
+        })
+        if (aiTraining) {
+          targetDoc = { type: 'employee_training', title: aiTraining.title, content: aiTraining.content }
+          usedAI = true
+          console.log(`AI-generated employee training (${aiTraining.content.length} chars)`)
+        }
+
+        // Template fallback
+        if (!targetDoc) {
         const employeeCount = wizardAnswers.employeeCount || ''
         const departments = wizardAnswers.departments || ''
         const lastTraining = wizardAnswers.lastTraining || 'never'
@@ -445,10 +479,42 @@ ${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
 *מסמך זה נוצר על ידי מערכת MyDPO. עודכן לאחרונה: ${date}*
 `
         }
-        console.log(`Generated employee training program (${employeeCount} employees, ${departments})`)
+        console.log(`Generated employee training program`)
+        } // end template fallback
       }
 
-      // ── STANDARD SINGLE DOC ──
+      // ── AI-POWERED GENERATION ──
+      // Try AI for supported doc types when no wizard template already set it
+      if (!targetDoc && AI_DOC_TYPES.includes(singleDocType)) {
+        const orgContext: OrgContext = {
+          orgName,
+          businessId: businessId || '',
+          industry: v3Answers?.industry,
+          dpoName, dpoEmail, dpoPhone, dpoLicense,
+          databases: v3Answers?.databases,
+          dbDetails: v3Answers?.dbDetails,
+          processors: v3Answers?.processors,
+          customProcessors: v3Answers?.customProcessors,
+          storage: v3Answers?.storage,
+          accessControl: v3Answers?.accessControl,
+          securityOwner: v3Answers?.securityOwner,
+          securityOwnerName: v3Answers?.securityOwnerName,
+          hasConsent: v3Answers?.hasConsent,
+          v3Answers,
+          wizardAnswers,
+        }
+        
+        const aiDoc = await generateDocWithAI(singleDocType, orgContext)
+        if (aiDoc) {
+          targetDoc = { type: singleDocType, ...aiDoc }
+          usedAI = true
+          console.log(`Using AI-generated ${singleDocType} (${aiDoc.content.length} chars)`)
+        } else {
+          console.log(`AI generation failed/skipped for ${singleDocType}, falling back to template`)
+        }
+      }
+
+      // ── STANDARD TEMPLATE FALLBACK ──
       if (!targetDoc) {
         targetDoc = allDocuments.find(d => d.type === singleDocType)
       }
@@ -514,7 +580,7 @@ ${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
         await supabase.from('audit_logs').insert({
           org_id: orgId,
           action: 'single_document_generated',
-          details: { docType: singleDocType, title: targetDoc.title, ...(wizardAnswers ? { wizardAnswers } : {}) }
+          details: { docType: singleDocType, title: targetDoc.title, generatedBy: usedAI ? 'ai' : 'template', ...(wizardAnswers ? { wizardAnswers } : {}) }
         })
       } catch {}
 
