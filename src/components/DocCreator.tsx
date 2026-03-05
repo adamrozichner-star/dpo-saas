@@ -36,6 +36,8 @@ const DOC_TYPE_OPTIONS: DocTypeOption[] = [
 
 export default function DocCreator({ orgId, orgName, businessId, v3Answers, supabase, isPaid, existingDocTypes, onDocumentCreated }: DocCreatorProps) {
   const [generating, setGenerating] = useState<string | null>(null)
+  const [genProgress, setGenProgress] = useState(0)
+  const [lastCreated, setLastCreated] = useState<{ type: string; label: string } | null>(null)
   const { toast } = useToast()
 
   const authFetch = useCallback(async (url: string, options: RequestInit = {}): Promise<Response> => {
@@ -48,9 +50,18 @@ export default function DocCreator({ orgId, orgName, businessId, v3Answers, supa
     return fetch(url, { ...options, headers })
   }, [supabase])
 
-  const generateDocument = async (docType: string) => {
+  const generateDocument = async (docType: string, label: string) => {
     if (!isPaid) return
     setGenerating(docType)
+    setGenProgress(0)
+    setLastCreated(null)
+
+    const progressTimer = setInterval(() => {
+      setGenProgress(p => {
+        if (p >= 90) { clearInterval(progressTimer); return 90 }
+        return p + (p < 30 ? 8 : p < 60 ? 4 : 2)
+      })
+    }, 500)
 
     try {
       const res = await authFetch('/api/generate-documents', {
@@ -65,17 +76,23 @@ export default function DocCreator({ orgId, orgName, businessId, v3Answers, supa
         })
       })
 
+      clearInterval(progressTimer)
+
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.error || 'שגיאה ביצירת המסמך')
       }
 
-      toast('המסמך נוצר ונשלח לאישור הממונה')
+      setGenProgress(100)
+      setLastCreated({ type: docType, label })
+      toast(`${label} — נוצר בהצלחה ונשלח לאישור הממונה`)
       onDocumentCreated()
+      setTimeout(() => { setGenerating(null); setGenProgress(0) }, 1200)
     } catch (err: any) {
+      clearInterval(progressTimer)
       toast(err.message || 'שגיאה ביצירת המסמך', 'error')
-    } finally {
       setGenerating(null)
+      setGenProgress(0)
     }
   }
 
@@ -85,27 +102,63 @@ export default function DocCreator({ orgId, orgName, businessId, v3Answers, supa
         בחרו סוג מסמך — המערכת תייצר אותו על בסיס נתוני הארגון שהוזנו באשף.
       </p>
 
+      {/* Progress banner */}
+      {generating && (
+        <div className="bg-gradient-to-l from-indigo-50 to-white rounded-xl p-4 border border-indigo-200 shadow-sm">
+          <div className="flex items-center gap-3 mb-2">
+            <Loader2 className="h-5 w-5 text-indigo-600 animate-spin flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-indigo-800">
+                {genProgress >= 100 ? '✅ המסמך נוצר!' : `מייצר ${DOC_TYPE_OPTIONS.find(o => o.type === generating)?.label || 'מסמך'}...`}
+              </p>
+              <p className="text-xs text-indigo-500">
+                {genProgress < 30 ? 'מנתח נתוני ארגון...' : genProgress < 60 ? 'כותב באמצעות AI...' : genProgress < 90 ? 'שומר ושולח לאישור...' : 'הושלם!'}
+              </p>
+            </div>
+          </div>
+          <div className="w-full h-2 bg-indigo-100 rounded-full overflow-hidden">
+            <div className="h-full bg-indigo-500 rounded-full transition-all duration-500 ease-out" style={{ width: `${genProgress}%` }} />
+          </div>
+        </div>
+      )}
+
+      {/* Success banner */}
+      {!generating && lastCreated && (
+        <div className="flex items-center justify-between bg-emerald-50 rounded-xl px-4 py-3 border border-emerald-200">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />
+            <span className="text-sm text-emerald-700 font-medium">{lastCreated.label} — נוצר בהצלחה!</span>
+          </div>
+          <button onClick={() => setLastCreated(null)} className="text-xs text-stone-400 hover:text-stone-600 cursor-pointer">✕</button>
+        </div>
+      )}
+
       <div className="grid sm:grid-cols-2 gap-3">
         {DOC_TYPE_OPTIONS.map(opt => {
           const exists = existingDocTypes.includes(opt.type)
           const isGenerating = generating === opt.type
+          const justCreated = lastCreated?.type === opt.type
           const Icon = opt.icon
 
           return (
             <button
               key={opt.type}
-              onClick={() => generateDocument(opt.type)}
+              onClick={() => generateDocument(opt.type, opt.label)}
               disabled={!isPaid || isGenerating || !!generating}
               className={`text-right p-4 rounded-xl border transition-all cursor-pointer disabled:cursor-not-allowed ${
-                exists
+                justCreated
+                  ? 'bg-emerald-50 border-emerald-300 ring-2 ring-emerald-200'
+                  : exists
                   ? 'bg-emerald-50/50 border-emerald-200 hover:bg-emerald-50'
                   : 'bg-white border-stone-200 hover:border-indigo-200 hover:shadow-sm'
               } ${!isPaid ? 'opacity-60' : ''}`}
             >
               <div className="flex items-start gap-3">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${opt.iconBg}`}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${justCreated ? 'bg-emerald-100' : opt.iconBg}`}>
                   {isGenerating ? (
                     <Loader2 className={`h-5 w-5 animate-spin ${opt.iconColor}`} />
+                  ) : justCreated ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                   ) : (
                     <Icon className={`h-5 w-5 ${opt.iconColor}`} />
                   )}
@@ -113,15 +166,15 @@ export default function DocCreator({ orgId, orgName, businessId, v3Answers, supa
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm font-semibold text-stone-800">{opt.label}</h3>
-                    {exists && (
-                      <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">
-                        קיים
-                      </span>
-                    )}
+                    {justCreated ? (
+                      <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">✓ נוצר!</span>
+                    ) : exists ? (
+                      <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-medium">קיים</span>
+                    ) : null}
                   </div>
                   <p className="text-xs text-stone-500 mt-0.5">{opt.description}</p>
                   {isGenerating && (
-                    <p className="text-xs text-indigo-500 mt-1 font-medium">מייצר מסמך...</p>
+                    <p className="text-xs text-indigo-500 mt-1 font-medium">מייצר באמצעות AI...</p>
                   )}
                 </div>
               </div>
