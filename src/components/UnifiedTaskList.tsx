@@ -593,7 +593,7 @@ export default function UnifiedTaskList({
       toast(supplierName 
         ? `הסכם עיבוד מידע נוצר עבור ${supplierName} — עברו למסמכים לצפייה` 
         : `${docTitle} — המסמך נוצר! עברו ללשונית מסמכים לצפייה`)
-      setLastCreatedDoc(wizardTask.documentType)
+      setLastCreatedDoc(wizardTask.documentType || null)
       onResolve(wizardTask.id, supplierName ? `הסכם נוצר עבור ${supplierName}` : 'מסמך הופק ונשמר')
       setTimeout(() => { setWizardTask(null); setGenProgress(0); setGeneratingTitle('') }, 1200)
       onRefreshDocs?.()
