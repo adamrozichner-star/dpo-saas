@@ -92,6 +92,7 @@ function WizardModal({
               type="text"
               value={answers[q.id] || ''}
               onChange={e => setAnswers({ ...answers, [q.id]: e.target.value })}
+              onKeyDown={e => { if (e.key === 'Enter' && (answers[q.id] || !q.required)) handleNext() }}
               placeholder={q.placeholder}
               className="w-full px-4 py-3 border border-stone-200 rounded-xl text-stone-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400"
               autoFocus
@@ -103,6 +104,7 @@ function WizardModal({
               type="number"
               value={answers[q.id] || ''}
               onChange={e => setAnswers({ ...answers, [q.id]: e.target.value })}
+              onKeyDown={e => { if (e.key === 'Enter' && (answers[q.id] || !q.required)) handleNext() }}
               placeholder={q.placeholder}
               className="w-full px-4 py-3 border border-stone-200 rounded-xl text-stone-800 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400"
               autoFocus
@@ -490,8 +492,11 @@ export default function UnifiedTaskList({
 }: UnifiedTaskListProps) {
   const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set())
   const [generatingDocFor, setGeneratingDocFor] = useState<string | null>(null)
+  const [generatingTitle, setGeneratingTitle] = useState('')
+  const [genProgress, setGenProgress] = useState(0)
   const [wizardTask, setWizardTask] = useState<ComplianceTask | null>(null)
   const [wizardSubmitting, setWizardSubmitting] = useState(false)
+  const [lastCreatedDoc, setLastCreatedDoc] = useState<string | null>(null)
   const { toast } = useToast()
 
   const authFetch = useCallback(async (url: string, options: RequestInit = {}): Promise<Response> => {
@@ -516,6 +521,18 @@ export default function UnifiedTaskList({
   const handleGenerateDoc = async (task: ComplianceTask) => {
     if (!orgId || !task.documentType) return
     setGeneratingDocFor(task.id)
+    setGeneratingTitle(task.title)
+    setGenProgress(0)
+    setLastCreatedDoc(null)
+    
+    // Simulate progress while waiting for AI
+    const progressTimer = setInterval(() => {
+      setGenProgress(p => {
+        if (p >= 90) { clearInterval(progressTimer); return 90 }
+        return p + (p < 30 ? 8 : p < 60 ? 4 : 2)
+      })
+    }, 500)
+    
     try {
       const res = await authFetch('/api/generate-documents', {
         method: 'POST',
@@ -525,15 +542,21 @@ export default function UnifiedTaskList({
           singleDocType: task.documentType,
         })
       })
+      clearInterval(progressTimer)
       if (!res.ok) throw new Error('שגיאה ביצירת המסמך')
+      setGenProgress(100)
+      setLastCreatedDoc(task.documentType)
       toast(`${task.title} — המסמך נוצר! עברו למסמכים לצפייה`)
-      // Auto-resolve: doc generated → pending DPO review
       onResolve(task.id, 'מסמך הופק ונשמר — ממתין לאישור הממונה')
       onRefreshDocs?.()
+      // Clear progress after a moment
+      setTimeout(() => { setGeneratingDocFor(null); setGenProgress(0); setGeneratingTitle('') }, 1500)
     } catch (err: any) {
+      clearInterval(progressTimer)
       toast(err.message || 'שגיאה', 'error')
-    } finally {
       setGeneratingDocFor(null)
+      setGenProgress(0)
+      setGeneratingTitle('')
     }
   }
 
@@ -541,6 +564,16 @@ export default function UnifiedTaskList({
   const handleWizardSubmit = async (answers: Record<string, any>) => {
     if (!wizardTask || !orgId) return
     setWizardSubmitting(true)
+    setGenProgress(0)
+    setGeneratingTitle(wizardTask.title)
+    
+    const progressTimer = setInterval(() => {
+      setGenProgress(p => {
+        if (p >= 90) { clearInterval(progressTimer); return 90 }
+        return p + (p < 30 ? 8 : p < 60 ? 4 : 2)
+      })
+    }, 500)
+    
     try {
       const res = await authFetch('/api/generate-documents', {
         method: 'POST',
@@ -552,18 +585,23 @@ export default function UnifiedTaskList({
           wizardId: wizardTask.wizardConfig?.wizardId,
         })
       })
+      clearInterval(progressTimer)
       if (!res.ok) throw new Error('שגיאה ביצירת המסמך')
+      setGenProgress(100)
       const supplierName = answers.supplierName || ''
       const docTitle = wizardTask.title || 'מסמך'
       toast(supplierName 
         ? `הסכם עיבוד מידע נוצר עבור ${supplierName} — עברו למסמכים לצפייה` 
         : `${docTitle} — המסמך נוצר! עברו ללשונית מסמכים לצפייה`)
-      // Auto-resolve the wizard task
+      setLastCreatedDoc(wizardTask.documentType)
       onResolve(wizardTask.id, supplierName ? `הסכם נוצר עבור ${supplierName}` : 'מסמך הופק ונשמר')
-      setWizardTask(null)
+      setTimeout(() => { setWizardTask(null); setGenProgress(0); setGeneratingTitle('') }, 1200)
       onRefreshDocs?.()
     } catch (err: any) {
+      clearInterval(progressTimer)
       toast(err.message || 'שגיאה', 'error')
+      setGenProgress(0)
+      setGeneratingTitle('')
     } finally {
       setWizardSubmitting(false)
     }
@@ -580,6 +618,49 @@ export default function UnifiedTaskList({
 
   return (
     <div className="space-y-4" dir="rtl">
+      {/* AI Generation Progress Banner */}
+      {(generatingDocFor || wizardSubmitting) && (
+        <div className="bg-gradient-to-l from-indigo-50 to-white rounded-xl p-4 border border-indigo-200 shadow-sm animate-pulse">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="h-4 w-4 text-indigo-600 animate-spin" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-indigo-800">
+                {genProgress >= 100 ? '✅ המסמך נוצר בהצלחה!' : `מייצר: ${generatingTitle}`}
+              </p>
+              <p className="text-xs text-indigo-500">
+                {genProgress < 30 ? 'מנתח את נתוני הארגון...' : genProgress < 60 ? 'כותב את המסמך באמצעות AI...' : genProgress < 90 ? 'מסיים ושומר...' : genProgress >= 100 ? 'המסמך זמין בלשונית מסמכים' : 'כמעט מוכן...'}
+              </p>
+            </div>
+            {genProgress >= 100 && onNavigateTab && (
+              <button onClick={() => onNavigateTab('documents')} className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-xs font-medium hover:bg-indigo-600 transition-colors cursor-pointer whitespace-nowrap">
+                צפייה במסמך →
+              </button>
+            )}
+          </div>
+          <div className="w-full h-2 bg-indigo-100 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-indigo-500 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${genProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Last created doc — quick link */}
+      {!generatingDocFor && !wizardSubmitting && lastCreatedDoc && onNavigateTab && (
+        <div className="flex items-center justify-between bg-emerald-50 rounded-lg px-4 py-2.5 border border-emerald-200">
+          <span className="text-sm text-emerald-700 font-medium">✅ המסמך נוצר בהצלחה ונשמר</span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => onNavigateTab('documents')} className="text-xs text-indigo-600 font-medium hover:text-indigo-800 cursor-pointer transition-colors">
+              צפייה במסמכים →
+            </button>
+            <button onClick={() => setLastCreatedDoc(null)} className="text-xs text-stone-400 hover:text-stone-600 cursor-pointer">✕</button>
+          </div>
+        </div>
+      )}
+
       {/* Header (full mode only) */}
       {mode === 'full' && (
         <div className="mb-2">
