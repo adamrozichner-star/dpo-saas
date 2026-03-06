@@ -186,6 +186,23 @@ function WizardModal({
             )}
           </button>
         </div>
+
+        {/* Generation progress — visible inside modal */}
+        {isSubmitting && (
+          <div className="px-6 py-3 bg-indigo-50 border-t border-indigo-100">
+            <div className="flex items-center gap-3 mb-2">
+              <Sparkles className="h-4 w-4 text-indigo-600 animate-pulse flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-indigo-700">מנתח נתונים ומייצר מסמך מותאם...</p>
+                <p className="text-[10px] text-indigo-500">התהליך אורך 10-20 שניות — אל תסגרו את החלון</p>
+              </div>
+            </div>
+            <div className="w-full h-1.5 bg-indigo-200 rounded-full overflow-hidden">
+              <div className="h-full bg-indigo-500 rounded-full" style={{ width: '70%', transition: 'width 8s ease-in-out' }} />
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   )
