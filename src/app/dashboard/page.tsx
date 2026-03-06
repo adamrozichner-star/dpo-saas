@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, Suspense } from 'react'
+import { useEffect, useState, Suspense, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -121,11 +121,14 @@ function DashboardContent() {
       setUserName(user.user_metadata?.name || user.email?.split('@')[0] || 'משתמש')
       loadAllData()
     }
-  }, [user, supabase])
+  }, [user?.id, supabase]) // Use user.id instead of user object to avoid re-trigger on token refresh
 
+  const hasLoadedOnce = useRef(false)
+  
   const loadAllData = async () => {
     if (!user || !supabase) return
-    setIsLoading(true)
+    // Only show full loading screen on first load — silent reload on subsequent
+    if (!hasLoadedOnce.current) setIsLoading(true)
 
     try {
       const { data: userData } = await supabase
@@ -313,6 +316,7 @@ function DashboardContent() {
       console.error('Error loading data:', error)
     } finally {
       setIsLoading(false)
+      hasLoadedOnce.current = true
     }
   }
 
