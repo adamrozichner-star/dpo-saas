@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/Toast'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import DatabaseOptimizer from '@/components/DatabaseOptimizer'
 
 // ═══════════════════════════════════════════════
 // CONFIG
@@ -154,7 +155,7 @@ export default function DPODashboard() {
 
   // ── Org detail (full page) ──
   const [selectedOrg, setSelectedOrg] = useState<any>(null)
-  const [orgTab, setOrgTab] = useState<'overview'|'docs'|'rights'|'incidents'|'ropa'|'messages'|'reminders'|'guidelines'|'activity'|'profile'>('overview')
+  const [orgTab, setOrgTab] = useState<'overview'|'docs'|'rights'|'incidents'|'ropa'|'messages'|'reminders'|'guidelines'|'activity'|'profile'|'optimizer'>('overview')
   const [composeMsg, setComposeMsg] = useState('')
   const [composeSending, setComposeSending] = useState(false)
   const [composeSent, setComposeSent] = useState(false)
@@ -958,6 +959,7 @@ export default function DPODashboard() {
                     { key: 'rights', label: `👤 זכויות (${selectedOrg.rights_requests?.length || 0})` },
                     { key: 'incidents', label: `🚨 אירועים (${selectedOrg.incidents?.length || 0})` },
                     { key: 'ropa', label: `📊 ROPA (${selectedOrg.ropa_activities?.length || 0})` },
+                    { key: 'optimizer', label: '🧪 אופטימייזר' },
                     { key: 'messages', label: '💬 הודעות' },
                     { key: 'reminders', label: '⏰ תזכורות' },
                     { key: 'guidelines', label: '📋 הנחיות' },
@@ -1386,6 +1388,16 @@ export default function DPODashboard() {
                         )
                       })}
                     </div>
+                  )}
+
+                  {/* OPTIMIZER */}
+                  {orgTab === 'optimizer' && (
+                    <DatabaseOptimizer
+                      orgId={selectedOrg.id}
+                      orgName={selectedOrg.name}
+                      dpoFetch={dpoFetch}
+                      onBack={() => setOrgTab('overview')}
+                    />
                   )}
 
                   {/* PROFILE */}
