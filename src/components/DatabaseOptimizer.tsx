@@ -226,19 +226,19 @@ export default function DatabaseOptimizer({ orgId, orgName, dpoFetch, onBack }: 
         id: db1.id,
         name: `${db1.name} + ${db2.name}`,
         description: `מיזוג: ${db1.name}, ${db2.name}`,
-        dataCategories: [...new Set([...db1.dataCategories, ...db2.dataCategories])],
-        specialCategories: [...new Set([...db1.specialCategories, ...db2.specialCategories])],
+        dataCategories: Array.from(new Set(db1.dataCategories.concat(db2.dataCategories))),
+        specialCategories: Array.from(new Set(db1.specialCategories.concat(db2.specialCategories))),
         estimatedRecords: db1.estimatedRecords + db2.estimatedRecords,
         authorizedUsers: Math.max(db1.authorizedUsers, db2.authorizedUsers),
-        purposes: [...new Set([...db1.purposes, ...db2.purposes])],
+        purposes: Array.from(new Set(db1.purposes.concat(db2.purposes))),
         legalBasis: db1.legalBasis || db2.legalBasis,
         internationalTransfers: db1.internationalTransfers || db2.internationalTransfers,
-        transferCountries: [...new Set([...db1.transferCountries, ...db2.transferCountries])],
+        transferCountries: Array.from(new Set(db1.transferCountries.concat(db2.transferCountries))),
         retentionPeriod: db1.retentionPeriod || db2.retentionPeriod,
-        securityMeasures: [...new Set([...db1.securityMeasures, ...db2.securityMeasures])],
+        securityMeasures: Array.from(new Set(db1.securityMeasures.concat(db2.securityMeasures))),
         isPublicBody: db1.isPublicBody || db2.isPublicBody,
         isDataBroker: db1.isDataBroker || db2.isDataBroker,
-        systemsUsed: [...new Set([...db1.systemsUsed, ...db2.systemsUsed])],
+        systemsUsed: Array.from(new Set(db1.systemsUsed.concat(db2.systemsUsed))),
         department: db1.department || db2.department,
       }
       merged.securityLevel = classifySecurityLevel(merged)
@@ -478,7 +478,7 @@ export default function DatabaseOptimizer({ orgId, orgName, dpoFetch, onBack }: 
           const level = db.securityLevel || classifySecurityLevel(db)
           const obligations = calculateObligations(db)
           const allFields = [...db.dataCategories, ...db.specialCategories]
-          const uniqueFields = [...new Set(allFields)]
+          const uniqueFields = Array.from(new Set(allFields))
           const isSelected = selectedDb === db.id
           const isSplitting = splitMode === db.id
           const isMergeTarget = mergeMode !== null && mergeMode !== db.id
