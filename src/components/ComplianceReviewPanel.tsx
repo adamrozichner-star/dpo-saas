@@ -12,9 +12,7 @@ interface Finding {
   recommendation: string
 }
 
-interface ComplianceReviewPanelProps {
-  authFetch: (url: string, options?: RequestInit) => Promise<Response>
-}
+interface ComplianceReviewPanelProps {}
 
 const severityConfig = {
   ok: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', icon: CheckCircle2, label: 'תקין' },
@@ -22,7 +20,7 @@ const severityConfig = {
   critical: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', icon: AlertTriangle, label: 'קריטי' },
 }
 
-export default function ComplianceReviewPanel({ authFetch }: ComplianceReviewPanelProps) {
+export default function ComplianceReviewPanel() {
   const [findings, setFindings] = useState<Finding[]>([])
   const [score, setScore] = useState<number | null>(null)
   const [summary, setSummary] = useState<{ critical: number; warning: number; ok: number } | null>(null)
@@ -33,7 +31,7 @@ export default function ComplianceReviewPanel({ authFetch }: ComplianceReviewPan
   const runReview = async () => {
     setLoading(true)
     try {
-      const res = await authFetch('/api/compliance-review')
+      const res = await fetch('/api/compliance-review')
       const data = await res.json()
       setFindings(data.findings || [])
       setScore(data.score)

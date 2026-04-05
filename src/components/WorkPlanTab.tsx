@@ -15,9 +15,7 @@ interface WorkPlanTask {
   notes?: string
 }
 
-interface WorkPlanTabProps {
-  authFetch: (url: string, options?: RequestInit) => Promise<Response>
-}
+interface WorkPlanTabProps {}
 
 const categoryLabels: Record<string, string> = {
   review: 'סקירות',
@@ -41,7 +39,7 @@ const statusLabels: Record<string, string> = {
   overdue: 'באיחור',
 }
 
-export default function WorkPlanTab({ authFetch }: WorkPlanTabProps) {
+export default function WorkPlanTab() {
   const [tasks, setTasks] = useState<WorkPlanTask[]>([])
   const [progress, setProgress] = useState({ completed: 0, total: 0, percentage: 0 })
   const [loading, setLoading] = useState(true)
@@ -55,7 +53,7 @@ export default function WorkPlanTab({ authFetch }: WorkPlanTabProps) {
 
   const loadPlan = async () => {
     try {
-      const res = await authFetch(`/api/work-plan?year=${year}`)
+      const res = await fetch(`/api/work-plan?year=${year}`)
       const data = await res.json()
       if (data.tasks) {
         setTasks(data.tasks)
@@ -70,7 +68,7 @@ export default function WorkPlanTab({ authFetch }: WorkPlanTabProps) {
 
   const markComplete = async (taskId: string) => {
     try {
-      await authFetch('/api/work-plan', {
+      await fetch('/api/work-plan', {
         method: 'PATCH',
         body: JSON.stringify({ taskId, status: 'completed' }),
       })
