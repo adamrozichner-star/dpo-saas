@@ -438,7 +438,7 @@ function DashboardContent() {
             <TasksTab tasks={tasks} />
           )}
           {activeTab === 'documents' && (
-            <DocumentsTab documents={documents} organization={organization} supabase={supabase} />
+            <DocumentsTab documents={documents} organization={organization} supabase={supabase} authFetch={authFetch} />
           )}
           {activeTab === 'incidents' && (
             <IncidentsTab incidents={incidents} orgId={organization?.id} />
@@ -811,7 +811,7 @@ function TasksTab({ tasks }: { tasks: Task[] }) {
 // ============================================
 // DOCUMENTS TAB
 // ============================================
-function DocumentsTab({ documents, organization, supabase }: { documents: Document[], organization: any, supabase: any }) {
+function DocumentsTab({ documents, organization, supabase, authFetch }: { documents: Document[], organization: any, supabase: any, authFetch: (url: string, options?: RequestInit) => Promise<Response> }) {
   const { toast } = useToast()
   const [filter, setFilter] = useState<string>('all')
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null)
