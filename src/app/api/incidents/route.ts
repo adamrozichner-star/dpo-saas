@@ -201,7 +201,7 @@ let orgId: string | null = null
       const auth = await authenticateRequest(request, supabase)
       if (!auth) return unauthorizedResponse()
       // Override orgId with authenticated org
-      var orgId: string | null = auth.orgId
+      orgId = auth.orgId
     }
 
     // =========================================
