@@ -13,9 +13,10 @@ export interface ComplianceGuideline {
 }
 
 export interface SubTask {
-  id: string
-  label: string
-  status: 'pending' | 'completed'
+  title: string
+  description: string
+  linkUrl?: string
+  completed?: boolean
 }
 
 export interface WizardQuestion {
