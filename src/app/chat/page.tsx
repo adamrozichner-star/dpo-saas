@@ -1126,7 +1126,7 @@ ${summaryText}
               <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
                 <Shield className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-lg">MyDPO</span>
+              <span className="font-bold text-lg">Deepo</span>
             </div>
             <button 
               onClick={() => setSidebarOpen(false)}

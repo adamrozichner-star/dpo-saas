@@ -1280,7 +1280,7 @@ export default function DPODashboard() {
                           <>
                             <div className="p-3 bg-amber-50 rounded-lg">
                               <p className="text-sm text-amber-800">
-                                ⚠️ יש לדווח לרשות להגנת הפרטיות תוך 72 שעות מגילוי האירוע.
+                                ⚠️ יש לדווח לרשות להגנת הפרטיות תוך 24 שעות מגילוי האירוע.
                               </p>
                               <a 
                                 href="https://www.gov.il/he/service/data_security_breach_report" 

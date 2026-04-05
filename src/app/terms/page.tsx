@@ -9,7 +9,7 @@ export default function TermsPage() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Shield className="h-8 w-8 text-emerald-600" />
-            <span className="font-bold text-xl text-slate-800">MyDPO</span>
+            <span className="font-bold text-xl text-slate-800">Deepo</span>
           </Link>
           <Link href="/">
             <Button variant="ghost" className="gap-2">
@@ -25,12 +25,12 @@ export default function TermsPage() {
         <div className="prose prose-lg max-w-none space-y-8 text-right">
           <section>
             <h2 className="text-xl font-bold mb-4">1. כללי</h2>
-            <p className="text-gray-700 leading-relaxed">ברוכים הבאים ל-MyDPO (להלן: &quot;החברה&quot;, &quot;אנחנו&quot;). MyDPO מפעילה פלטפורמה מקוונת לניהול ציות לתיקון 13 לחוק הגנת הפרטיות, התשמ&quot;א-1981, הכוללת מינוי ממונה הגנת פרטיות חיצוני מוסמך, הפקת מסמכי ציות, ומערכת ניהול שוטפת לעסקים (להלן: &quot;השירות&quot;). האתר פועל בכתובת mydpo.co.il (להלן: &quot;האתר&quot;).</p>
+            <p className="text-gray-700 leading-relaxed">ברוכים הבאים ל-Deepo (להלן: &quot;החברה&quot;, &quot;אנחנו&quot;). Deepo מפעילה פלטפורמה מקוונת לניהול ציות לתיקון 13 לחוק הגנת הפרטיות, התשמ&quot;א-1981, הכוללת מינוי ממונה הגנת פרטיות חיצוני מוסמך, הפקת מסמכי ציות, ומערכת ניהול שוטפת לעסקים (להלן: &quot;השירות&quot;). האתר פועל בכתובת deepo.co.il (להלן: &quot;האתר&quot;).</p>
             <p className="text-gray-700 leading-relaxed mt-3">השימוש באתר ובשירות מהווה הסכמה מלאה לתנאים אלו. אם אינכם מסכימים לתנאים, אנא הימנעו משימוש בשירות.</p>
           </section>
           <section>
             <h2 className="text-xl font-bold mb-4">2. תיאור השירות</h2>
-            <p className="text-gray-700 leading-relaxed">MyDPO מספקת שירות מנוי חודשי לעסקים הכולל:</p>
+            <p className="text-gray-700 leading-relaxed">Deepo מספקת שירות מנוי חודשי לעסקים הכולל:</p>
             <ul className="list-disc list-inside text-gray-700 mt-2 space-y-2 mr-4">
               <li>מינוי ממונה הגנת פרטיות (DPO) חיצוני מוסמך בהתאם לדרישות החוק</li>
               <li>הפקת מסמכי מדיניות פרטיות, נהלי אבטחת מידע וכתבי מינוי</li>
@@ -84,7 +84,7 @@ export default function TermsPage() {
           </section>
           <section>
             <h2 className="text-xl font-bold mb-4">9. קניין רוחני</h2>
-            <p className="text-gray-700 leading-relaxed">9.1. כל הזכויות במערכת, בקוד, בעיצוב ובתוכן שייכות ל-MyDPO.</p>
+            <p className="text-gray-700 leading-relaxed">9.1. כל הזכויות במערכת, בקוד, בעיצוב ובתוכן שייכות ל-Deepo.</p>
             <p className="text-gray-700 leading-relaxed mt-2">9.2. המסמכים שנוצרים עבור הלקוח במסגרת השירות ניתנים לשימושו לצורכי הארגון בלבד.</p>
             <p className="text-gray-700 leading-relaxed mt-2">9.3. הלקוח אינו רשאי להעתיק, להפיץ או למכור את המערכת או חלקים ממנה.</p>
           </section>
@@ -102,7 +102,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-bold mb-4">12. יצירת קשר</h2>
             <p className="text-gray-700 leading-relaxed">לשאלות בנוגע לתנאי השימוש ניתן לפנות אלינו:</p>
-            <p className="text-gray-700 mt-2">דוא&quot;ל: <a href="mailto:support@mydpo.co.il" className="text-emerald-600 hover:underline">support@mydpo.co.il</a></p>
+            <p className="text-gray-700 mt-2">דוא&quot;ל: <a href="mailto:support@deepo.co.il" className="text-emerald-600 hover:underline">support@deepo.co.il</a></p>
             <p className="text-gray-700">טלפון: 054-424-2427</p>
           </section>
           <section>
@@ -111,7 +111,7 @@ export default function TermsPage() {
           </section>
         </div>
         <div className="mt-12 pt-8 border-t text-center text-gray-500">
-          <p>© 2026 MyDPO. כל הזכויות שמורות.</p>
+          <p>© 2026 Deepo. כל הזכויות שמורות.</p>
         </div>
       </main>
     </div>

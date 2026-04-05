@@ -27,7 +27,7 @@ export function calculateTrialStatus(createdAt: string, trialDays = TRIAL_DAYS) 
 export function getTrialMessage(daysLeft: number): { message: string; type: 'info' | 'warning' | 'danger' } {
   if (daysLeft <= 0) {
     return {
-      message: 'תקופת הניסיון הסתיימה. שדרג כדי להמשיך להשתמש ב-MyDPO.',
+      message: 'תקופת הניסיון הסתיימה. שדרג כדי להמשיך להשתמש ב-Deepo.',
       type: 'danger',
     };
   }

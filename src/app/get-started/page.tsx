@@ -61,9 +61,9 @@ export default function GetStartedPage() {
       return 'enterprise'
     }
     
-    // Extended: Medium+ company OR high-risk industry
+    // Recommended: Medium+ company OR high-risk industry
     if (companySize === 'large' || companySize === 'medium' || industryData?.risk === 'high') {
-      return 'extended'
+      return 'recommended'
     }
     
     return 'basic'
@@ -87,7 +87,7 @@ export default function GetStartedPage() {
 
       try {
         // Save to localStorage for later use in full onboarding
-        localStorage.setItem('mydpo_quick_assessment', JSON.stringify({
+        localStorage.setItem('deepo_quick_assessment', JSON.stringify({
           companyName,
           industry,
           companySize,
@@ -130,7 +130,7 @@ export default function GetStartedPage() {
             <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
               <Shield className="h-6 w-6 text-white" />
             </div>
-            <span className="font-bold text-xl text-slate-900">MyDPO</span>
+            <span className="font-bold text-xl text-slate-900">Deepo</span>
           </Link>
           <div className="text-sm text-slate-500">
             שלב {step} מתוך 3

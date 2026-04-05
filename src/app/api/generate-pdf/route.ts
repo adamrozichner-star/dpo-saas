@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title || 'מסמך'} - MyDPO</title>
+  <title>${title || 'מסמך'} - Deepo</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
     
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
   </button>
   
   <div class="header">
-    <div class="logo">MyDPO</div>
+    <div class="logo">Deepo</div>
     <h1 class="doc-title">${title || 'מסמך'}</h1>
     <div class="meta">
       ${orgName ? `<div>ארגון: ${orgName}</div>` : ''}
@@ -147,8 +147,8 @@ export async function POST(request: NextRequest) {
   <div class="content">${escapeHtml(content)}</div>
   
   <div class="footer">
-    <p>מסמך זה נוצר באמצעות MyDPO - מערכת ניהול פרטיות לעסקים</p>
-    <p>© ${new Date().getFullYear()} MyDPO. כל הזכויות שמורות.</p>
+    <p>מסמך זה נוצר באמצעות Deepo - מערכת ניהול פרטיות לעסקים</p>
+    <p>© ${new Date().getFullYear()} Deepo. כל הזכויות שמורות.</p>
   </div>
   
   <script>

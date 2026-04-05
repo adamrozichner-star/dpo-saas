@@ -15,7 +15,7 @@ export default function BrandingPreview() {
   return (
     <div className="min-h-screen bg-slate-100 p-8" dir="rtl">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-2">MyDPO - גוונים של כחול</h1>
+        <h1 className="text-3xl font-bold text-center mb-2">Deepo - גוונים של כחול</h1>
         <p className="text-center text-slate-600 mb-8">מבוסס מחקר צבעים לאמון, ביטחון ורגיעה</p>
         
         {/* Research Summary */}
@@ -72,7 +72,7 @@ export default function BrandingPreview() {
                     <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
                       <Shield className="w-6 h-6" style={{color: '#1e40af'}} />
                     </div>
-                    <span className="text-2xl font-bold">MyDPO</span>
+                    <span className="text-2xl font-bold">Deepo</span>
                   </div>
                   <button className="text-white px-5 py-2 rounded-lg font-medium" style={{backgroundColor: '#10b981'}}>התחברות</button>
                 </div>
@@ -141,7 +141,7 @@ export default function BrandingPreview() {
                     <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
                       <Shield className="w-6 h-6" style={{color: '#0066CC'}} />
                     </div>
-                    <span className="text-2xl font-bold">MyDPO</span>
+                    <span className="text-2xl font-bold">Deepo</span>
                   </div>
                   <button className="text-slate-900 px-5 py-2 rounded-lg font-bold" style={{backgroundColor: '#F5A623'}}>התחברות</button>
                 </div>
@@ -210,7 +210,7 @@ export default function BrandingPreview() {
                     <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center">
                       <Shield className="w-6 h-6" style={{color: '#3b82f6'}} />
                     </div>
-                    <span className="text-2xl font-bold">MyDPO</span>
+                    <span className="text-2xl font-bold">Deepo</span>
                   </div>
                   <button className="text-white px-5 py-2 rounded-lg font-medium" style={{backgroundColor: '#06b6d4'}}>התחברות</button>
                 </div>

@@ -1,7 +1,7 @@
 // Organization types
 export type OrganizationStatus = 'onboarding' | 'active' | 'suspended'
 export type RiskLevel = 'standard' | 'sensitive' | 'high'
-export type SubscriptionTier = 'basic' | 'extended'
+export type SubscriptionTier = 'basic' | 'recommended' | 'premium' | 'enterprise'
 
 export interface Organization {
   id: string
@@ -52,14 +52,20 @@ export interface ThirdParty {
 }
 
 // Document types
-export type DocumentType = 
-  | 'privacy_policy' 
-  | 'database_registration' 
-  | 'security_policy' 
-  | 'procedure' 
+export type DocumentType =
+  | 'privacy_policy'
+  | 'database_registration'
+  | 'security_policy'
+  | 'procedure'
   | 'custom'
+  | 'database_structure'
+  | 'consent_form'
+  | 'cv_retention_policy'
+  | 'camera_appointment'
+  | 'processor_agreement'
+  | 'ropa'
 
-export type DocumentStatus = 'draft' | 'active' | 'archived'
+export type DocumentStatus = 'draft' | 'active' | 'archived' | 'pending_review' | 'pending_approval'
 
 export interface Document {
   id: string

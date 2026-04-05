@@ -39,7 +39,7 @@ function SuccessContent() {
             <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
               <Shield className="h-6 w-6 text-white" />
             </div>
-            <span className="font-bold text-xl text-slate-900">MyDPO</span>
+            <span className="font-bold text-xl text-slate-900">Deepo</span>
           </Link>
         </div>
       </header>
@@ -61,7 +61,7 @@ function SuccessContent() {
           </h1>
 
           <p className="text-lg text-slate-600 mb-8">
-            ברוכים הבאים למשפחת MyDPO! החשבון שלך שודרג והארגון שלך מוגן עכשיו.
+            ברוכים הבאים למשפחת Deepo! החשבון שלך שודרג והארגון שלך מוגן עכשיו.
           </p>
 
           {/* What's Next */}

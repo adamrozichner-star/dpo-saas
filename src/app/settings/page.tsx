@@ -204,7 +204,7 @@ export default function SettingsPage() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
             <Shield className="h-8 w-8 text-primary" />
-            <span className="font-bold text-xl">MyDPO</span>
+            <span className="font-bold text-xl">Deepo</span>
           </Link>
           <div className="flex items-center gap-4">
             <Link href="/dashboard">
@@ -398,7 +398,7 @@ export default function SettingsPage() {
                           <Badge className="bg-green-500">פעיל</Badge>
                         </div>
                         <div className="text-2xl font-bold">
-                          {subscription.tier === 'extended' ? 'מורחבת' : 'בסיסית'}
+                          {subscription.tier === 'recommended' ? 'מומלצת' : subscription.tier === 'premium' ? 'פרימיום' : subscription.tier === 'enterprise' ? 'ארגונית' : 'בסיסית'}
                         </div>
                         <div className="text-gray-600">
                           ₪{subscription.amount} / חודש

@@ -80,7 +80,7 @@ export default function ResetPasswordPage() {
             <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
               <Shield className="h-7 w-7 text-white" />
             </div>
-            <span className="font-bold text-2xl" style={{color: '#1e40af'}}>MyDPO</span>
+            <span className="font-bold text-2xl" style={{color: '#1e40af'}}>Deepo</span>
           </Link>
           <CardTitle>בחר סיסמה חדשה</CardTitle>
           <CardDescription>

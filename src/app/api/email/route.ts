@@ -7,18 +7,18 @@ export const dynamic = 'force-dynamic'
 // Initialize Resend - will gracefully fail if no API key
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
-const BASE_URL = 'https://mydpo.co.il'
+const BASE_URL = 'https://deepo.co.il'
 
 const emailTemplates = {
   welcome: (data: { name: string, orgName: string }) => ({
-    subject: 'ברוכים הבאים ל-MyDPO!',
+    subject: 'ברוכים הבאים ל-Deepo!',
     html: `<div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%); padding: 30px; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0;">🛡️ MyDPO</h1>
+          <h1 style="color: white; margin: 0;">🛡️ Deepo</h1>
         </div>
         <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
           <h2 style="color: #1f2937;">שלום ${data.name},</h2>
-          <p style="color: #4b5563; line-height: 1.8;">ברוכים הבאים ל-MyDPO! אנחנו שמחים שבחרת בנו לניהול הפרטיות של <strong>${data.orgName}</strong>.</p>
+          <p style="color: #4b5563; line-height: 1.8;">ברוכים הבאים ל-Deepo! אנחנו שמחים שבחרת בנו לניהול הפרטיות של <strong>${data.orgName}</strong>.</p>
           <a href="${BASE_URL}/dashboard" style="display: inline-block; background: #10b981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin-top: 20px;">כניסה ללוח הבקרה</a>
         </div>
       </div>`
@@ -28,7 +28,7 @@ const emailTemplates = {
     subject: '🚨 דוח בדיקת חובת DPO - תוצאות האבחון שלך',
     html: `<div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 30px; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0;">🛡️ MyDPO</h1>
+          <h1 style="color: white; margin: 0;">🛡️ Deepo</h1>
           <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">דוח בדיקת חובת DPO</p>
         </div>
         <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
@@ -57,7 +57,7 @@ const emailTemplates = {
 
           <div style="background: #eff6ff; border-radius: 8px; padding: 20px; margin: 20px 0;">
             <h3 style="color: #1e40af; margin: 0 0 10px 0;">🎯 הפתרון שלנו</h3>
-            <p style="color: #1e3a8a; margin: 0;">ב-MyDPO תקבלו ממונה הגנת פרטיות מוסמך + מערכת AI שעושה את כל העבודה - <strong>ב-500 ₪ בלבד לחודש</strong>.</p>
+            <p style="color: #1e3a8a; margin: 0;">ב-Deepo תקבלו ממונה הגנת פרטיות מוסמך + מערכת AI שעושה את כל העבודה - <strong>ב-500 ₪ בלבד לחודש</strong>.</p>
           </div>
 
           <a href="${BASE_URL}/onboarding" style="display: block; background: #10b981; color: white; padding: 18px 30px; text-decoration: none; border-radius: 8px; text-align: center; font-weight: bold; font-size: 18px;">
@@ -72,10 +72,10 @@ const emailTemplates = {
   }),
 
   escalation_resolved: (data: { name: string, question: string, answer: string }) => ({
-    subject: 'הממונה ענה לשאלתך - MyDPO',
+    subject: 'הממונה ענה לשאלתך - Deepo',
     html: `<div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%); padding: 20px; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0;">🛡️ MyDPO</h1>
+          <h1 style="color: white; margin: 0;">🛡️ Deepo</h1>
         </div>
         <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
           <h2 style="color: #1f2937;">שלום ${data.name},</h2>
@@ -94,10 +94,10 @@ const emailTemplates = {
   }),
 
   password_reset: (data: { name: string, resetLink: string }) => ({
-    subject: 'איפוס סיסמה - MyDPO',
+    subject: 'איפוס סיסמה - Deepo',
     html: `<div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%); padding: 20px; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0;">🛡️ MyDPO</h1>
+          <h1 style="color: white; margin: 0;">🛡️ Deepo</h1>
         </div>
         <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px;">
           <h2 style="color: #1f2937;">שלום ${data.name},</h2>
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     // Try to send with Resend if configured
     if (resend) {
       try {
-        const fromEmail = process.env.FROM_EMAIL || 'MyDPO <noreply@mydpo.co.il>'
+        const fromEmail = process.env.FROM_EMAIL || 'Deepo <noreply@deepo.co.il>'
         await resend.emails.send({
           from: fromEmail,
           to: [to],

@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       title: doc.title,
       content: doc.content,
       version: 1,
-      status: doc.type === 'dpo_appointment' ? 'pending_signature' : 'active',
+      status: doc.type === 'dpo_appointment' ? 'pending_approval' : 'active',
       generated_by: 'system'
     }))
 

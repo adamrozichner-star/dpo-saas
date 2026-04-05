@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
 
         // Send the email
         try {
-          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mydpo.co.il';
+          const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://deepo.co.il';
           const response = await fetch(`${baseUrl}/api/email`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

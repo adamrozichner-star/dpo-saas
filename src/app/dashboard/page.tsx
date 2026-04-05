@@ -27,13 +27,17 @@ import {
   X,
   Copy,
   Edit3,
-  Save
+  Save,
+  Calendar
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useSubscriptionGate } from '@/lib/use-subscription-gate'
 import { DPO_CONFIG } from '@/lib/dpo-config'
 import { useToast } from '@/components/Toast'
 import WelcomeModal from '@/components/WelcomeModal'
+import WorkPlanTab from '@/components/WorkPlanTab'
+import ComplianceReviewPanel from '@/components/ComplianceReviewPanel'
+import DataFlowDiagram from '@/components/DataFlowDiagram'
 
 // ============================================
 // TYPES
@@ -79,7 +83,7 @@ function DashboardContent() {
   }
   const { isAuthorized, isChecking } = useSubscriptionGate()
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'incidents' | 'messages' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'incidents' | 'messages' | 'settings' | 'workplan'>('overview')
   const [organization, setOrganization] = useState<any>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [incidents, setIncidents] = useState<any[]>([])
@@ -307,7 +311,7 @@ function DashboardContent() {
               <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center">
                 <Shield className="h-5 w-5 text-white" />
               </div>
-              <span className="font-semibold text-lg text-stone-800">MyDPO</span>
+              <span className="font-semibold text-lg text-stone-800">Deepo</span>
             </Link>
           </div>
 
@@ -342,10 +346,16 @@ function DashboardContent() {
               active={activeTab === 'documents'} 
               onClick={() => { setActiveTab('documents'); setMobileMenuOpen(false) }} 
             />
-            <NavButton 
-              icon={<AlertTriangle className="h-5 w-5" />} 
-              label="אירועי אבטחה" 
-              active={activeTab === 'incidents'} 
+            <NavButton
+              icon={<Calendar className="h-5 w-5" />}
+              label="תוכנית עבודה"
+              active={activeTab === 'workplan'}
+              onClick={() => { setActiveTab('workplan'); setMobileMenuOpen(false) }}
+            />
+            <NavButton
+              icon={<AlertTriangle className="h-5 w-5" />}
+              label="אירועי אבטחה"
+              active={activeTab === 'incidents'}
               onClick={() => { setActiveTab('incidents'); setMobileMenuOpen(false) }}
               badge={activeIncidentsCount > 0 ? activeIncidentsCount : undefined}
             />
@@ -401,7 +411,7 @@ function DashboardContent() {
             <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center">
               <Shield className="h-5 w-5 text-white" />
             </div>
-            <span className="font-semibold text-stone-800">MyDPO</span>
+            <span className="font-semibold text-stone-800">Deepo</span>
           </div>
           <button 
             onClick={() => setMobileMenuOpen(true)}
@@ -439,6 +449,12 @@ function DashboardContent() {
               orgId={organization?.id}
               onRefresh={loadAllData}
             />
+          )}
+          {activeTab === 'workplan' && (
+            <div className="space-y-6">
+              <WorkPlanTab authFetch={authFetch} />
+              <ComplianceReviewPanel authFetch={authFetch} />
+            </div>
           )}
           {activeTab === 'settings' && (
             <SettingsTab organization={organization} user={user} />
@@ -910,6 +926,9 @@ function DocumentsTab({ documents, organization, supabase }: { documents: Docume
           </button>
         </Link>
       </div>
+
+      {/* Data Flow Diagram */}
+      <DataFlowDiagram />
 
       {/* Filters */}
       {docTypes.length > 0 && (
@@ -1561,7 +1580,7 @@ function SettingsTab({ organization, user }: { organization: any, user: any }) {
             <label className="text-sm text-stone-500">חבילה</label>
             <p className="mt-1">
               <span className="px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-700">
-                {organization?.tier === 'extended' ? 'מורחבת' : organization?.tier === 'enterprise' ? 'ארגונית' : 'בסיסית'}
+                {organization?.tier === 'recommended' ? 'מומלצת' : organization?.tier === 'premium' ? 'פרימיום' : organization?.tier === 'enterprise' ? 'ארגונית' : 'בסיסית'}
               </span>
             </p>
           </div>

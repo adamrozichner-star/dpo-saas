@@ -38,7 +38,7 @@ export const mockOrganizations: Organization[] = [
     id: 'org-2',
     name: 'קליניקת ד"ר לוי',
     businessId: '515789012',
-    tier: 'extended',
+    tier: 'recommended',
     status: 'active',
     riskLevel: 'sensitive',
     dpoId: 'dpo-1',

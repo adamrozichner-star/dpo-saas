@@ -23,30 +23,30 @@ const plans = [
     id: 'basic',
     name: 'בסיסית',
     price: 500,
-    description: 'לעסקים קטנים עם פעילות סטנדרטית',
+    description: 'לעסקים קטנים — ללא ממונה',
     features: [
-      'DPO ממונה מוסמך',
       'מערכת ניהול פרטיות מלאה',
       'מסמכים מותאמים אוטומטית',
       'בוט שאלות ותשובות AI',
       'תמיכה בדוא"ל',
-      'זמן תגובה: 72 שעות',
+      'זמן תגובה: 48 שעות',
     ],
     notIncluded: [
+      'ממונה הגנת פרטיות',
       'סקירה תקופתית',
-      'זמינות DPO מורחבת',
       'ליווי אירועי אבטחה',
     ],
     popular: false,
     cta: 'בחירת חבילה'
   },
   {
-    id: 'extended',
-    name: 'מורחבת',
-    price: 1200,
-    description: 'לעסקים עם מידע רגיש או פעילות מורכבת',
+    id: 'recommended',
+    name: 'מומלצת',
+    price: 999,
+    description: 'לעסקים עם מידע רגיש — כולל ממונה',
     features: [
       'כל מה שבחבילה הבסיסית',
+      'ממונה הגנת פרטיות מוסמך',
       'סקירה תקופתית רבעונית',
       'זמינות DPO עד 30 דק׳/חודש',
       'ליווי אירועי אבטחה',
@@ -61,10 +61,10 @@ const plans = [
   {
     id: 'enterprise',
     name: 'ארגונית',
-    price: 3500,
+    price: 0,
     description: 'לארגונים גדולים עם דרישות מורכבות',
     features: [
-      'כל מה שבחבילה המורחבת',
+      'כל מה שבחבילה המומלצת',
       'זמינות DPO עד 2 שעות/חודש',
       'זמן תגובה: 4 שעות',
       'סקירה תקופתית חודשית',
@@ -146,7 +146,7 @@ function SubscribeContent() {
     // Get quick assessment data from localStorage (payment-first flow)
     let quickAssessment = null;
     try {
-      const saved = localStorage.getItem('mydpo_quick_assessment');
+      const saved = localStorage.getItem('deepo_quick_assessment');
       if (saved) {
         quickAssessment = JSON.parse(saved);
       }
@@ -204,7 +204,7 @@ function SubscribeContent() {
           <CardContent className="p-8">
             <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
             <h1 className="text-2xl font-bold mb-2">התשלום בוצע בהצלחה!</h1>
-            <p className="text-gray-600 mb-6">המנוי שלך הופעל. ברוכים הבאים ל-MyDPO!</p>
+            <p className="text-gray-600 mb-6">המנוי שלך הופעל. ברוכים הבאים ל-Deepo!</p>
             <Button onClick={() => router.push('/dashboard')}>
               המשך ללוח הבקרה
             </Button>
@@ -222,7 +222,7 @@ function SubscribeContent() {
             <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
               <Shield className="h-6 w-6 text-white" />
             </div>
-            <span className="font-bold text-xl" style={{color: '#1e40af'}}>MyDPO</span>
+            <span className="font-bold text-xl" style={{color: '#1e40af'}}>Deepo</span>
           </Link>
           <Link href="/dashboard">
             <Button variant="ghost">חזרה ללוח הבקרה</Button>
@@ -246,7 +246,7 @@ function SubscribeContent() {
             >
               {plan.popular && (
                 <Badge className="absolute -top-3 right-4 bg-primary">
-                  הכי פופולרי
+                  מומלצת
                 </Badge>
               )}
               {plan.id === 'enterprise' && (
@@ -318,7 +318,7 @@ function SubscribeContent() {
                 <tr className="border-b-2">
                   <th className="text-right p-4">תכונה</th>
                   <th className="text-center p-4">בסיסית</th>
-                  <th className="text-center p-4 bg-primary/5">מורחבת</th>
+                  <th className="text-center p-4 bg-primary/5">מומלצת</th>
                   <th className="text-center p-4 bg-slate-100">ארגונית</th>
                 </tr>
               </thead>
@@ -326,7 +326,7 @@ function SubscribeContent() {
                 <tr className="border-b">
                   <td className="p-4">מחיר חודשי</td>
                   <td className="text-center p-4">₪500</td>
-                  <td className="text-center p-4 bg-primary/5 font-bold">₪1,200</td>
+                  <td className="text-center p-4 bg-primary/5 font-bold">₪999</td>
                   <td className="text-center p-4 bg-slate-100">₪3,500</td>
                 </tr>
                 <tr className="border-b">
@@ -349,7 +349,7 @@ function SubscribeContent() {
                 </tr>
                 <tr className="border-b">
                   <td className="p-4">זמן תגובה</td>
-                  <td className="text-center p-4">72 שעות</td>
+                  <td className="text-center p-4">48 שעות</td>
                   <td className="text-center p-4 bg-primary/5">24 שעות</td>
                   <td className="text-center p-4 bg-slate-100">4 שעות</td>
                 </tr>

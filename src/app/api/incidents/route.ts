@@ -47,7 +47,7 @@ async function analyzeIncident(incident: any): Promise<any> {
   const systemPrompt = `אתה יועץ הגנת פרטיות מומחה בישראל. תפקידך לנתח אירועי אבטחה ולהעריך את הסיכון.
 
 על פי תיקון 13 לחוק הגנת הפרטיות:
-- יש לדווח לרשות להגנת הפרטיות תוך 72 שעות מגילוי האירוע
+- יש לדווח לרשות להגנת הפרטיות תוך 24 שעות מגילוי האירוע
 - יש להודיע לנפגעים אם קיים סיכון גבוה לזכויותיהם
 - יש לתעד את כל הפעולות שננקטו
 
@@ -189,6 +189,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const action = searchParams.get('action')
     const incidentId = searchParams.get('id')
+let orgId: string | null = null
 
     // DPO dashboard action — requires DPO auth
     if (action === 'dashboard') {

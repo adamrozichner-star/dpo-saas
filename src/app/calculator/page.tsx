@@ -79,7 +79,7 @@ export default function CalculatorPage() {
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
                 <Shield className="h-6 w-6 text-white" />
               </div>
-              <span className="font-bold text-xl" style={{color: '#1e40af'}}>MyDPO</span>
+              <span className="font-bold text-xl" style={{color: '#1e40af'}}>Deepo</span>
             </Link>
             <div className="flex items-center gap-4">
               <Link href="/login">
@@ -311,7 +311,7 @@ export default function CalculatorPage() {
 
       {/* Footer */}
       <footer className="border-t py-8 text-center text-sm text-gray-500">
-        <p>© 2026 MyDPO. כל הזכויות שמורות.</p>
+        <p>© 2026 Deepo. כל הזכויות שמורות.</p>
         <div className="flex justify-center gap-4 mt-2">
           <Link href="/terms" className="hover:text-gray-700">תנאי שימוש</Link>
           <Link href="/privacy" className="hover:text-gray-700">מדיניות פרטיות</Link>

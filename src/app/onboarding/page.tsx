@@ -33,6 +33,8 @@ import { DPO_CONFIG } from '@/lib/dpo-config'
 import { onboardingSteps } from '@/lib/mock-data'
 import { OnboardingQuestion, OnboardingAnswer } from '@/types'
 
+const REQUIRED_CARDS = ['business_name', 'business_id']
+
 const stepIcons = [Building2, Database, Share2, Lock, FileCheck, User]
 const stepDescriptions = [
   'נתחיל עם פרטים בסיסיים על העסק',
@@ -62,7 +64,7 @@ function OnboardingContent() {
   
   const [currentStep, setCurrentStep] = useState(0)
   const [answers, setAnswers] = useState<OnboardingAnswer[]>([])
-  const [selectedTier, setSelectedTier] = useState<'basic' | 'extended' | 'enterprise' | null>(null)
+  const [selectedTier, setSelectedTier] = useState<'basic' | 'recommended' | 'enterprise' | null>(null)
   const [showTierSelection, setShowTierSelection] = useState(false) // Start with questions, show pricing AFTER
   const [showDpoIntro, setShowDpoIntro] = useState(false) // Show DPO intro after pricing
   const [showEnterpriseModal, setShowEnterpriseModal] = useState(false)
@@ -70,7 +72,7 @@ function OnboardingContent() {
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string>('')
   const [generationProgress, setGenerationProgress] = useState(0)
-  const [recommendedTier, setRecommendedTier] = useState<'basic' | 'extended' | 'enterprise'>('basic')
+  const [recommendedTier, setRecommendedTier] = useState<'basic' | 'recommended' | 'enterprise'>('basic')
 
   // Questions only - DPO intro is shown separately after pricing
   const allSteps = onboardingSteps
@@ -84,7 +86,7 @@ function OnboardingContent() {
 
   useEffect(() => {
     const tier = searchParams.get('tier')
-    if (tier === 'basic' || tier === 'extended' || tier === 'enterprise') {
+    if (tier === 'basic' || tier === 'recommended' || tier === 'enterprise') {
       setSelectedTier(tier)
       if (tier === 'enterprise') {
         setShowEnterpriseModal(true)
@@ -150,8 +152,28 @@ function OnboardingContent() {
     })
   }
 
+  const currentStepHasRequiredCard = () => {
+    if (!currentStepData || !currentStepData.questions) return false
+    return currentStepData.questions.some((q: OnboardingQuestion) =>
+      REQUIRED_CARDS.includes(q.id)
+    )
+  }
+
+  const skipStep = () => {
+    if (currentStepData && currentStepData.questions) {
+      currentStepData.questions.forEach((q: OnboardingQuestion) => {
+        const existing = getAnswer(q.id)
+        if (existing === undefined || existing === '') {
+          handleAnswer(q.id, '_skipped')
+        }
+      })
+    }
+    setCurrentStep(prev => Math.min(prev + 1, totalSteps - 1))
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   // Calculate recommended tier based on answers
-  const calculateRecommendedTier = (): 'basic' | 'extended' | 'enterprise' => {
+  const calculateRecommendedTier = (): 'basic' | 'recommended' | 'enterprise' => {
     const dataTypes = getAnswer('data_types') as string[] || []
     const recordCount = getAnswer('record_count') as string || ''
     const industry = getAnswer('industry') as string || ''
@@ -177,9 +199,9 @@ function OnboardingContent() {
       internationalTransfers ||
       dataTypes.length >= 4
     ) {
-      return 'extended'
+      return 'recommended'
     }
-    
+
     return 'basic'
   }
 
@@ -488,7 +510,7 @@ function OnboardingContent() {
               <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
                 <Shield className="h-6 w-6 text-white" />
               </div>
-              <span className="font-bold text-2xl" style={{color: '#1e40af'}}>MyDPO</span>
+              <span className="font-bold text-2xl" style={{color: '#1e40af'}}>Deepo</span>
             </div>
             <h1 className="text-3xl font-bold mb-2">בחרו את החבילה שלכם</h1>
             <p className="text-gray-600 mb-4">בהתבסס על הפרטים שמילאתם, אנחנו ממליצים על:</p>
@@ -549,19 +571,19 @@ function OnboardingContent() {
 
             {/* Extended Package */}
             <Card 
-              className={`cursor-pointer transition-all hover:shadow-lg border-2 relative ${selectedTier === 'extended' ? 'ring-2 ring-primary border-primary' : 'border-primary/50'} ${recommendedTier === 'extended' ? 'border-emerald-500' : ''}`}
-              onClick={() => setSelectedTier('extended')}
+              className={`cursor-pointer transition-all hover:shadow-lg border-2 relative ${selectedTier === 'recommended' ? 'ring-2 ring-primary border-primary' : 'border-primary/50'} ${recommendedTier === 'recommended' ? 'border-emerald-500' : ''}`}
+              onClick={() => setSelectedTier('recommended')}
             >
-              {recommendedTier === 'extended' ? (
+              {recommendedTier === 'recommended' ? (
                 <Badge className="absolute -top-3 right-4 bg-emerald-500">מומלץ עבורך</Badge>
               ) : (
-                <Badge className="absolute -top-3 right-4 bg-primary">הכי פופולרי</Badge>
+                <Badge className="absolute -top-3 right-4 bg-primary">מומלצת</Badge>
               )}
               <CardHeader>
-                <CardTitle>חבילה מורחבת</CardTitle>
-                <CardDescription>לעסקים עם פעילות מורכבת</CardDescription>
+                <CardTitle>חבילה מומלצת</CardTitle>
+                <CardDescription>לעסקים עם מידע רגיש — כולל ממונה</CardDescription>
                 <div className="pt-2">
-                  <span className="text-3xl font-bold">₪1,200</span>
+                  <span className="text-3xl font-bold">₪999</span>
                   <span className="text-gray-600"> / חודש</span>
                 </div>
               </CardHeader>
@@ -619,7 +641,7 @@ function OnboardingContent() {
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
-                    כל מה שבחבילה המורחבת
+                    כל מה שבחבילה המומלצת
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />
@@ -688,7 +710,7 @@ function OnboardingContent() {
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-white/10 backdrop-blur-sm">
                 <Shield className="h-5 w-5 text-white" />
               </div>
-              <span className="font-bold text-white">MyDPO</span>
+              <span className="font-bold text-white">Deepo</span>
             </div>
           </div>
 
@@ -820,7 +842,7 @@ function OnboardingContent() {
             <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
               <Shield className="h-5 w-5 text-white" />
             </div>
-            <span className="font-bold" style={{color: '#1e40af'}}>MyDPO</span>
+            <span className="font-bold" style={{color: '#1e40af'}}>Deepo</span>
           </div>
         </div>
 
@@ -1034,6 +1056,16 @@ function OnboardingContent() {
         <p className="text-center text-sm text-gray-500 mt-4">
           שלב {currentStep + 1} מתוך {totalSteps} • התשובות נשמרות אוטומטית
         </p>
+        {!currentStepHasRequiredCard() && (
+          <div className="text-center">
+            <button
+              onClick={skipStep}
+              className="text-sm text-slate-400 hover:text-slate-600 transition-colors mt-2"
+            >
+              מלא אחר כך →
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

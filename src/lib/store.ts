@@ -35,7 +35,7 @@ interface AppState {
   documents: Document[]
   loadDocuments: () => void
   subscription: Subscription | null
-  selectTier: (tier: 'basic' | 'extended') => void
+  selectTier: (tier: 'basic' | 'recommended' | 'premium' | 'enterprise') => void
   qaHistory: QAInteraction[]
   askQuestion: (question: string) => Promise<QAInteraction>
   escalations: Escalation[]
@@ -125,11 +125,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   
   subscription: null,
   selectTier: (tier) => {
-    set({ 
+    set({
       subscription: {
         ...mockSubscription,
         tier,
-        monthlyPrice: tier === 'basic' ? 500 : 1200
+        monthlyPrice: tier === 'basic' ? 500 : tier === 'recommended' ? 999 : tier === 'premium' ? 4500 : 0
       }
     })
   },

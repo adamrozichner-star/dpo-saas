@@ -219,7 +219,7 @@ export default function WelcomeModal({
             {/* DPO verification note */}
             <div className="flex items-center justify-center gap-2 text-sm text-amber-700 bg-amber-50 p-3 rounded-lg">
               <Clock className="h-4 w-4" />
-              <span>המסמכים יאושרו על ידי הממונה תוך 72 שעות</span>
+              <span>המסמכים יאושרו על ידי הממונה תוך 24 שעות</span>
             </div>
           </CardContent>
         </Card>

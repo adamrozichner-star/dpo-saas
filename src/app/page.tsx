@@ -68,7 +68,7 @@ function MiniCalculator() {
           {required ? (
             <Link href="/register">
               <Button className="w-full py-5 rounded-xl font-bold text-base" style={{ backgroundColor: '#059669' }}>
-                התחל עכשיו — ₪500/חודש
+                התחל עכשיו — החל מ־₪500/חודש
                 <ArrowLeft className="h-4 w-4 mr-2" />
               </Button>
             </Link>
@@ -170,7 +170,7 @@ export default function HomePage() {
       {/* ===== NAV ===== */}
       <nav className="sticky top-0 z-50 bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-5 flex justify-between items-center h-16">
-          <Link href="/" className="font-bold text-xl text-blue-600">MyDPO</Link>
+          <Link href="/" className="font-bold text-xl text-blue-600">Deepo</Link>
           <div className="flex items-center gap-2">
             <Link href="/login">
               <Button variant="ghost" size="sm" className="text-slate-600">התחברות</Button>
@@ -215,8 +215,8 @@ export default function HomePage() {
             {/* Stats row */}
             <div className="flex gap-8 mb-8">
               <div className="text-center">
-                <div className="text-3xl font-bold text-slate-900">₪500</div>
-                <div className="text-xs text-slate-500 mt-1">לחודש</div>
+                <div className="text-3xl font-bold text-slate-900">₪999</div>
+                <div className="text-xs text-slate-500 mt-1">לחודש — כולל ממונה</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-slate-900">5 דק׳</div>
@@ -264,7 +264,7 @@ export default function HomePage() {
               <div className="text-sm text-slate-500 mt-1">קנס מקסימלי</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl sm:text-4xl font-bold text-amber-600">72 שעות</div>
+              <div className="text-3xl sm:text-4xl font-bold text-amber-600">24 שעות</div>
               <div className="text-sm text-slate-500 mt-1">לדווח על אירוע אבטחה</div>
             </div>
           </div>
@@ -280,7 +280,7 @@ export default function HomePage() {
             { icon: <UserCheck className="h-6 w-6 text-emerald-600" />, bg: 'bg-emerald-50', title: 'ממונה אנושי מוסמך', desc: 'לא בוט — ממונה הגנת פרטיות אנושי שמתמנה רשמית על העסק שלך.' },
             { icon: <FileText className="h-6 w-6 text-blue-600" />, bg: 'bg-blue-50', title: 'מסמכים אוטומטיים', desc: 'מדיניות פרטיות, נוהלי אבטחה, כתב מינוי, רישום מאגרים — מותאמים לעסק.' },
             { icon: <MessageSquare className="h-6 w-6 text-purple-600" />, bg: 'bg-purple-50', title: 'צ׳אט חכם 24/7', desc: 'מענה מיידי לכל שאלה, יצירת מסמכים, העברה לממונה בלחיצה.' },
-            { icon: <Bell className="h-6 w-6 text-red-600" />, bg: 'bg-red-50', title: 'ניהול אירועי אבטחה', desc: 'ספירה לאחור 72 שעות, תבניות דיווח, ליווי מקצועי עד לסגירה.' },
+            { icon: <Bell className="h-6 w-6 text-red-600" />, bg: 'bg-red-50', title: 'ניהול אירועי אבטחה', desc: 'ספירה לאחור 24 שעות, תבניות דיווח, ליווי מקצועי עד לסגירה.' },
             { icon: <BarChart3 className="h-6 w-6 text-amber-600" />, bg: 'bg-amber-50', title: 'ציון ציות בזמן אמת', desc: 'רואים בדיוק מה חסר ומה לעשות — עם לינקים ישירים לפעולה.' },
             { icon: <ClipboardList className="h-6 w-6 text-teal-600" />, bg: 'bg-teal-50', title: 'יומן ביקורת', desc: 'Audit trail אוטומטי — מוכנים לביקורת מהרשות בכל רגע.' },
           ].map((f, i) => (
@@ -366,10 +366,10 @@ export default function HomePage() {
             <div className="absolute -top-3 left-1/2 -translate-x-1/2">
               <span className="bg-emerald-500 text-white text-xs font-bold px-4 py-1 rounded-full">הכי פופולרי</span>
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-1">מורחבת</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-1">מומלצת</h3>
             <p className="text-sm text-slate-500 mb-5">לעסקים עם מידע רגיש</p>
             <div className="mb-1">
-              <span className="text-5xl font-bold text-slate-900">₪1,200</span>
+              <span className="text-5xl font-bold text-slate-900">₪999</span>
               <span className="text-slate-500 text-lg"> / חודש</span>
             </div>
             <p className="text-xs text-slate-400 mb-6">במקום ₪3,000-8,000 אצל יועץ</p>
@@ -388,7 +388,7 @@ export default function HomePage() {
                 </li>
               ))}
             </ul>
-            <Link href="/register?plan=extended" className="block">
+            <Link href="/register?plan=recommended" className="block">
               <Button className="w-full py-5 rounded-xl text-base font-semibold" style={{ backgroundColor: '#059669' }}>
                 בחירת חבילה
               </Button>
@@ -466,7 +466,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-3 gap-10 mb-10">
             <div className="text-right">
               <div className="flex items-center gap-2 justify-end mb-3">
-                <span className="font-bold text-white text-lg">MyDPO</span>
+                <span className="font-bold text-white text-lg">Deepo</span>
                 <Shield className="h-5 w-5 text-blue-400" />
               </div>
               <p className="text-slate-400 text-sm leading-relaxed">
@@ -486,13 +486,13 @@ export default function HomePage() {
             <div className="text-right">
               <h4 className="font-semibold text-white mb-3">צרו קשר</h4>
               <div className="flex flex-col gap-2 text-sm text-slate-400">
-                <span>support@mydpo.co.il</span>
-                <span>mydpo.co.il</span>
+                <span>support@deepo.co.il</span>
+                <span>deepo.co.il</span>
               </div>
             </div>
           </div>
           <div className="border-t border-slate-800 pt-8 text-sm text-slate-500 text-center">
-            © 2026 MyDPO. כל הזכויות שמורות.
+            © 2026 Deepo. כל הזכויות שמורות.
           </div>
         </div>
       </footer>

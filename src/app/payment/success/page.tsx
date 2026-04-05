@@ -49,7 +49,7 @@ export default function PaymentSuccessPage() {
               if (org && org.status === 'onboarding') {
                 setNeedsOnboarding(true);
                 // Clear quick assessment data
-                localStorage.removeItem('mydpo_quick_assessment');
+                localStorage.removeItem('deepo_quick_assessment');
                 // Redirect to full onboarding after payment
                 setTimeout(() => {
                   router.push('/onboarding');
@@ -105,7 +105,7 @@ export default function PaymentSuccessPage() {
             <p className="text-slate-600 mb-6">
               {needsOnboarding 
                 ? 'עכשיו נשלים את הגדרת הארגון ונייצר לך את המסמכים.'
-                : 'תודה שבחרת ב-MyDPO. המנוי שלך פעיל כעת.'
+                : 'תודה שבחרת ב-Deepo. המנוי שלך פעיל כעת.'
               }
             </p>
             

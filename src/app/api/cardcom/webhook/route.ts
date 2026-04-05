@@ -15,8 +15,9 @@ function getSupabase() {
 
 const PLAN_DETAILS: Record<string, { monthly_price: number; dpo_minutes_quota: number }> = {
   basic: { monthly_price: 500, dpo_minutes_quota: 0 },
-  extended: { monthly_price: 1200, dpo_minutes_quota: 30 },
-  enterprise: { monthly_price: 3500, dpo_minutes_quota: 120 },
+  recommended: { monthly_price: 999, dpo_minutes_quota: 30 },
+  premium: { monthly_price: 4500, dpo_minutes_quota: 120 },
+  enterprise: { monthly_price: 0, dpo_minutes_quota: 240 },
 };
 
 // Handle both GET and POST — Cardcom v11 sends webhook as POST with JSON,
@@ -137,7 +138,7 @@ async function handleWebhook(lowProfileId: string | null, returnValue: string | 
         subscriptionEnd.setMonth(subscriptionEnd.getMonth() + 1);
       }
 
-      const dbTier = payment.plan === 'enterprise' ? 'extended' : payment.plan;
+      const dbTier = payment.plan;
 
       // 1. Update payment record
       await supabase.from('payment_transactions').update({
@@ -197,7 +198,7 @@ async function handleWebhook(lowProfileId: string | null, returnValue: string | 
 
       // 4. Send confirmation email (non-blocking)
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mydpo.co.il';
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://deepo.co.il';
         const { data: org } = await supabase.from('organizations').select('name').eq('id', payment.org_id).single();
         const { data: userData } = await supabase.auth.admin.getUserById(payment.user_id);
         const email = userData?.user?.email;

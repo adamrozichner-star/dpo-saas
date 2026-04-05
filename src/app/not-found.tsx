@@ -12,7 +12,7 @@ export default function NotFound() {
           <div className="w-14 h-14 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
             <Shield className="h-8 w-8 text-white" />
           </div>
-          <span className="font-bold text-3xl" style={{color: '#1e40af'}}>MyDPO</span>
+          <span className="font-bold text-3xl" style={{color: '#1e40af'}}>Deepo</span>
         </Link>
         
         <h1 className="text-8xl font-bold text-gray-200 mb-4">404</h1>

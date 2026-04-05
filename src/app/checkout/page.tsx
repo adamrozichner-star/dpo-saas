@@ -6,31 +6,32 @@ import Link from 'next/link';
 import { Shield, Check, ArrowRight, Loader2, CreditCard, Lock, Clock, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
-type Plan = 'basic' | 'extended' | 'enterprise';
+type Plan = 'basic' | 'recommended' | 'premium' | 'enterprise';
 
 const PLANS = {
   basic: {
     name: 'חבילה בסיסית',
     price: 500,
     annualPrice: 5000,
-    description: 'לעסקים קטנים ובינוניים',
+    description: 'לעסקים קטנים — ללא ממונה',
     features: [
-      'ממונה הגנת פרטיות מוסמך',
+      'מערכת ניהול פרטיות מלאה',
       'מסמכים אוטומטיים',
       'בוט Q&A לעובדים',
       'יומן ביקורת',
       'תמיכה בדוא"ל',
-      'זמן תגובה: 72 שעות',
+      'זמן תגובה: 48 שעות',
     ],
     popular: false,
   },
-  extended: {
-    name: 'חבילה מורחבת',
-    price: 1200,
-    annualPrice: 12000,
-    description: 'לעסקים עם מידע רגיש',
+  recommended: {
+    name: 'חבילה מומלצת',
+    price: 999,
+    annualPrice: 9990,
+    description: 'לעסקים עם מידע רגיש — כולל ממונה',
     features: [
       'כל מה שבחבילה הבסיסית',
+      'ממונה הגנת פרטיות מוסמך',
       'סקירה רבעונית של הממונה',
       '30 דק׳ זמן DPO/חודש',
       'ליווי באירועי אבטחה',
@@ -40,13 +41,13 @@ const PLANS = {
     ],
     popular: true,
   },
-  enterprise: {
-    name: 'חבילה ארגונית',
-    price: 3500,
-    annualPrice: 35000,
+  premium: {
+    name: 'חבילה פרימיום',
+    price: 4500,
+    annualPrice: 45000,
     description: 'לארגונים עם דרישות מורכבות',
     features: [
-      'כל מה שבחבילה המורחבת',
+      'כל מה שבחבילה המומלצת',
       '2 שעות זמן DPO/חודש',
       'סקירה חודשית',
       'הדרכת עובדים רבעונית',
@@ -57,6 +58,20 @@ const PLANS = {
     ],
     popular: false,
   },
+  enterprise: {
+    name: 'חבילה ארגונית',
+    price: 0,
+    annualPrice: 0,
+    description: 'התאמה מלאה לארגון',
+    features: [
+      'כל מה שבחבילה הפרימיום',
+      'מנהל לקוח ייעודי',
+      'SLA מותאם אישית',
+      'הדרכות מותאמות',
+      'ליווי רגולטורי מלא',
+    ],
+    popular: false,
+  },
 };
 
 export default function CheckoutPage() {
@@ -64,7 +79,7 @@ export default function CheckoutPage() {
   const searchParams = useSearchParams();
   const { user, session, supabase } = useAuth();
   
-  const [selectedPlan, setSelectedPlan] = useState<Plan>('extended');
+  const [selectedPlan, setSelectedPlan] = useState<Plan>('recommended');
   const [isAnnual, setIsAnnual] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [organization, setOrganization] = useState<any>(null);
@@ -132,7 +147,7 @@ export default function CheckoutPage() {
     // Get quick assessment data from localStorage (payment-first flow)
     let quickAssessment = null;
     try {
-      const saved = localStorage.getItem('mydpo_quick_assessment');
+      const saved = localStorage.getItem('deepo_quick_assessment');
       if (saved) {
         quickAssessment = JSON.parse(saved);
       }
@@ -187,7 +202,7 @@ export default function CheckoutPage() {
             <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
               <Shield className="h-6 w-6 text-white" />
             </div>
-            <span className="font-bold text-xl text-slate-900">MyDPO</span>
+            <span className="font-bold text-xl text-slate-900">Deepo</span>
           </Link>
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <Lock className="h-4 w-4" />
@@ -207,7 +222,7 @@ export default function CheckoutPage() {
             <AlertTriangle className="h-5 w-5 flex-shrink-0" />
             <span>
               {trialDaysLeft === 0 
-                ? 'תקופת הניסיון הסתיימה! השלם את התשלום כדי להמשיך להשתמש ב-MyDPO.'
+                ? 'תקופת הניסיון הסתיימה! השלם את התשלום כדי להמשיך להשתמש ב-Deepo.'
                 : `נותרו ${trialDaysLeft} ימים לתקופת הניסיון שלך.`
               }
             </span>
@@ -244,7 +259,7 @@ export default function CheckoutPage() {
           </span>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6 mb-12">
+        <div className="grid lg:grid-cols-4 gap-6 mb-12">
           {(Object.keys(PLANS) as Plan[]).map((planKey) => {
             const plan = PLANS[planKey];
             const isSelected = selectedPlan === planKey;
@@ -264,7 +279,7 @@ export default function CheckoutPage() {
                 {plan.popular && (
                   <div className="absolute -top-3 right-4">
                     <span className="bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full">
-                      הכי פופולרי
+                      מומלצת
                     </span>
                   </div>
                 )}
@@ -276,8 +291,14 @@ export default function CheckoutPage() {
 
                 <div className="mb-6">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-slate-900">₪{monthlyPrice}</span>
-                    <span className="text-slate-500">/חודש</span>
+                    {planKey === 'enterprise' ? (
+                      <span className="text-4xl font-bold text-slate-900">צרו קשר</span>
+                    ) : (
+                      <>
+                        <span className="text-4xl font-bold text-slate-900">₪{monthlyPrice}</span>
+                        <span className="text-slate-500">/חודש</span>
+                      </>
+                    )}
                   </div>
                   {isAnnual && (
                     <p className="text-sm text-slate-500 mt-1">

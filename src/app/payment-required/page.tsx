@@ -68,7 +68,7 @@ export default function PaymentRequiredPage() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-2">
             <Shield className="h-8 w-8 text-emerald-600" />
-            <span className="text-2xl font-bold text-slate-800">MyDPO</span>
+            <span className="text-2xl font-bold text-slate-800">Deepo</span>
           </div>
         </div>
 
@@ -141,7 +141,7 @@ export default function PaymentRequiredPage() {
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-6">
-          © 2025 MyDPO. כל הזכויות שמורות.
+          © 2025 Deepo. כל הזכויות שמורות.
         </p>
       </div>
     </div>
