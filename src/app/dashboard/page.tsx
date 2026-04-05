@@ -652,6 +652,21 @@ function DashboardContent() {
 
         {/* Page Content */}
         <div className="p-4 lg:p-8 max-w-5xl mx-auto">
+          {/* Incomplete onboarding banner */}
+          {organization && organization.onboarding_completed === false && (
+            <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+                <span className="text-sm text-amber-800 font-medium">השלמת התהליך שלך עדיין לא הסתיימה</span>
+              </div>
+              <Link href="/onboarding">
+                <button className="px-4 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors">
+                  המשך
+                </button>
+              </Link>
+            </div>
+          )}
+
           {/* Paywall Banner for unpaid users */}
           {!gateIsPaid && (
             <div className="mb-6">

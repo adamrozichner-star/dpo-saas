@@ -41,6 +41,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid plan', success: false }, { status: 400 });
     }
 
+    if (plan === 'enterprise') {
+      return NextResponse.json({ error: 'לחבילה ארגונית יש ליצור קשר ישירות', success: false }, { status: 400 });
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!supabaseUrl || !supabaseServiceKey) {

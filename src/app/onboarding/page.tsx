@@ -1209,6 +1209,40 @@ function OnboardingContent() {
     setTimeout(() => { setStep(s => s + 1); setAnimDir('in'); setValidationError(null) }, 180)
   }, [set])
 
+  // Skip current card without validation (not for required fields)
+  const REQUIRED_CARDS = ['bizName', 'companyId']
+  const skip = useCallback(() => {
+    sessionStarted.current = true
+    setValidationError(null)
+    setAnimDir('out')
+    setTimeout(() => { setStep(s => s + 1); setAnimDir('in') }, 180)
+  }, [])
+
+  // Save progress and redirect to dashboard (complete later)
+  const completeLater = useCallback(async () => {
+    if (!supabase || !user) return
+    try {
+      // Save to localStorage for resume
+      localStorage.setItem('dpo_v3_answers', JSON.stringify(v3Answers))
+      localStorage.setItem('dpo_v3_step', String(step))
+      localStorage.setItem('dpo_v3_user', user.id)
+
+      // Also save to DB so dashboard can show banner
+      const { data: userData } = await supabase.from('users').select('org_id').eq('auth_user_id', user.id).single()
+      if (userData?.org_id) {
+        await supabase.from('organizations').update({
+          onboarding_answers: v3Answers,
+          onboarding_step: step,
+          onboarding_completed: false,
+        }).eq('id', userData.org_id)
+      }
+      router.push('/dashboard')
+    } catch (e) {
+      console.error('[Onboarding] Save error:', e)
+      router.push('/dashboard')
+    }
+  }, [supabase, user, v3Answers, step, router])
+
   useEffect(() => {
     if (step >= mainLen && !showReport && !showDpoIntro && !isGenerating) {
       const predefinedDBs = v3Answers.databases || []
@@ -1657,26 +1691,33 @@ function OnboardingContent() {
             </div>
             <span className="font-bold text-[#1e40af]">Deepo</span>
           </div>
-          {step > 0 && (
-            <button 
-              onClick={() => {
-                if (isDBPhase) {
-                  if (currentDBIdx === 0) {
-                    setStep(mainLen - 1)
+          <div className="flex items-center gap-4">
+            {step > 0 && (
+              <button
+                onClick={() => {
+                  if (isDBPhase) {
+                    if (currentDBIdx === 0) {
+                      setStep(mainLen - 1)
+                    } else {
+                      setStep(s => s - 1)
+                    }
                   } else {
                     setStep(s => s - 1)
                   }
-                } else {
-                  setStep(s => s - 1)
-                }
-                setAnimDir('in')
-              }}
-              className="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1"
-            >
-              <ArrowRight className="h-3 w-3" />
-              חזרה
-            </button>
-          )}
+                  setAnimDir('in')
+                }}
+                className="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1"
+              >
+                <ArrowRight className="h-3 w-3" />
+                חזרה
+              </button>
+            )}
+            {step >= 2 && !showReport && !showDpoIntro && !isGenerating && (
+              <button onClick={completeLater} className="text-gray-400 hover:text-gray-600 text-xs">
+                השלם מאוחר יותר
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex justify-between items-center mb-2">
@@ -1838,6 +1879,13 @@ function OnboardingContent() {
                   </>
                 )}
               </>
+            )}
+
+            {/* Skip button — not shown for required fields */}
+            {!REQUIRED_CARDS.includes(card.id) && (
+              <button onClick={skip} className="block mx-auto mt-3 text-gray-400 hover:text-gray-600 text-xs transition-colors">
+                דלג ←
+              </button>
             )}
           </CardShell>
         )}

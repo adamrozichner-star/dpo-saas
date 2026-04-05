@@ -6,19 +6,19 @@ import Link from 'next/link';
 import { Shield, Check, ArrowRight, Loader2, CreditCard, Lock, Clock, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
-type Plan = 'basic' | 'recommended' | 'enterprise';
+type Plan = 'basic' | 'recommended' | 'premium' | 'enterprise';
 
 const PLANS = {
   basic: {
     name: 'חבילה בסיסית',
     price: 500,
     annualPrice: 5000,
-    description: 'לעסקים קטנים ובינוניים',
+    description: 'ניהול פרטיות עצמאי — ללא ממונה',
     features: [
-      'ממונה הגנת פרטיות מוסמך',
       'מסמכים אוטומטיים',
       'בוט Q&A לעובדים',
       'יומן ביקורת',
+      'המלצות ציות (לא מחייבות)',
       'תמיכה בדוא"ל',
       'זמן תגובה: 72 שעות',
     ],
@@ -28,11 +28,11 @@ const PLANS = {
     name: 'חבילה מומלצת',
     price: 999,
     annualPrice: 9990,
-    description: 'לעסקים עם מידע רגיש — כולל ממונה',
+    description: 'כולל DPO ממונה — המומלצת לרוב העסקים',
     features: [
       'כל מה שבחבילה הבסיסית',
       'סקירה רבעונית של הממונה',
-      '30 דק׳ זמן DPO/חודש',
+      'עד 2 פניות DPO בחודש',
       'ליווי באירועי אבטחה',
       'תמיכה טלפונית',
       'זמן תגובה: 24 שעות',
@@ -40,10 +40,10 @@ const PLANS = {
     ],
     popular: true,
   },
-  enterprise: {
-    name: 'חבילה ארגונית',
-    price: 3500,
-    annualPrice: 35000,
+  premium: {
+    name: 'חבילה פרימיום',
+    price: 4500,
+    annualPrice: 45000,
     description: 'לארגונים עם דרישות מורכבות',
     features: [
       'כל מה שבחבילה המומלצת',
@@ -53,7 +53,19 @@ const PLANS = {
       'DPIA מלא כלול',
       'זמן תגובה: 4 שעות',
       'משתמשים ללא הגבלה',
+    ],
+    popular: false,
+  },
+  enterprise: {
+    name: 'חבילה ארגונית',
+    price: 0,
+    annualPrice: 0,
+    description: 'התאמה מלאה לארגון',
+    features: [
+      'כל מה שבחבילה הפרימיום',
       'SLA מובטח',
+      'התאמה מלאה לארגון',
+      'הטמעה ייעודית',
     ],
     popular: false,
   },
@@ -244,7 +256,7 @@ export default function CheckoutPage() {
           </span>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6 mb-12">
+        <div className="grid lg:grid-cols-4 gap-6 mb-12">
           {(Object.keys(PLANS) as Plan[]).map((planKey) => {
             const plan = PLANS[planKey];
             const isSelected = selectedPlan === planKey;
@@ -275,14 +287,22 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="mb-6">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-slate-900">₪{monthlyPrice}</span>
-                    <span className="text-slate-500">/חודש</span>
-                  </div>
-                  {isAnnual && (
-                    <p className="text-sm text-slate-500 mt-1">
-                      ₪{price} לשנה (חיסכון ₪{plan.price * 12 - plan.annualPrice})
-                    </p>
+                  {planKey === 'enterprise' ? (
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-bold text-slate-900">צרו קשר</span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-bold text-slate-900">₪{monthlyPrice}</span>
+                        <span className="text-slate-500">/חודש</span>
+                      </div>
+                      {isAnnual && (
+                        <p className="text-sm text-slate-500 mt-1">
+                          ₪{price} לשנה (חיסכון ₪{plan.price * 12 - plan.annualPrice})
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -295,13 +315,19 @@ export default function CheckoutPage() {
                   ))}
                 </ul>
 
-                <div className={`w-full py-3 rounded-xl text-center font-medium transition-colors ${
-                  isSelected 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-slate-100 text-slate-700'
-                }`}>
-                  {isSelected ? 'נבחר ✓' : 'בחר חבילה'}
-                </div>
+                {planKey === 'enterprise' ? (
+                  <Link href="/contact" className={`block w-full py-3 rounded-xl text-center font-medium transition-colors bg-slate-100 text-slate-700 hover:bg-slate-200`}>
+                    צרו קשר
+                  </Link>
+                ) : (
+                  <div className={`w-full py-3 rounded-xl text-center font-medium transition-colors ${
+                    isSelected
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-100 text-slate-700'
+                  }`}>
+                    {isSelected ? 'נבחר ✓' : 'בחר חבילה'}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -338,23 +364,32 @@ export default function CheckoutPage() {
             </div>
           )}
 
-          <button
-            onClick={handleCheckout}
-            disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-colors"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                מעבד...
-              </>
-            ) : (
-              <>
-                <CreditCard className="h-5 w-5" />
-                המשך לתשלום מאובטח
-              </>
-            )}
-          </button>
+          {selectedPlan === 'enterprise' ? (
+            <Link
+              href="/contact"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-colors"
+            >
+              צרו קשר
+            </Link>
+          ) : (
+            <button
+              onClick={handleCheckout}
+              disabled={isLoading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-colors"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  מעבד...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="h-5 w-5" />
+                  המשך לתשלום מאובטח
+                </>
+              )}
+            </button>
+          )}
 
           <div className="mt-6 flex items-center justify-center gap-4 text-sm text-slate-500">
             <div className="flex items-center gap-1">
