@@ -13,8 +13,11 @@ export interface ComplianceGuideline {
 }
 
 export interface SubTask {
+  id: string
   title: string
+  label?: string
   description: string
+  status?: 'completed' | 'pending'
   linkUrl?: string
   completed?: boolean
 }
@@ -29,6 +32,7 @@ export interface WizardQuestion {
 }
 
 export interface WizardConfig {
+  wizardId?: string
   questions: WizardQuestion[]
 }
 
@@ -40,7 +44,7 @@ export interface ComplianceTask {
   priority: 'high' | 'medium' | 'low'
   field?: string
   icon?: string
-  status?: 'pending' | 'completed' | 'auto_resolved' | 'doc_pending_review' | 'doc_approved' | 'needs_generation' | 'needs_enrichment' | 'needs_action'
+  status?: 'pending' | 'completed' | 'auto_resolved' | 'doc_pending_review' | 'doc_approved' | 'needs_generation' | 'needs_enrichment' | 'needs_action' | 'not_applicable'
   actionType?: 'generate_doc' | 'external_guide' | 'wizard' | 'manual' | 'doc_review'
   documentType?: string
   legalBasis?: string
