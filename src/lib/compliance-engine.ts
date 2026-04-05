@@ -45,7 +45,7 @@ export interface ComplianceTask {
   documentType?: string
   legalBasis?: string
   estimatedMinutes?: number
-  guideSteps?: string[]
+  guideSteps?: { title: string; description: string; linkUrl?: string; linkLabel?: string }[]
   postApprovalAction?: string
   subTasks?: SubTask[]
   resolvedNote?: string
