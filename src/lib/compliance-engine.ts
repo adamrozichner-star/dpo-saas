@@ -12,16 +12,46 @@ export interface ComplianceGuideline {
   resolvedReason?: string
 }
 
-interface ComplianceTask {
+export interface SubTask {
+  id: string
+  label: string
+  status: 'pending' | 'completed'
+}
+
+export interface WizardQuestion {
+  id: string
+  label: string
+  type: 'text' | 'number' | 'select' | 'multi_select'
+  required?: boolean
+  placeholder?: string
+  options?: { value: string; label: string }[]
+}
+
+export interface WizardConfig {
+  questions: WizardQuestion[]
+}
+
+export interface ComplianceTask {
   id: string
   type: 'complete_profile' | 'missing_doc' | 'review' | 'update'
   title: string
   description: string
   priority: 'high' | 'medium' | 'low'
   field?: string
+  icon?: string
+  status?: 'pending' | 'completed' | 'auto_resolved' | 'doc_pending_review' | 'doc_approved'
+  actionType?: 'generate_doc' | 'external_guide' | 'wizard' | 'manual'
+  documentType?: string
+  legalBasis?: string
+  estimatedMinutes?: number
+  guideSteps?: string[]
+  postApprovalAction?: string
+  subTasks?: SubTask[]
+  resolvedNote?: string
+  wizardConfig?: WizardConfig
 }
 
-interface V3Answers {
+export interface V3Answers {
   [key: string]: any
 }
 
