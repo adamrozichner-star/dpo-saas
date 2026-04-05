@@ -59,8 +59,8 @@ function generateEscalationResponseEmail(
   </div>
   
   <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 12px;">
-    <p style="margin: 0;">הודעה זו נשלחה באמצעות DPO-Pro</p>
-    <p style="margin: 5px 0 0 0;">© ${new Date().getFullYear()} DPO-Pro - שירותי ממונה הגנת פרטיות</p>
+    <p style="margin: 0;">הודעה זו נשלחה באמצעות MyDPO</p>
+    <p style="margin: 5px 0 0 0;">© ${new Date().getFullYear()} MyDPO - שירותי ממונה הגנת פרטיות</p>
   </div>
 </body>
 </html>
@@ -120,8 +120,8 @@ function generateDSRResponseEmail(
   </div>
   
   <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 12px;">
-    <p style="margin: 0;">הודעה זו נשלחה באמצעות DPO-Pro</p>
-    <p style="margin: 5px 0 0 0;">© ${new Date().getFullYear()} DPO-Pro - שירותי ממונה הגנת פרטיות</p>
+    <p style="margin: 0;">הודעה זו נשלחה באמצעות MyDPO</p>
+    <p style="margin: 5px 0 0 0;">© ${new Date().getFullYear()} MyDPO - שירותי ממונה הגנת פרטיות</p>
   </div>
 </body>
 </html>
@@ -138,9 +138,9 @@ async function sendResponseEmail(
   html: string
 ): Promise<boolean> {
   try {
-    // Use resend.dev for testing until dpo-pro.co.il is verified
+    // Use resend.dev for testing until mydpo.co.il is verified
     const { data, error } = await resend.emails.send({
-      from: 'DPO-Pro <onboarding@resend.dev>',
+      from: process.env.FROM_EMAIL || 'MyDPO <onboarding@resend.dev>',
       to: [to],
       subject: subject,
       html: html
@@ -435,12 +435,16 @@ export async function GET(request: NextRequest) {
         dsr = dsrData
       }
 
-      // Get org documents
-      const { data: documents } = await supabase
+      // Get org documents (all statuses — DPO needs to see pending_review too)
+      const { data: documents, error: docErr } = await supabase
         .from('documents')
-        .select('id, name, type, status')
+        .select('id, title, type, status, content, created_at')
         .eq('org_id', item.org_id)
-        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+      
+      if (docErr) {
+        console.error('Error fetching documents:', docErr)
+      }
 
       // Get org compliance score
       const { data: compliance } = await supabase
@@ -572,13 +576,56 @@ export async function GET(request: NextRequest) {
         .eq('org_id', orgId)
         .single()
 
+      // Also get org profile (onboarding answers from registration)
+      const { data: orgProfile } = await supabase
+        .from('organization_profiles')
+        .select('profile_data')
+        .eq('org_id', orgId)
+        .single()
+
+      // Get user contact info
+      const { data: orgUser } = await supabase
+        .from('users')
+        .select('email, auth_user_id')
+        .eq('org_id', orgId)
+        .limit(1)
+        .single()
+
+      // Get rights requests (DSAR)
+      const { data: rightsRequests } = await supabase
+        .from('data_subject_requests')
+        .select('*')
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      // Get security incidents
+      const { data: incidents } = await supabase
+        .from('security_incidents')
+        .select('*')
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      // Get ROPA processing activities
+      const { data: ropaActivities } = await supabase
+        .from('processing_activities')
+        .select('*')
+        .eq('org_id', orgId)
+        .order('created_at', { ascending: false })
+
       return NextResponse.json({
         organization: org,
         compliance,
         documents,
         queue_history: queueHistory,
         time_this_month_minutes: Math.round(totalMinutesThisMonth),
-        onboarding_context: onboarding?.answers || {}
+        onboarding_context: onboarding?.answers || {},
+        profile: orgProfile?.profile_data || null,
+        contact_email: orgUser?.email || null,
+        rights_requests: rightsRequests || [],
+        incidents: incidents || [],
+        ropa_activities: ropaActivities || []
       })
     }
 
@@ -786,6 +833,71 @@ export async function POST(request: NextRequest) {
               `עדכון בקשת נושא מידע - ${orgName}`,
               emailHtml
             )
+          }
+        }
+      }
+
+      // Handle DOCUMENT REVIEW resolution — activate pending docs
+      if (item.type === 'review') {
+        // Activate any remaining pending_review docs
+        await supabase
+          .from('documents')
+          .update({ 
+            status: 'active',
+            updated_at: new Date().toISOString()
+          })
+          .eq('org_id', item.org_id)
+          .eq('status', 'pending_review')
+
+        // Get ALL org docs for the email (including already-approved ones)
+        const { data: allOrgDocs } = await supabase
+          .from('documents')
+          .select('id, title, type')
+          .eq('org_id', item.org_id)
+          .eq('status', 'active')
+
+        if (allOrgDocs?.length) {
+          console.log(`✅ Org ${item.org_id} has ${allOrgDocs.length} active docs`)
+        }
+
+        // Send email to client: your documents have been reviewed and approved
+        if (sendEmail) {
+          try {
+            const { data: orgData } = await supabase
+              .from('organizations')
+              .select('contact_email, owner_email, name')
+              .eq('id', item.org_id)
+              .single()
+            
+            // Try: 1) org contact email, 2) org owner email, 3) user's auth email
+            let email = orgData?.contact_email || orgData?.owner_email
+            if (!email) {
+              const { data: userData } = await supabase
+                .from('users')
+                .select('email')
+                .eq('org_id', item.org_id)
+                .limit(1)
+                .single()
+              email = userData?.email
+            }
+
+            if (email) {
+              const docList = allOrgDocs?.map(d => d.title || d.type).join('، ') || 'מסמכים'
+              const emailHtml = `
+                <div dir="rtl" style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:24px">
+                  <h2 style="color:#059669">✅ המסמכים שלכם אושרו</h2>
+                  <p>שלום,</p>
+                  <p>ממונה הגנת הפרטיות סקר ואישר את המסמכים הבאים:</p>
+                  <p style="background:#f0fdf4;padding:12px;border-radius:8px;font-weight:600">${docList}</p>
+                  ${response ? `<p>הערות הממונה: ${response}</p>` : ''}
+                  <p>המסמכים זמינים בלוח הבקרה שלכם.</p>
+                  <a href="https://mydpo.co.il/dashboard" style="display:inline-block;padding:10px 24px;background:#4f46e5;color:white;border-radius:8px;text-decoration:none;margin-top:8px">צפייה במסמכים</a>
+                </div>
+              `
+              emailSent = await sendResponseEmail(email, `מסמכים אושרו - ${orgData?.name || ''}`, emailHtml)
+            }
+          } catch (e) {
+            console.log('Could not send doc approval email:', e)
           }
         }
       }
@@ -1003,6 +1115,288 @@ export async function POST(request: NextRequest) {
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ success: true })
+    }
+
+    // =========================================
+    // Approve individual document
+    // =========================================
+    if (action === 'approve_document') {
+      const { documentId, notes } = body
+      if (!documentId) {
+        return NextResponse.json({ error: 'Missing documentId' }, { status: 400 })
+      }
+
+      const { error } = await supabase
+        .from('documents')
+        .update({ 
+          status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId)
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      // Log time
+      const { data: doc } = await supabase
+        .from('documents')
+        .select('org_id, title, type')
+        .eq('id', documentId)
+        .single()
+
+      if (doc) {
+        try {
+          await supabase.from('dpo_time_log').insert({
+            org_id: doc.org_id,
+            action: 'document_review',
+            description: `אישור מסמך: ${doc.title || doc.type}`,
+            duration_seconds: 60
+          })
+        } catch (e) { /* ignore */ }
+
+        // Auto-resolve review queue items when ALL org docs are active
+        try {
+          const { data: allDocs } = await supabase
+            .from('documents')
+            .select('id, status')
+            .eq('org_id', doc.org_id)
+
+          const allActive = allDocs && allDocs.length > 0 && allDocs.every((d: any) => d.status === 'active')
+
+          if (allActive) {
+            // Find pending review queue items for this org and resolve them
+            const { data: pendingReviews } = await supabase
+              .from('dpo_queue')
+              .select('id')
+              .eq('org_id', doc.org_id)
+              .eq('type', 'review')
+              .in('status', ['pending', 'in_progress'])
+
+            if (pendingReviews && pendingReviews.length > 0) {
+              for (const qi of pendingReviews) {
+                await supabase
+                  .from('dpo_queue')
+                  .update({
+                    status: 'resolved',
+                    resolved_at: new Date().toISOString(),
+                    ai_draft_response: 'כל המסמכים נסקרו ואושרו.'
+                  })
+                  .eq('id', qi.id)
+              }
+            }
+          }
+        } catch (e) { /* ignore auto-resolve errors */ }
+      }
+
+      return NextResponse.json({ success: true })
+    }
+
+    // =========================================
+    // Edit document content (DPO edits)
+    // =========================================
+    if (action === 'edit_document') {
+      const { documentId, content, notes } = body
+      if (!documentId || !content) {
+        return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+      }
+
+      const { error } = await supabase
+        .from('documents')
+        .update({
+          content,
+          status: 'active',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId)
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      // Auto-resolve review queue items when all org docs are active
+      try {
+        const { data: doc } = await supabase.from('documents').select('org_id').eq('id', documentId).single()
+        if (doc) {
+          const { data: allDocs } = await supabase.from('documents').select('id, status').eq('org_id', doc.org_id)
+          const allActive = allDocs && allDocs.length > 0 && allDocs.every((d: any) => d.status === 'active')
+          if (allActive) {
+            const { data: pendingReviews } = await supabase
+              .from('dpo_queue').select('id').eq('org_id', doc.org_id).eq('type', 'review').in('status', ['pending', 'in_progress'])
+            if (pendingReviews?.length) {
+              for (const qi of pendingReviews) {
+                await supabase.from('dpo_queue').update({ status: 'resolved', resolved_at: new Date().toISOString(), ai_draft_response: 'כל המסמכים נסקרו ואושרו.' }).eq('id', qi.id)
+              }
+            }
+          }
+        }
+      } catch (e) { /* ignore */ }
+
+      return NextResponse.json({ success: true })
+    }
+
+    // =========================================
+    // Request document regeneration with feedback
+    // =========================================
+    if (action === 'regenerate_document') {
+      const { documentId, feedback } = body
+      if (!documentId) {
+        return NextResponse.json({ error: 'Missing documentId' }, { status: 400 })
+      }
+
+      const { data: doc } = await supabase
+        .from('documents')
+        .select('*')
+        .eq('id', documentId)
+        .single()
+
+      if (!doc) {
+        return NextResponse.json({ error: 'Document not found' }, { status: 404 })
+      }
+
+      // Get org context for regeneration
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('id', doc.org_id)
+        .single()
+
+      const { data: onboarding } = await supabase
+        .from('onboarding_responses')
+        .select('*')
+        .eq('org_id', doc.org_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      // Use AI to regenerate
+      const Anthropic = (await import('@anthropic-ai/sdk')).default
+      const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+      const message = await client.messages.create({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: `אתה ממונה הגנת פרטיות. יש לשכתב את המסמך הבא עבור הארגון.
+
+ארגון: ${org?.name || 'לא ידוע'}
+תחום: ${onboarding?.industry || 'לא ידוע'}
+עובדים: ${onboarding?.employee_count || 'לא ידוע'}
+
+סוג מסמך: ${doc.type}
+כותרת: ${doc.title}
+
+הערות הממונה לשיפור:
+${feedback || 'יש לשפר את המסמך'}
+
+המסמך הנוכחי:
+${doc.content?.substring(0, 3000)}
+
+אנא כתוב גרסה משופרת של המסמך בעברית. כתוב רק את המסמך עצמו, ללא הסברים.`
+        }]
+      })
+
+      const newContent = message.content[0].type === 'text' ? message.content[0].text : ''
+
+      // Update document with new content
+      const { error } = await supabase
+        .from('documents')
+        .update({
+          content: newContent,
+          status: 'pending_review',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId)
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      return NextResponse.json({ success: true, content: newContent })
+    }
+
+    // =========================================
+    // Delete document
+    // =========================================
+    if (action === 'delete_document') {
+      const { documentId } = body
+      if (!documentId) {
+        return NextResponse.json({ error: 'Missing documentId' }, { status: 400 })
+      }
+
+      // Get doc info for audit log before deleting
+      const { data: doc } = await supabase
+        .from('documents')
+        .select('org_id, title, type')
+        .eq('id', documentId)
+        .single()
+
+      const { error } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', documentId)
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      // Audit log
+      if (doc) {
+        try {
+          await supabase.from('dpo_time_log').insert({
+            org_id: doc.org_id,
+            action: 'document_delete',
+            description: `מחיקת מסמך: ${doc.title || doc.type}`,
+            duration_seconds: 10
+          })
+        } catch (e) { /* ignore */ }
+      }
+
+      return NextResponse.json({ success: true })
+    }
+
+    // =========================================
+    // Finalize document — mark as official final version
+    // =========================================
+    if (action === 'finalize_document') {
+      const { documentId, version } = body
+      if (!documentId) {
+        return NextResponse.json({ error: 'Missing documentId' }, { status: 400 })
+      }
+
+      const { error } = await supabase
+        .from('documents')
+        .update({ 
+          status: 'active',
+          version: version || 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', documentId)
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      // Audit log
+      const { data: doc } = await supabase
+        .from('documents')
+        .select('org_id, title, type')
+        .eq('id', documentId)
+        .single()
+
+      if (doc) {
+        try {
+          await supabase.from('dpo_time_log').insert({
+            org_id: doc.org_id,
+            action: 'document_finalize',
+            description: `גרסה סופית (v${version || 1}): ${doc.title || doc.type}`,
+            duration_seconds: 30
+          })
+        } catch (e) { /* ignore */ }
       }
 
       return NextResponse.json({ success: true })

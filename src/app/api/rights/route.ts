@@ -31,7 +31,7 @@ async function sendRequesterConfirmationEmail(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: process.env.FROM_EMAIL || 'DPO-Pro <noreply@dpo-pro.co.il>',
+        from: process.env.FROM_EMAIL || 'MyDPO <noreply@mydpo.co.il>',
         to: email,
         subject: `אישור קבלת בקשה - ${data.requestNumber}`,
         html: `
@@ -60,7 +60,7 @@ async function sendRequesterConfirmationEmail(
     </p>
   </div>
   <div style="background: #1e293b; color: #94a3b8; padding: 15px; border-radius: 0 0 12px 12px; text-align: center; font-size: 12px;">
-    <p style="margin: 0;">DPO-Pro - מערכת ניהול פרטיות</p>
+    <p style="margin: 0;">MyDPO - מערכת ניהול פרטיות</p>
   </div>
 </body>
 </html>`,
@@ -108,7 +108,7 @@ async function sendOrgNotificationEmail(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: process.env.FROM_EMAIL || 'DPO-Pro <noreply@dpo-pro.co.il>',
+        from: process.env.FROM_EMAIL || 'MyDPO <noreply@mydpo.co.il>',
         to: adminEmail,
         subject: `⚠️ בקשת נושא מידע חדשה - ${data.requestNumber}`,
         html: `
@@ -138,14 +138,14 @@ async function sendOrgNotificationEmail(
     </div>
 
     <div style="text-align: center; margin: 30px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://dpo-saas.vercel.app'}/dashboard?tab=requests" 
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://dpo-saas.vercel.app'}/dashboard?tab=rights" 
          style="background: #F59E0B; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
         טיפול בבקשה ←
       </a>
     </div>
   </div>
   <div style="background: #1e293b; color: #94a3b8; padding: 15px; border-radius: 0 0 12px 12px; text-align: center; font-size: 12px;">
-    <p style="margin: 0;">DPO-Pro - מערכת ניהול פרטיות</p>
+    <p style="margin: 0;">MyDPO - מערכת ניהול פרטיות</p>
   </div>
 </body>
 </html>`,
@@ -287,6 +287,22 @@ export async function POST(request: NextRequest) {
 
     // Create notification for organization (message thread)
     try {
+      // Audit log for new request
+      await supabase.from('audit_logs').insert({
+        org_id: orgId,
+        action: 'rights_request_received',
+        details: {
+          requestId: newRequest?.id,
+          requestNumber,
+          requestType,
+          requesterName: fullName,
+          requesterEmail: email,
+          deadline: deadlineStr,
+        }
+      })
+    } catch {}
+
+    try {
       const requestTypeLabels: Record<string, string> = {
         access: 'עיון במידע',
         rectification: 'תיקון מידע',
@@ -396,6 +412,22 @@ ${details ? `פרטים נוספים:\n${details}` : ''}
       return NextResponse.json({ error: 'Failed to update request' }, { status: 500 })
     }
 
+    // Audit log
+    try {
+      await supabase.from('audit_logs').insert({
+        org_id: requestData?.org_id,
+        action: 'rights_request_updated',
+        details: {
+          requestId,
+          requestNumber: requestData?.request_number,
+          previousStatus: requestData?.status,
+          newStatus: status,
+          hasResponse: !!response,
+          respondedBy: respondedBy || null,
+        }
+      })
+    } catch {}
+
     // Send email to requester when request is completed or rejected
     if (requestData && (status === 'completed' || status === 'rejected') && process.env.RESEND_API_KEY) {
       const statusLabels: Record<string, string> = {
@@ -411,7 +443,7 @@ ${details ? `פרטים נוספים:\n${details}` : ''}
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            from: process.env.FROM_EMAIL || 'DPO-Pro <noreply@dpo-pro.co.il>',
+            from: process.env.FROM_EMAIL || 'MyDPO <noreply@mydpo.co.il>',
             to: requestData.requester_email,
             subject: `עדכון לבקשה ${requestData.request_number} - ${statusLabels[status]}`,
             html: `

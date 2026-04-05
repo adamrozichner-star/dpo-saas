@@ -95,6 +95,8 @@ export default function AuthCallbackPage() {
           localStorage.removeItem('dpo_onboarding_step');
           localStorage.removeItem('dpo_onboarding_org_id');
           localStorage.removeItem('dpo_onboarding_org_name');
+          localStorage.removeItem('dpo_v3_answers');
+          localStorage.removeItem('dpo_v3_step');
           
           const name = session.user.user_metadata?.full_name || 
                        session.user.user_metadata?.name ||
@@ -111,22 +113,13 @@ export default function AuthCallbackPage() {
             console.error('User insert error:', insertError);
           }
 
-          // Send welcome email (don't wait)
-          fetch('/api/email', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              template: 'welcome',
-              to: session.user.email,
-              data: { name, orgName: 'הארגון שלך' }
-            })
-          }).catch(e => console.error('Email error:', e));
+          // Welcome email is sent from complete-onboarding (server-side with real org name)
 
-          // New user - go to quick assessment (payment-first flow)
-          setStatus('מעביר להגדרות...');
+          // New user - go to onboarding
+          setStatus('מעביר לשאלון...');
           // Small delay to ensure session is fully stored
           await new Promise(resolve => setTimeout(resolve, 300));
-          window.location.href = '/get-started';
+          window.location.href = '/onboarding';
         } else {
           // Existing user - check if they have an active subscription
           setStatus('בודק מנוי...');
@@ -159,9 +152,9 @@ export default function AuthCallbackPage() {
             setStatus('מעביר לתשלום...');
             window.location.href = '/subscribe';
           } else {
-            // No org — needs quick assessment first
-            setStatus('מעביר להגדרות...');
-            window.location.href = '/get-started';
+            // No org — needs onboarding
+            setStatus('מעביר לשאלון...');
+            window.location.href = '/onboarding';
           }
         }
       } catch (err) {

@@ -3,14 +3,14 @@
 export const DPO_CONFIG = {
   name: 'עו"ד דנה כהן', // Replace with actual DPO name
   licenseNumber: 'DPO-2025-001', // Replace with actual license number
-  email: 'dpo@dpo-pro.co.il',
+  email: 'dpo@mydpo.co.il',
   phone: '03-555-1234',
   
   company: {
-    name: 'DPO-Pro בע"מ',
+    name: 'MyDPO בע"מ',
     businessId: 'XXXXXXXXX',
     address: 'תל אביב, ישראל',
-    email: 'support@dpo-pro.co.il',
+    email: 'support@mydpo.co.il',
   },
   
   serviceLimits: {

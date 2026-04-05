@@ -3,6 +3,8 @@ import { Heebo } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/lib/auth-context'
 import { ToastProvider } from '@/components/Toast'
+import AccessibilityMenu from '@/components/AccessibilityMenu'
+import CookieBanner from '@/components/CookieBanner'
 
 const heebo = Heebo({
   subsets: ['hebrew', 'latin'],
@@ -25,6 +27,8 @@ export default function RootLayout({
         <AuthProvider>
           <ToastProvider>
             {children}
+            <AccessibilityMenu />
+            <CookieBanner />
           </ToastProvider>
         </AuthProvider>
       </body>

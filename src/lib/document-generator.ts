@@ -1,5 +1,6 @@
 // Document Generator Service
 // Transforms onboarding answers into document variables and generates documents
+// V2: Supports new smart onboarding (business questions → privacy inference)
 
 import { OnboardingAnswer } from '@/types'
 import { 
@@ -46,15 +47,285 @@ function arrayToHebrewList(items: string[], labels: Record<string, string>): str
     .join(', ')
 }
 
+// =============================================
+// V2: SMART INFERENCE FROM BUSINESS DATA
+// =============================================
+
+/**
+ * Infer data types from industry, customer type, and explicit flags
+ */
+function inferDataTypes(answers: OnboardingAnswer[]): string[] {
+  const industry = getAnswerValue<string>(answers, 'industry', 'other')
+  const customerType = getAnswerValue<string[]>(answers, 'customer_type', [])
+  const hasHealthData = getAnswerValue<boolean | null>(answers, 'has_health_data', null)
+  const collectsPayments = getAnswerValue<boolean | null>(answers, 'collects_payments', null)
+  const worksWithMinors = getAnswerValue<boolean | null>(answers, 'works_with_minors', null)
+  const software = getAnswerValue<string[]>(answers, 'software', [])
+
+  const dataTypes = new Set<string>(['contact']) // Everyone collects contact info
+
+  // Industry-based inference
+  const industryDataMap: Record<string, string[]> = {
+    healthcare: ['health', 'id', 'contact'],
+    finance: ['financial', 'id', 'contact'],
+    retail: ['contact', 'financial', 'behavioral'],
+    technology: ['contact', 'behavioral'],
+    education: ['contact', 'id'],
+    services: ['contact'],
+    manufacturing: ['contact', 'employment'],
+    food: ['contact'],
+    realestate: ['contact', 'financial', 'id'],
+  }
+  
+  if (industryDataMap[industry]) {
+    industryDataMap[industry].forEach(t => dataTypes.add(t))
+  }
+
+  // B2C typically involves more personal data
+  if (customerType.includes('b2c')) {
+    dataTypes.add('contact')
+    dataTypes.add('behavioral')
+  }
+
+  // Explicit flags override inference
+  if (hasHealthData === true) dataTypes.add('health')
+  if (collectsPayments === true) dataTypes.add('financial')
+  if (worksWithMinors === true) dataTypes.add('id') // Minors require extra ID handling
+
+  // Software-based inference
+  if (software.includes('shopify') || software.includes('woocommerce') || software.includes('wix')) {
+    dataTypes.add('behavioral') // E-commerce = tracking
+    dataTypes.add('financial')
+  }
+  if (software.includes('payroll')) {
+    dataTypes.add('employment')
+    dataTypes.add('id')
+    dataTypes.add('financial')
+  }
+
+  return Array.from(dataTypes)
+}
+
+/**
+ * Infer data sources from software and business model
+ */
+function inferDataSources(answers: OnboardingAnswer[]): string[] {
+  const software = getAnswerValue<string[]>(answers, 'software', [])
+  const customerType = getAnswerValue<string[]>(answers, 'customer_type', [])
+  const websiteUrl = getAnswerValue<string>(answers, 'website_url', '')
+  const hasApp = getAnswerValue<boolean | null>(answers, 'has_app', null)
+  const employeeCount = getAnswerValue<string>(answers, 'employee_count', '1-10')
+
+  const sources = new Set<string>(['direct']) // Everyone gets data directly
+
+  if (websiteUrl || hasApp) sources.add('website')
+  if (hasApp) sources.add('website')
+  if (customerType.includes('b2b')) sources.add('third_party')
+  
+  // Any business with employees collects employee data
+  if (employeeCount !== '1-10') sources.add('employees')
+  // Even small businesses with payroll software
+  if (software.includes('payroll')) sources.add('employees')
+
+  return Array.from(sources)
+}
+
+/**
+ * Infer processing purposes from industry and software
+ */
+function inferProcessingPurposes(answers: OnboardingAnswer[]): string[] {
+  const industry = getAnswerValue<string>(answers, 'industry', 'other')
+  const software = getAnswerValue<string[]>(answers, 'software', [])
+  const customerType = getAnswerValue<string[]>(answers, 'customer_type', [])
+  const employeeCount = getAnswerValue<string>(answers, 'employee_count', '1-10')
+
+  const purposes = new Set<string>(['service', 'legal']) // Everyone
+
+  if (software.includes('hubspot') || software.includes('salesforce') || software.includes('crm_other')) {
+    purposes.add('marketing')
+  }
+  if (customerType.includes('b2c')) {
+    purposes.add('marketing')
+  }
+  if (software.some(s => ['google_workspace', 'microsoft_365', 'monday'].includes(s))) {
+    purposes.add('analytics')
+  }
+  if (employeeCount !== '1-10' || software.includes('payroll')) {
+    purposes.add('hr')
+  }
+  purposes.add('security') // Everyone should have this
+
+  return Array.from(purposes)
+}
+
+/**
+ * Infer security measures from software stack
+ */
+function inferSecurityMeasures(answers: OnboardingAnswer[]): string[] {
+  const software = getAnswerValue<string[]>(answers, 'software', [])
+  const measures = new Set<string>()
+
+  // Cloud software providers generally include basic security
+  if (software.includes('google_workspace') || software.includes('microsoft_365')) {
+    measures.add('encryption')
+    measures.add('access_control')
+    measures.add('backup')
+  }
+
+  // Any cloud-based software implies some measures
+  if (software.length > 0) {
+    measures.add('access_control')
+  }
+
+  // E-commerce platforms include basic security
+  if (software.includes('shopify') || software.includes('woocommerce')) {
+    measures.add('encryption')
+    measures.add('firewall')
+  }
+
+  return Array.from(measures)
+}
+
+/**
+ * Determine if international transfer is happening based on software
+ */
+function inferInternationalTransfer(answers: OnboardingAnswer[]): boolean {
+  const software = getAnswerValue<string[]>(answers, 'software', [])
+  
+  // These are all US/international services
+  const internationalSoftware = [
+    'salesforce', 'hubspot', 'google_workspace', 'microsoft_365',
+    'shopify', 'monday', 'woocommerce', 'wix'
+  ]
+  
+  return software.some(s => internationalSoftware.includes(s))
+}
+
+/**
+ * Determine cloud storage type from software
+ */
+function inferCloudStorage(answers: OnboardingAnswer[]): string {
+  const software = getAnswerValue<string[]>(answers, 'software', [])
+  
+  const intlCloud = ['google_workspace', 'microsoft_365', 'salesforce', 'hubspot', 'shopify', 'monday', 'woocommerce', 'wix']
+  const hasInternational = software.some(s => intlCloud.includes(s))
+  
+  // Israeli software
+  const israeliSoftware = ['priority', 'accounting'] // Priority is usually local
+  const hasIsraeli = software.some(s => israeliSoftware.includes(s))
+  
+  if (hasInternational && hasIsraeli) return 'both'
+  if (hasInternational) return 'international'
+  if (hasIsraeli) return 'israeli'
+  if (software.length > 0) return 'international' // Default assumption for unknown cloud
+  return 'none'
+}
+
+/**
+ * Detect onboarding version from answers
+ * V1: has 'data_types', 'data_sources', 'security_measures' etc.
+ * V2: has 'software', 'customer_type', 'has_health_data' etc.
+ */
+function isV2Onboarding(answers: OnboardingAnswer[]): boolean {
+  return answers.some(a => 
+    a.questionId === 'software' || 
+    a.questionId === 'customer_type' || 
+    a.questionId === 'has_health_data' ||
+    a.questionId === 'website_url'
+  )
+}
+
+// =============================================
+// MAIN EXPORT: answersToDocumentVariables
+// =============================================
+
 /**
  * Transform onboarding answers into document variables
+ * Supports both V1 (old) and V2 (new) onboarding formats
  */
 export function answersToDocumentVariables(
   answers: OnboardingAnswer[],
   orgName: string,
   businessId: string
 ): DocumentVariables {
-  // Extract values from answers
+  const dpo = dpoConfig
+  
+  // Detect which onboarding version
+  if (isV2Onboarding(answers)) {
+    return answersToDocumentVariablesV2(answers, orgName, businessId, dpo)
+  }
+  
+  // V1: Original direct-mapping (backward compatible)
+  return answersToDocumentVariablesV1(answers, orgName, businessId, dpo)
+}
+
+/**
+ * V2: Smart inference from business questions
+ */
+function answersToDocumentVariablesV2(
+  answers: OnboardingAnswer[],
+  orgName: string,
+  businessId: string,
+  dpo: typeof dpoConfig
+): DocumentVariables {
+  const businessType = getAnswerValue<string>(answers, 'industry', 'other')
+  const employeeCount = getAnswerValue<string>(answers, 'employee_count', '1-10')
+
+  // Smart inference from business data
+  const dataTypes = inferDataTypes(answers)
+  const dataSources = inferDataSources(answers)
+  const processingPurposes = inferProcessingPurposes(answers)
+  const securityMeasures = inferSecurityMeasures(answers)
+  const internationalTransfer = inferInternationalTransfer(answers)
+  const cloudStorage = inferCloudStorage(answers)
+
+  // Sensitive data detection
+  const sensitiveDataTypes = dataTypes.filter(type => SENSITIVE_DATA_TYPES.includes(type))
+  const hasSensitiveData = sensitiveDataTypes.length > 0
+
+  return {
+    orgName,
+    businessId,
+    businessType,
+    businessTypeLabel: businessTypeLabels[businessType] || businessType,
+    employeeCount,
+
+    dataTypes,
+    dataTypesText: arrayToHebrewList(dataTypes, dataTypeLabels),
+    dataSources,
+    dataSourcesText: arrayToHebrewList(dataSources, dataSourceLabels),
+    processingPurposes,
+    processingPurposesText: arrayToHebrewList(processingPurposes, processingPurposeLabels),
+
+    thirdPartySharing: internationalTransfer, // Using intl software = sharing with 3rd parties
+    internationalTransfer,
+    cloudStorage,
+
+    securityMeasures,
+    securityMeasuresText: arrayToHebrewList(securityMeasures, securityMeasureLabels),
+
+    hasSensitiveData,
+    sensitiveDataTypes: sensitiveDataTypes.map(type => dataTypeLabels[type] || type),
+
+    dpoName: dpo.name,
+    dpoEmail: dpo.email,
+    dpoPhone: dpo.phone || '',
+    dpoLicense: dpo.licenseNumber,
+
+    effectiveDate: formatHebrewDate(new Date()),
+    generatedDate: formatHebrewDate(new Date())
+  }
+}
+
+/**
+ * V1: Original direct-mapping (backward compatible for existing customers)
+ */
+function answersToDocumentVariablesV1(
+  answers: OnboardingAnswer[],
+  orgName: string,
+  businessId: string,
+  dpo: typeof dpoConfig
+): DocumentVariables {
   const businessType = getAnswerValue<string>(answers, 'business_type', 'other')
   const employeeCount = getAnswerValue<string>(answers, 'employee_count', '1-10')
   const dataTypes = getAnswerValue<string[]>(answers, 'data_types', ['contact'])
@@ -65,56 +336,40 @@ export function answersToDocumentVariables(
   const cloudStorage = getAnswerValue<string>(answers, 'cloud_storage', 'none')
   const securityMeasures = getAnswerValue<string[]>(answers, 'security_measures', [])
 
-  // Determine sensitive data
   const sensitiveDataTypes = dataTypes.filter(type => SENSITIVE_DATA_TYPES.includes(type))
   const hasSensitiveData = sensitiveDataTypes.length > 0
 
-  // Get DPO info from config
-  const dpo = dpoConfig
-
-  // Build variables object
-  const vars: DocumentVariables = {
-    // Organization info
+  return {
     orgName,
     businessId,
     businessType,
     businessTypeLabel: businessTypeLabels[businessType] || businessType,
     employeeCount,
-
-    // Data info
     dataTypes,
     dataTypesText: arrayToHebrewList(dataTypes, dataTypeLabels),
     dataSources,
     dataSourcesText: arrayToHebrewList(dataSources, dataSourceLabels),
     processingPurposes,
     processingPurposesText: arrayToHebrewList(processingPurposes, processingPurposeLabels),
-
-    // Sharing info
     thirdPartySharing,
     internationalTransfer: internationalTransfer || cloudStorage === 'international' || cloudStorage === 'both',
     cloudStorage,
-
-    // Security info
     securityMeasures: securityMeasures.filter(m => m !== 'none'),
     securityMeasuresText: arrayToHebrewList(securityMeasures.filter(m => m !== 'none'), securityMeasureLabels),
-
-    // Sensitive data
     hasSensitiveData,
     sensitiveDataTypes: sensitiveDataTypes.map(type => dataTypeLabels[type] || type),
-
-    // DPO info
     dpoName: dpo.name,
     dpoEmail: dpo.email,
     dpoPhone: dpo.phone || '',
     dpoLicense: dpo.licenseNumber,
-
-    // Dates
     effectiveDate: formatHebrewDate(new Date()),
     generatedDate: formatHebrewDate(new Date())
   }
-
-  return vars
 }
+
+// =============================================
+// DOCUMENT GENERATION (unchanged)
+// =============================================
 
 /**
  * Generate a single document
@@ -149,10 +404,8 @@ export function generateAllDocuments(
   businessId: string,
   variablesOverride?: Partial<DocumentVariables>
 ): Array<{ title: string; content: string; type: DocumentType }> {
-  // Generate base variables from answers
   const baseVariables = answersToDocumentVariables(answers, orgName, businessId)
   
-  // Merge with any overrides (e.g., DPO info from database)
   const variables: DocumentVariables = {
     ...baseVariables,
     ...variablesOverride
@@ -170,6 +423,7 @@ export function generateAllDocuments(
 
 /**
  * Calculate compliance score based on onboarding answers
+ * V2: Infers score from business data
  */
 export function calculateComplianceScore(answers: OnboardingAnswer[]): {
   score: number
@@ -179,64 +433,60 @@ export function calculateComplianceScore(answers: OnboardingAnswer[]): {
   let score = 0
   const gaps: string[] = []
 
-  // Check existing policy (10 points)
-  const existingPolicy = getAnswerValue<boolean>(answers, 'existing_policy', false)
-  if (existingPolicy) {
-    score += 10
-  } else {
-    gaps.push('חסרה מדיניות פרטיות כתובה')
-  }
+  if (isV2Onboarding(answers)) {
+    // V2: Start with a base score — we generate all docs automatically
+    score += 25 // DPO appointed
+    score += 10 // Privacy policy (generated)
+    score += 10 // Security procedures (generated)
+    score += 10 // Database definition (generated)
 
-  // Check database registration (15 points)
-  const databaseRegistered = getAnswerValue<string>(answers, 'database_registered', 'unknown')
-  if (databaseRegistered === 'yes') {
-    score += 15
-  } else if (databaseRegistered === 'partial') {
-    score += 7
-    gaps.push('יש לרשום את כל מאגרי המידע')
-  } else {
+    // Software-based security inference
+    const securityMeasures = inferSecurityMeasures(answers)
+    if (securityMeasures.includes('encryption')) score += 8
+    else gaps.push('מומלץ ליישם הצפנת מידע')
+    if (securityMeasures.includes('access_control')) score += 8
+    else gaps.push('יש להגדיר בקרת גישה והרשאות')
+    if (securityMeasures.includes('backup')) score += 8
+    else gaps.push('יש ליישם גיבויים סדירים')
+
+    // Database registration (assume not done yet)
     gaps.push('יש לרשום מאגרי מידע ברשות להגנת הפרטיות')
-  }
 
-  // Check security measures (up to 40 points)
-  const securityMeasures = getAnswerValue<string[]>(answers, 'security_measures', [])
-  
-  if (securityMeasures.includes('encryption')) score += 8
-  else gaps.push('מומלץ ליישם הצפנת מידע')
-  
-  if (securityMeasures.includes('access_control')) score += 8
-  else gaps.push('יש להגדיר בקרת גישה והרשאות')
-  
-  if (securityMeasures.includes('backup')) score += 8
-  else gaps.push('יש ליישם גיבויים סדירים')
-  
-  if (securityMeasures.includes('firewall')) score += 6
-  
-  if (securityMeasures.includes('antivirus')) score += 5
-  
-  if (securityMeasures.includes('training')) score += 5
-  else gaps.push('מומלץ לקיים הדרכות אבטחת מידע לעובדים')
+    // Employee training (assume not done)
+    gaps.push('מומלץ לקיים הדרכות אבטחת מידע לעובדים')
 
-  // Check for no incidents (10 points)
-  const previousIncidents = getAnswerValue<boolean>(answers, 'previous_incidents', false)
-  if (!previousIncidents) {
-    score += 10
+    // Processes
+    gaps.push('הגדרת תהליך לטיפול בבקשות נושאי מידע')
   } else {
-    gaps.push('יש לבחון את הלקחים מאירועי אבטחה קודמים')
+    // V1: Original scoring
+    const existingPolicy = getAnswerValue<boolean>(answers, 'existing_policy', false)
+    if (existingPolicy) score += 10
+    else gaps.push('חסרה מדיניות פרטיות כתובה')
+
+    const databaseRegistered = getAnswerValue<string>(answers, 'database_registered', 'unknown')
+    if (databaseRegistered === 'yes') score += 15
+    else if (databaseRegistered === 'partial') { score += 7; gaps.push('יש לרשום את כל מאגרי המידע') }
+    else gaps.push('יש לרשום מאגרי מידע ברשות להגנת הפרטיות')
+
+    const securityMeasures = getAnswerValue<string[]>(answers, 'security_measures', [])
+    if (securityMeasures.includes('encryption')) score += 8; else gaps.push('מומלץ ליישם הצפנת מידע')
+    if (securityMeasures.includes('access_control')) score += 8; else gaps.push('יש להגדיר בקרת גישה והרשאות')
+    if (securityMeasures.includes('backup')) score += 8; else gaps.push('יש ליישם גיבויים סדירים')
+    if (securityMeasures.includes('firewall')) score += 6
+    if (securityMeasures.includes('antivirus')) score += 5
+    if (securityMeasures.includes('training')) score += 5; else gaps.push('מומלץ לקיים הדרכות אבטחת מידע לעובדים')
+
+    const previousIncidents = getAnswerValue<boolean>(answers, 'previous_incidents', false)
+    if (!previousIncidents) score += 10
+    else gaps.push('יש לבחון את הלקחים מאירועי אבטחה קודמים')
+
+    score += 25 // DPO auto-granted
   }
 
-  // DPO appointment (25 points - auto-granted since we provide it)
-  score += 25
-
-  // Determine level
   let level: 'low' | 'medium' | 'high'
-  if (score >= 80) {
-    level = 'high'
-  } else if (score >= 50) {
-    level = 'medium'
-  } else {
-    level = 'low'
-  }
+  if (score >= 80) level = 'high'
+  else if (score >= 50) level = 'medium'
+  else level = 'low'
 
   return { score, level, gaps }
 }
@@ -250,29 +500,35 @@ export function isDpoRequired(answers: OnboardingAnswer[]): {
 } {
   const reasons: string[] = []
 
-  // Check if public body
-  const businessType = getAnswerValue<string>(answers, 'business_type', '')
-  // Note: We'd need a specific question for public body
+  if (isV2Onboarding(answers)) {
+    const industry = getAnswerValue<string>(answers, 'industry', '')
+    const hasHealthData = getAnswerValue<boolean | null>(answers, 'has_health_data', null)
+    const collectsPayments = getAnswerValue<boolean | null>(answers, 'collects_payments', null)
+    const worksWithMinors = getAnswerValue<boolean | null>(answers, 'works_with_minors', null)
 
-  // Check for data trading with >10k records
-  // Note: Would need specific questions for this
-
-  // Check for systematic monitoring
-  const dataTypes = getAnswerValue<string[]>(answers, 'data_types', [])
-  if (dataTypes.includes('location') || dataTypes.includes('behavioral')) {
-    reasons.push('הארגון מבצע ניטור שיטתי (נתוני מיקום/התנהגות)')
+    if (industry === 'healthcare' || hasHealthData === true) {
+      reasons.push('הארגון מעבד מידע רפואי/בריאותי')
+    }
+    if (industry === 'finance') {
+      reasons.push('הארגון פועל בתחום הפיננסי')
+    }
+    if (worksWithMinors === true) {
+      reasons.push('הארגון מעבד מידע של קטינים')
+    }
+    if (collectsPayments === true) {
+      reasons.push('הארגון אוסף מידע פיננסי')
+    }
+  } else {
+    const dataTypes = getAnswerValue<string[]>(answers, 'data_types', [])
+    if (dataTypes.includes('location') || dataTypes.includes('behavioral')) {
+      reasons.push('הארגון מבצע ניטור שיטתי (נתוני מיקום/התנהגות)')
+    }
+    if (dataTypes.some(type => SENSITIVE_DATA_TYPES.includes(type))) {
+      reasons.push('הארגון מעבד מידע רגיש (בריאות, פיננסי, ביומטרי)')
+    }
   }
 
-  // Check for sensitive data processing
-  const hasSensitiveData = dataTypes.some(type => SENSITIVE_DATA_TYPES.includes(type))
-  if (hasSensitiveData) {
-    reasons.push('הארגון מעבד מידע רגיש (בריאות, פיננסי, ביומטרי)')
-  }
-
-  // For now, we recommend DPO for everyone since it's our service
-  const required = reasons.length > 0
-
-  return { required, reasons }
+  return { required: reasons.length > 0, reasons }
 }
 
 /**
@@ -286,109 +542,21 @@ export function generateComplianceChecklist(answers: OnboardingAnswer[]): Array<
   completed: boolean
   priority: 'high' | 'medium' | 'low'
 }> {
-  const securityMeasures = getAnswerValue<string[]>(answers, 'security_measures', [])
-  const existingPolicy = getAnswerValue<boolean>(answers, 'existing_policy', false)
-  const databaseRegistered = getAnswerValue<string>(answers, 'database_registered', 'unknown')
+  const securityMeasures = isV2Onboarding(answers) 
+    ? inferSecurityMeasures(answers) 
+    : getAnswerValue<string[]>(answers, 'security_measures', [])
 
-  const checklist = [
-    // Documentation
-    {
-      id: 'privacy_policy',
-      title: 'מדיניות פרטיות',
-      description: 'פרסום מדיניות פרטיות באתר ובמערכות',
-      category: 'documentation',
-      completed: true, // We generate this
-      priority: 'high' as const
-    },
-    {
-      id: 'database_definition',
-      title: 'מסמך הגדרות מאגר',
-      description: 'תיעוד מאגרי המידע בארגון',
-      category: 'documentation',
-      completed: true, // We generate this
-      priority: 'high' as const
-    },
-    {
-      id: 'security_procedures',
-      title: 'נהלי אבטחת מידע',
-      description: 'נהלים כתובים לאבטחת מידע',
-      category: 'documentation',
-      completed: true, // We generate this
-      priority: 'high' as const
-    },
-    {
-      id: 'dpo_appointment',
-      title: 'מינוי ממונה הגנת פרטיות',
-      description: 'כתב מינוי רשמי לממונה',
-      category: 'documentation',
-      completed: true, // We generate this
-      priority: 'high' as const
-    },
-
-    // Registration
-    {
-      id: 'database_registration',
-      title: 'רישום מאגרי מידע',
-      description: 'רישום מאגרים ברשות להגנת הפרטיות',
-      category: 'registration',
-      completed: databaseRegistered === 'yes',
-      priority: 'high' as const
-    },
-
-    // Security
-    {
-      id: 'access_control',
-      title: 'בקרת גישה',
-      description: 'הגדרת הרשאות גישה למערכות',
-      category: 'security',
-      completed: securityMeasures.includes('access_control'),
-      priority: 'high' as const
-    },
-    {
-      id: 'encryption',
-      title: 'הצפנת מידע',
-      description: 'הצפנת מידע רגיש',
-      category: 'security',
-      completed: securityMeasures.includes('encryption'),
-      priority: 'medium' as const
-    },
-    {
-      id: 'backup',
-      title: 'גיבויים',
-      description: 'גיבויים סדירים של המידע',
-      category: 'security',
-      completed: securityMeasures.includes('backup'),
-      priority: 'high' as const
-    },
-
-    // Training
-    {
-      id: 'employee_training',
-      title: 'הדרכת עובדים',
-      description: 'הדרכת עובדים בנושאי פרטיות ואבטחה',
-      category: 'training',
-      completed: securityMeasures.includes('training'),
-      priority: 'medium' as const
-    },
-
-    // Processes
-    {
-      id: 'data_subject_process',
-      title: 'תהליך טיפול בפניות',
-      description: 'הגדרת תהליך לטיפול בבקשות נושאי מידע',
-      category: 'processes',
-      completed: false, // User needs to set up
-      priority: 'high' as const
-    },
-    {
-      id: 'incident_response',
-      title: 'נוהל תגובה לאירועים',
-      description: 'נוהל לטיפול באירועי אבטחה',
-      category: 'processes',
-      completed: false, // User needs to set up
-      priority: 'medium' as const
-    }
+  return [
+    { id: 'privacy_policy', title: 'מדיניות פרטיות', description: 'פרסום מדיניות פרטיות באתר ובמערכות', category: 'documentation', completed: true, priority: 'high' },
+    { id: 'database_definition', title: 'מסמך הגדרות מאגר', description: 'תיעוד מאגרי המידע בארגון', category: 'documentation', completed: true, priority: 'high' },
+    { id: 'security_procedures', title: 'נהלי אבטחת מידע', description: 'נהלים כתובים לאבטחת מידע', category: 'documentation', completed: true, priority: 'high' },
+    { id: 'dpo_appointment', title: 'מינוי ממונה הגנת פרטיות', description: 'כתב מינוי רשמי לממונה', category: 'documentation', completed: true, priority: 'high' },
+    { id: 'database_registration', title: 'רישום מאגרי מידע', description: 'רישום מאגרים ברשות להגנת הפרטיות', category: 'registration', completed: false, priority: 'high' },
+    { id: 'access_control', title: 'בקרת גישה', description: 'הגדרת הרשאות גישה למערכות', category: 'security', completed: securityMeasures.includes('access_control'), priority: 'high' },
+    { id: 'encryption', title: 'הצפנת מידע', description: 'הצפנת מידע רגיש', category: 'security', completed: securityMeasures.includes('encryption'), priority: 'medium' },
+    { id: 'backup', title: 'גיבויים', description: 'גיבויים סדירים של המידע', category: 'security', completed: securityMeasures.includes('backup'), priority: 'high' },
+    { id: 'employee_training', title: 'הדרכת עובדים', description: 'הדרכת עובדים בנושאי פרטיות ואבטחה', category: 'training', completed: false, priority: 'medium' },
+    { id: 'data_subject_process', title: 'תהליך טיפול בפניות', description: 'הגדרת תהליך לטיפול בבקשות נושאי מידע', category: 'processes', completed: false, priority: 'high' },
+    { id: 'incident_response', title: 'נוהל תגובה לאירועים', description: 'נוהל לטיפול באירועי אבטחה', category: 'processes', completed: false, priority: 'medium' },
   ]
-
-  return checklist
 }

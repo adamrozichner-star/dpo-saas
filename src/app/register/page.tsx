@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Shield, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { PasswordStrength, validatePassword } from '@/components/PasswordStrength'
 
 // Google Icon Component
 const GoogleIcon = () => (
@@ -55,9 +56,10 @@ export default function RegisterPage() {
       return
     }
 
-    // Validate password length
-    if (password.length < 6) {
-      setError('הסיסמה חייבת להכיל לפחות 6 תווים')
+    // Validate password strength
+    const { valid } = validatePassword(password)
+    if (!valid) {
+      setError('הסיסמה לא עומדת בדרישות החוזק')
       setIsLoading(false)
       return
     }
@@ -72,9 +74,9 @@ export default function RegisterPage() {
         }
       } else {
         setSuccess(true)
-        // Redirect to quick assessment (payment-first flow)
+        // Redirect to onboarding questionnaire
         setTimeout(() => {
-          router.push('/get-started')
+        router.push('/onboarding')
         }, 2000)
       }
     } catch (err) {
@@ -180,12 +182,13 @@ export default function RegisterPage() {
               <label className="block text-sm font-medium mb-1">סיסמה</label>
               <Input
                 type="password"
-                placeholder="לפחות 6 תווים"
+                placeholder="לפחות 8 תווים, אות גדולה, ספרה ותו מיוחד"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 dir="ltr"
               />
+              <PasswordStrength password={password} />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">אימות סיסמה</label>
@@ -234,3 +237,4 @@ export default function RegisterPage() {
     </div>
   )
 }
+  

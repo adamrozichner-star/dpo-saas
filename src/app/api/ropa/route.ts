@@ -347,13 +347,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
 
-      // Log creation
-      await supabase.from('ropa_audit_log').insert({
+      // Log creation (fire-and-forget — never block the save)
+      Promise.resolve(supabase.from('ropa_audit_log').insert({
         org_id: orgId,
         processing_activity_id: activity.id,
         action: 'created',
-        performed_by_type: 'user'
-      })
+        performed_by: auth?.userId || 'dpo',
+        performed_by_type: isDpo ? 'dpo' : 'user'
+      })).catch(() => {})
 
       return NextResponse.json({ success: true, activity })
     }
@@ -383,12 +384,13 @@ export async function POST(request: NextRequest) {
       }
 
       // Log update
-      await supabase.from('ropa_audit_log').insert({
+      Promise.resolve(supabase.from('ropa_audit_log').insert({
         org_id: activity.org_id,
         processing_activity_id: activityId,
         action: 'updated',
-        performed_by_type: 'user'
-      })
+        performed_by: auth?.userId || 'dpo',
+        performed_by_type: isDpo ? 'dpo' : 'user'
+      })).catch(() => {})
 
       return NextResponse.json({ success: true, activity })
     }
@@ -458,13 +460,13 @@ export async function POST(request: NextRequest) {
         .eq('id', activityId)
         .single()
 
-      await supabase.from('ropa_audit_log').insert({
+      Promise.resolve(supabase.from('ropa_audit_log').insert({
         org_id: activity?.org_id,
         processing_activity_id: activityId,
         action: 'reviewed',
         new_value: reviewNotes,
         performed_by_type: 'dpo'
-      })
+      })).catch(() => {})
 
       return NextResponse.json({ success: true })
     }
@@ -536,12 +538,13 @@ export async function POST(request: NextRequest) {
 
       // Log deletion
       if (activity) {
-        await supabase.from('ropa_audit_log').insert({
+        Promise.resolve(supabase.from('ropa_audit_log').insert({
           org_id: activity.org_id,
           action: 'deleted',
           old_value: activity.name,
-          performed_by_type: 'user'
-        })
+          performed_by: auth?.userId || 'dpo',
+          performed_by_type: isDpo ? 'dpo' : 'user'
+        })).catch(() => {})
       }
 
       return NextResponse.json({ success: true })
@@ -571,11 +574,11 @@ export async function POST(request: NextRequest) {
         .single()
 
       // Log export
-      await supabase.from('ropa_audit_log').insert({
+      Promise.resolve(supabase.from('ropa_audit_log').insert({
         org_id: orgId,
         action: 'exported',
         performed_by_type: 'user'
-      })
+      })).catch(() => {})
 
       return NextResponse.json({
         export_date: new Date().toISOString(),

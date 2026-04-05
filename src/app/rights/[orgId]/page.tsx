@@ -391,7 +391,7 @@ export default function DataSubjectRightsPage() {
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-500">
-          <p>טופס זה מופעל על ידי <strong>DPO-Pro</strong></p>
+          <p>טופס זה מופעל על ידי <strong>MyDPO</strong></p>
           <p>הממונה על הגנת הפרטיות של {organization?.name}</p>
         </div>
       </div>

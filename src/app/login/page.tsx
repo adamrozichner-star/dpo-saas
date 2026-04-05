@@ -33,22 +33,41 @@ const GoogleIcon = () => (
 
 export default function LoginPage() {
   const router = useRouter()
-  const { signIn, signInWithGoogle } = useAuth()
+  const { signIn, signInWithGoogle, supabase } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // MFA state
+  const [mfaStep, setMfaStep] = useState(false)
+  const [mfaCode, setMfaCode] = useState('')
+  const [mfaLoading, setMfaLoading] = useState(false)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError('')
 
+    // Client-side validation
+    if (!email.includes('@') || !email.includes('.')) {
+      setError('כתובת אימייל לא תקינה')
+      setIsLoading(false)
+      return
+    }
+    if (password.length < 6) {
+      setError('הסיסמה חייבת להכיל לפחות 6 תווים')
+      setIsLoading(false)
+      return
+    }
+
     try {
-      const { error } = await signIn(email, password)
+      const { error, mfaRequired } = await signIn(email, password)
       if (error) {
         setError('פרטי ההתחברות שגויים')
+      } else if (mfaRequired) {
+        setMfaStep(true)
       } else {
         router.push('/chat')
       }
@@ -56,6 +75,45 @@ export default function LoginPage() {
       setError('אירעה שגיאה, נסו שוב')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleMfaVerify = async () => {
+    if (!supabase || mfaCode.length !== 6) return
+    setMfaLoading(true)
+    setError('')
+
+    try {
+      const { data: factors } = await supabase.auth.mfa.listFactors()
+      const totp = factors?.totp?.[0]
+      if (!totp) {
+        setError('לא נמצא גורם אימות')
+        setMfaLoading(false)
+        return
+      }
+
+      const { data: challenge, error: challengeErr } = await supabase.auth.mfa.challenge({ factorId: totp.id })
+      if (challengeErr || !challenge) {
+        setError('שגיאה ביצירת אתגר אימות')
+        setMfaLoading(false)
+        return
+      }
+
+      const { error: verifyErr } = await supabase.auth.mfa.verify({
+        factorId: totp.id,
+        challengeId: challenge.id,
+        code: mfaCode
+      })
+
+      if (verifyErr) {
+        setError('קוד שגוי, נסו שוב')
+      } else {
+        router.push('/chat')
+      }
+    } catch (err) {
+      setError('שגיאה באימות')
+    } finally {
+      setMfaLoading(false)
     }
   }
 
@@ -90,6 +148,49 @@ export default function LoginPage() {
           <CardDescription>היכנסו לחשבון שלכם לניהול הפרטיות</CardDescription>
         </CardHeader>
         <CardContent>
+          {mfaStep ? (
+            /* MFA Challenge */
+            <div className="space-y-4">
+              <div className="text-center">
+                <div className="w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center" style={{ backgroundColor: '#eef2ff' }}>
+                  <Shield className="h-7 w-7" style={{ color: '#4f46e5' }} />
+                </div>
+                <h3 className="font-bold text-lg mb-1">אימות דו-שלבי</h3>
+                <p className="text-sm text-gray-500">הזינו את הקוד מאפליקציית האימות</p>
+              </div>
+              <div>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="000000"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="text-center text-2xl tracking-widest font-mono"
+                  dir="ltr"
+                  autoFocus
+                  onKeyDown={(e) => { if (e.key === 'Enter' && mfaCode.length === 6) handleMfaVerify() }}
+                />
+              </div>
+              {error && <p className="text-sm text-destructive text-center">{error}</p>}
+              <Button
+                onClick={handleMfaVerify}
+                disabled={mfaCode.length !== 6 || mfaLoading}
+                className="w-full text-white"
+                style={{ backgroundColor: '#10b981' }}
+              >
+                {mfaLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'אימות'}
+              </Button>
+              <button
+                onClick={() => { setMfaStep(false); setMfaCode(''); setError('') }}
+                className="w-full text-sm text-gray-500 hover:text-gray-700"
+              >
+                חזרה להתחברות
+              </button>
+            </div>
+          ) : (
+            /* Normal Login */
+            <>
           {/* Google Sign In Button */}
           <Button
             type="button"
@@ -163,6 +264,8 @@ export default function LoginPage() {
               <Link href="/register" className="hover:underline font-medium" style={{color: '#1e40af'}}>הרשמה</Link>
             </p>
           </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
