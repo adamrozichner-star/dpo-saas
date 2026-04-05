@@ -1,5 +1,17 @@
 // compliance-engine.ts — Compliance checks and task generation
 
+export interface ComplianceGuideline {
+  id: string
+  title: string
+  description: string
+  icon: string
+  legalBasis: string
+  status: 'required' | 'resolved' | 'not_required' | 'info'
+  priority: 'critical' | 'high' | 'medium' | 'low'
+  actionIds: string[]
+  resolvedReason?: string
+}
+
 interface ComplianceTask {
   id: string
   type: 'complete_profile' | 'missing_doc' | 'review' | 'update'
