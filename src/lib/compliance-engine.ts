@@ -39,7 +39,7 @@ export interface ComplianceTask {
   priority: 'high' | 'medium' | 'low'
   field?: string
   icon?: string
-  status?: 'pending' | 'completed' | 'auto_resolved' | 'doc_pending_review' | 'doc_approved'
+  status?: 'pending' | 'completed' | 'auto_resolved' | 'doc_pending_review' | 'doc_approved' | 'needs_generation' | 'needs_enrichment' | 'needs_action'
   actionType?: 'generate_doc' | 'external_guide' | 'wizard' | 'manual'
   documentType?: string
   legalBasis?: string
