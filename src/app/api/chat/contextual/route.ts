@@ -16,7 +16,7 @@ const supabase = createClient(
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY || '' })
 
-const SYSTEM_PROMPT = `אתה עוזר קצר וממוקד של MyDPO - שירות ממונה הגנת פרטיות לעסקים בישראל.
+const SYSTEM_PROMPT = `אתה עוזר קצר וממוקד של Deepo - שירות ממונה הגנת פרטיות לעסקים בישראל.
 
 כללים:
 1. ענה בעברית, קצר וברור (2-4 משפטים)

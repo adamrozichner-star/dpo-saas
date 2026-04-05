@@ -76,7 +76,7 @@ function generatePDFContent(doc: any, orgName: string) {
       title: doc.title,
       author: orgName,
       subject: 'מסמך הגנת פרטיות',
-      creator: 'MyDPO'
+      creator: 'Deepo'
     }
   }
 }

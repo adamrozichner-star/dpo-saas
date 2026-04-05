@@ -9,7 +9,7 @@ export default function PrivacyPage() {
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Shield className="h-8 w-8 text-emerald-600" />
-            <span className="font-bold text-xl text-slate-800">MyDPO</span>
+            <span className="font-bold text-xl text-slate-800">Deepo</span>
           </Link>
           <Link href="/">
             <Button variant="ghost" className="gap-2">
@@ -25,8 +25,8 @@ export default function PrivacyPage() {
         <div className="prose prose-lg max-w-none space-y-8 text-right">
           <section>
             <h2 className="text-xl font-bold mb-4">1. מבוא</h2>
-            <p className="text-gray-700 leading-relaxed">MyDPO (להלן: &quot;החברה&quot;) מחויבת להגנה על פרטיות המשתמשים בשירותיה. מדיניות זו מסבירה כיצד אנו אוספים, משתמשים, מגנים ומאחסנים מידע אישי בהתאם לחוק הגנת הפרטיות, התשמ&quot;א-1981, ותיקוניו.</p>
-            <p className="text-gray-700 leading-relaxed mt-3">החברה מפעילה פלטפורמה מקוונת בכתובת mydpo.co.il לצורך מתן שירותי ממונה הגנת פרטיות חיצוני לעסקים.</p>
+            <p className="text-gray-700 leading-relaxed">Deepo (להלן: &quot;החברה&quot;) מחויבת להגנה על פרטיות המשתמשים בשירותיה. מדיניות זו מסבירה כיצד אנו אוספים, משתמשים, מגנים ומאחסנים מידע אישי בהתאם לחוק הגנת הפרטיות, התשמ&quot;א-1981, ותיקוניו.</p>
+            <p className="text-gray-700 leading-relaxed mt-3">החברה מפעילה פלטפורמה מקוונת בכתובת deepo.co.il לצורך מתן שירותי ממונה הגנת פרטיות חיצוני לעסקים.</p>
           </section>
           <section>
             <h2 className="text-xl font-bold mb-4">2. מידע שאנו אוספים</h2>
@@ -91,7 +91,7 @@ export default function PrivacyPage() {
               <li>זכות התנגדות: להתנגד לעיבוד מידע למטרות שיווקיות</li>
               <li>זכות ניוד: לקבל עותק של המידע שלכם בפורמט מובנה</li>
             </ul>
-            <p className="text-gray-700 leading-relaxed mt-3">לבקשות בנוגע לזכויותיכם, פנו אלינו בדוא&quot;ל: <a href="mailto:privacy@mydpo.co.il" className="text-emerald-600 hover:underline">privacy@mydpo.co.il</a></p>
+            <p className="text-gray-700 leading-relaxed mt-3">לבקשות בנוגע לזכויותיכם, פנו אלינו בדוא&quot;ל: <a href="mailto:privacy@deepo.co.il" className="text-emerald-600 hover:underline">privacy@deepo.co.il</a></p>
           </section>
           <section>
             <h2 className="text-xl font-bold mb-4">8. עוגיות (Cookies)</h2>
@@ -104,13 +104,13 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-bold mb-4">10. יצירת קשר</h2>
             <p className="text-gray-700 leading-relaxed">לשאלות בנוגע למדיניות הפרטיות:</p>
-            <p className="text-gray-700 mt-2">דוא&quot;ל: <a href="mailto:privacy@mydpo.co.il" className="text-emerald-600 hover:underline">privacy@mydpo.co.il</a></p>
+            <p className="text-gray-700 mt-2">דוא&quot;ל: <a href="mailto:privacy@deepo.co.il" className="text-emerald-600 hover:underline">privacy@deepo.co.il</a></p>
             <p className="text-gray-700">טלפון: 03-555-1234</p>
-            <p className="text-gray-700">אתר: mydpo.co.il</p>
+            <p className="text-gray-700">אתר: deepo.co.il</p>
           </section>
         </div>
         <div className="mt-12 pt-8 border-t text-center text-gray-500">
-          <p>© 2026 MyDPO. כל הזכויות שמורות.</p>
+          <p>© 2026 Deepo. כל הזכויות שמורות.</p>
         </div>
       </main>
     </div>

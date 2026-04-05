@@ -15,18 +15,18 @@ const SEQUENCE = [
 // =============================================
 // Email templates (inline — no internal API call needed)
 // =============================================
-const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mydpo.co.il'
+const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://deepo.co.il'
 const YEAR = new Date().getFullYear()
 
 const header = (subtitle?: string, bg = 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%)') => `
 <div style="background: ${bg}; padding: 28px 30px; border-radius: 12px 12px 0 0; text-align: center;">
-  <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 700;">🛡️ MyDPO</h1>
+  <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 700;">🛡️ Deepo</h1>
   ${subtitle ? `<p style="color: rgba(255,255,255,0.85); margin: 8px 0 0 0; font-size: 14px;">${subtitle}</p>` : ''}
 </div>`
 
 const footer = () => `
 <div style="background: #1e293b; color: #94a3b8; padding: 20px; border-radius: 0 0 12px 12px; text-align: center; font-size: 12px;">
-  <p style="margin: 0;">MyDPO © ${YEAR} | <a href="${BASE_URL}" style="color: #94a3b8;">mydpo.co.il</a></p>
+  <p style="margin: 0;">Deepo © ${YEAR} | <a href="${BASE_URL}" style="color: #94a3b8;">deepo.co.il</a></p>
   <p style="margin: 6px 0 0 0; font-size: 11px;">שירותי ממונה הגנת פרטיות לעסקים</p>
 </div>`
 
@@ -93,7 +93,7 @@ function buildEmail(template: string, data: any): { subject: string; html: strin
               </div>`).join('')}
             </div>
             <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 20px 0;">
-              <p style="margin: 0; color: #065f46; font-weight: bold;">✅ עם MyDPO — הכל מסודר תוך דקות.</p>
+              <p style="margin: 0; color: #065f46; font-weight: bold;">✅ עם Deepo — הכל מסודר תוך דקות.</p>
               <p style="margin: 6px 0 0 0; color: #064e3b; font-size: 14px;">ממונה מוסמכת + מסמכים + ניטור שוטף — ₪500/חודש.</p>
             </div>
             ${btn('הפעלה עכשיו ←', BASE_URL + '/subscribe')}
@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'RESEND_API_KEY not set' }, { status: 500 })
   }
   const resend = new Resend(resendKey)
-  const fromEmail = process.env.FROM_EMAIL || 'MyDPO <noreply@mydpo.co.il>'
+  const fromEmail = process.env.FROM_EMAIL || 'Deepo <noreply@deepo.co.il>'
 
   const now = new Date()
   const results: any[] = []

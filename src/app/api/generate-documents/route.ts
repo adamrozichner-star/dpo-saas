@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     // Get DPO details from database (fallback to config if not found)
     let dpoName = 'עו"ד דנה כהן'
     let dpoLicense = 'DPO-2025-001'
-    let dpoEmail = 'dpo@mydpo.co.il'
+    let dpoEmail = 'dpo@deepo.co.il'
     let dpoPhone = '03-555-1234'
     
     const { data: dpoData } = await supabase
@@ -290,7 +290,7 @@ ${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
 **חתימת הממונה:** ________________  תאריך: ________
 
 ---
-*מסמך זה נוצר על ידי מערכת MyDPO בהתאם לדרישות חוק הגנת הפרטיות, סעיף 7.*
+*מסמך זה נוצר על ידי מערכת Deepo בהתאם לדרישות חוק הגנת הפרטיות, סעיף 7.*
 `
         }
         console.log(`Generated camera officer appointment for: ${officerName}`)
@@ -376,7 +376,7 @@ ${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
 - קנס כספי בהתאם לתיקון 13
 
 ---
-*מסמך זה נוצר על ידי מערכת MyDPO. עודכן לאחרונה: ${date}*
+*מסמך זה נוצר על ידי מערכת Deepo. עודכן לאחרונה: ${date}*
 `
         }
         console.log('Generated CV retention policy')
@@ -448,7 +448,7 @@ ${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
 - מהו אירוע אבטחת מידע?
 - דוגמאות: מייל שנשלח בטעות, מחשב שנגנב, גישה לא מורשית
 - למי לדווח ותוך כמה זמן (מיידי → ${dpoName})
-- חובת דיווח תוך 72 שעות לרשות
+- חובת דיווח תוך 24 שעות לרשות
 
 ### 2.4 זכויות נושאי מידע (10 דקות)
 - מה לעשות אם לקוח מבקש "למחוק את המידע שלי"?
@@ -476,7 +476,7 @@ ${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
 - **הדרכת רענון** בעקבות אירוע אבטחה או שינוי מדיניות
 
 ---
-*מסמך זה נוצר על ידי מערכת MyDPO. עודכן לאחרונה: ${date}*
+*מסמך זה נוצר על ידי מערכת Deepo. עודכן לאחרונה: ${date}*
 `
         }
         console.log(`Generated employee training program`)
@@ -556,7 +556,7 @@ ${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
             title: targetDoc.title,
             content: targetDoc.content,
             version: 2,
-            status: singleDocType === 'dpo_appointment' ? 'pending_signature' : 'pending_review',
+            status: singleDocType === 'dpo_appointment' ? 'pending_approval' : 'pending_review',
             updated_at: new Date().toISOString(),
           })
           .eq('id', existing[0].id)
@@ -569,7 +569,7 @@ ${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
             title: targetDoc.title,
             content: targetDoc.content,
             version: 1,
-            status: singleDocType === 'dpo_appointment' ? 'pending_signature' : 'pending_review',
+            status: singleDocType === 'dpo_appointment' ? 'pending_approval' : 'pending_review',
             generated_by: 'system',
           })
       }
@@ -636,7 +636,7 @@ ${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
       title: doc.title,
       content: doc.content,
       version: 1,
-      status: doc.type === 'dpo_appointment' ? 'pending_signature' : 'pending_review',
+      status: doc.type === 'dpo_appointment' ? 'pending_approval' : 'pending_review',
       generated_by: 'system'
     }))
 

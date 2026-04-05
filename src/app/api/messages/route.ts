@@ -188,7 +188,7 @@ ${additionalMessage}` : ''}
           .insert({
             thread_id: thread.id,
             sender_type: 'system',
-            sender_name: 'מערכת MyDPO',
+            sender_name: 'מערכת Deepo',
             content: messageContent
           })
           .select()
@@ -410,7 +410,7 @@ ${additionalMessage}` : ''}
               .maybeSingle()
 
             if (orgUsers?.email) {
-              const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mydpo.co.il'
+              const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://deepo.co.il'
               await fetch(`${baseUrl}/api/email`, {
                 method: 'POST',
                 headers: {

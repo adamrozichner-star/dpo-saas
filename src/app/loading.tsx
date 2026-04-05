@@ -7,7 +7,7 @@ export default function Loading() {
         <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
           <Shield className="h-7 w-7 text-white" />
         </div>
-        <span className="font-bold text-2xl" style={{color: '#1e40af'}}>MyDPO</span>
+        <span className="font-bold text-2xl" style={{color: '#1e40af'}}>Deepo</span>
       </div>
       <Loader2 className="h-8 w-8 animate-spin" style={{color: '#1e40af'}} />
       <p className="mt-4 text-gray-600">טוען...</p>

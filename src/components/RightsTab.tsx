@@ -80,7 +80,7 @@ export default function RightsTab({ orgId, orgName, isPaid, supabase }: RightsTa
   const [responding, setResponding] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
 
-  const publicUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://mydpo.co.il'}/rights/${orgId}`
+  const publicUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://deepo.co.il'}/rights/${orgId}`
 
   // Load requests
   useEffect(() => {

@@ -9,8 +9,9 @@ export const dynamic = 'force-dynamic'
 
 const PLANS = {
   basic: { monthly: 500, name: 'חבילה בסיסית' },
-  extended: { monthly: 1200, name: 'חבילה מורחבת' },
-  enterprise: { monthly: 3500, name: 'חבילה ארגונית' },
+  recommended: { monthly: 999, name: 'חבילה מומלצת' },
+  premium: { monthly: 4500, name: 'חבילה פרימיום' },
+  enterprise: { monthly: 0, name: 'חבילה ארגונית' },
 }
 
 export async function GET(request: NextRequest) {
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
           token: org.payment_token,
           tokenExpiry: org.payment_token_expiry || '', // MMYY format
           amount,
-          productName: `MyDPO - ${plan.name} (חודשי)`,
+          productName: `Deepo - ${plan.name} (חודשי)`,
           customerEmail: userEmail,
         })
 

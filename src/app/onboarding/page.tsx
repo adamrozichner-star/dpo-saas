@@ -1234,8 +1234,8 @@ function OnboardingContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, mainLen, selectedDBs.length])
 
-  // FIX: DB enum only allows 'basic' | 'extended' — no 'enterprise'
-  const calculateRecommendedTier = useCallback((): 'basic' | 'extended' => {
+  // FIX: DB enum only allows 'basic' | 'recommended' — no 'enterprise'
+  const calculateRecommendedTier = useCallback((): 'basic' | 'recommended' => {
     const totalRecords = Object.values(v3Answers.dbDetails || {}).reduce((sum, d) => {
       return sum + (SIZE_RANGES.find(s => s.v === d.size)?.num || 50)
     }, 0)
@@ -1244,9 +1244,9 @@ function OnboardingContent() {
     const isFinance = v3Answers.industry === 'finance'
     const isHealth = v3Answers.industry === 'health'
 
-    if (totalRecords >= 100000 || isHealth || isFinance) return 'extended'
+    if (totalRecords >= 100000 || isHealth || isFinance) return 'recommended'
     if (totalRecords >= 10000 || hasMedical || dbs.length >= 5 || 
-        (v3Answers.processors || []).length >= 3) return 'extended'
+        (v3Answers.processors || []).length >= 3) return 'recommended'
     return 'basic'
   }, [v3Answers])
 
@@ -1399,7 +1399,7 @@ function OnboardingContent() {
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
                 <Shield className="h-5 w-5 text-white" />
               </div>
-              <span className="font-bold text-[#1e40af] text-lg">MyDPO</span>
+              <span className="font-bold text-[#1e40af] text-lg">Deepo</span>
             </div>
           </div>
 
@@ -1503,7 +1503,7 @@ function OnboardingContent() {
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
                 <Shield className="h-5 w-5 text-white" />
               </div>
-              <span className="font-bold text-[#1e40af]">MyDPO</span>
+              <span className="font-bold text-[#1e40af]">Deepo</span>
             </div>
             <button onClick={() => { setShowDpoIntro(false); setShowReport(true) }}
               className="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
@@ -1537,7 +1537,7 @@ function OnboardingContent() {
 
             <div className="flex flex-wrap gap-2 justify-center mb-5">
               <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg text-xs text-gray-600">
-                <Mail className="h-3.5 w-3.5 text-indigo-500" />dpo@mydpo.co.il
+                <Mail className="h-3.5 w-3.5 text-indigo-500" />dpo@deepo.co.il
               </div>
               <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg text-xs text-gray-600">
                 <FileCheck className="h-3.5 w-3.5 text-indigo-500" />רישיון DPO-2025-001
@@ -1636,7 +1636,7 @@ function OnboardingContent() {
               <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
                 <Shield className="h-5 w-5 text-white" />
               </div>
-              <span className="font-bold text-[#1e40af]">MyDPO</span>
+              <span className="font-bold text-[#1e40af]">Deepo</span>
             </div>
           </div>
           <ClassificationReport answers={v3Answers} onContinue={handleReportContinue} isReview={isReviewMode} />
@@ -1655,7 +1655,7 @@ function OnboardingContent() {
             <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
               <Shield className="h-5 w-5 text-white" />
             </div>
-            <span className="font-bold text-[#1e40af]">MyDPO</span>
+            <span className="font-bold text-[#1e40af]">Deepo</span>
           </div>
           {step > 0 && (
             <button 

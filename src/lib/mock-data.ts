@@ -38,7 +38,7 @@ export const mockOrganizations: Organization[] = [
     id: 'org-2',
     name: 'קליניקת ד"ר לוי',
     businessId: '515789012',
-    tier: 'extended',
+    tier: 'recommended',
     status: 'active',
     riskLevel: 'sensitive',
     dpoId: 'dpo-1',
@@ -379,21 +379,21 @@ export const onboardingQuestions: OnboardingQuestion[] = [
     text: 'האם יש מצלמות אבטחה בעסק?',
     type: 'boolean',
     required: true,
-    category: 'extended'
+    category: 'recommended'
   },
   {
     id: 'processes_minors',
     text: 'האם אתם מעבדים מידע של קטינים (מתחת לגיל 18)?',
     type: 'boolean',
     required: true,
-    category: 'extended'
+    category: 'recommended'
   },
   {
     id: 'website_leads',
     text: 'האם יש טפסי לידים או איסוף מידע באתר?',
     type: 'boolean',
     required: true,
-    category: 'extended'
+    category: 'recommended'
   },
   {
     id: 'suppliers_count',
@@ -406,14 +406,14 @@ export const onboardingQuestions: OnboardingQuestion[] = [
       { value: '6-20', label: '6-20' },
       { value: '20+', label: 'מעל 20' }
     ],
-    category: 'extended'
+    category: 'recommended'
   },
   {
     id: 'cv_retention',
     text: 'האם אתם שומרים קורות חיים של מועמדים?',
     type: 'boolean',
     required: true,
-    category: 'extended'
+    category: 'recommended'
   }
 ]
 
@@ -424,5 +424,5 @@ export const onboardingSteps = [
   { id: 3, title: 'שיתוף ואחסון', questions: onboardingQuestions.filter(q => q.category === 'sharing') },
   { id: 4, title: 'אבטחת מידע', questions: onboardingQuestions.filter(q => q.category === 'security') },
   { id: 5, title: 'מצב קיים', questions: onboardingQuestions.filter(q => q.category === 'compliance') },
-  { id: 6, title: 'פרטים נוספים', questions: onboardingQuestions.filter(q => q.category === 'extended') }
+  { id: 6, title: 'פרטים נוספים', questions: onboardingQuestions.filter(q => q.category === 'recommended') }
 ]

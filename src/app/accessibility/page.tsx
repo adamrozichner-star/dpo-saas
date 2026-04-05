@@ -11,7 +11,7 @@ export default function AccessibilityPage() {
             <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
               <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
             </div>
-            <span className="font-bold text-lg text-indigo-700">MyDPO</span>
+            <span className="font-bold text-lg text-indigo-700">Deepo</span>
           </Link>
           <Link href="/" className="text-sm text-indigo-600 hover:text-indigo-700">
             ← חזרה לדף הבית
@@ -27,7 +27,7 @@ export default function AccessibilityPage() {
           <section>
             <h2 className="text-lg font-semibold text-stone-800 mb-3">מחויבות לנגישות</h2>
             <p>
-              חברת MyDPO מחויבת להנגשת האתר והשירותים שלה לאנשים עם מוגבלויות, 
+              חברת Deepo מחויבת להנגשת האתר והשירותים שלה לאנשים עם מוגבלויות, 
               בהתאם לחוק שוויון זכויות לאנשים עם מוגבלות, התשנ״ח-1998, 
               ותקנות שוויון זכויות לאנשים עם מוגבלות (התאמות נגישות לשירות), התשע״ג-2013.
             </p>
@@ -59,8 +59,8 @@ export default function AccessibilityPage() {
               נשמח לשמוע מכם:
             </p>
             <div className="mt-3 p-4 bg-stone-50 rounded-xl text-sm space-y-1">
-              <p><strong>רכז נגישות:</strong> צוות MyDPO</p>
-              <p><strong>דוא״ל:</strong> accessibility@mydpo.co.il</p>
+              <p><strong>רכז נגישות:</strong> צוות Deepo</p>
+              <p><strong>דוא״ל:</strong> accessibility@deepo.co.il</p>
               <p><strong>טלפון:</strong> 03-0000000</p>
             </div>
           </section>

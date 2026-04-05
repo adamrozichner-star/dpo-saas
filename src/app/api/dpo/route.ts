@@ -59,8 +59,8 @@ function generateEscalationResponseEmail(
   </div>
   
   <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 12px;">
-    <p style="margin: 0;">הודעה זו נשלחה באמצעות MyDPO</p>
-    <p style="margin: 5px 0 0 0;">© ${new Date().getFullYear()} MyDPO - שירותי ממונה הגנת פרטיות</p>
+    <p style="margin: 0;">הודעה זו נשלחה באמצעות Deepo</p>
+    <p style="margin: 5px 0 0 0;">© ${new Date().getFullYear()} Deepo - שירותי ממונה הגנת פרטיות</p>
   </div>
 </body>
 </html>
@@ -120,8 +120,8 @@ function generateDSRResponseEmail(
   </div>
   
   <div style="text-align: center; padding: 20px; color: #94a3b8; font-size: 12px;">
-    <p style="margin: 0;">הודעה זו נשלחה באמצעות MyDPO</p>
-    <p style="margin: 5px 0 0 0;">© ${new Date().getFullYear()} MyDPO - שירותי ממונה הגנת פרטיות</p>
+    <p style="margin: 0;">הודעה זו נשלחה באמצעות Deepo</p>
+    <p style="margin: 5px 0 0 0;">© ${new Date().getFullYear()} Deepo - שירותי ממונה הגנת פרטיות</p>
   </div>
 </body>
 </html>
@@ -138,9 +138,9 @@ async function sendResponseEmail(
   html: string
 ): Promise<boolean> {
   try {
-    // Use resend.dev for testing until mydpo.co.il is verified
+    // Use resend.dev for testing until deepo.co.il is verified
     const { data, error } = await resend.emails.send({
-      from: process.env.FROM_EMAIL || 'MyDPO <onboarding@resend.dev>',
+      from: process.env.FROM_EMAIL || 'Deepo <onboarding@resend.dev>',
       to: [to],
       subject: subject,
       html: html
@@ -891,7 +891,7 @@ export async function POST(request: NextRequest) {
                   <p style="background:#f0fdf4;padding:12px;border-radius:8px;font-weight:600">${docList}</p>
                   ${response ? `<p>הערות הממונה: ${response}</p>` : ''}
                   <p>המסמכים זמינים בלוח הבקרה שלכם.</p>
-                  <a href="https://mydpo.co.il/dashboard" style="display:inline-block;padding:10px 24px;background:#4f46e5;color:white;border-radius:8px;text-decoration:none;margin-top:8px">צפייה במסמכים</a>
+                  <a href="https://deepo.co.il/dashboard" style="display:inline-block;padding:10px 24px;background:#4f46e5;color:white;border-radius:8px;text-decoration:none;margin-top:8px">צפייה במסמכים</a>
                 </div>
               `
               emailSent = await sendResponseEmail(email, `מסמכים אושרו - ${orgData?.name || ''}`, emailHtml)

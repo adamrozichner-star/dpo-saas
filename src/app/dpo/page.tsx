@@ -488,7 +488,7 @@ export default function DPODashboard() {
         ═══════════════════════════════════════════ */}
         <nav className="dp-nav">
           <div className="dp-nav-r">
-            <span className="dp-logo">MyDPO</span>
+            <span className="dp-logo">Deepo</span>
             <span className="dp-sep">|</span>
             <span className="dp-name">{DPO_NAME}</span>
           </div>
@@ -939,8 +939,8 @@ export default function DPODashboard() {
                       {org.business_id && <span>🏢 {org.business_id}</span>}
                       {selectedOrg.contact_email && <span>📧 {selectedOrg.contact_email}</span>}
                       {org.phone && <span>📞 {org.phone}</span>}
-                      <span className="dp-badge" style={{ background: org.tier === 'extended' ? '#eef2ff' : '#f4f4f5', color: org.tier === 'extended' ? '#4f46e5' : '#71717a', border: org.tier === 'extended' ? '1px solid #c7d2fe' : '1px solid #e4e4e7' }}>
-                        {org.tier === 'extended' ? '⭐ חבילה מורחבת' : '📋 חבילה בסיסית'}
+                      <span className="dp-badge" style={{ background: org.tier === 'recommended' ? '#eef2ff' : '#f4f4f5', color: org.tier === 'recommended' ? '#4f46e5' : '#71717a', border: org.tier === 'recommended' ? '1px solid #c7d2fe' : '1px solid #e4e4e7' }}>
+                        {org.tier === 'recommended' ? '⭐ חבילה מומלצת' : '📋 חבילה בסיסית'}
                       </span>
                       {org.status && <span style={{ fontSize: 11, color: org.status === 'active' ? '#16a34a' : '#f59e0b' }}>{org.status === 'active' ? '● פעיל' : '● ' + org.status}</span>}
                     </div>

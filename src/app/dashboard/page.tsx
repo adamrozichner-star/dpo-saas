@@ -30,7 +30,10 @@ import {
   Edit3,
   Save,
   Users,
-  Database
+  Database,
+  Calendar,
+  Search,
+  Activity
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useSubscriptionGate } from '@/lib/use-subscription-gate'
@@ -45,6 +48,9 @@ import DocCreator from '@/components/DocCreator'
 import RightsTab from '@/components/RightsTab'
 import IncidentReportTab from '@/components/IncidentReportTab'
 import ROPATab from '@/components/ROPATab'
+import WorkPlanTab from '@/components/WorkPlanTab'
+import ComplianceReviewPanel from '@/components/ComplianceReviewPanel'
+import DataFlowDiagram from '@/components/DataFlowDiagram'
 import { deriveComplianceActions, ComplianceSummary, ActionOverride } from '@/lib/compliance-engine'
 
 // ============================================
@@ -81,7 +87,7 @@ function DashboardContent() {
   }
   const { isAuthorized, isChecking, isPaid: gateIsPaid } = useSubscriptionGate()
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'databases' | 'incidents' | 'messages' | 'rights' | 'reminders' | 'settings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'databases' | 'incidents' | 'messages' | 'rights' | 'reminders' | 'settings' | 'workplan' | 'compliance' | 'data-flow'>('overview')
   const [organization, setOrganization] = useState<any>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [incidents, setIncidents] = useState<any[]>([])
@@ -493,7 +499,7 @@ function DashboardContent() {
               <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center">
                 <Shield className="h-5 w-5 text-white" />
               </div>
-              <span className="font-semibold text-lg text-stone-800">MyDPO</span>
+              <span className="font-semibold text-lg text-stone-800">Deepo</span>
             </Link>
           </div>
 
@@ -571,11 +577,29 @@ function DashboardContent() {
               active={activeTab === 'reminders'} 
               onClick={() => { setActiveTab('reminders'); setMobileMenuOpen(false) }} 
             />
-            <NavButton 
-              icon={<Settings className="h-5 w-5" />} 
-              label="הגדרות" 
-              active={activeTab === 'settings'} 
-              onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false) }} 
+            <NavButton
+              icon={<Calendar className="h-5 w-5" />}
+              label="תוכנית עבודה"
+              active={activeTab === 'workplan'}
+              onClick={() => { setActiveTab('workplan'); setMobileMenuOpen(false) }}
+            />
+            <NavButton
+              icon={<Activity className="h-5 w-5" />}
+              label="סקירת ציות"
+              active={activeTab === 'compliance'}
+              onClick={() => { setActiveTab('compliance'); setMobileMenuOpen(false) }}
+            />
+            <NavButton
+              icon={<Search className="h-5 w-5" />}
+              label="מפת זרימת מידע"
+              active={activeTab === 'data-flow'}
+              onClick={() => { setActiveTab('data-flow'); setMobileMenuOpen(false) }}
+            />
+            <NavButton
+              icon={<Settings className="h-5 w-5" />}
+              label="הגדרות"
+              active={activeTab === 'settings'}
+              onClick={() => { setActiveTab('settings'); setMobileMenuOpen(false) }}
             />
           </nav>
 
@@ -616,7 +640,7 @@ function DashboardContent() {
             <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center">
               <Shield className="h-5 w-5 text-white" />
             </div>
-            <span className="font-semibold text-stone-800">MyDPO</span>
+            <span className="font-semibold text-stone-800">Deepo</span>
           </div>
           <button 
             onClick={() => setMobileMenuOpen(true)}
@@ -678,7 +702,7 @@ function DashboardContent() {
           )}
           {activeTab === 'incidents' && (
             gateIsPaid ? <IncidentReportTab incidents={incidents} orgId={organization?.id} onRefresh={loadAllData} /> :
-            <LockedTabOverlay icon="⚠️" title="ניהול אירועי אבטחה" description="דווחו וטפלו באירועי אבטחת מידע עם ספירה לאחור של 72 שעות לדיווח לרשות" />
+            <LockedTabOverlay icon="⚠️" title="ניהול אירועי אבטחה" description="דווחו וטפלו באירועי אבטחת מידע עם ספירה לאחור של 24 שעות לדיווח לרשות" />
           )}
           {activeTab === 'messages' && (
             gateIsPaid ? <MessagesTab 
@@ -700,6 +724,15 @@ function DashboardContent() {
           )}
           {activeTab === 'reminders' && (
             <RemindersTab orgProfile={orgProfile} documents={documents} />
+          )}
+          {activeTab === 'workplan' && organization?.id && (
+            <WorkPlanTab orgId={organization.id} supabase={supabase} />
+          )}
+          {activeTab === 'compliance' && organization?.id && (
+            <ComplianceReviewPanel orgId={organization.id} supabase={supabase} />
+          )}
+          {activeTab === 'data-flow' && (
+            <DataFlowDiagram />
           )}
           {activeTab === 'settings' && (
             <SettingsTab organization={organization} user={user} orgProfile={orgProfile} supabase={supabase} />
@@ -1143,13 +1176,13 @@ function DocumentsTab({ documents, organization, supabase, isPaid, orgProfile, o
       draft: 'bg-stone-100 text-stone-700',
       pending: 'bg-amber-100 text-amber-700',
       pending_review: 'bg-indigo-100 text-indigo-700',
-      pending_signature: 'bg-purple-100 text-purple-700'
+      pending_approval: 'bg-purple-100 text-purple-700'
     }
     return styles[status] || 'bg-stone-100 text-stone-700'
   }
 
   const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = { active: 'פעיל', draft: 'טיוטה', pending: 'ממתין', pending_review: 'ממתין לאישור ממונה', pending_signature: 'ממתין לחתימה' }
+    const labels: Record<string, string> = { active: 'פעיל', draft: 'טיוטה', pending: 'ממתין', pending_review: 'ממתין לאישור ממונה', pending_approval: 'ממתין לאישור' }
     return labels[status] || status
   }
 
@@ -1214,7 +1247,7 @@ function DocumentsTab({ documents, organization, supabase, isPaid, orgProfile, o
     let docs = documents
     if (filter === 'pending_review') docs = docs.filter(d => d.status === 'pending_review')
     else if (filter === 'active') docs = docs.filter(d => d.status === 'active')
-    else if (filter === 'pending_signature') docs = docs.filter(d => d.status === 'pending_signature')
+    else if (filter === 'pending_approval') docs = docs.filter(d => d.status === 'pending_approval')
     else if (filter !== 'all') docs = docs.filter(d => d.type === filter)
     return docs
   })()
@@ -1391,7 +1424,7 @@ function DocumentsTab({ documents, organization, supabase, isPaid, orgProfile, o
                 title={
                   doc.status === 'pending_review' ? 'הממונה צריך לסקור ולאשר את המסמך' :
                   doc.status === 'active' ? 'המסמך אושר ופעיל' :
-                  doc.status === 'pending_signature' ? 'נדרשת חתימה' : ''
+                  doc.status === 'pending_approval' ? 'נדרש אישור' : ''
                 }
               >
                 {getStatusLabel(doc.status)}
@@ -1422,7 +1455,7 @@ function DocumentsTab({ documents, organization, supabase, isPaid, orgProfile, o
                       title={
                         doc.status === 'pending_review' ? 'הממונה צריך לסקור ולאשר את המסמך' :
                         doc.status === 'active' ? 'המסמך אושר ופעיל — ניתן להוריד ולהשתמש' :
-                        doc.status === 'pending_signature' ? 'נדרשת חתימה של הממונה על המסמך' :
+                        doc.status === 'pending_approval' ? 'נדרש אישור של הממונה על המסמך' :
                         doc.status === 'draft' ? 'טיוטה — המסמך עדיין בעריכה' : ''
                       }
                     >
@@ -1565,8 +1598,8 @@ function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: a
   const [replyText, setReplyText] = useState('')
   const [isSending, setIsSending] = useState(false)
   
-  // Credit counter — basic: 2/quarter, extended: 6/quarter
-  const maxCredits = tier === 'extended' ? 6 : tier === 'enterprise' ? 12 : 2
+  // Credit counter — basic: 2/quarter, recommended: 6/quarter
+  const maxCredits = tier === 'recommended' ? 6 : tier === 'enterprise' ? 12 : 2
   const usedCredits = threads.filter(t => {
     const d = new Date(t.created_at || t.createdAt)
     const now = new Date()
@@ -1793,7 +1826,7 @@ function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: a
       <div className="flex items-center gap-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
         <div className="flex-1">
           <p className="text-sm font-medium text-indigo-800">פניות לממונה ברבעון זה</p>
-          <p className="text-xs text-indigo-500 mt-0.5">{tier === 'extended' ? 'חבילה מורחבת' : 'חבילה בסיסית'} · עד {maxCredits} פניות ברבעון</p>
+          <p className="text-xs text-indigo-500 mt-0.5">{tier === 'recommended' ? 'חבילה מומלצת' : 'חבילה בסיסית'} · עד {maxCredits} פניות ברבעון</p>
         </div>
         <div className="flex items-center gap-1.5">
           {Array.from({ length: maxCredits }).map((_, i) => (
@@ -2114,7 +2147,7 @@ function SettingsTab({ organization, user, orgProfile, supabase }: { organizatio
             <label className="text-sm text-stone-500">חבילה</label>
             <p className="mt-1">
               <span className="px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-700">
-                {organization?.tier === 'extended' ? 'מורחבת' : organization?.tier === 'enterprise' ? 'ארגונית' : 'בסיסית'}
+                {organization?.tier === 'recommended' ? 'מומלצת' : organization?.tier === 'enterprise' ? 'ארגונית' : 'בסיסית'}
               </span>
             </p>
           </div>
@@ -2298,7 +2331,7 @@ function MfaSection({ supabase }: { supabase: any }) {
     try {
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
-        friendlyName: 'MyDPO Authenticator'
+        friendlyName: 'Deepo Authenticator'
       })
       if (error) throw error
       setQrUri(data.totp.qr_code)

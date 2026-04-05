@@ -43,7 +43,7 @@ interface ContextualChatProps {
 // =============================================
 const CONTEXT_CONFIGS: Record<ChatContext, ContextConfig> = {
   dashboard: {
-    title: 'עוזר MyDPO',
+    title: 'עוזר Deepo',
     subtitle: 'איך אפשר לעזור?',
     suggestions: [
       'מה הצעד הבא שלי?',
@@ -91,7 +91,7 @@ const CONTEXT_CONFIGS: Record<ChatContext, ContextConfig> = {
       'מה עושים בדליפת מידע?',
       'כמה זמן יש לדווח?',
     ],
-    systemHint: 'המשתמש נמצא בעמוד אירועי אבטחה. התמקד בדיווח, זמנים (72 שעות), תיעוד, והתמודדות עם אירועים.',
+    systemHint: 'המשתמש נמצא בעמוד אירועי אבטחה. התמקד בדיווח, זמנים (24 שעות), תיעוד, והתמודדות עם אירועים.',
   },
   settings: {
     title: 'הגדרות',
@@ -103,7 +103,7 @@ const CONTEXT_CONFIGS: Record<ChatContext, ContextConfig> = {
     systemHint: 'המשתמש נמצא בהגדרות. עזור עם חשבון, חבילות, ופרטי ארגון.',
   },
   general: {
-    title: 'עוזר MyDPO',
+    title: 'עוזר Deepo',
     subtitle: 'איך אפשר לעזור?',
     suggestions: [
       'מה זה תיקון 13?',

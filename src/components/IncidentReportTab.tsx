@@ -222,10 +222,10 @@ export default function IncidentReportTab({ orgId, incidents, onRefresh }: Incid
         <div className="flex gap-3">
           <Clock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-semibold text-amber-800">חובת דיווח תוך 72 שעות</h3>
+            <h3 className="font-semibold text-amber-800">חובת דיווח תוך 24 שעות</h3>
             <p className="text-sm text-amber-700 mt-1">
               על פי תיקון 13 לחוק הגנת הפרטיות, יש לדווח לרשות להגנת הפרטיות על אירועי אבטחה 
-              תוך 72 שעות מרגע הגילוי. דווחו בהקדם כדי לאפשר לממונה לטפל בזמן.
+              תוך 24 שעות מרגע הגילוי. דווחו בהקדם כדי לאפשר לממונה לטפל בזמן.
             </p>
           </div>
         </div>

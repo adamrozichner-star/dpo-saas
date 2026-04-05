@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Shield, Check, ArrowRight, Loader2, CreditCard, Lock, Clock, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 
-type Plan = 'basic' | 'extended' | 'enterprise';
+type Plan = 'basic' | 'recommended' | 'enterprise';
 
 const PLANS = {
   basic: {
@@ -24,11 +24,11 @@ const PLANS = {
     ],
     popular: false,
   },
-  extended: {
-    name: 'חבילה מורחבת',
-    price: 1200,
-    annualPrice: 12000,
-    description: 'לעסקים עם מידע רגיש',
+  recommended: {
+    name: 'חבילה מומלצת',
+    price: 999,
+    annualPrice: 9990,
+    description: 'לעסקים עם מידע רגיש — כולל ממונה',
     features: [
       'כל מה שבחבילה הבסיסית',
       'סקירה רבעונית של הממונה',
@@ -46,7 +46,7 @@ const PLANS = {
     annualPrice: 35000,
     description: 'לארגונים עם דרישות מורכבות',
     features: [
-      'כל מה שבחבילה המורחבת',
+      'כל מה שבחבילה המומלצת',
       '2 שעות זמן DPO/חודש',
       'סקירה חודשית',
       'הדרכת עובדים רבעונית',
@@ -64,7 +64,7 @@ export default function CheckoutPage() {
   const searchParams = useSearchParams();
   const { user, session, supabase } = useAuth();
   
-  const [selectedPlan, setSelectedPlan] = useState<Plan>('extended');
+  const [selectedPlan, setSelectedPlan] = useState<Plan>('recommended');
   const [isAnnual, setIsAnnual] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [organization, setOrganization] = useState<any>(null);
@@ -132,7 +132,7 @@ export default function CheckoutPage() {
     // Get quick assessment data from localStorage (payment-first flow)
     let quickAssessment = null;
     try {
-      const saved = localStorage.getItem('mydpo_quick_assessment');
+      const saved = localStorage.getItem('deepo_quick_assessment');
       if (saved) {
         quickAssessment = JSON.parse(saved);
       }
@@ -187,7 +187,7 @@ export default function CheckoutPage() {
             <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
               <Shield className="h-6 w-6 text-white" />
             </div>
-            <span className="font-bold text-xl text-slate-900">MyDPO</span>
+            <span className="font-bold text-xl text-slate-900">Deepo</span>
           </Link>
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <Lock className="h-4 w-4" />
@@ -207,7 +207,7 @@ export default function CheckoutPage() {
             <AlertTriangle className="h-5 w-5 flex-shrink-0" />
             <span>
               {trialDaysLeft === 0 
-                ? 'תקופת הניסיון הסתיימה! השלם את התשלום כדי להמשיך להשתמש ב-MyDPO.'
+                ? 'תקופת הניסיון הסתיימה! השלם את התשלום כדי להמשיך להשתמש ב-Deepo.'
                 : `נותרו ${trialDaysLeft} ימים לתקופת הניסיון שלך.`
               }
             </span>

@@ -49,7 +49,7 @@ function SubscribeContent() {
   // Load recommendation from localStorage
   useEffect(() => {
     const tier = localStorage.getItem('dpo_recommended_tier')
-    if (tier === 'basic' || tier === 'extended') setRecommendedTier(tier)
+    if (tier === 'basic' || tier === 'recommended') setRecommendedTier(tier)
 
     try {
       const saved = localStorage.getItem('dpo_v3_answers')
@@ -153,7 +153,7 @@ function SubscribeContent() {
         <div className="w-full max-w-sm text-center bg-white rounded-2xl p-8 shadow-lg">
           <CheckCircle2 className="h-14 w-14 text-green-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-2">התשלום בוצע בהצלחה!</h1>
-          <p className="text-gray-600 mb-6">המנוי שלכם הופעל. ברוכים הבאים ל-MyDPO!</p>
+          <p className="text-gray-600 mb-6">המנוי שלכם הופעל. ברוכים הבאים ל-Deepo!</p>
           <Button onClick={() => router.push('/dashboard?welcome=true')} className="w-full">
             המשך ללוח הבקרה
           </Button>
@@ -162,7 +162,7 @@ function SubscribeContent() {
     )
   }
 
-  const otherTier = recommendedTier === 'basic' ? 'extended' : 'basic'
+  const otherTier = recommendedTier === 'basic' ? 'recommended' : 'basic'
 
   const plans: Record<string, { name: string; price: number; desc: string; features: string[] }> = {
     basic: {
@@ -177,9 +177,9 @@ function SubscribeContent() {
         'תמיכה בדוא״ל (72 שעות)',
       ],
     },
-    extended: {
-      name: 'מורחבת',
-      price: 1200,
+    recommended: {
+      name: 'מומלצת',
+      price: 999,
       desc: 'לעסקים עם מידע רגיש או פעילות מורכבת',
       features: [
         'הכל בבסיסית, ובנוסף:',
@@ -200,7 +200,7 @@ function SubscribeContent() {
           <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
             <Shield className="h-5 w-5 text-white" />
           </div>
-          <span className="font-bold text-[#1e40af]">MyDPO</span>
+          <span className="font-bold text-[#1e40af]">Deepo</span>
         </div>
         <Link href="/dashboard" className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
           <Eye className="h-3 w-3" />
@@ -268,7 +268,7 @@ function SubscribeContent() {
 
         {/* Enterprise link */}
         <div className="mt-5 text-center">
-          <a href="mailto:hello@mydpo.co.il?subject=בקשה לחבילה ארגונית" 
+          <a href="mailto:hello@deepo.co.il?subject=בקשה לחבילה ארגונית" 
              className="text-xs text-gray-400 hover:text-gray-600 inline-flex items-center gap-1">
             ארגון גדול? <span className="underline">צרו קשר לחבילה מותאמת</span>
           </a>

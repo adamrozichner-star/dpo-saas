@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
   const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!
   const supabase = createClient(supabaseUrl, supabaseKey)
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mydpo.co.il'
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://deepo.co.il'
   const results: any[] = []
 
   try {

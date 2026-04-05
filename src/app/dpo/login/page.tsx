@@ -83,7 +83,7 @@ export default function DPOLoginPage() {
           </form>
 
           <p className="text-center text-xs text-gray-500 mt-6">
-            מערכת ניהול MyDPO
+            מערכת ניהול Deepo
             <br />
             גישה מותרת לממונים מורשים בלבד
           </p>

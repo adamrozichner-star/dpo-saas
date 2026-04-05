@@ -110,7 +110,7 @@ export default function PaymentRequiredPage() {
             <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
               <Shield className="h-4 w-4 text-white" />
             </div>
-            <span className="font-bold text-stone-800">MyDPO</span>
+            <span className="font-bold text-stone-800">Deepo</span>
           </div>
           <button onClick={async () => { await signOut(); router.push('/login') }} className="text-sm text-stone-400 hover:text-stone-600">
             התנתקות
@@ -138,7 +138,7 @@ export default function PaymentRequiredPage() {
             <>
               <div className="inline-flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-1.5 rounded-full text-sm font-medium mb-4">
                 <Shield className="h-4 w-4" />
-                ברוך הבא ל-MyDPO
+                ברוך הבא ל-Deepo
               </div>
               <h1 className="text-3xl font-bold text-stone-800 mb-2">
                 {orgName ? `${orgName}, הגנת הפרטיות שלך מתחילה כאן` : 'הגנת הפרטיות שלך מתחילה כאן'}
@@ -247,7 +247,7 @@ export default function PaymentRequiredPage() {
           <p className="text-xs text-stone-400 mt-4">ביטול בכל עת · ללא התחייבות</p>
         </div>
 
-        <p className="text-center text-xs text-stone-400 mt-8">© 2025 MyDPO. כל הזכויות שמורות.</p>
+        <p className="text-center text-xs text-stone-400 mt-8">© 2025 Deepo. כל הזכויות שמורות.</p>
       </div>
 
       {/* Preview Modal */}

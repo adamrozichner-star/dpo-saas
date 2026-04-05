@@ -3,14 +3,14 @@
 export const DPO_CONFIG = {
   name: 'עו"ד דנה כהן', // Replace with actual DPO name
   licenseNumber: 'DPO-2025-001', // Replace with actual license number
-  email: 'dpo@mydpo.co.il',
+  email: 'dpo@deepo.co.il',
   phone: '03-555-1234',
   
   company: {
-    name: 'MyDPO בע"מ',
+    name: 'Deepo בע"מ',
     businessId: 'XXXXXXXXX',
     address: 'תל אביב, ישראל',
-    email: 'support@mydpo.co.il',
+    email: 'support@deepo.co.il',
   },
   
   serviceLimits: {
@@ -18,7 +18,7 @@ export const DPO_CONFIG = {
       dpoTimePerQuarter: 30,
       escalationsPerQuarter: 2,
     },
-    extended: {
+    recommended: {
       dpoTimePerQuarter: 120,
       escalationsPerQuarter: 8,
     }

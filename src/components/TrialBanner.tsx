@@ -146,7 +146,7 @@ export function ExpiredOverlay({ onUpgrade }: { onUpgrade?: () => void }) {
         </h2>
 
         <p className="text-slate-600 mb-6">
-          כדי להמשיך להשתמש ב-MyDPO ולשמור על הגנת הפרטיות שלך, אנא שדרג לחשבון מלא.
+          כדי להמשיך להשתמש ב-Deepo ולשמור על הגנת הפרטיות שלך, אנא שדרג לחשבון מלא.
         </p>
 
         <div className="bg-slate-50 rounded-xl p-4 mb-6">
@@ -173,7 +173,7 @@ export function ExpiredOverlay({ onUpgrade }: { onUpgrade?: () => void }) {
         </a>
 
         <p className="text-sm text-slate-400">
-          יש שאלות? <a href="mailto:support@mydpo.co.il" className="text-blue-600 hover:underline">צור קשר</a>
+          יש שאלות? <a href="mailto:support@deepo.co.il" className="text-blue-600 hover:underline">צור קשר</a>
         </p>
       </div>
     </div>
@@ -206,7 +206,7 @@ export function UpgradeModal({ isOpen, onClose, daysLeft }: UpgradeModalProps) {
         <div className="flex items-start justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">
-              שדרג ל-MyDPO Pro
+              שדרג ל-Deepo Pro
             </h2>
             {daysLeft !== undefined && daysLeft > 0 && (
               <p className="text-slate-500 mt-1">

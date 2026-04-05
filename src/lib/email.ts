@@ -3,8 +3,8 @@ import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-const FROM_EMAIL = process.env.FROM_EMAIL || 'MyDPO <noreply@resend.dev>'
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mydpo.co.il'
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Deepo <noreply@resend.dev>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://deepo.co.il'
 
 interface EmailTemplate {
   subject: string
@@ -19,18 +19,18 @@ export function welcomeEmail(data: {
   dpoName: string
 }): EmailTemplate {
   return {
-    subject: `ברוכים הבאים ל-MyDPO! 🛡️`,
+    subject: `ברוכים הבאים ל-Deepo! 🛡️`,
     html: `
 <!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head><meta charset="UTF-8"></head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-    <h1 style="color: white; margin: 0; font-size: 28px;">🛡️ MyDPO</h1>
+    <h1 style="color: white; margin: 0; font-size: 28px;">🛡️ Deepo</h1>
   </div>
   <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none;">
     <h2 style="color: #1e40af; margin-top: 0;">שלום ${data.userName}! 👋</h2>
-    <p>ברוכים הבאים ל-MyDPO. הארגון <strong>${data.orgName}</strong> נרשם בהצלחה.</p>
+    <p>ברוכים הבאים ל-Deepo. הארגון <strong>${data.orgName}</strong> נרשם בהצלחה.</p>
     <p>המערכת ניתחה את פעילות הארגון ומוכנה עם מפת ציות מלאה — כולל ציון ציות, רשימת פעולות נדרשות, ומסמכים מותאמים.</p>
     <div style="background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 18px; margin: 20px 0;">
       <p style="margin: 0; color: #92400e; font-weight: bold;">⚡ הצעד הבא:</p>
@@ -41,11 +41,11 @@ export function welcomeEmail(data: {
     </div>
   </div>
   <div style="background: #1e293b; color: #94a3b8; padding: 20px; border-radius: 0 0 12px 12px; text-align: center; font-size: 12px;">
-    <p style="margin: 0;">MyDPO © ${new Date().getFullYear()}</p>
+    <p style="margin: 0;">Deepo © ${new Date().getFullYear()}</p>
   </div>
 </body>
 </html>`,
-    text: `שלום ${data.userName}!\n\nברוכים הבאים ל-MyDPO!\nהארגון ${data.orgName} נרשם בהצלחה.\nהמערכת מוכנה עם מפת ציות מלאה.\n\nכניסה: ${APP_URL}/dashboard`
+    text: `שלום ${data.userName}!\n\nברוכים הבאים ל-Deepo!\nהארגון ${data.orgName} נרשם בהצלחה.\nהמערכת מוכנה עם מפת ציות מלאה.\n\nכניסה: ${APP_URL}/dashboard`
   }
 }
 
@@ -64,7 +64,7 @@ export function newMessageEmail(data: {
 <head><meta charset="UTF-8"></head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
   <div style="background: #3B82F6; padding: 20px; border-radius: 12px 12px 0 0; text-align: center;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">🛡️ MyDPO</h1>
+    <h1 style="color: white; margin: 0; font-size: 24px;">🛡️ Deepo</h1>
   </div>
   <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none;">
     <h2 style="color: #1e40af; margin-top: 0;">שלום ${data.userName},</h2>
@@ -78,7 +78,7 @@ export function newMessageEmail(data: {
     </div>
   </div>
   <div style="background: #1e293b; color: #94a3b8; padding: 15px; border-radius: 0 0 12px 12px; text-align: center; font-size: 12px;">
-    <p style="margin: 0;">MyDPO © ${new Date().getFullYear()}</p>
+    <p style="margin: 0;">Deepo © ${new Date().getFullYear()}</p>
   </div>
 </body>
 </html>`,

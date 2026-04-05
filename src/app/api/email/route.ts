@@ -5,7 +5,7 @@ import { escapeHtml } from '@/lib/api-utils'
 export const dynamic = 'force-dynamic'
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
-const BASE_URL = 'https://mydpo.co.il'
+const BASE_URL = 'https://deepo.co.il'
 const YEAR = new Date().getFullYear()
 
 // ============================================
@@ -13,13 +13,13 @@ const YEAR = new Date().getFullYear()
 // ============================================
 const header = (subtitle?: string, bg = 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%)') => `
 <div style="background: ${bg}; padding: 28px 30px; border-radius: 12px 12px 0 0; text-align: center;">
-  <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 700;">🛡️ MyDPO</h1>
+  <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 700;">🛡️ Deepo</h1>
   ${subtitle ? `<p style="color: rgba(255,255,255,0.85); margin: 8px 0 0 0; font-size: 14px;">${subtitle}</p>` : ''}
 </div>`
 
 const footer = () => `
 <div style="background: #1e293b; color: #94a3b8; padding: 20px; border-radius: 0 0 12px 12px; text-align: center; font-size: 12px;">
-  <p style="margin: 0;">MyDPO © ${YEAR} | <a href="${BASE_URL}" style="color: #94a3b8;">mydpo.co.il</a></p>
+  <p style="margin: 0;">Deepo © ${YEAR} | <a href="${BASE_URL}" style="color: #94a3b8;">deepo.co.il</a></p>
   <p style="margin: 6px 0 0 0; font-size: 11px;">שירותי ממונה הגנת פרטיות לעסקים</p>
 </div>`
 
@@ -50,12 +50,12 @@ const emailTemplates: Record<string, (data: any) => { subject: string; html: str
   // No DPO appointment claim!
   // ——————————————————————————————
   welcome: (data: { name: string; orgName: string }) => ({
-    subject: 'ברוכים הבאים ל-MyDPO! 🛡️',
+    subject: 'ברוכים הבאים ל-Deepo! 🛡️',
     html: wrap(`
       ${header()}
       ${body(`
         <h2 style="color: #1e40af; margin-top: 0;">שלום ${data.name}! 👋</h2>
-        <p>ברוכים הבאים ל-MyDPO. הארגון <strong>${data.orgName}</strong> נרשם בהצלחה.</p>
+        <p>ברוכים הבאים ל-Deepo. הארגון <strong>${data.orgName}</strong> נרשם בהצלחה.</p>
         <p>המערכת ניתחה את פעילות הארגון ומוכנה עם מפת ציות מלאה — כולל ציון ציות, רשימת פעולות נדרשות, ומסמכים מותאמים.</p>
         <div style="background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 18px; margin: 20px 0;">
           <p style="margin: 0; color: #92400e; font-weight: bold;">⚡ הצעד הבא:</p>
@@ -114,7 +114,7 @@ const emailTemplates: Record<string, (data: any) => { subject: string; html: str
           </table>
         </div>
         ${btn('כניסה ללוח הבקרה ←', BASE_URL + '/dashboard', '#059669')}
-        <p style="text-align: center; font-size: 12px; color: #94a3b8;">לשאלות בנושא חיוב: support@mydpo.co.il</p>
+        <p style="text-align: center; font-size: 12px; color: #94a3b8;">לשאלות בנושא חיוב: support@deepo.co.il</p>
       `)}
       ${footer()}
     `)
@@ -193,7 +193,7 @@ const emailTemplates: Record<string, (data: any) => { subject: string; html: str
   // ESCALATION RESOLVED (Q&A)
   // ——————————————————————————————
   escalation_resolved: (data: { name: string; question: string; answer: string }) => ({
-    subject: 'הממונה ענה לשאלתך — MyDPO',
+    subject: 'הממונה ענה לשאלתך — Deepo',
     html: wrap(`
       ${header()}
       ${body(`
@@ -241,7 +241,7 @@ const emailTemplates: Record<string, (data: any) => { subject: string; html: str
         </div>` : ''}
         <div style="background: #eff6ff; border-radius: 8px; padding: 20px; margin: 20px 0;">
           <h3 style="color: #1e40af; margin: 0 0 10px 0;">🎯 הפתרון</h3>
-          <p style="color: #1e3a8a; margin: 0;">ב-MyDPO תקבלו ממונה מוסמך + מערכת AI מלאה — <strong>ב-₪500 בלבד לחודש</strong>.</p>
+          <p style="color: #1e3a8a; margin: 0;">ב-Deepo תקבלו ממונה מוסמך + מערכת AI מלאה — <strong>ב-₪500 בלבד לחודש</strong>.</p>
         </div>
         ${btn('התחילו עכשיו ←', BASE_URL + '/onboarding', '#059669')}
         <p style="color: #6b7280; font-size: 12px; text-align: center;">תאריך הדוח: ${new Date(data.timestamp).toLocaleDateString('he-IL')}</p>
@@ -298,7 +298,7 @@ const emailTemplates: Record<string, (data: any) => { subject: string; html: str
           </div>`).join('')}
         </div>
         <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 20px 0;">
-          <p style="margin: 0; color: #065f46; font-weight: bold;">✅ עם MyDPO — הכל מסודר תוך דקות.</p>
+          <p style="margin: 0; color: #065f46; font-weight: bold;">✅ עם Deepo — הכל מסודר תוך דקות.</p>
           <p style="margin: 6px 0 0 0; color: #064e3b; font-size: 14px;">ממונה מוסמכת + מסמכים + ניטור שוטף — ₪500/חודש.</p>
         </div>
         ${btn('הפעלה עכשיו ←', BASE_URL + '/subscribe', '#059669')}
@@ -368,7 +368,7 @@ const emailTemplates: Record<string, (data: any) => { subject: string; html: str
   // PASSWORD RESET (for API-triggered resets)
   // ——————————————————————————————
   password_reset: (data: { name: string; resetLink: string }) => ({
-    subject: 'איפוס סיסמה — MyDPO',
+    subject: 'איפוס סיסמה — Deepo',
     html: wrap(`
       ${header()}
       ${body(`
@@ -427,7 +427,7 @@ export async function POST(request: NextRequest) {
 
     if (resend) {
       try {
-        const fromEmail = process.env.FROM_EMAIL || 'MyDPO <noreply@mydpo.co.il>'
+        const fromEmail = process.env.FROM_EMAIL || 'Deepo <noreply@deepo.co.il>'
         await resend.emails.send({
           from: fromEmail,
           to: [to],

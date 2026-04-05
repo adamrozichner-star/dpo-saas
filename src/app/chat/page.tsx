@@ -181,7 +181,7 @@ export default function ChatPage() {
         // Load DPO credit usage for this quarter
         try {
           const tier = userData.organizations.tier || 'basic'
-          const limitMap: Record<string, number> = { basic: 2, extended: 8, enterprise: 12 }
+          const limitMap: Record<string, number> = { basic: 2, recommended: 8, premium: 12, enterprise: 12 }
           const creditLimit = limitMap[tier] || 2
           const qStart = new Date()
           qStart.setMonth(Math.floor(qStart.getMonth() / 3) * 3, 1)
@@ -203,7 +203,7 @@ export default function ChatPage() {
             {
               id: 'welcome-1',
               role: 'assistant',
-              content: `שלום! 👋 אני העוזר החכם של MyDPO ב-${userData.organizations.name}.\n\nאני כאן כדי לעזור לך עם מסמכים, שאלות פרטיות, ודיווחי אבטחה.\nלהעברה ישירה לממונה — לחץ ״העבר לדנה״ למטה.\n\nבמה אפשר לעזור?`,
+              content: `שלום! 👋 אני העוזר החכם של Deepo ב-${userData.organizations.name}.\n\nאני כאן כדי לעזור לך עם מסמכים, שאלות פרטיות, ודיווחי אבטחה.\nלהעברה ישירה לממונה — לחץ ״העבר לדנה״ למטה.\n\nבמה אפשר לעזור?`,
               created_at: new Date().toISOString()
             }
           ])
@@ -730,7 +730,7 @@ export default function ChatPage() {
         setMessages(prev => [...prev, {
           id: `credit-limit-${Date.now()}`,
           role: 'assistant',
-          content: `⚠️ ניצלת את ${dpoCredits.limit} הפניות לממונה ברבעון זה.\n\nלפניות נוספות — שדרג לחבילה מורחבת.\nבינתיים, אני כאן לכל שאלה! 🤖`,
+          content: `⚠️ ניצלת את ${dpoCredits.limit} הפניות לממונה ברבעון זה.\n\nלפניות נוספות — שדרג לחבילה מומלצת.\nבינתיים, אני כאן לכל שאלה! 🤖`,
           created_at: new Date().toISOString()
         }])
         return
@@ -756,7 +756,7 @@ export default function ChatPage() {
           setMessages(prev => [...prev, {
             id: `credit-limit-${Date.now()}`,
             role: 'assistant',
-            content: `⚠️ ניצלת את ${data.limit} הפניות לממונה ברבעון זה.\n\nלפניות נוספות — שדרג לחבילה מורחבת.\nבינתיים, אני כאן לכל שאלה! 🤖`,
+            content: `⚠️ ניצלת את ${data.limit} הפניות לממונה ברבעון זה.\n\nלפניות נוספות — שדרג לחבילה מומלצת.\nבינתיים, אני כאן לכל שאלה! 🤖`,
             created_at: new Date().toISOString()
           }])
         } else if (data.success) {
@@ -1197,7 +1197,7 @@ ${summaryText}
               <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
                 <Shield className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-lg text-stone-800">MyDPO</span>
+              <span className="font-bold text-lg text-stone-800">Deepo</span>
             </div>
             <button 
               onClick={() => setSidebarOpen(false)}

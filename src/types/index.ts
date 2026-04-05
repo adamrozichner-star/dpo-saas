@@ -1,7 +1,7 @@
 // Organization types
 export type OrganizationStatus = 'onboarding' | 'active' | 'suspended'
 export type RiskLevel = 'standard' | 'sensitive' | 'high'
-export type SubscriptionTier = 'basic' | 'extended'
+export type SubscriptionTier = 'basic' | 'recommended' | 'premium' | 'enterprise'
 
 export interface Organization {
   id: string

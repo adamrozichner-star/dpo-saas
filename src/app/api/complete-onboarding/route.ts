@@ -158,9 +158,9 @@ async function sendWelcomeEmailDirect(email: string | undefined, orgName: string
   }
 
   const resend = new Resend(apiKey)
-  const fromEmail = process.env.FROM_EMAIL || 'MyDPO <noreply@mydpo.co.il>'
+  const fromEmail = process.env.FROM_EMAIL || 'Deepo <noreply@deepo.co.il>'
   const name = email.split('@')[0]
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mydpo.co.il'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://deepo.co.il'
   const year = new Date().getFullYear()
 
   console.log('[Email] Sending welcome email to:', email, 'from:', fromEmail)
@@ -168,17 +168,17 @@ async function sendWelcomeEmailDirect(email: string | undefined, orgName: string
   const { data, error } = await resend.emails.send({
     from: fromEmail,
     to: [email],
-    subject: 'ברוכים הבאים ל-MyDPO! 🛡️',
+    subject: 'ברוכים הבאים ל-Deepo! 🛡️',
     html: `<!DOCTYPE html>
 <html dir="rtl" lang="he">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="font-family: -apple-system, Arial, sans-serif; line-height: 1.7; color: #334155; max-width: 600px; margin: 0 auto; padding: 20px; background: #f1f5f9;">
   <div style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%); padding: 28px 30px; border-radius: 12px 12px 0 0; text-align: center;">
-    <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 700;">🛡️ MyDPO</h1>
+    <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 700;">🛡️ Deepo</h1>
   </div>
   <div style="background: #ffffff; padding: 30px; border: 1px solid #e2e8f0; border-top: none;">
     <h2 style="color: #1e40af; margin-top: 0;">שלום ${name}! 👋</h2>
-    <p>ברוכים הבאים ל-MyDPO. הארגון <strong>${orgName}</strong> נרשם בהצלחה.</p>
+    <p>ברוכים הבאים ל-Deepo. הארגון <strong>${orgName}</strong> נרשם בהצלחה.</p>
     <p>המערכת ניתחה את פעילות הארגון ומוכנה עם מפת ציות מלאה — כולל ציון ציות, רשימת פעולות נדרשות, ומסמכים מותאמים.</p>
     <div style="background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 18px; margin: 20px 0;">
       <p style="margin: 0; color: #92400e; font-weight: bold;">⚡ הצעד הבא:</p>
@@ -189,7 +189,7 @@ async function sendWelcomeEmailDirect(email: string | undefined, orgName: string
     </div>
   </div>
   <div style="background: #1e293b; color: #94a3b8; padding: 20px; border-radius: 0 0 12px 12px; text-align: center; font-size: 12px;">
-    <p style="margin: 0;">MyDPO © ${year} | <a href="${appUrl}" style="color: #94a3b8;">mydpo.co.il</a></p>
+    <p style="margin: 0;">Deepo © ${year} | <a href="${appUrl}" style="color: #94a3b8;">deepo.co.il</a></p>
   </div>
 </body>
 </html>`

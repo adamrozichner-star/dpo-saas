@@ -13,14 +13,15 @@ interface PaymentRequest {
   companyName?: string;
   industry?: string;
   companySize?: string;
-  plan: 'basic' | 'extended' | 'enterprise';
+  plan: 'basic' | 'recommended' | 'premium' | 'enterprise';
   isAnnual?: boolean;
 }
 
 const PLANS = {
   basic: { monthly: 500, annual: 5000, name: 'חבילה בסיסית', tier: 'basic' as const },
-  extended: { monthly: 1200, annual: 12000, name: 'חבילה מורחבת', tier: 'extended' as const },
-  enterprise: { monthly: 3500, annual: 35000, name: 'חבילה ארגונית', tier: 'extended' as const },
+  recommended: { monthly: 999, annual: 9990, name: 'חבילה מומלצת', tier: 'recommended' as const },
+  premium: { monthly: 4500, annual: 45000, name: 'חבילה פרימיום', tier: 'premium' as const },
+  enterprise: { monthly: 0, annual: 0, name: 'חבילה ארגונית', tier: 'enterprise' as const },
 };
 
 export async function POST(request: NextRequest) {
@@ -112,9 +113,9 @@ export async function POST(request: NextRequest) {
 
     // ---- Create Cardcom payment page ----
     const amount = isAnnual ? planDetails.annual : planDetails.monthly;
-    const productName = `MyDPO - ${planDetails.name} ${isAnnual ? '(שנתי)' : '(חודשי)'}`;
+    const productName = `Deepo - ${planDetails.name} ${isAnnual ? '(שנתי)' : '(חודשי)'}`;
     const txnId = `txn_${Date.now()}`;
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://mydpo.co.il';
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://deepo.co.il';
 
     console.log('[Payment] Step 2 — Calling Cardcom v11:', { amount, productName, orgId });
 

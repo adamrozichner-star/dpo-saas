@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
   // Check env vars
   const diagnostics: Record<string, string> = {
     RESEND_API_KEY: process.env.RESEND_API_KEY ? `set (${process.env.RESEND_API_KEY.slice(0, 8)}...)` : '❌ NOT SET',
-    FROM_EMAIL: process.env.FROM_EMAIL || '❌ NOT SET (fallback: noreply@mydpo.co.il)',
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || '❌ NOT SET (fallback: https://mydpo.co.il)',
+    FROM_EMAIL: process.env.FROM_EMAIL || '❌ NOT SET (fallback: noreply@deepo.co.il)',
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || '❌ NOT SET (fallback: https://deepo.co.il)',
     CRON_SECRET: process.env.CRON_SECRET ? 'set' : '❌ NOT SET',
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'set' : '❌ NOT SET'
   }
@@ -42,16 +42,16 @@ export async function GET(request: NextRequest) {
   }
 
   const resend = new Resend(process.env.RESEND_API_KEY)
-  const fromEmail = process.env.FROM_EMAIL || 'MyDPO <noreply@mydpo.co.il>'
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mydpo.co.il'
+  const fromEmail = process.env.FROM_EMAIL || 'Deepo <noreply@deepo.co.il>'
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://deepo.co.il'
 
   const templates: Record<string, { subject: string; html: string }> = {
     welcome: {
-      subject: '🧪 [TEST] ברוכים הבאים ל-MyDPO!',
+      subject: '🧪 [TEST] ברוכים הבאים ל-Deepo!',
       html: `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"></head>
 <body style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
 <div style="background: linear-gradient(135deg, #0f172a, #1e40af); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
-  <h1 style="color: white; margin: 0;">🛡️ MyDPO — TEST EMAIL</h1>
+  <h1 style="color: white; margin: 0;">🛡️ Deepo — TEST EMAIL</h1>
 </div>
 <div style="background: white; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
   <h2 style="color: #1e40af;">שלום! 👋</h2>
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
   </div>
 </div>
 <div style="background: #1e293b; color: #94a3b8; padding: 16px; border-radius: 0 0 12px 12px; text-align: center; font-size: 12px;">
-  <p style="margin: 0;">Test email from MyDPO email system</p>
+  <p style="margin: 0;">Test email from Deepo email system</p>
 </div>
 </body></html>`
     },
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
       html: `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"></head>
 <body style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
 <div style="background: linear-gradient(135deg, #0f172a, #1e40af); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
-  <h1 style="color: white; margin: 0;">🛡️ MyDPO</h1>
+  <h1 style="color: white; margin: 0;">🛡️ Deepo</h1>
 </div>
 <div style="background: white; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
   <h2 style="color: #1e40af;">שלום,</h2>

@@ -226,7 +226,7 @@ export function deriveComplianceActions(
   const docTypes = documents.map(d => d.type)
   const activeDocs = documents.filter(d => d.status === 'active')
   const activeDocTypes = activeDocs.map(d => d.type)
-  const pendingDocs = documents.filter(d => ['pending_review', 'pending_signature'].includes(d.status))
+  const pendingDocs = documents.filter(d => ['pending_review', 'pending_approval'].includes(d.status))
   const pendingDocTypes = pendingDocs.map(d => d.type)
 
   // Extract v3 data
@@ -301,7 +301,7 @@ export function deriveComplianceActions(
   tasks.push({
     id: 'dpo-appointed',
     title: 'מינוי ממונה הגנת פרטיות',
-    description: 'עו״ד דנה כהן מונתה כממונה הגנת הפרטיות שלכם באמצעות MyDPO.',
+    description: 'עו״ד דנה כהן מונתה כממונה הגנת הפרטיות שלכם באמצעות Deepo.',
     legalBasis: 'תיקון 13, סעיף 17ב',
     icon: '🛡️',
     priority: 'critical',
@@ -329,7 +329,7 @@ export function deriveComplianceActions(
     guideSteps: [
       { title: 'הורדת כתב המינוי', description: 'גשו ללשונית מסמכים והורידו את כתב המינוי כ-PDF' },
       { title: 'חתימה', description: 'חתמו על המסמך (חתימה דיגיטלית או ידנית)' },
-      { title: 'שליחה לממונה', description: 'שלחו עותק חתום לממונה במייל — dpo@mydpo.co.il' },
+      { title: 'שליחה לממונה', description: 'שלחו עותק חתום לממונה במייל — dpo@deepo.co.il' },
     ],
     sortOrder: sortOrder++,
   })
@@ -711,7 +711,7 @@ export function deriveComplianceActions(
     tasks.push({
       id: 'open-incidents',
       title: `${openIncidents.length} אירועי אבטחה פתוחים`,
-      description: 'יש לטפל באירועי אבטחה פתוחים בהקדם. דיווח לרשות תוך 72 שעות אם רלוונטי.',
+      description: 'יש לטפל באירועי אבטחה פתוחים בהקדם. דיווח לרשות תוך 24 שעות אם רלוונטי.',
       legalBasis: 'תיקון 13, חובת דיווח אירוע אבטחה',
       icon: '🚨',
       priority: 'critical',
@@ -728,13 +728,13 @@ export function deriveComplianceActions(
   tasks.push({
     id: 'breach-procedures',
     title: 'נוהל טיפול באירועי אבטחה',
-    description: 'מערכת MyDPO כוללת מודול ניהול אירועים עם ספירה לאחור של 72 שעות.',
+    description: 'מערכת Deepo כוללת מודול ניהול אירועים עם ספירה לאחור של 24 שעות.',
     legalBasis: 'תיקון 13, חובת דיווח אירוע אבטחה',
     icon: '🚨',
     priority: 'high',
     status: 'auto_resolved',
     actionType: 'auto_resolved',
-    resolvedNote: 'מובנה במערכת MyDPO',
+    resolvedNote: 'מובנה במערכת Deepo',
     sortOrder: sortOrder++,
   })
 
@@ -742,13 +742,13 @@ export function deriveComplianceActions(
   tasks.push({
     id: 'subject-rights',
     title: 'טיפול בבקשות פרטיות של נושאי מידע',
-    description: 'מערכת MyDPO כוללת טופס ציבורי לבקשות פרטיות עם מעקב ולוחות זמנים.',
+    description: 'מערכת Deepo כוללת טופס ציבורי לבקשות פרטיות עם מעקב ולוחות זמנים.',
     legalBasis: 'תיקון 13, זכויות נושא המידע',
     icon: '👤',
     priority: 'high',
     status: 'auto_resolved',
     actionType: 'auto_resolved',
-    resolvedNote: 'מובנה במערכת MyDPO',
+    resolvedNote: 'מובנה במערכת Deepo',
     sortOrder: sortOrder++,
   })
 
@@ -762,7 +762,7 @@ export function deriveComplianceActions(
     priority: 'medium',
     status: 'auto_resolved',
     actionType: 'auto_resolved',
-    resolvedNote: 'מובנה במערכת MyDPO',
+    resolvedNote: 'מובנה במערכת Deepo',
     sortOrder: sortOrder++,
   })
 

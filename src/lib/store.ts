@@ -35,7 +35,7 @@ interface AppState {
   documents: Document[]
   loadDocuments: () => void
   subscription: Subscription | null
-  selectTier: (tier: 'basic' | 'extended') => void
+  selectTier: (tier: 'basic' | 'recommended' | 'premium' | 'enterprise') => void
   qaHistory: QAInteraction[]
   askQuestion: (question: string) => Promise<QAInteraction>
   escalations: Escalation[]

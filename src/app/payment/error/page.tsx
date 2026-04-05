@@ -68,8 +68,8 @@ export default function PaymentErrorPage() {
           <p className="text-xs text-slate-500">
             נתקלת בבעיה? צור קשר:
             <br />
-            <a href="mailto:support@mydpo.co.il" className="text-emerald-600 hover:underline">
-              support@mydpo.co.il
+            <a href="mailto:support@deepo.co.il" className="text-emerald-600 hover:underline">
+              support@deepo.co.il
             </a>
           </p>
         </div>

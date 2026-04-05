@@ -47,7 +47,7 @@ async function analyzeIncident(incident: any): Promise<any> {
   const systemPrompt = `אתה יועץ הגנת פרטיות מומחה בישראל. תפקידך לנתח אירועי אבטחה ולהעריך את הסיכון.
 
 על פי תיקון 13 לחוק הגנת הפרטיות:
-- יש לדווח לרשות להגנת הפרטיות תוך 72 שעות מגילוי האירוע
+- יש לדווח לרשות להגנת הפרטיות תוך 24 שעות מגילוי האירוע
 - יש להודיע לנפגעים אם קיים סיכון גבוה לזכויותיהם
 - יש לתעד את כל הפעולות שננקטו
 
@@ -169,7 +169,7 @@ async function sendDPOAlert(incident: any, orgName: string): Promise<boolean> {
 
   try {
     await resend.emails.send({
-      from: 'MyDPO <onboarding@resend.dev>',
+      from: 'Deepo <onboarding@resend.dev>',
       to: [process.env.DPO_EMAIL || 'dpo@example.com'],
       subject: `🚨 אירוע אבטחה חדש - ${orgName} - ${incident.severity}`,
       html
@@ -391,7 +391,7 @@ export async function POST(request: NextRequest) {
           .maybeSingle()
 
         if (orgUsers?.email) {
-          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mydpo.co.il'
+          const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://deepo.co.il'
           const deadline = new Date(incident.authority_deadline)
           await fetch(`${baseUrl}/api/email`, {
             method: 'POST',
@@ -508,7 +508,7 @@ export async function POST(request: NextRequest) {
               .maybeSingle()
 
             if (orgUsers?.email) {
-              const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mydpo.co.il'
+              const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://deepo.co.il'
               await fetch(`${baseUrl}/api/email`, {
                 method: 'POST',
                 headers: {
