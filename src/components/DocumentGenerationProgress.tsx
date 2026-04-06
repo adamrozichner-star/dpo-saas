@@ -193,7 +193,7 @@ export default function DocumentGenerationProgress({
           <Shield className="h-8 w-8 text-white" />
         </div>
         <h2 className="text-2xl font-bold text-slate-900 mb-2">
-          {isGenerating ? 'מכינים את המסמכים שלך...' : 'המסמכים מוכנים! 🎉'}
+          {isGenerating ? 'מכינים את המסמכים שלך...' : 'המסמכים נוצרו ונשלחו לאישור הממונה'}
         </h2>
         <p className="text-slate-600">
           {isGenerating 
@@ -328,11 +328,9 @@ export default function DocumentGenerationProgress({
               <CheckCircle2 className="h-5 w-5 text-emerald-600" />
             </div>
             <div>
-              <h4 className="font-semibold text-slate-900 mb-1">מעולה! המסמכים מוכנים</h4>
+              <h4 className="font-semibold text-slate-900 mb-1">המסמכים נשלחו לאישור</h4>
               <p className="text-sm text-slate-600 mb-2">
-                הממונה שלך יבדוק ויאשר את המסמכים תוך 72 שעות.
-                <br />
-                בינתיים, תוכל לצפות בהם ולערוך במידת הצורך.
+                הממונה יבדוק ויאשר את המסמכים בהתאם לחבילה שלך.
               </p>
               <div className="flex gap-2">
                 <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700">

@@ -292,6 +292,25 @@ ${additionalMessage}` : ''}
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
       }
 
+      // Credit check — basic tier has no DPO access
+      if (auth) {
+        const { data: orgData } = await supabase.from('organizations').select('tier').eq('id', orgId).single()
+        const orgTier = orgData?.tier || 'basic'
+        if (orgTier === 'basic') {
+          return NextResponse.json({ error: 'שדרגו לחבילה מומלצת לגישה ישירה לממונה' }, { status: 403 })
+        }
+        const creditLimits: Record<string, number> = { recommended: 2, premium: 10, enterprise: 999 }
+        const limit = creditLimits[orgTier] || 2
+        // Count threads this month
+        const monthStart = new Date()
+        monthStart.setDate(1)
+        monthStart.setHours(0, 0, 0, 0)
+        const { count } = await supabase.from('message_threads').select('id', { count: 'exact', head: true }).eq('org_id', orgId).gte('created_at', monthStart.toISOString())
+        if ((count || 0) >= limit) {
+          return NextResponse.json({ error: 'ניצלת את כל הפניות החודשיות. ניתן לרכוש פניות נוספות או לשדרג חבילה.' }, { status: 429 })
+        }
+      }
+
       const { data: thread, error: threadError } = await supabase
         .from('message_threads')
         .insert({

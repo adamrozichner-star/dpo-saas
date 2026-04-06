@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Database, Globe, Server, Users, AlertTriangle, X } from 'lucide-react'
+import { Database, Globe, Server, Users, AlertTriangle, X, ZoomIn, ZoomOut } from 'lucide-react'
 
 interface DataNode {
   id: string
@@ -20,6 +20,8 @@ interface DataFlowDiagramProps {
 
 export default function DataFlowDiagram({ databases = [], processors = [] }: DataFlowDiagramProps) {
   const [selectedNode, setSelectedNode] = useState<DataNode | null>(null)
+  const [zoom, setZoom] = useState(1)
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null)
 
   const collectionNodes: DataNode[] = [
     { id: 'web', label: 'אתר אינטרנט', type: 'collection', x: 80, y: 60, details: 'נקודת איסוף: טפסים, עוגיות, אנליטיקה' },
@@ -68,8 +70,13 @@ export default function DataFlowDiagram({ databases = [], processors = [] }: Dat
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-purple-200 inline-block" /> מעבדים</span>
         </div>
       </div>
+      <div className="flex gap-1 mb-2">
+        <button onClick={() => setZoom(z => Math.min(z + 0.2, 2))} className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 transition-colors"><ZoomIn className="h-4 w-4 text-stone-600" /></button>
+        <button onClick={() => setZoom(z => Math.max(z - 0.2, 0.6))} className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 transition-colors"><ZoomOut className="h-4 w-4 text-stone-600" /></button>
+        <span className="text-xs text-stone-400 self-center mr-2">{Math.round(zoom * 100)}%</span>
+      </div>
       <div className="relative overflow-x-auto">
-        <svg width="780" height={svgHeight} className="w-full" viewBox={`0 0 780 ${svgHeight}`}>
+        <svg width={780 * zoom} height={svgHeight * zoom} className="w-full" viewBox={`0 0 780 ${svgHeight}`} style={{ minWidth: 780 * zoom }}>
           <defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" /></marker></defs>
           {flows.map((flow, i) => {
             const from = allNodes.find(n => n.id === flow.from)
@@ -80,8 +87,8 @@ export default function DataFlowDiagram({ databases = [], processors = [] }: Dat
           {allNodes.map(node => {
             const colors = getNodeColor(node.type)
             return (
-              <g key={node.id} className="cursor-pointer" onClick={() => setSelectedNode(node)}>
-                <rect x={node.x - 55} y={node.y - 25} width="110" height="50" rx="10" fill={colors.fill} stroke={colors.stroke} strokeWidth="2" />
+              <g key={node.id} className="cursor-pointer" onClick={() => setSelectedNode(node)} onMouseEnter={() => setHoveredNode(node.id)} onMouseLeave={() => setHoveredNode(null)} style={{ transition: 'transform 0.15s', transform: hoveredNode === node.id ? 'scale(1.05)' : 'scale(1)', transformOrigin: `${node.x}px ${node.y}px` }}>
+                <rect x={node.x - 55} y={node.y - 25} width="110" height="50" rx="10" fill={colors.fill} stroke={colors.stroke} strokeWidth={hoveredNode === node.id ? '3' : '2'} />
                 {node.sensitive && <><circle cx={node.x + 45} cy={node.y - 18} r="8" fill="#ef4444" /><text x={node.x + 45} y={node.y - 14} textAnchor="middle" fontSize="10" fill="white">!</text></>}
                 <text x={node.x} y={node.y + 5} textAnchor="middle" fontSize="11" fontWeight="600" fill="#374151" className="select-none">{node.label.length > 14 ? node.label.slice(0, 12) + '...' : node.label}</text>
               </g>

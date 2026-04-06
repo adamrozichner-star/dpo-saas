@@ -17,37 +17,54 @@ interface Finding {
   recommendation: string
 }
 
-function generateFindings(docs: any[], incidents: any[]): Finding[] {
+function generateFindings(docs: any[], incidents: any[], org: any): Finding[] {
   const findings: Finding[] = []
   const docTypes = docs.map(d => d.type)
+  const approvedStatuses = ['active', 'approved']
+  const pendingStatuses = ['draft', 'pending_review', 'pending_approval']
 
-  if (!docTypes.includes('privacy_policy')) {
-    findings.push({ id: 'no-privacy-policy', area: '\u05DE\u05E1\u05DE\u05DB\u05D9\u05DD', severity: 'critical', title: '\u05D7\u05E1\u05E8\u05D4 \u05DE\u05D3\u05D9\u05E0\u05D9\u05D5\u05EA \u05E4\u05E8\u05D8\u05D9\u05D5\u05EA', description: '\u05DC\u05D0 \u05E0\u05DE\u05E6\u05D0\u05D4 \u05DE\u05D3\u05D9\u05E0\u05D9\u05D5\u05EA \u05E4\u05E8\u05D8\u05D9\u05D5\u05EA \u05D1\u05D0\u05E8\u05D2\u05D5\u05DF. \u05D6\u05D4\u05D5 \u05DE\u05E1\u05DE\u05DA \u05D7\u05D5\u05D1\u05D4 \u05DC\u05E4\u05D9 \u05EA\u05D9\u05E7\u05D5\u05DF 13.', recommendation: '\u05D9\u05E9 \u05DC\u05D9\u05E6\u05D5\u05E8 \u05DE\u05D3\u05D9\u05E0\u05D9\u05D5\u05EA \u05E4\u05E8\u05D8\u05D9\u05D5\u05EA \u05DE\u05D5\u05EA\u05D0\u05DE\u05EA \u05DC\u05D0\u05E8\u05D2\u05D5\u05DF \u05D3\u05E8\u05DA \u05DE\u05E2\u05E8\u05DB\u05EA \u05D4\u05E6\u05F3\u05D0\u05D8.' })
+  if (org?.onboarding_completed === false) {
+    findings.push({ id: 'incomplete-onboarding', area: 'פרופיל', severity: 'warning', title: 'תהליך ההרשמה לא הושלם', description: 'חלק מהנתונים חסרים — ייתכן שמסמכים לא ישקפו את המצב המלא.', recommendation: 'השלימו את תהליך ההרשמה דרך לוח הבקרה.' })
+  }
+
+  const pp = docs.find(d => d.type === 'privacy_policy')
+  if (!pp) {
+    findings.push({ id: 'no-privacy-policy', area: 'מסמכים', severity: 'critical', title: 'חסרה מדיניות פרטיות', description: 'לא נמצאה מדיניות פרטיות בארגון. זהו מסמך חובה לפי תיקון 13.', recommendation: 'יש ליצור מדיניות פרטיות מותאמת לארגון דרך מערכת הצ׳את.' })
+  } else if (pendingStatuses.includes(pp.status)) {
+    findings.push({ id: 'pending-privacy-policy', area: 'מסמכים', severity: 'warning', title: 'מסמך קיים אך טרם אושר', description: 'מדיניות הפרטיות קיימת אך טרם אושרה.', recommendation: 'יש לאשר את מדיניות הפרטיות.' })
   } else {
-    const pp = docs.find(d => d.type === 'privacy_policy')
     const ageMonths = (Date.now() - new Date(pp.updated_at || pp.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30)
     findings.push(ageMonths > 12
-      ? { id: 'stale-privacy-policy', area: '\u05DE\u05E1\u05DE\u05DB\u05D9\u05DD', severity: 'warning', title: '\u05DE\u05D3\u05D9\u05E0\u05D9\u05D5\u05EA \u05E4\u05E8\u05D8\u05D9\u05D5\u05EA \u05DC\u05D0 \u05E2\u05D5\u05D3\u05DB\u05E0\u05D4 \u05DE\u05E2\u05DC \u05E9\u05E0\u05D4', description: '\u05D4\u05DE\u05D3\u05D9\u05E0\u05D9\u05D5\u05EA \u05DC\u05D0 \u05E2\u05D5\u05D3\u05DB\u05E0\u05D4 \u05DE\u05E2\u05DC 12 \u05D7\u05D5\u05D3\u05E9\u05D9\u05DD.', recommendation: '\u05E1\u05E7\u05E8\u05D5 \u05D5\u05E2\u05D3\u05DB\u05E0\u05D5 \u05D0\u05EA \u05DE\u05D3\u05D9\u05E0\u05D9\u05D5\u05EA \u05D4\u05E4\u05E8\u05D8\u05D9\u05D5\u05EA.' }
-      : { id: 'privacy-policy-ok', area: '\u05DE\u05E1\u05DE\u05DB\u05D9\u05DD', severity: 'ok', title: '\u05DE\u05D3\u05D9\u05E0\u05D9\u05D5\u05EA \u05E4\u05E8\u05D8\u05D9\u05D5\u05EA \u05EA\u05E7\u05D9\u05E0\u05D4', description: '\u05DE\u05D3\u05D9\u05E0\u05D9\u05D5\u05EA \u05D4\u05E4\u05E8\u05D8\u05D9\u05D5\u05EA \u05E7\u05D9\u05D9\u05DE\u05EA \u05D5\u05E2\u05D3\u05DB\u05E0\u05D9\u05EA.', recommendation: '' }
+      ? { id: 'stale-privacy-policy', area: 'מסמכים', severity: 'warning', title: 'מדיניות פרטיות לא עודכנה מעל שנה', description: 'המדיניות לא עודכנה מעל 12 חודשים.', recommendation: 'סקרו ועדכנו את מדיניות הפרטיות.' }
+      : { id: 'privacy-policy-ok', area: 'מסמכים', severity: 'ok', title: 'מדיניות פרטיות תקינה', description: 'מדיניות הפרטיות קיימת ועדכנית.', recommendation: '' }
     )
   }
 
-  if (!docTypes.includes('security_policy') && !docTypes.includes('security_procedures')) {
-    findings.push({ id: 'no-security-policy', area: '\u05D0\u05D1\u05D8\u05D7\u05D4', severity: 'critical', title: '\u05D7\u05E1\u05E8 \u05E0\u05D5\u05D4\u05DC \u05D0\u05D1\u05D8\u05D7\u05EA \u05DE\u05D9\u05D3\u05E2', description: '\u05DC\u05D0 \u05E0\u05DE\u05E6\u05D0 \u05E0\u05D5\u05D4\u05DC \u05D0\u05D1\u05D8\u05D7\u05EA \u05DE\u05D9\u05D3\u05E2. \u05E0\u05D3\u05E8\u05E9 \u05DC\u05E4\u05D9 \u05EA\u05E7\u05E0\u05D5\u05EA \u05D0\u05D1\u05D8\u05D7\u05EA \u05DE\u05D9\u05D3\u05E2.', recommendation: '\u05D9\u05E9 \u05DC\u05D9\u05E6\u05D5\u05E8 \u05E0\u05D5\u05D4\u05DC \u05D0\u05D1\u05D8\u05D7\u05EA \u05DE\u05D9\u05D3\u05E2 \u05DE\u05D5\u05EA\u05D0\u05DD \u05DC\u05D0\u05E8\u05D2\u05D5\u05DF.' })
+  const secDoc = docs.find(d => d.type === 'security_policy' || d.type === 'security_procedures')
+  if (!secDoc) {
+    findings.push({ id: 'no-security-policy', area: 'אבטחה', severity: 'critical', title: 'חסר נוהל אבטחת מידע', description: 'לא נמצא נוהל אבטחת מידע. נדרש לפי תקנות אבטחת מידע.', recommendation: 'יש ליצור נוהל אבטחת מידע מותאם לארגון.' })
+  } else if (pendingStatuses.includes(secDoc.status)) {
+    findings.push({ id: 'pending-security-policy', area: 'אבטחה', severity: 'warning', title: 'מסמך קיים אך טרם אושר', description: 'נוהל אבטחת מידע קיים אך טרם אושר.', recommendation: 'יש לאשר את נוהל אבטחת המידע.' })
   } else {
-    findings.push({ id: 'security-policy-ok', area: '\u05D0\u05D1\u05D8\u05D7\u05D4', severity: 'ok', title: '\u05E0\u05D5\u05D4\u05DC \u05D0\u05D1\u05D8\u05D7\u05EA \u05DE\u05D9\u05D3\u05E2 \u05E7\u05D9\u05D9\u05DD', description: '\u05E0\u05DE\u05E6\u05D0 \u05E0\u05D5\u05D4\u05DC \u05D0\u05D1\u05D8\u05D7\u05EA \u05DE\u05D9\u05D3\u05E2 \u05D1\u05D0\u05E8\u05D2\u05D5\u05DF.', recommendation: '' })
+    findings.push({ id: 'security-policy-ok', area: 'אבטחה', severity: 'ok', title: 'נוהל אבטחת מידע קיים', description: 'נמצא נוהל אבטחת מידע בארגון.', recommendation: '' })
   }
 
-  if (!docTypes.includes('dpo_appointment')) {
-    findings.push({ id: 'no-dpo-appointment', area: '\u05DE\u05DE\u05D5\u05E0\u05D4', severity: 'warning', title: '\u05D7\u05E1\u05E8 \u05DB\u05EA\u05D1 \u05DE\u05D9\u05E0\u05D5\u05D9 DPO', description: '\u05DC\u05D0 \u05E0\u05DE\u05E6\u05D0 \u05DB\u05EA\u05D1 \u05DE\u05D9\u05E0\u05D5\u05D9 \u05E8\u05E9\u05DE\u05D9 \u05DC\u05DE\u05DE\u05D5\u05E0\u05D4 \u05D4\u05D2\u05E0\u05EA \u05E4\u05E8\u05D8\u05D9\u05D5\u05EA.', recommendation: '\u05D9\u05E9 \u05DC\u05D9\u05E6\u05D5\u05E8 \u05DB\u05EA\u05D1 \u05DE\u05D9\u05E0\u05D5\u05D9 \u05E8\u05E9\u05DE\u05D9 \u05DC\u05DE\u05DE\u05D5\u05E0\u05D4.' })
+  const dpoDoc = docs.find(d => d.type === 'dpo_appointment')
+  if (!dpoDoc) {
+    findings.push({ id: 'no-dpo-appointment', area: 'ממונה', severity: 'warning', title: 'חסר כתב מינוי DPO', description: 'לא נמצא כתב מינוי רשמי לממונה הגנת פרטיות.', recommendation: 'יש ליצור כתב מינוי רשמי לממונה.' })
+  } else if (pendingStatuses.includes(dpoDoc.status)) {
+    findings.push({ id: 'pending-dpo-appointment', area: 'ממונה', severity: 'warning', title: 'מסמך קיים אך טרם אושר', description: 'כתב מינוי DPO קיים אך טרם אושר.', recommendation: 'יש לאשר את כתב המינוי.' })
   } else {
-    findings.push({ id: 'dpo-appointment-ok', area: '\u05DE\u05DE\u05D5\u05E0\u05D4', severity: 'ok', title: '\u05DB\u05EA\u05D1 \u05DE\u05D9\u05E0\u05D5\u05D9 DPO \u05E7\u05D9\u05D9\u05DD', description: '\u05DB\u05EA\u05D1 \u05DE\u05D9\u05E0\u05D5\u05D9 \u05E8\u05E9\u05DE\u05D9 \u05DC\u05DE\u05DE\u05D5\u05E0\u05D4 \u05E0\u05DE\u05E6\u05D0 \u05D1\u05DE\u05E2\u05E8\u05DB\u05EA.', recommendation: '' })
+    findings.push({ id: 'dpo-appointment-ok', area: 'ממונה', severity: 'ok', title: 'כתב מינוי DPO קיים', description: 'כתב מינוי רשמי לממונה נמצא במערכת.', recommendation: '' })
   }
 
-  if (!docTypes.includes('database_registration') && !docTypes.includes('database_definition')) {
-    findings.push({ id: 'no-db-registration', area: '\u05DE\u05D0\u05D2\u05E8\u05D9\u05DD', severity: 'warning', title: '\u05D7\u05E1\u05E8 \u05E8\u05D9\u05E9\u05D5\u05DD \u05DE\u05D0\u05D2\u05E8\u05D9 \u05DE\u05D9\u05D3\u05E2', description: '\u05DC\u05D0 \u05E0\u05DE\u05E6\u05D0 \u05DE\u05E1\u05DE\u05DA \u05E8\u05D9\u05E9\u05D5\u05DD \u05DE\u05D0\u05D2\u05E8\u05D9 \u05DE\u05D9\u05D3\u05E2.', recommendation: '\u05D9\u05E9 \u05DC\u05E8\u05E9\u05D5\u05DD \u05D0\u05EA \u05DE\u05D0\u05D2\u05E8\u05D9 \u05D4\u05DE\u05D9\u05D3\u05E2 \u05E9\u05DC \u05D4\u05D0\u05E8\u05D2\u05D5\u05DF.' })
+  const dbDoc = docs.find(d => d.type === 'database_registration' || d.type === 'database_definition')
+  if (!dbDoc) {
+    findings.push({ id: 'no-db-registration', area: 'מאגרים', severity: 'warning', title: 'חסר רישום מאגרי מידע', description: 'לא נמצא מסמך רישום מאגרי מידע.', recommendation: 'יש לרשום את מאגרי המידע של הארגון.' })
+  } else if (pendingStatuses.includes(dbDoc.status)) {
+    findings.push({ id: 'pending-db-registration', area: 'מאגרים', severity: 'warning', title: 'מסמך קיים אך טרם אושר', description: 'מסמך רישום מאגרים קיים אך טרם אושר.', recommendation: 'יש לאשר את מסמך רישום המאגרים.' })
   } else {
-    findings.push({ id: 'db-registration-ok', area: '\u05DE\u05D0\u05D2\u05E8\u05D9\u05DD', severity: 'ok', title: '\u05E8\u05D9\u05E9\u05D5\u05DD \u05DE\u05D0\u05D2\u05E8\u05D9\u05DD \u05EA\u05E7\u05D9\u05DF', description: '\u05DE\u05D0\u05D2\u05E8\u05D9 \u05D4\u05DE\u05D9\u05D3\u05E2 \u05E8\u05E9\u05D5\u05DE\u05D9\u05DD \u05D1\u05DE\u05E2\u05E8\u05DB\u05EA.', recommendation: '' })
+    findings.push({ id: 'db-registration-ok', area: 'מאגרים', severity: 'ok', title: 'רישום מאגרים תקין', description: 'מאגרי המידע רשומים במערכת.', recommendation: '' })
   }
 
   const openIncidents = incidents.filter(i => !['resolved', 'closed'].includes(i.status))
@@ -77,17 +94,18 @@ export async function GET(request: NextRequest) {
     if (!userData?.org_id) return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
 
     const orgId = userData.org_id
-    const [{ data: docs }, { data: incidents }] = await Promise.all([
+    const [{ data: org }, { data: docs }, { data: incidents }] = await Promise.all([
+      supabaseAdmin.from('organizations').select('*').eq('id', orgId).single(),
       supabaseAdmin.from('documents').select('*').eq('org_id', orgId),
       supabaseAdmin.from('security_incidents').select('*').eq('org_id', orgId),
     ])
 
-    const findings = generateFindings(docs || [], incidents || [])
+    const findings = generateFindings(docs || [], incidents || [], org)
     const criticalCount = findings.filter(f => f.severity === 'critical').length
     const warningCount = findings.filter(f => f.severity === 'warning').length
     const okCount = findings.filter(f => f.severity === 'ok').length
     const total = findings.length
-    const score = total > 0 ? Math.round((okCount / total) * 100) : 0
+    const score = total > 0 ? Math.round(((okCount * 1.0 + warningCount * 0.5) / total) * 100) : 0
 
     return NextResponse.json({
       score,

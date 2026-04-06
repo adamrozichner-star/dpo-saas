@@ -87,7 +87,7 @@ function DashboardContent() {
   }
   const { isAuthorized, isChecking, isPaid: gateIsPaid } = useSubscriptionGate()
   
-  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'databases' | 'incidents' | 'messages' | 'rights' | 'reminders' | 'settings' | 'workplan' | 'compliance' | 'data-flow'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'databases' | 'incidents' | 'messages' | 'compliance' | 'settings'>('overview')
   const [organization, setOrganization] = useState<any>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [incidents, setIncidents] = useState<any[]>([])
@@ -524,76 +524,51 @@ function DashboardContent() {
 
           {/* Navigation */}
           <nav className="flex-1 px-3 py-2 space-y-0.5">
-            <NavButton 
-              icon={<LayoutDashboard className="h-5 w-5" />} 
-              label="לוח בקרה" 
-              active={activeTab === 'overview'} 
-              onClick={() => { setActiveTab('overview'); setMobileMenuOpen(false) }} 
+            <NavButton
+              icon={<LayoutDashboard className="h-5 w-5" />}
+              label="לוח בקרה"
+              active={activeTab === 'overview'}
+              onClick={() => { setActiveTab('overview'); setMobileMenuOpen(false) }}
             />
-            <NavButton 
-              icon={<ClipboardList className="h-5 w-5" />} 
-              label="משימות" 
-              active={activeTab === 'tasks'} 
+            <NavButton
+              icon={<ClipboardList className="h-5 w-5" />}
+              label="משימות"
+              active={activeTab === 'tasks'}
               onClick={() => { setActiveTab('tasks'); setMobileMenuOpen(false) }}
               badge={(complianceSummary?.tasks?.filter(t => t.status !== 'completed' && t.status !== 'auto_resolved' && t.status !== 'not_applicable').length || 0) > 0 ? complianceSummary?.tasks?.filter(t => t.status !== 'completed' && t.status !== 'auto_resolved' && t.status !== 'not_applicable').length : undefined}
             />
-            <NavButton 
-              icon={<FolderOpen className="h-5 w-5" />} 
-              label="מסמכים" 
-              active={activeTab === 'documents'} 
+            <NavButton
+              icon={<FolderOpen className="h-5 w-5" />}
+              label="מסמכים"
+              active={activeTab === 'documents'}
               onClick={() => { setActiveTab('documents'); setMobileMenuOpen(false) }}
               badge={documents.filter(d => d.status === 'pending_review').length > 0 ? documents.filter(d => d.status === 'pending_review').length : undefined}
             />
-            <NavButton 
-              icon={<Database className="h-5 w-5" />} 
-              label="מאגרי מידע" 
-              active={activeTab === 'databases'} 
+            <NavButton
+              icon={<Database className="h-5 w-5" />}
+              label="מאגרי מידע"
+              active={activeTab === 'databases'}
               onClick={() => { setActiveTab('databases'); setMobileMenuOpen(false) }}
             />
-            <NavButton 
-              icon={<AlertTriangle className="h-5 w-5" />} 
-              label="אירועי אבטחה" 
-              active={activeTab === 'incidents'} 
+            <NavButton
+              icon={<AlertTriangle className="h-5 w-5" />}
+              label="אירועי אבטחה"
+              active={activeTab === 'incidents'}
               onClick={() => { setActiveTab('incidents'); setMobileMenuOpen(false) }}
               badge={activeIncidentsCount > 0 ? activeIncidentsCount : undefined}
             />
-            <NavButton 
-              icon={<MessageSquare className="h-5 w-5" />} 
-              label="שיח עם ממונה" 
-              active={activeTab === 'messages'} 
-              onClick={() => { setActiveTab('messages'); setMobileMenuOpen(false) }}
-              badge={unreadMessages > 0 ? unreadMessages : undefined}
-            />
-            <NavButton 
-              icon={<Users className="h-5 w-5" />} 
-              label="בקשות פרטיות" 
-              active={activeTab === 'rights'} 
-              onClick={() => { setActiveTab('rights'); setMobileMenuOpen(false) }}
-              badge={openRightsCount > 0 ? openRightsCount : undefined}
-            />
-            <NavButton 
-              icon={<Clock className="h-5 w-5" />} 
-              label="תזכורות" 
-              active={activeTab === 'reminders'} 
-              onClick={() => { setActiveTab('reminders'); setMobileMenuOpen(false) }} 
-            />
             <NavButton
-              icon={<Calendar className="h-5 w-5" />}
-              label="תוכנית עבודה"
-              active={activeTab === 'workplan'}
-              onClick={() => { setActiveTab('workplan'); setMobileMenuOpen(false) }}
+              icon={<MessageSquare className="h-5 w-5" />}
+              label="ממונה ובקשות"
+              active={activeTab === 'messages'}
+              onClick={() => { setActiveTab('messages'); setMobileMenuOpen(false) }}
+              badge={(unreadMessages + openRightsCount) > 0 ? (unreadMessages + openRightsCount) : undefined}
             />
             <NavButton
               icon={<Activity className="h-5 w-5" />}
               label="סקירת ציות"
               active={activeTab === 'compliance'}
               onClick={() => { setActiveTab('compliance'); setMobileMenuOpen(false) }}
-            />
-            <NavButton
-              icon={<Search className="h-5 w-5" />}
-              label="מפת זרימת מידע"
-              active={activeTab === 'data-flow'}
-              onClick={() => { setActiveTab('data-flow'); setMobileMenuOpen(false) }}
             />
             <NavButton
               icon={<Settings className="h-5 w-5" />}
@@ -657,11 +632,13 @@ function DashboardContent() {
             <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
-                <span className="text-sm text-amber-800 font-medium">השלמת התהליך שלך עדיין לא הסתיימה</span>
+                <div>
+                  <span className="text-sm text-amber-800 font-medium block">ההרשמה שלך לא הושלמה — חלק מהמידע חסר ליצירת מסמכים מדויקים</span>
+                </div>
               </div>
               <Link href="/onboarding">
-                <button className="px-4 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors">
-                  המשך
+                <button className="px-4 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors whitespace-nowrap">
+                  המשך הרשמה
                 </button>
               </Link>
             </div>
@@ -692,7 +669,7 @@ function DashboardContent() {
             />
           )}
           {activeTab === 'tasks' && (
-            gateIsPaid ? (
+            gateIsPaid ? (<>
               <UnifiedTaskList
                 tasks={complianceSummary?.tasks || []}
                 isPaid={gateIsPaid}
@@ -705,14 +682,37 @@ function DashboardContent() {
                 onRefreshDocs={loadAllData}
                 onNavigateTab={(tab) => setActiveTab(tab as any)}
               />
-            ) : 
+              {organization?.id && (
+                <div className="border-t border-stone-200 pt-6 mt-6">
+                  <h2 className="text-lg font-semibold text-stone-800 mb-4 flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-indigo-500" />
+                    תוכנית עבודה שנתית
+                  </h2>
+                  <WorkPlanTab orgId={organization.id} supabase={supabase} />
+                </div>
+              )}
+              <div className="border-t border-stone-200 pt-6 mt-6">
+                <h2 className="text-lg font-semibold text-stone-800 mb-4 flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-amber-500" />
+                  תזכורות
+                </h2>
+                <RemindersTab orgProfile={orgProfile} documents={documents} />
+              </div>
+            </>) :
             <LockedTabOverlay icon="📋" title="משימות ממתינות לביצוע" description="שלמו כדי לצפות ולבצע את רשימת הפעולות הנדרשות לציות לתיקון 13" />
           )}
           {activeTab === 'documents' && (
             <DocumentsTab documents={documents} organization={organization} supabase={supabase} isPaid={gateIsPaid} orgProfile={orgProfile} onRefresh={loadAllData} />
           )}
           {activeTab === 'databases' && (
-            gateIsPaid && organization?.id ? <ROPATab orgId={organization.id} authFetch={authFetch} /> :
+            gateIsPaid && organization?.id ? (
+              <div className="space-y-8">
+                <ROPATab orgId={organization.id} authFetch={authFetch} />
+                <div className="border-t border-stone-200 pt-6">
+                  <DataFlowDiagram />
+                </div>
+              </div>
+            ) :
             <LockedTabOverlay icon="📊" title="מאגרי מידע (ROPA)" description="צפו, ערכו והוסיפו מאגרי מידע אישי. נדרש לציות לתיקון 13." />
           )}
           {activeTab === 'incidents' && (
@@ -720,34 +720,43 @@ function DashboardContent() {
             <LockedTabOverlay icon="⚠️" title="ניהול אירועי אבטחה" description="דווחו וטפלו באירועי אבטחת מידע עם ספירה לאחור של 24 שעות לדיווח לרשות" />
           )}
           {activeTab === 'messages' && (
-            gateIsPaid ? <MessagesTab 
-              threads={messageThreads} 
-              orgId={organization?.id}
-              onRefresh={loadAllData}
-              supabase={supabase}
-              tier={organization?.tier}
-            /> :
-            <LockedTabOverlay icon="💬" title="שיח עם הממונה" description="שלחו שאלות ישירות לממונה הגנת הפרטיות שלכם וקבלו תשובה מקצועית" />
-          )}
-          {activeTab === 'rights' && (
-            <RightsTab
-              orgId={organization?.id || ''}
-              orgName={organization?.name || ''}
-              isPaid={gateIsPaid}
-              supabase={supabase}
-            />
-          )}
-          {activeTab === 'reminders' && (
-            <RemindersTab orgProfile={orgProfile} documents={documents} />
-          )}
-          {activeTab === 'workplan' && organization?.id && (
-            <WorkPlanTab orgId={organization.id} supabase={supabase} />
+            gateIsPaid ? (
+              <div className="space-y-8">
+                {organization?.tier === 'basic' ? (
+                  <div className="bg-white rounded-2xl p-8 shadow-sm border border-stone-200 text-center">
+                    <MessageSquare className="h-12 w-12 text-stone-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-stone-800 mb-2">גישה ישירה לממונה</h3>
+                    <p className="text-stone-500 mb-4">שדרגו לחבילה מומלצת לקבלת גישה ישירה לממונה הגנת פרטיות מוסמך</p>
+                    <Link href="/subscribe">
+                      <button className="px-6 py-2.5 bg-indigo-500 text-white rounded-xl font-medium hover:bg-indigo-600 transition-colors">שדרגו לחבילה מומלצת</button>
+                    </Link>
+                  </div>
+                ) : (
+                  <MessagesTab
+                    threads={messageThreads}
+                    orgId={organization?.id}
+                    onRefresh={loadAllData}
+                    supabase={supabase}
+                    tier={organization?.tier}
+                  />
+                )}
+                <div className="border-t border-stone-200 pt-6">
+                  <h2 className="text-lg font-semibold text-stone-800 mb-4 flex items-center gap-2">
+                    <Users className="h-5 w-5 text-indigo-500" />
+                    בקשות פרטיות (DSAR)
+                  </h2>
+                  <RightsTab
+                    orgId={organization?.id || ''}
+                    orgName={organization?.name || ''}
+                    isPaid={gateIsPaid}
+                    supabase={supabase}
+                  />
+                </div>
+              </div>
+            ) : <LockedTabOverlay icon="💬" title="ממונה ובקשות" description="שלחו שאלות לממונה וטפלו בבקשות פרטיות" />
           )}
           {activeTab === 'compliance' && organization?.id && (
             <ComplianceReviewPanel orgId={organization.id} supabase={supabase} />
-          )}
-          {activeTab === 'data-flow' && (
-            <DataFlowDiagram />
           )}
           {activeTab === 'settings' && (
             <SettingsTab organization={organization} user={user} orgProfile={orgProfile} supabase={supabase} />
@@ -1613,13 +1622,15 @@ function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: a
   const [replyText, setReplyText] = useState('')
   const [isSending, setIsSending] = useState(false)
   
-  // Credit counter — basic: 2/quarter, recommended: 6/quarter
-  const maxCredits = tier === 'recommended' ? 6 : tier === 'enterprise' ? 12 : 2
+  // Credit counter — basic: 0 (no DPO), recommended: 2/month, premium: 10/month, enterprise: unlimited
+  const isBasicTier = !tier || tier === 'basic'
+  const isEnterpriseTier = tier === 'enterprise'
+  const maxCredits = tier === 'premium' ? 10 : tier === 'recommended' ? 2 : isEnterpriseTier ? Infinity : 0
   const usedCredits = threads.filter(t => {
     const d = new Date(t.created_at || t.createdAt)
     const now = new Date()
-    const qStart = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1)
-    return d >= qStart
+    const mStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    return d >= mStart
   }).length
 
   const authFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
@@ -1837,19 +1848,36 @@ function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: a
         </button>
       </div>
 
-      {/* Credit counter */}
-      <div className="flex items-center gap-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-indigo-800">פניות לממונה ברבעון זה</p>
-          <p className="text-xs text-indigo-500 mt-0.5">{tier === 'recommended' ? 'חבילה מומלצת' : 'חבילה בסיסית'} · עד {maxCredits} פניות ברבעון</p>
+      {/* Credit counter / Upgrade prompt */}
+      {isBasicTier ? (
+        <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 text-center">
+          <p className="text-sm font-medium text-amber-800 mb-2">שדרגו לחבילה מומלצת לגישה ישירה לממונה</p>
+          <Link href="/subscribe">
+            <button className="px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors">שדרגו עכשיו</button>
+          </Link>
         </div>
-        <div className="flex items-center gap-1.5">
-          {Array.from({ length: maxCredits }).map((_, i) => (
-            <div key={i} className={`w-3 h-3 rounded-full ${i < usedCredits ? 'bg-indigo-500' : 'bg-indigo-200'}`} />
-          ))}
-          <span className="text-sm font-semibold text-indigo-700 mr-1">{usedCredits}/{maxCredits}</span>
+      ) : isEnterpriseTier ? (
+        <div className="flex items-center gap-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-indigo-800">פניות לממונה</p>
+            <p className="text-xs text-indigo-500 mt-0.5">חבילה ארגונית · ללא הגבלה</p>
+          </div>
+          <span className="text-sm font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">ללא הגבלה</span>
         </div>
-      </div>
+      ) : (
+        <div className="flex items-center gap-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-indigo-800">פניות לממונה בחודש זה</p>
+            <p className="text-xs text-indigo-500 mt-0.5">{tier === 'premium' ? 'חבילה פרימיום' : 'חבילה מומלצת'} · עד {maxCredits} פניות בחודש</p>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {Array.from({ length: maxCredits }).map((_, i) => (
+              <div key={i} className={`w-3 h-3 rounded-full ${i < usedCredits ? 'bg-indigo-500' : 'bg-indigo-200'}`} />
+            ))}
+            <span className="text-sm font-semibold text-indigo-700 mr-1">{usedCredits}/{maxCredits}</span>
+          </div>
+        </div>
+      )}
 
       {/* New Message Form */}
       {showNewMessage && (
