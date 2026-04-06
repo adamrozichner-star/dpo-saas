@@ -68,7 +68,7 @@ function MiniCalculator() {
           {required ? (
             <Link href="/register">
               <Button className="w-full py-5 rounded-xl font-bold text-base" style={{ backgroundColor: '#059669' }}>
-                התחל עכשיו — ₪500/חודש
+                התחל עכשיו — החל מ-₪500/חודש
                 <ArrowLeft className="h-4 w-4 mr-2" />
               </Button>
             </Link>
@@ -216,7 +216,7 @@ export default function HomePage() {
             <div className="flex gap-8 mb-8">
               <div className="text-center">
                 <div className="text-3xl font-bold text-slate-900">₪500</div>
-                <div className="text-xs text-slate-500 mt-1">לחודש</div>
+                <div className="text-xs text-slate-500 mt-1">החל מ- / לחודש</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl font-bold text-slate-900">5 דק׳</div>
@@ -232,7 +232,7 @@ export default function HomePage() {
             <div className="flex flex-wrap gap-4 text-sm text-slate-500">
               <span className="flex items-center gap-1.5">
                 <UserCheck className="h-4 w-4 text-emerald-500" />
-                ממונה אנושי מוסמך
+                ממונה אנושי מוסמך (מחבילה מומלצת)
               </span>
               <span className="flex items-center gap-1.5">
                 <FileText className="h-4 w-4 text-blue-500" />
@@ -273,11 +273,11 @@ export default function HomePage() {
 
       {/* ===== WHAT YOU GET ===== */}
       <section className="max-w-5xl mx-auto px-5 py-16">
-        <h2 className="text-3xl font-bold text-slate-900 text-center mb-3">מה מקבלים ב-₪500/חודש</h2>
+        <h2 className="text-3xl font-bold text-slate-900 text-center mb-3">מה מקבלים ב-Deepo</h2>
         <p className="text-slate-500 text-center mb-10">כל מה שצריך לעמידה מלאה בתיקון 13</p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
-            { icon: <UserCheck className="h-6 w-6 text-emerald-600" />, bg: 'bg-emerald-50', title: 'ממונה אנושי מוסמך', desc: 'לא בוט — ממונה הגנת פרטיות אנושי שמתמנה רשמית על העסק שלך.' },
+            { icon: <UserCheck className="h-6 w-6 text-emerald-600" />, bg: 'bg-emerald-50', title: 'ממונה אנושי מוסמך', desc: 'ממונה הגנת פרטיות אנושי שמתמנה רשמית על העסק שלך (מחבילה מומלצת).' },
             { icon: <FileText className="h-6 w-6 text-blue-600" />, bg: 'bg-blue-50', title: 'מסמכים אוטומטיים', desc: 'מדיניות פרטיות, נוהלי אבטחה, כתב מינוי, רישום מאגרים — מותאמים לעסק.' },
             { icon: <MessageSquare className="h-6 w-6 text-purple-600" />, bg: 'bg-purple-50', title: 'צ׳אט חכם 24/7', desc: 'מענה מיידי לכל שאלה, יצירת מסמכים, העברה לממונה בלחיצה.' },
             { icon: <Bell className="h-6 w-6 text-red-600" />, bg: 'bg-red-50', title: 'ניהול אירועי אבטחה', desc: 'ספירה לאחור 24 שעות, תבניות דיווח, ליווי מקצועי עד לסגירה.' },
@@ -324,17 +324,17 @@ export default function HomePage() {
       </section>
 
       {/* ===== PRICING ===== */}
-      <section className="max-w-4xl mx-auto px-5 py-16">
+      <section className="max-w-6xl mx-auto px-5 py-16">
         <h2 className="text-3xl font-bold text-slate-900 text-center mb-3">חבילות ומחירים</h2>
         <p className="text-slate-500 text-center mb-10">
           עו"ד פרטי גובה ₪8,000-15,000/חודש. יועץ פרטיות ₪3,000-8,000. אנחנו?
         </p>
-        <div className="grid md:grid-cols-2 gap-5 max-w-3xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 max-w-6xl mx-auto">
 
           {/* Basic */}
           <div className="bg-white rounded-2xl border border-slate-200 p-7 text-center hover:shadow-lg transition-shadow">
             <h3 className="text-lg font-bold text-slate-900 mb-1">בסיסית</h3>
-            <p className="text-sm text-slate-500 mb-5">לעסקים קטנים ובינוניים</p>
+            <p className="text-sm text-slate-500 mb-5">ניהול פרטיות עצמאי — ללא ממונה</p>
             <div className="mb-1">
               <span className="text-5xl font-bold text-slate-900">₪500</span>
               <span className="text-slate-500 text-lg"> / חודש</span>
@@ -342,10 +342,11 @@ export default function HomePage() {
             <p className="text-xs text-slate-400 mb-6">במקום ₪8,000+ אצל עו"ד</p>
             <ul className="space-y-2.5 mb-7 text-right">
               {[
-                'ממונה הגנת פרטיות מוסמך',
+                'מערכת AI מלאה',
                 'מסמכים אוטומטיים',
                 'צ׳אט חכם 24/7',
                 'לוח בקרה וציון ציות',
+                'המלצות ציות (לא מחייבות)',
                 'תמיכה במייל',
               ].map((f, i) => (
                 <li key={i} className="flex items-center gap-2 text-sm text-slate-600">
@@ -361,23 +362,24 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* Extended */}
+          {/* Recommended */}
           <div className="bg-white rounded-2xl border-2 border-emerald-500 p-7 text-center relative shadow-md hover:shadow-lg transition-shadow">
             <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-              <span className="bg-emerald-500 text-white text-xs font-bold px-4 py-1 rounded-full">הכי פופולרי</span>
+              <span className="bg-emerald-500 text-white text-xs font-bold px-4 py-1 rounded-full">מומלצת</span>
             </div>
             <h3 className="text-lg font-bold text-slate-900 mb-1">מומלצת</h3>
-            <p className="text-sm text-slate-500 mb-5">לעסקים עם מידע רגיש</p>
+            <p className="text-sm text-slate-500 mb-5">כולל DPO ממונה מוסמך — המומלצת לרוב העסקים</p>
             <div className="mb-1">
-              <span className="text-5xl font-bold text-slate-900">₪1,200</span>
+              <span className="text-5xl font-bold text-slate-900">₪999</span>
               <span className="text-slate-500 text-lg"> / חודש</span>
             </div>
             <p className="text-xs text-slate-400 mb-6">במקום ₪3,000-8,000 אצל יועץ</p>
             <ul className="space-y-2.5 mb-7 text-right">
               {[
                 'כל מה שבבסיסית',
+                'DPO ממונה מוסמך',
                 'סקירה רבעונית מהממונה',
-                '30 דק׳ זמן DPO / חודש',
+                'עד 2 פניות DPO בחודש',
                 'ליווי באירועי אבטחה',
                 'תמיכה טלפונית',
                 'זמן תגובה: 24 שעות',
@@ -391,6 +393,66 @@ export default function HomePage() {
             <Link href="/register?plan=recommended" className="block">
               <Button className="w-full py-5 rounded-xl text-base font-semibold" style={{ backgroundColor: '#059669' }}>
                 בחירת חבילה
+              </Button>
+            </Link>
+          </div>
+
+          {/* Premium */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-7 text-center hover:shadow-lg transition-shadow">
+            <h3 className="text-lg font-bold text-slate-900 mb-1">פרימיום</h3>
+            <p className="text-sm text-slate-500 mb-5">לארגונים עם דרישות מורכבות</p>
+            <div className="mb-1">
+              <span className="text-5xl font-bold text-slate-900">₪4,500</span>
+              <span className="text-slate-500 text-lg"> / חודש</span>
+            </div>
+            <p className="text-xs text-slate-400 mb-6">ליווי מקצועי צמוד</p>
+            <ul className="space-y-2.5 mb-7 text-right">
+              {[
+                'כל מה שבמומלצת',
+                '2 שעות זמן DPO/חודש',
+                'סקירה חודשית',
+                'הדרכת עובדים רבעונית',
+                'DPIA מלא כלול',
+                'זמן תגובה: 4 שעות',
+                'משתמשים ללא הגבלה',
+              ].map((f, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm text-slate-600">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <Link href="/register?plan=premium" className="block">
+              <Button variant="outline" className="w-full py-5 rounded-xl text-base font-semibold">
+                בחירת חבילה
+              </Button>
+            </Link>
+          </div>
+
+          {/* Enterprise */}
+          <div className="bg-white rounded-2xl border border-slate-200 p-7 text-center hover:shadow-lg transition-shadow bg-gradient-to-b from-slate-50 to-white">
+            <h3 className="text-lg font-bold text-slate-900 mb-1">ארגונית</h3>
+            <p className="text-sm text-slate-500 mb-5">התאמה מלאה לארגון</p>
+            <div className="mb-1">
+              <span className="text-3xl font-bold text-slate-900">צרו קשר</span>
+            </div>
+            <p className="text-xs text-slate-400 mb-6">תמחור מותאם אישית</p>
+            <ul className="space-y-2.5 mb-7 text-right">
+              {[
+                'כל מה שבפרימיום',
+                'SLA מובטח',
+                'הטמעה ייעודית',
+                'התאמה מלאה',
+              ].map((f, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm text-slate-600">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+            <Link href="/contact" className="block">
+              <Button variant="outline" className="w-full py-5 rounded-xl text-base font-semibold">
+                צרו קשר
               </Button>
             </Link>
           </div>
