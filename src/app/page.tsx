@@ -213,17 +213,17 @@ export default function HomePage() {
             </p>
 
             {/* Stats row */}
-            <div className="flex gap-8 mb-8">
+            <div className="grid grid-cols-3 gap-4 mb-8">
               <div className="text-center">
-                <div className="text-3xl font-bold text-slate-900">₪500</div>
+                <div className="text-2xl sm:text-3xl font-bold text-slate-900">₪500</div>
                 <div className="text-xs text-slate-500 mt-1">החל מ- / לחודש</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-slate-900">5 דק׳</div>
+                <div className="text-2xl sm:text-3xl font-bold text-slate-900">5 דק׳</div>
                 <div className="text-xs text-slate-500 mt-1">להקמה</div>
               </div>
               <div className="text-center">
-                <div className="text-3xl font-bold text-slate-900">24/7</div>
+                <div className="text-2xl sm:text-3xl font-bold text-slate-900">24/7</div>
                 <div className="text-xs text-slate-500 mt-1">זמינות</div>
               </div>
             </div>
@@ -301,7 +301,7 @@ export default function HomePage() {
       <section className="bg-white border-y border-slate-200 py-16 px-5">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-bold text-slate-900 text-center mb-12">ארבעה צעדים, חמש דקות</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
             {[
               { num: '1', title: 'הרשמה', desc: '5 שאלות על העסק שלך', tag: '2 דקות' },
               { num: '2', title: 'מסמכים', desc: 'נוצרים אוטומטית ומותאמים', tag: 'אוטומטי' },
@@ -329,7 +329,7 @@ export default function HomePage() {
         <p className="text-slate-500 text-center mb-10">
           עו"ד פרטי גובה ₪8,000-15,000/חודש. יועץ פרטיות ₪3,000-8,000. אנחנו?
         </p>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-6xl mx-auto">
 
           {/* Basic */}
           <div className="bg-white rounded-2xl border border-slate-200 p-7 text-center hover:shadow-lg transition-shadow">
@@ -509,9 +509,9 @@ export default function HomePage() {
             האכיפה כבר כאן — אל תחכו לקנס.
           </p>
           <Link href="/register">
-            <Button 
-              size="lg" 
-              className="text-lg px-10 py-6 h-auto rounded-xl font-bold shadow-lg shadow-emerald-500/25"
+            <Button
+              size="lg"
+              className="w-full sm:w-auto text-lg px-10 py-6 h-auto rounded-xl font-bold shadow-lg shadow-emerald-500/25"
               style={{ backgroundColor: '#059669' }}
             >
               התחל עכשיו
@@ -525,7 +525,7 @@ export default function HomePage() {
       {/* ===== FOOTER ===== */}
       <footer className="bg-slate-900 py-12 px-5">
         <div className="max-w-6xl mx-auto">
-          <div className="grid md:grid-cols-3 gap-10 mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
             <div className="text-right">
               <div className="flex items-center gap-2 justify-end mb-3">
                 <span className="font-bold text-white text-lg">Deepo</span>

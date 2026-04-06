@@ -82,7 +82,7 @@ export default function ComplianceReviewPanel({ orgId, supabase }: ComplianceRev
           </div>
 
           {summary && (
-            <div className="flex gap-3 mb-5">
+            <div className="flex gap-3 mb-5 flex-wrap">
               {summary.critical > 0 && <span className="flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium"><AlertTriangle className="h-3 w-3" /> {summary.critical} קריטי</span>}
               {summary.warning > 0 && <span className="flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium"><AlertCircle className="h-3 w-3" /> {summary.warning} אזהרות</span>}
               {summary.ok > 0 && <span className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium"><CheckCircle2 className="h-3 w-3" /> {summary.ok} תקין</span>}

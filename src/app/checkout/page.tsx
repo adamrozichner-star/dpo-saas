@@ -256,7 +256,7 @@ export default function CheckoutPage() {
           </span>
         </div>
 
-        <div className="grid lg:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {(Object.keys(PLANS) as Plan[]).map((planKey) => {
             const plan = PLANS[planKey];
             const isSelected = selectedPlan === planKey;
@@ -334,7 +334,7 @@ export default function CheckoutPage() {
         </div>
 
         {/* Checkout Summary */}
-        <div className="max-w-xl mx-auto bg-white rounded-2xl p-8 shadow-lg border border-slate-200">
+        <div className="w-full max-w-xl mx-auto bg-white rounded-2xl p-6 sm:p-8 shadow-lg border border-slate-200">
           <h2 className="text-xl font-bold text-slate-900 mb-6">סיכום הזמנה</h2>
 
           <div className="space-y-4 mb-6">

@@ -102,7 +102,7 @@ export default function WorkPlanTab({ orgId, supabase }: WorkPlanTabProps) {
                 <div className={`w-8 h-8 rounded-lg ${config.bg} flex items-center justify-center`}><Icon className={`h-4 w-4 ${config.text}`} /></div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-stone-800">{task.title}</p>
-                  <div className="flex items-center gap-3 mt-0.5">
+                  <div className="flex items-center gap-2 sm:gap-3 mt-0.5 flex-wrap">
                     <span className={`text-xs px-2 py-0.5 rounded-full ${config.bg} ${config.text}`}>{config.label}</span>
                     <span className="text-xs text-stone-400 flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(task.dueDate).toLocaleDateString('he-IL')}</span>
                     <span className="text-xs text-stone-400">{task.quarter}</span>

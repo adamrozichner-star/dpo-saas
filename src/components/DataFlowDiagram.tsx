@@ -61,9 +61,9 @@ export default function DataFlowDiagram({ databases = [], processors = [] }: Dat
 
   return (
     <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-4">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-start sm:items-center justify-between mb-3 flex-col sm:flex-row gap-2">
         <h3 className="font-semibold text-stone-800 flex items-center gap-2"><Database className="h-4 w-4 text-indigo-500" />מפת זרימת מידע</h3>
-        <div className="flex gap-3 text-xs text-stone-500">
+        <div className="flex gap-2 sm:gap-3 text-xs text-stone-500 flex-wrap">
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-blue-200 inline-block" /> איסוף</span>
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-200 inline-block" /> מאגרים</span>
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-200 inline-block" /> אחסון</span>
@@ -75,6 +75,7 @@ export default function DataFlowDiagram({ databases = [], processors = [] }: Dat
         <button onClick={() => setZoom(z => Math.max(z - 0.2, 0.6))} className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 transition-colors"><ZoomOut className="h-4 w-4 text-stone-600" /></button>
         <span className="text-xs text-stone-400 self-center mr-2">{Math.round(zoom * 100)}%</span>
       </div>
+      <p className="text-xs text-stone-400 mb-1 sm:hidden">← גללו ימינה לצפייה מלאה →</p>
       <div className="relative overflow-x-auto">
         <svg width={780 * zoom} height={svgHeight * zoom} className="w-full" viewBox={`0 0 780 ${svgHeight}`} style={{ minWidth: 780 * zoom }}>
           <defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" /></marker></defs>

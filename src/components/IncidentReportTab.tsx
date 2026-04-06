@@ -195,7 +195,7 @@ export default function IncidentReportTab({ orgId, incidents, onRefresh }: Incid
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Shield className="w-6 h-6 text-red-600" />
@@ -209,7 +209,7 @@ export default function IncidentReportTab({ orgId, incidents, onRefresh }: Incid
         {!showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2"
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2 w-full sm:w-auto justify-center"
           >
             <AlertTriangle className="w-4 h-4" />
             דווח על אירוע
@@ -337,7 +337,7 @@ export default function IncidentReportTab({ orgId, incidents, onRefresh }: Incid
               {/* Data Types */}
               <div>
                 <label className="block text-sm font-medium mb-2">סוגי מידע שנחשפו (אם ידוע)</label>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                   {dataTypes.map(type => (
                     <label
                       key={type.value}
@@ -420,7 +420,7 @@ export default function IncidentReportTab({ orgId, incidents, onRefresh }: Incid
               </div>
 
               {/* Submit */}
-              <div className="flex gap-3 justify-end pt-4 border-t">
+              <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end pt-4 border-t">
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
@@ -511,7 +511,7 @@ export default function IncidentReportTab({ orgId, incidents, onRefresh }: Incid
                     </div>
                   )}
                   
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                     <div>
                       <label className="text-xs text-gray-500">סוג:</label>
                       <p>{incidentTypes.find(t => t.value === incident.incident_type)?.label || incident.incident_type}</p>

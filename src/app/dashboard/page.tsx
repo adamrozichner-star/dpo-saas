@@ -629,7 +629,7 @@ function DashboardContent() {
         <div className="p-4 lg:p-8 max-w-5xl mx-auto">
           {/* Incomplete onboarding banner */}
           {organization && organization.onboarding_completed === false && (
-            <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
+            <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
                 <div>
@@ -951,7 +951,7 @@ function OverviewTab({
               style={{ width: `${complianceScore}%` }}
             />
           </div>
-          <div className="flex items-center gap-4 text-xs text-stone-500">
+          <div className="flex items-center gap-4 text-xs text-stone-500 flex-wrap">
             {isPaid ? (
               <>
                 <span>✅ {doneActions.length} בוצעו</span>
@@ -1129,9 +1129,9 @@ function OverviewTab({
       {/* Upgrade Card */}
       {!isPaid && (
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center flex-shrink-0">
                 <Shield className="h-6 w-6 text-indigo-500" />
               </div>
               <div>
@@ -1140,7 +1140,7 @@ function OverviewTab({
               </div>
             </div>
             <Link href="/subscribe">
-              <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors">
+              <button className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors whitespace-nowrap">
                 צפייה בחבילות
               </button>
             </Link>
@@ -1759,9 +1759,9 @@ function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: a
         <div className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
           {/* Thread header */}
           <div className="p-4 border-b bg-stone-50">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-stone-800">{selectedThread.subject}</h2>
-              <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusStyle(selectedThread.status)}`}>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-semibold text-stone-800 truncate min-w-0">{selectedThread.subject}</h2>
+              <span className={`px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 ${getStatusStyle(selectedThread.status)}`}>
                 {getStatusLabel(selectedThread.status)}
               </span>
             </div>
@@ -1834,14 +1834,14 @@ function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: a
   // Thread list view
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-stone-800">💬 שיח עם ממונה</h1>
           <p className="text-stone-500 mt-1">תקשורת ישירה עם עו״ד דנה כהן — ממונה הגנת הפרטיות שלכם</p>
         </div>
-        <button 
+        <button
           onClick={() => setShowNewMessage(true)}
-          className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors flex items-center gap-2"
+          className="px-4 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600 transition-colors flex items-center gap-2 self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" />
           הודעה חדשה
@@ -1865,13 +1865,13 @@ function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: a
           <span className="text-sm font-semibold text-indigo-700 bg-indigo-100 px-3 py-1 rounded-full">ללא הגבלה</span>
         </div>
       ) : (
-        <div className="flex items-center gap-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
-          <div className="flex-1">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+          <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-indigo-800">פניות לממונה בחודש זה</p>
             <p className="text-xs text-indigo-500 mt-0.5">{tier === 'premium' ? 'חבילה פרימיום' : 'חבילה מומלצת'} · עד {maxCredits} פניות בחודש</p>
           </div>
-          <div className="flex items-center gap-1.5">
-            {Array.from({ length: maxCredits }).map((_, i) => (
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {Array.from({ length: Math.min(maxCredits, 10) }).map((_, i) => (
               <div key={i} className={`w-3 h-3 rounded-full ${i < usedCredits ? 'bg-indigo-500' : 'bg-indigo-200'}`} />
             ))}
             <span className="text-sm font-semibold text-indigo-700 mr-1">{usedCredits}/{maxCredits}</span>

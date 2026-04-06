@@ -223,6 +223,7 @@ export default function ContextualChat({ context, orgId, extraContext, position 
   }
 
   const posClass = position === 'bottom-left' ? 'left-4' : 'right-4'
+  const smPosClass = position === 'bottom-left' ? 'sm:left-4' : 'sm:right-4'
 
   if (!user) return null
 
@@ -242,7 +243,7 @@ export default function ContextualChat({ context, orgId, extraContext, position 
 
       {/* Chat Panel */}
       {isOpen && (
-        <div className={`fixed bottom-6 ${posClass} z-50 w-[380px] max-h-[520px] bg-white rounded-2xl shadow-2xl border border-stone-200 flex flex-col overflow-hidden`}
+        <div className={`fixed bottom-0 left-0 right-0 sm:bottom-6 sm:left-auto sm:right-auto ${smPosClass} z-50 w-full sm:w-[380px] max-h-[100dvh] sm:max-h-[520px] bg-white sm:rounded-2xl shadow-2xl border border-stone-200 flex flex-col overflow-hidden`}
           style={{ animation: 'slideUp 0.2s ease-out' }}
         >
           {/* Header */}

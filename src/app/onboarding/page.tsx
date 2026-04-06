@@ -1713,7 +1713,7 @@ function OnboardingContent() {
               </button>
             )}
             {step >= 2 && !showReport && !showDpoIntro && !isGenerating && (
-              <button onClick={completeLater} className="text-gray-400 hover:text-gray-600 text-xs">
+              <button onClick={completeLater} className="text-gray-400 hover:text-gray-600 text-xs min-h-[44px] min-w-[44px] flex items-center">
                 השלם מאוחר יותר
               </button>
             )}
@@ -1798,7 +1798,7 @@ function OnboardingContent() {
                       setValidationError(null)
                       advance(card.id, 'other')
                     }}
-                      className={`mt-3 px-6 py-2.5 rounded-xl border-none text-white text-sm font-semibold cursor-pointer ${!v3Answers[card.id + 'Other']?.trim() ? 'bg-gray-300' : 'bg-amber-500 hover:bg-amber-600'}`}>
+                      className={`w-full mt-3 px-6 py-2.5 rounded-xl border-none text-white text-sm font-semibold cursor-pointer ${!v3Answers[card.id + 'Other']?.trim() ? 'bg-gray-300' : 'bg-amber-500 hover:bg-amber-600'}`}>
                       הבא ⬅
                     </button>
                   </>
@@ -1815,7 +1815,7 @@ function OnboardingContent() {
                   onRemoveOther={i => set('customDatabases', (v3Answers.customDatabases || []).filter((_: string, idx: number) => idx !== i))} />
                 {((v3Answers[card.id]?.length > 0) || (v3Answers.customDatabases?.length || 0) > 0) && (
                   <button onClick={() => advance(card.id, v3Answers[card.id])}
-                    className="mt-3 px-6 py-2.5 rounded-xl border-none bg-amber-500 text-white text-sm font-semibold cursor-pointer hover:bg-amber-600">
+                    className="w-full mt-3 px-6 py-2.5 rounded-xl border-none bg-amber-500 text-white text-sm font-semibold cursor-pointer hover:bg-amber-600">
                     הבא ⬅
                   </button>
                 )}
@@ -1831,7 +1831,7 @@ function OnboardingContent() {
                   onRemoveOther={i => set('customStorage', (v3Answers.customStorage || []).filter((_: string, idx: number) => idx !== i))} />
                 {((v3Answers.storage?.length || 0) > 0 || (v3Answers.customStorage?.length || 0) > 0) && (
                   <button onClick={() => advance('storage', v3Answers.storage)}
-                    className="mt-3 px-6 py-2.5 rounded-xl border-none bg-amber-500 text-white text-sm font-semibold cursor-pointer hover:bg-amber-600">
+                    className="w-full mt-3 px-6 py-2.5 rounded-xl border-none bg-amber-500 text-white text-sm font-semibold cursor-pointer hover:bg-amber-600">
                     הבא ⬅
                   </button>
                 )}
@@ -1846,7 +1846,7 @@ function OnboardingContent() {
                   onAddOther={v => set('customProcessors', [...(v3Answers.customProcessors || []), v])}
                   onRemoveOther={i => set('customProcessors', (v3Answers.customProcessors || []).filter((_: string, idx: number) => idx !== i))} />
                 <button onClick={() => advance('processors', v3Answers.processors || [])}
-                  className="mt-3 px-6 py-2.5 rounded-xl border-none bg-amber-500 text-white text-sm font-semibold cursor-pointer hover:bg-amber-600">
+                  className="w-full mt-3 px-6 py-2.5 rounded-xl border-none bg-amber-500 text-white text-sm font-semibold cursor-pointer hover:bg-amber-600">
                   {(v3Answers.processors?.length || 0) > 0 || (v3Answers.customProcessors?.length || 0) > 0 ? 'הבא ⬅' : 'אין ספקים, הבא ⬅'}
                 </button>
               </>
@@ -1873,7 +1873,7 @@ function OnboardingContent() {
                       setValidationError(null)
                       set(card.id + 'Name', tempName); setTempName(''); advance(card.id, v3Answers[card.id])
                     }}
-                      className={`mt-3 px-6 py-2.5 rounded-xl border-none text-white text-sm font-semibold cursor-pointer ${!tempName.trim() ? 'bg-gray-300' : 'bg-amber-500 hover:bg-amber-600'}`}>
+                      className={`w-full mt-3 px-6 py-2.5 rounded-xl border-none text-white text-sm font-semibold cursor-pointer ${!tempName.trim() ? 'bg-gray-300' : 'bg-amber-500 hover:bg-amber-600'}`}>
                       הבא ⬅
                     </button>
                   </>
@@ -1883,7 +1883,7 @@ function OnboardingContent() {
 
             {/* Skip button — not shown for required fields */}
             {!REQUIRED_CARDS.includes(card.id) && (
-              <button onClick={skip} className="block mx-auto mt-3 text-gray-400 hover:text-gray-600 text-xs transition-colors">
+              <button onClick={skip} className="block mx-auto mt-3 text-gray-400 hover:text-gray-600 text-xs transition-colors min-h-[44px] flex items-center justify-center">
                 דלג ←
               </button>
             )}
