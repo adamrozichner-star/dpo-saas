@@ -471,7 +471,7 @@ function DashboardContent() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 flex" dir="rtl">
+    <div className="min-h-screen bg-stone-50 flex overflow-x-hidden" dir="rtl">
       {/* Welcome Modal — only show after subscription check is complete */}
       {showWelcome && !isChecking && !gateIsPaid && (
         <UnpaidWelcomeModal
@@ -491,7 +491,7 @@ function DashboardContent() {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 right-0 z-50 w-64 bg-stone-100/80 backdrop-blur-sm border-l border-stone-200 transform transition-transform duration-200 ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'} lg:translate-x-0 lg:static`}>
+      <aside className={`fixed inset-y-0 right-0 z-50 w-64 bg-stone-100/80 backdrop-blur-sm border-l border-stone-200 transform transition-transform duration-200 ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-[16rem]'} lg:!translate-x-0 lg:static`}>
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-5">
@@ -608,7 +608,7 @@ function DashboardContent() {
       )}
 
       {/* Main Content */}
-      <main className="flex-1 min-h-screen">
+      <main className="flex-1 min-h-screen min-w-0 w-full overflow-x-hidden">
         {/* Mobile Header */}
         <header className="lg:hidden sticky top-0 z-30 bg-stone-50/90 backdrop-blur-sm border-b border-stone-200 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -626,7 +626,7 @@ function DashboardContent() {
         </header>
 
         {/* Page Content */}
-        <div className="p-4 lg:p-8 pb-24 sm:pb-8 max-w-5xl mx-auto overflow-x-hidden">
+        <div className="px-3 py-4 sm:px-4 lg:p-8 pb-24 sm:pb-8 max-w-5xl mx-auto w-full overflow-x-hidden">
           {/* Incomplete onboarding banner */}
           {organization && organization.onboarding_completed === false && (
             <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -708,7 +708,7 @@ function DashboardContent() {
             gateIsPaid && organization?.id ? (
               <div className="space-y-8">
                 <ROPATab orgId={organization.id} authFetch={authFetch} />
-                <div className="border-t border-stone-200 pt-6">
+                <div className="border-t border-stone-200 pt-6 w-full overflow-x-auto">
                   <DataFlowDiagram />
                 </div>
               </div>

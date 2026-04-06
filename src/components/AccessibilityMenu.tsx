@@ -74,7 +74,7 @@ export default function AccessibilityMenu() {
       {/* Floating button — always on top, never affected by body filters */}
       <button
         onClick={() => setOpen(!open)}
-        className="fixed bottom-4 left-4 z-[9999] w-12 h-12 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center text-xl"
+        className="fixed bottom-20 sm:bottom-4 left-4 z-[9999] w-12 h-12 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center text-xl"
         aria-label="תפריט נגישות"
         title="נגישות"
         style={{ isolation: 'isolate' }}
@@ -85,7 +85,7 @@ export default function AccessibilityMenu() {
       {/* Menu panel */}
       {open && (
         <div 
-          className="fixed bottom-20 left-4 z-[9999] bg-white rounded-xl shadow-2xl border border-stone-200 p-4 w-64" 
+          className="fixed bottom-36 sm:bottom-20 left-4 z-[9999] bg-white rounded-xl shadow-2xl border border-stone-200 p-4 w-64 max-w-[calc(100vw-2rem)]" 
           dir="rtl"
           style={{ isolation: 'isolate' }}
         >
