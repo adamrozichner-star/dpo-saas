@@ -96,4 +96,4 @@ Proprietary - All rights reserved.
 
 ## 🤝 Support
 
-For questions or support, contact support@mydpo.co.il
+For questions or support, contact support@deepo.co.il
