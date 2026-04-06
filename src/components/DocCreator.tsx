@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { FileText, Loader2, CheckCircle2, Shield, Lock as LockIcon, BookOpen, Users, FileCheck, ClipboardList } from 'lucide-react'
+import { FileText, Loader2, CheckCircle2, Shield, Lock as LockIcon, BookOpen, Users, FileCheck, ClipboardList, Database } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 
 interface DocCreatorProps {
@@ -32,6 +32,7 @@ const DOC_TYPE_OPTIONS: DocTypeOption[] = [
   { type: 'consent_form', label: 'טופס הסכמה', description: 'טופס הסכמה מדעת לאיסוף מידע', icon: Users, iconColor: 'text-amber-600', iconBg: 'bg-amber-50' },
   { type: 'ropa', label: 'מפת עיבוד נתונים (ROPA)', description: 'תיעוד פעילויות עיבוד מידע', icon: BookOpen, iconColor: 'text-purple-600', iconBg: 'bg-purple-50' },
   { type: 'processor_agreement', label: 'הסכם עיבוד מידע (DPA)', description: 'הסכם עם ספקים חיצוניים המעבדים מידע', icon: FileText, iconColor: 'text-stone-600', iconBg: 'bg-stone-100' },
+  { type: 'database_structure', label: 'מסמך מבנה מאגר', description: 'תיעוד מבנה מאגרי מידע, סיווג אבטחה ומעבדים', icon: Database, iconColor: 'text-teal-600', iconBg: 'bg-teal-50' },
 ]
 
 export default function DocCreator({ orgId, orgName, businessId, v3Answers, supabase, isPaid, existingDocTypes, onDocumentCreated }: DocCreatorProps) {

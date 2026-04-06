@@ -51,6 +51,7 @@ import ROPATab from '@/components/ROPATab'
 import WorkPlanTab from '@/components/WorkPlanTab'
 import ComplianceReviewPanel from '@/components/ComplianceReviewPanel'
 import DataFlowDiagram from '@/components/DataFlowDiagram'
+import WebsiteScanner from '@/components/WebsiteScanner'
 import { deriveComplianceActions, ComplianceSummary, ActionOverride } from '@/lib/compliance-engine'
 
 // ============================================
@@ -711,6 +712,9 @@ function DashboardContent() {
                 <div className="border-t border-stone-200 pt-6 w-full overflow-x-auto">
                   <DataFlowDiagram />
                 </div>
+                <div className="mt-6">
+                  <WebsiteScanner supabase={supabase} />
+                </div>
               </div>
             ) :
             <LockedTabOverlay icon="📊" title="מאגרי מידע (ROPA)" description="צפו, ערכו והוסיפו מאגרי מידע אישי. נדרש לציות לתיקון 13." />
@@ -1050,6 +1054,24 @@ function OverviewTab({
           </div>
         )}
       </div>
+
+      {/* Incomplete onboarding task */}
+      {organization?.onboarding_completed === false && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="text-xl flex-shrink-0">📋</span>
+            <div className="min-w-0">
+              <p className="font-medium text-amber-800 text-sm">השלמת פרטים חסרים מההרשמה</p>
+              <p className="text-xs text-amber-600 mt-0.5">השלימו את השאלות לקבלת מסמכים מדויקים</p>
+            </div>
+          </div>
+          <Link href="/onboarding">
+            <button className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 flex-shrink-0">
+              המשך
+            </button>
+          </Link>
+        </div>
+      )}
 
       {/* Unified Task List — replaces GuidelinesPanel + action sections */}
       {complianceSummary?.tasks && (

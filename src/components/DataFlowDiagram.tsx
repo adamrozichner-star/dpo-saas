@@ -84,7 +84,19 @@ export default function DataFlowDiagram({ databases = [], processors = [] }: Dat
             const from = allNodes.find(n => n.id === flow.from)
             const to = allNodes.find(n => n.id === flow.to)
             if (!from || !to) return null
-            return <line key={i} x1={from.x + 60} y1={from.y} x2={to.x - 60} y2={to.y} stroke="#cbd5e1" strokeWidth="2" markerEnd="url(#arrowhead)" strokeDasharray="6 3" />
+            return (
+              <g key={i} className="cursor-pointer" onClick={() => setSelectedNode({
+                id: `flow-${from.id}-${to.id}`,
+                label: `${from.label} → ${to.label}`,
+                type: 'collection',
+                x: (from.x + to.x) / 2,
+                y: (from.y + to.y) / 2,
+                details: `זרימת מידע: ${from.label} מעביר נתונים ל${to.label}`
+              })}>
+                <line x1={from.x + 60} y1={from.y} x2={to.x - 60} y2={to.y} stroke="transparent" strokeWidth="20" />
+                <line x1={from.x + 60} y1={from.y} x2={to.x - 60} y2={to.y} stroke="#cbd5e1" strokeWidth="2" markerEnd="url(#arrowhead)" strokeDasharray="6 3" />
+              </g>
+            )
           })}
           {allNodes.map(node => {
             const colors = getNodeColor(node.type)

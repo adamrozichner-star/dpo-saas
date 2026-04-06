@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Heebo } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/lib/auth-context'
@@ -14,6 +14,12 @@ const heebo = Heebo({
 export const metadata: Metadata = {
   title: 'DPO-as-a-Service | שירות ממונה הגנת פרטיות',
   description: 'פתרון AI מקיף לעמידה ברגולציית הגנת הפרטיות - תיקון 13',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 }
 
 export default function RootLayout({

@@ -519,6 +519,20 @@ ${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
         targetDoc = allDocuments.find(d => d.type === singleDocType)
       }
 
+      if (!targetDoc && singleDocType === 'database_structure') {
+        const { generateDatabaseStructure } = await import('@/lib/v3-document-templates')
+        const content = generateDatabaseStructure({
+          orgName: orgName || '',
+          businessId: v3Answers?.companyId || '',
+          v3Answers: v3Answers || {},
+          dpoName: dpoConfig?.name || '',
+          dpoEmail: dpoConfig?.email || '',
+          dpoPhone: dpoConfig?.phone || '',
+          dpoLicense: dpoConfig?.license || '',
+        })
+        targetDoc = { type: 'database_structure', title: 'מסמך מבנה מאגר מידע', content }
+      }
+
       if (!targetDoc) {
         return NextResponse.json({ error: `Document type ${singleDocType} not found in templates` }, { status: 400 })
       }
