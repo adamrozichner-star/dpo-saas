@@ -233,7 +233,7 @@ export default function ContextualChat({ context, orgId, extraContext, position 
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className={`fixed bottom-6 ${posClass} z-40 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-105 group`}
+          className={`fixed bottom-20 sm:bottom-6 ${posClass} z-40 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-4 shadow-xl hover:shadow-2xl transition-all hover:scale-105 group`}
           title={config.title}
         >
           <MessageSquare className="w-6 h-6" />

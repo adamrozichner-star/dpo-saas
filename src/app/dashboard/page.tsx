@@ -626,7 +626,7 @@ function DashboardContent() {
         </header>
 
         {/* Page Content */}
-        <div className="p-4 lg:p-8 max-w-5xl mx-auto">
+        <div className="p-4 lg:p-8 pb-24 sm:pb-8 max-w-5xl mx-auto overflow-x-hidden">
           {/* Incomplete onboarding banner */}
           {organization && organization.onboarding_completed === false && (
             <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -828,13 +828,13 @@ function PaywallBanner({ complianceScore, orgName }: { complianceScore: number, 
   return (
     <div className="bg-gradient-to-l from-rose-50 via-amber-50 to-indigo-50 border border-amber-200 rounded-2xl p-5 shadow-sm">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 min-w-0">
           <div className="w-14 h-14 rounded-xl bg-rose-100 border-2 border-rose-200 flex items-center justify-center flex-shrink-0">
             <span className="text-2xl font-bold text-rose-600">{complianceScore}</span>
           </div>
-          <div>
-            <p className="font-bold text-stone-800 text-base">⚠️ {orgName} חשופים לאכיפה</p>
-            <p className="text-sm text-stone-600 mt-0.5">ציון הציות שלכם <strong className="text-rose-600">{complianceScore}/100</strong> — המסמכים, הממונה והפעולות ממתינים להפעלה</p>
+          <div className="min-w-0">
+            <p className="font-bold text-stone-800 text-sm sm:text-base">⚠️ {orgName} חשופים לאכיפה</p>
+            <p className="text-xs sm:text-sm text-stone-600 mt-0.5">ציון הציות שלכם <strong className="text-rose-600">{complianceScore}/100</strong> — המסמכים, הממונה והפעולות ממתינים להפעלה</p>
           </div>
         </div>
         <Link href="/subscribe">

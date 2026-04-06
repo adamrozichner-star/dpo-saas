@@ -23,21 +23,22 @@ export default function DataFlowDiagram({ databases = [], processors = [] }: Dat
   const [zoom, setZoom] = useState(1)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
 
+  // Node positions — compact enough to fit in a 580-wide viewBox (scrollable on mobile)
   const collectionNodes: DataNode[] = [
-    { id: 'web', label: 'אתר אינטרנט', type: 'collection', x: 80, y: 60, details: 'נקודת איסוף: טפסים, עוגיות, אנליטיקה' },
-    { id: 'crm', label: 'CRM / מערכת ניהול', type: 'collection', x: 80, y: 140, details: 'נקודת איסוף: פרטי לקוחות, היסטוריה' },
-    { id: 'hr', label: 'משאבי אנוש', type: 'collection', x: 80, y: 220, details: 'נקודת איסוף: פרטי עובדים, שכר', sensitive: true },
+    { id: 'web', label: 'אתר אינטרנט', type: 'collection', x: 65, y: 50, details: 'נקודת איסוף: טפסים, עוגיות, אנליטיקה' },
+    { id: 'crm', label: 'CRM / מערכת ניהול', type: 'collection', x: 65, y: 120, details: 'נקודת איסוף: פרטי לקוחות, היסטוריה' },
+    { id: 'hr', label: 'משאבי אנוש', type: 'collection', x: 65, y: 190, details: 'נקודת איסוף: פרטי עובדים, שכר', sensitive: true },
   ]
 
   const dbNodes: DataNode[] = databases.length > 0
-    ? databases.map((db, i) => ({ id: `db-${i}`, label: db.name, type: 'database' as const, x: 300, y: 60 + i * 80, details: `מטרה: ${db.purpose}`, sensitive: db.dataTypes?.some(t => ['health', 'biometric', 'בריאות', 'ביומטרי'].some(s => t.includes(s))) }))
-    : [{ id: 'db-main', label: 'מאגר ראשי', type: 'database' as const, x: 300, y: 80, details: 'מאגר המידע הראשי' }, { id: 'db-backup', label: 'גיבוי', type: 'database' as const, x: 300, y: 180, details: 'מאגר גיבוי מוצפן' }]
+    ? databases.map((db, i) => ({ id: `db-${i}`, label: db.name, type: 'database' as const, x: 225, y: 50 + i * 70, details: `מטרה: ${db.purpose}`, sensitive: db.dataTypes?.some(t => ['health', 'biometric', 'בריאות', 'ביומטרי'].some(s => t.includes(s))) }))
+    : [{ id: 'db-main', label: 'מאגר ראשי', type: 'database' as const, x: 225, y: 70, details: 'מאגר המידע הראשי' }, { id: 'db-backup', label: 'גיבוי', type: 'database' as const, x: 225, y: 160, details: 'מאגר גיבוי מוצפן' }]
 
-  const storageNode: DataNode = { id: 'storage', label: 'אחסון ענן', type: 'storage', x: 500, y: 140, details: 'שרתי אחסון מאובטחים' }
+  const storageNode: DataNode = { id: 'storage', label: 'אחסון ענן', type: 'storage', x: 370, y: 120, details: 'שרתי אחסון מאובטחים' }
 
   const processorNodes: DataNode[] = processors.length > 0
-    ? processors.map((p, i) => ({ id: `proc-${i}`, label: p.name, type: 'processor' as const, x: 680, y: 60 + i * 80, details: `מטרה: ${p.purpose}${p.location ? ` (${p.location})` : ''}` }))
-    : [{ id: 'proc-analytics', label: 'אנליטיקה', type: 'processor' as const, x: 680, y: 80, details: 'עיבוד נתונים סטטיסטיים' }, { id: 'proc-email', label: 'שירות מיילים', type: 'processor' as const, x: 680, y: 180, details: 'שליחת מיילים ללקוחות' }]
+    ? processors.map((p, i) => ({ id: `proc-${i}`, label: p.name, type: 'processor' as const, x: 515, y: 50 + i * 70, details: `מטרה: ${p.purpose}${p.location ? ` (${p.location})` : ''}` }))
+    : [{ id: 'proc-analytics', label: 'אנליטיקה', type: 'processor' as const, x: 515, y: 70, details: 'עיבוד נתונים סטטיסטיים' }, { id: 'proc-email', label: 'שירות מיילים', type: 'processor' as const, x: 515, y: 160, details: 'שליחת מיילים ללקוחות' }]
 
   const allNodes = [...collectionNodes, ...dbNodes, storageNode, ...processorNodes]
 
@@ -76,8 +77,8 @@ export default function DataFlowDiagram({ databases = [], processors = [] }: Dat
         <span className="text-xs text-stone-400 self-center mr-2">{Math.round(zoom * 100)}%</span>
       </div>
       <p className="text-xs text-stone-400 mb-1 sm:hidden">← גללו ימינה לצפייה מלאה →</p>
-      <div className="relative overflow-x-auto">
-        <svg width={780 * zoom} height={svgHeight * zoom} className="w-full" viewBox={`0 0 780 ${svgHeight}`} style={{ minWidth: 780 * zoom }}>
+      <div className="relative overflow-x-auto -mx-1">
+        <svg width="100%" height={svgHeight * zoom} viewBox={`0 0 580 ${svgHeight}`} preserveAspectRatio="xMidYMid meet" style={{ minWidth: 580 * zoom, maxWidth: '100%' }}>
           <defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" /></marker></defs>
           {flows.map((flow, i) => {
             const from = allNodes.find(n => n.id === flow.from)
