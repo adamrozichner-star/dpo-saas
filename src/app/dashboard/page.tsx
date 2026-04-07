@@ -1590,9 +1590,47 @@ function DocumentsTab({ documents, organization, supabase, isPaid, orgProfile, o
                   dir="rtl"
                 />
               ) : (
-                <pre className="whitespace-pre-wrap text-sm text-stone-700 font-sans leading-relaxed">
-                  {selectedDoc.content || 'אין תוכן למסמך זה'}
-                </pre>
+                <div className="px-2" dir="rtl">
+                  <div className="text-center mb-8">
+                    <div className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-white border-[1.5px] border-amber-400 rounded-full shadow-[0_2px_12px_rgba(251,191,36,0.18)] mb-5">
+                      <div className="w-5 h-5 bg-gradient-to-br from-amber-500 to-amber-600 rounded flex items-center justify-center text-white text-[11px] font-bold">D</div>
+                      <div className="text-[11px] font-bold text-amber-800 tracking-wide">DEEPO · מוגן בהתאם לתיקון 13</div>
+                    </div>
+                    <h1 className="text-2xl font-bold text-stone-900 mb-1">{selectedDoc.title || selectedDoc.name || getDocTypeLabel(selectedDoc.type)}</h1>
+                    <div className="text-xs text-stone-500">מסמך רשמי · תאריך: {new Date(selectedDoc.updated_at || selectedDoc.created_at).toLocaleDateString('he-IL')}</div>
+                    {organization?.name && <div className="text-sm font-semibold text-amber-600 mt-1">{organization.name}</div>}
+                  </div>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="flex-1 h-px bg-stone-200"></div>
+                    <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
+                    <div className="flex-1 h-px bg-stone-200"></div>
+                  </div>
+                  <div className="prose prose-sm max-w-none">
+                    {(selectedDoc.content || 'אין תוכן למסמך זה').split('\n\n').map((block: string, i: number) => {
+                      const trimmed = block.trim()
+                      if (trimmed.startsWith('# ')) return <h1 key={i} className="text-xl font-bold text-stone-900 mt-6 mb-3">{trimmed.replace('# ', '')}</h1>
+                      if (trimmed.startsWith('## ')) return (
+                        <h2 key={i} className="text-base font-bold text-stone-900 mt-5 mb-2 flex items-center gap-2.5">
+                          <span className="w-6 h-[3px] bg-amber-500 rounded-sm flex-shrink-0"></span>
+                          {trimmed.replace('## ', '')}
+                        </h2>
+                      )
+                      if (trimmed.startsWith('### ')) return <h3 key={i} className="text-sm font-semibold text-stone-800 mt-4 mb-2">{trimmed.replace('### ', '')}</h3>
+                      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+                        const items = trimmed.split('\n').filter((l: string) => l.trim().startsWith('-') || l.trim().startsWith('*'))
+                        return (
+                          <ul key={i} className="list-disc pr-6 mb-3 space-y-1 text-sm text-stone-700">
+                            {items.map((item: string, j: number) => <li key={j}>{item.replace(/^[\-\*]\s*/, '')}</li>)}
+                          </ul>
+                        )
+                      }
+                      return <p key={i} className="text-sm text-stone-700 leading-relaxed mb-3 text-justify">{trimmed}</p>
+                    })}
+                  </div>
+                  <div className="mt-10 pt-4 border-t border-dashed border-stone-200 text-center text-[11px] text-stone-400">
+                    <strong className="text-stone-600">Deepo</strong> · שירות ממונה הגנת פרטיות · deepo.co.il
+                  </div>
+                </div>
               )}
             </div>
             
