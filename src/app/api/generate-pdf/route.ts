@@ -1,10 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import { rateLimit } from '@/lib/rate-limit'
 
 // Simple HTML to PDF using browser print
 // This endpoint returns an HTML page that can be printed/saved as PDF
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 10 per minute
+    const ip = request.headers.get('x-forwarded-for') || 'unknown'
+    const { success: rateLimitOk } = rateLimit(`generate-pdf:${ip}`, 10, 60000)
+    if (!rateLimitOk) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    }
+
+    // Auth check
+    const authHeader = request.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    const supabaseAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(authHeader.replace('Bearer ', ''))
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { title, content, orgName } = await request.json()
     
     if (!content) {

@@ -4,6 +4,17 @@ import { useState, useRef, useCallback } from 'react'
 import { Upload, FileText, Loader2, CheckCircle2, AlertTriangle, X, ChevronDown, ChevronUp } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 
+// Sanitize HTML to prevent XSS — strips script tags, event handlers, and dangerous protocols
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^>]*>/gi, '')
+    .replace(/\bon\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/\bon\w+\s*=\s*[^\s>]+/gi, '')
+    .replace(/javascript\s*:/gi, 'blocked:')
+    .replace(/data\s*:\s*text\/html/gi, 'blocked:text/html')
+}
+
 interface DocUploadAdapterProps {
   orgId: string
   orgName: string
@@ -283,10 +294,10 @@ export default function DocUploadAdapter({ orgId, orgName, supabase, onDocumentC
                 <div className="p-4">
                   <div className="text-xs text-indigo-500 mb-2 font-medium">מותאם לתיקון 13</div>
                   <pre className="text-xs text-stone-700 whitespace-pre-wrap max-h-[400px] overflow-y-auto font-sans leading-relaxed" dangerouslySetInnerHTML={{
-                    __html: adaptedContent.slice(0, 5000).replace(
+                    __html: sanitizeHtml(adaptedContent.slice(0, 5000).replace(
                       /\[נוסף\]/g,
                       '<span class="bg-amber-100 text-amber-700 px-1 rounded text-[10px] font-bold">נוסף</span>'
-                    )
+                    ))
                   }} />
                 </div>
               </div>

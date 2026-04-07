@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard
+Disallow: /api/
+Disallow: /onboarding
+Disallow: /settings
+Disallow: /checkout
+Disallow: /chat
+Disallow: /dpo/
+Disallow: /dpo-admin
+Disallow: /admin
+Disallow: /payment
+Disallow: /payment-required
+Sitemap: https://deepo.co.il/sitemap.xml

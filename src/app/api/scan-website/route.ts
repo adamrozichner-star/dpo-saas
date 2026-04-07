@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,6 +36,13 @@ const CONSENT_PATTERNS = [/cookie.?consent/i, /cookie.?banner/i, /cookie.?notice
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 3 scans per minute
+    const ip = request.headers.get('x-forwarded-for') || 'unknown'
+    const { success: rateLimitOk } = rateLimit(`scan-website:${ip}`, 3, 60000)
+    if (!rateLimitOk) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    }
+
     const authHeader = request.headers.get('authorization')
     if (!authHeader) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
