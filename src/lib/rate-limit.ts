@@ -22,10 +22,11 @@ export function rateLimit(identifier: string, limit = 10, windowMs = 60000): { s
 
 // Cleanup old entries every 5 minutes
 if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
+  const cleanup = () => {
     const now = Date.now()
-    for (const [key, value] of requests.entries()) {
+    requests.forEach((value, key) => {
       if (now > value.reset) requests.delete(key)
-    }
-  }, 5 * 60 * 1000)
+    })
+  }
+  setInterval(cleanup, 5 * 60 * 1000)
 }
