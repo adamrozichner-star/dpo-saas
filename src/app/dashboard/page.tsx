@@ -1597,7 +1597,7 @@ function DocumentsTab({ documents, organization, supabase, isPaid, orgProfile, o
                       <div className="text-[11px] font-bold text-amber-800 tracking-wide">DEEPO · מוגן בהתאם לתיקון 13</div>
                     </div>
                     <h1 className="text-2xl font-bold text-stone-900 mb-1">{selectedDoc.title || selectedDoc.name || getDocTypeLabel(selectedDoc.type)}</h1>
-                    <div className="text-xs text-stone-500">מסמך רשמי · תאריך: {new Date(selectedDoc.updated_at || selectedDoc.created_at).toLocaleDateString('he-IL')}</div>
+                    <div className="text-xs text-stone-500">מסמך רשמי · תאריך: {new Date(selectedDoc.created_at).toLocaleDateString('he-IL')}</div>
                     {organization?.name && <div className="text-sm font-semibold text-amber-600 mt-1">{organization.name}</div>}
                   </div>
                   <div className="flex items-center gap-3 mb-6">
