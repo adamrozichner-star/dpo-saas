@@ -1,4 +1,5 @@
 import { authenticateRequest, unauthorizedResponse } from "@/lib/api-auth"
+import { dpoConfig } from '@/lib/dpo-config'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { 
@@ -528,7 +529,7 @@ ${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
           dpoName: dpoConfig?.name || '',
           dpoEmail: dpoConfig?.email || '',
           dpoPhone: dpoConfig?.phone || '',
-          dpoLicense: dpoConfig?.license || '',
+          dpoLicense: dpoConfig?.licenseNumber || '',
         })
         targetDoc = { type: 'database_structure', title: 'מסמך מבנה מאגר מידע', content }
       }
