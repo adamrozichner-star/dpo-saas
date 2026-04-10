@@ -1220,27 +1220,26 @@ function OnboardingContent() {
 
   // Save progress and redirect to dashboard (complete later)
   const completeLater = useCallback(async () => {
-    if (!supabase || !user) return
-    try {
-      // Save to localStorage for resume
-      localStorage.setItem('dpo_v3_answers', JSON.stringify(v3Answers))
-      localStorage.setItem('dpo_v3_step', String(step))
-      localStorage.setItem('dpo_v3_user', user.id)
+    // Always save to localStorage
+    localStorage.setItem('dpo_v3_answers', JSON.stringify(v3Answers))
+    localStorage.setItem('dpo_v3_step', String(step))
 
-      // Also save to DB so dashboard can show banner
-      const { data: userData } = await supabase.from('users').select('org_id').eq('auth_user_id', user.id).single()
-      if (userData?.org_id) {
-        await supabase.from('organizations').update({
-          onboarding_answers: v3Answers,
-          onboarding_step: step,
-          onboarding_completed: false,
-        }).eq('id', userData.org_id)
+    if (supabase && user) {
+      try {
+        localStorage.setItem('dpo_v3_user', user.id)
+        const { data: userData } = await supabase.from('users').select('org_id').eq('auth_user_id', user.id).single()
+        if (userData?.org_id) {
+          await supabase.from('organizations').update({
+            onboarding_answers: v3Answers,
+            onboarding_step: step,
+            onboarding_completed: false,
+          }).eq('id', userData.org_id)
+        }
+      } catch (e) {
+        console.error('[Onboarding] Save error:', e)
       }
-      router.push('/dashboard')
-    } catch (e) {
-      console.error('[Onboarding] Save error:', e)
-      router.push('/dashboard')
     }
+    router.push('/dashboard')
   }, [supabase, user, v3Answers, step, router])
 
   useEffect(() => {

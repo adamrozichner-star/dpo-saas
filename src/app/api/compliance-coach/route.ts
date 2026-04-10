@@ -15,22 +15,27 @@ const anthropic = new Anthropic({
 
 const SYSTEM_PROMPT = `אתה יועץ מומחה לחוק הגנת הפרטיות בישראל ולתיקון 13. תפקידך להסביר ממצאי ציות בשפה פשוטה לבעלי עסקים קטנים שאינם משפטנים. תמיד תן: הסבר ברור, סיבה משפטית מדויקת, צעדי פעולה קונקרטיים, ודחיפות (קריטית/בינונית/נמוכה). הימנע מז'רגון משפטי.
 
-החזר תשובה בפורמט JSON בלבד, ללא טקסט נוסף:
-{
-  "explanation": "הסבר קצר ובהיר מה הממצא הזה אומר בפועל",
-  "whyItMatters": "הבסיס המשפטי והשלכות אפשריות",
-  "actionSteps": ["צעד 1", "צעד 2", "צעד 3"],
-  "documentToCreate": "סוג_מסמך או null",
-  "urgency": "critical | high | medium | low"
-}
+חובה להחזיר JSON תקין בלבד, ללא טקסט נוסף, ללא הסברים, ללא markdown code blocks. רק האובייקט:
+{"explanation":"...","whyItMatters":"...","actionSteps":["...","...","..."],"documentToCreate":"סוג_מסמך או null","urgency":"critical | high | medium | low"}
 
 עבור documentToCreate, השתמש באחד מהערכים הבאים אם רלוונטי:
-- privacy_policy — מדיניות פרטיות
-- security_policy — נוהל אבטחת מידע
-- dpo_appointment — כתב מינוי ממונה
-- database_registration — רישום מאגרי מידע
-- ropa — מפת עיבוד מידע
-- null — אם לא נדרש מסמך חדש`
+privacy_policy, security_policy, dpo_appointment, database_registration, ropa, או null.`
+
+function extractJSON(text: string): any | null {
+  try { return JSON.parse(text) } catch {}
+
+  const codeBlockMatch = text.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/)
+  if (codeBlockMatch) {
+    try { return JSON.parse(codeBlockMatch[1]) } catch {}
+  }
+
+  const objMatch = text.match(/\{[\s\S]*\}/)
+  if (objMatch) {
+    try { return JSON.parse(objMatch[0]) } catch {}
+  }
+
+  return null
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -94,12 +99,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No response from AI' }, { status: 500 })
     }
 
-    let parsed
-    try {
-      parsed = JSON.parse(textContent.text)
-    } catch (parseError) {
-      console.error('Compliance coach parse error:', textContent.text)
-      return NextResponse.json({ error: 'Failed to parse AI response', raw: textContent.text }, { status: 500 })
+    const parsed = extractJSON(textContent.text)
+    if (!parsed) {
+      console.error('Compliance coach: could not extract JSON from:', textContent.text.slice(0, 500))
+      return NextResponse.json({
+        explanation: textContent.text,
+        whyItMatters: '',
+        actionSteps: [],
+        documentToCreate: null,
+        urgency: 'medium',
+      })
     }
 
     return NextResponse.json(parsed)

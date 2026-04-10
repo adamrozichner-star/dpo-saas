@@ -74,18 +74,20 @@ export default function NotificationsBell({ supabase }: NotificationsBellProps) 
   const unreadCount = notifications.filter(n => !n.read).length
 
   const handleAction = async (n: Notification) => {
-    // Mark as read
-    const headers = await getHeaders()
-    fetch('/api/notifications', {
-      method: 'PATCH',
-      headers: { ...headers, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: n.id, action: 'read' }),
-    }).catch(() => {})
+    // Mark as read (fire-and-forget)
+    getHeaders().then(headers => {
+      fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: n.id, action: 'read' }),
+      }).catch(() => {})
+    })
     setNotifications(prev => prev.map(x => x.id === n.id ? { ...x, read: true } : x))
 
     if (n.action_url) {
       setOpen(false)
-      router.push(n.action_url)
+      // Use window.location for reliable navigation (router.push can race with dropdown close)
+      window.location.href = n.action_url
     }
   }
 
