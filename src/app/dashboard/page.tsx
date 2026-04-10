@@ -52,6 +52,7 @@ import WorkPlanTab from '@/components/WorkPlanTab'
 import ComplianceReviewPanel from '@/components/ComplianceReviewPanel'
 import DataFlowDiagram from '@/components/DataFlowDiagram'
 import WebsiteScanner from '@/components/WebsiteScanner'
+import NotificationsBell from '@/components/NotificationsBell'
 import { deriveComplianceActions, ComplianceSummary, ActionOverride } from '@/lib/compliance-engine'
 
 // ============================================
@@ -495,13 +496,14 @@ function DashboardContent() {
       <aside className={`fixed inset-y-0 right-0 z-50 w-64 bg-stone-100/80 backdrop-blur-sm border-l border-stone-200 transform transition-transform duration-200 ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-[16rem]'} lg:!translate-x-0 lg:static`}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-5">
+          <div className="p-5 flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center">
                 <Shield className="h-5 w-5 text-white" />
               </div>
               <span className="font-semibold text-lg text-stone-800">Deepo</span>
             </Link>
+            <NotificationsBell supabase={supabase} />
           </div>
 
           {/* Chat Button */}
@@ -618,12 +620,15 @@ function DashboardContent() {
             </div>
             <span className="font-semibold text-stone-800">Deepo</span>
           </div>
-          <button 
-            onClick={() => setMobileMenuOpen(true)}
-            className="w-10 h-10 rounded-lg bg-white border border-stone-200 flex items-center justify-center"
-          >
-            <Menu className="h-5 w-5 text-stone-600" />
-          </button>
+          <div className="flex items-center gap-2">
+            <NotificationsBell supabase={supabase} />
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="w-10 h-10 rounded-lg bg-white border border-stone-200 flex items-center justify-center"
+            >
+              <Menu className="h-5 w-5 text-stone-600" />
+            </button>
+          </div>
         </header>
 
         {/* Page Content */}
