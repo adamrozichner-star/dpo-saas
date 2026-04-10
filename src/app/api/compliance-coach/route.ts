@@ -75,23 +75,35 @@ export async function POST(request: NextRequest) {
 
 נא להסביר את הממצא הזה ולתת הנחיות לפעולה.`
 
-    const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userPrompt }],
-    })
+    let message
+    try {
+      message = await anthropic.messages.create({
+        model: 'claude-sonnet-4-5-20250929',
+        max_tokens: 1024,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userPrompt }],
+      })
+    } catch (aiError: any) {
+      console.error('Compliance coach AI error:', aiError)
+      return NextResponse.json({ error: 'AI service error', details: aiError.message }, { status: 500 })
+    }
 
     const textContent = message.content.find(c => c.type === 'text')
     if (!textContent || textContent.type !== 'text') {
       return NextResponse.json({ error: 'No response from AI' }, { status: 500 })
     }
 
-    const parsed = JSON.parse(textContent.text)
+    let parsed
+    try {
+      parsed = JSON.parse(textContent.text)
+    } catch (parseError) {
+      console.error('Compliance coach parse error:', textContent.text)
+      return NextResponse.json({ error: 'Failed to parse AI response', raw: textContent.text }, { status: 500 })
+    }
 
     return NextResponse.json(parsed)
-  } catch (error) {
+  } catch (error: any) {
     console.error('Compliance coach error:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 })
   }
 }

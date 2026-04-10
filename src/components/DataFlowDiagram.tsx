@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Database, AlertTriangle, X, ZoomIn, ZoomOut, ArrowLeft } from 'lucide-react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
+import { Database, AlertTriangle, X, ZoomIn, ZoomOut, ArrowLeft, Pencil, Save, RotateCcw, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
 // =============================================
@@ -104,6 +104,8 @@ interface DataFlowDiagramProps {
   orgData?: any
   onboardingAnswers?: any
   ropaRecords?: any[]
+  supabase?: any
+  orgId?: string
 }
 
 // =============================================
@@ -260,15 +262,45 @@ function buildDiagram(v3: any) {
 // =============================================
 // Component
 // =============================================
-export default function DataFlowDiagram({ orgData, onboardingAnswers, ropaRecords }: DataFlowDiagramProps) {
+const NODE_TYPE_OPTIONS: { v: DataNode['type']; l: string }[] = [
+  { v: 'collection', l: 'איסוף' },
+  { v: 'database', l: 'מאגר' },
+  { v: 'storage', l: 'אחסון' },
+  { v: 'processor', l: 'מעבד' },
+]
+
+export default function DataFlowDiagram({ orgData, onboardingAnswers, ropaRecords, supabase, orgId }: DataFlowDiagramProps) {
   const [selectedNode, setSelectedNode] = useState<DataNode | null>(null)
   const [selectedEdge, setSelectedEdge] = useState<EdgeDetails | null>(null)
+  const [selectedEdgeIndex, setSelectedEdgeIndex] = useState<number | null>(null)
   const [zoom, setZoom] = useState(1)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
+  const [editMode, setEditMode] = useState(false)
+  const [customNodes, setCustomNodes] = useState<DataNode[] | null>(null)
+  const [customEdges, setCustomEdges] = useState<DataEdge[] | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [showAddNode, setShowAddNode] = useState(false)
+  const [newNodeLabel, setNewNodeLabel] = useState('')
+  const [newNodeType, setNewNodeType] = useState<DataNode['type']>('database')
+  const [newNodeSensitive, setNewNodeSensitive] = useState(false)
+  const [connectMode, setConnectMode] = useState<string | null>(null) // source node id
+
+  // Load overrides
+  useEffect(() => {
+    if (orgData?.data_flow_overrides?.nodes) {
+      setCustomNodes(orgData.data_flow_overrides.nodes)
+      setCustomEdges(orgData.data_flow_overrides.edges || [])
+    }
+  }, [orgData?.data_flow_overrides])
 
   const v3 = onboardingAnswers || {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const { nodes: allNodes, edges: flows, empty } = useMemo(() => buildDiagram(v3), [JSON.stringify(v3)])
+  const autoDiagram = useMemo(() => buildDiagram(v3), [JSON.stringify(v3)])
+
+  const isUsingOverrides = customNodes !== null
+  const allNodes = isUsingOverrides ? customNodes! : autoDiagram.nodes
+  const flows = isUsingOverrides ? (customEdges || []) : autoDiagram.edges
+  const empty = !isUsingOverrides && autoDiagram.empty
 
   const getNodeColor = (type: string) => {
     switch (type) {
@@ -282,7 +314,88 @@ export default function DataFlowDiagram({ orgData, onboardingAnswers, ropaRecord
 
   const svgHeight = Math.max(300, allNodes.reduce((max, n) => Math.max(max, n.y + 60), 0))
 
-  const closePanel = () => { setSelectedNode(null); setSelectedEdge(null) }
+  const closePanel = () => { setSelectedNode(null); setSelectedEdge(null); setSelectedEdgeIndex(null) }
+
+  const enterEditMode = () => {
+    if (!isUsingOverrides) {
+      setCustomNodes([...autoDiagram.nodes])
+      setCustomEdges([...autoDiagram.edges])
+    }
+    setEditMode(true)
+    closePanel()
+  }
+
+  const handleSave = async () => {
+    if (!supabase || !orgId) return
+    setSaving(true)
+    try {
+      await supabase.from('organizations').update({
+        data_flow_overrides: { nodes: customNodes, edges: customEdges, lastModified: new Date().toISOString() }
+      }).eq('id', orgId)
+      setEditMode(false)
+    } catch (e) { console.error('Failed to save diagram:', e) }
+    setSaving(false)
+  }
+
+  const handleReset = async () => {
+    if (!supabase || !orgId) return
+    setSaving(true)
+    try {
+      await supabase.from('organizations').update({ data_flow_overrides: null }).eq('id', orgId)
+      setCustomNodes(null)
+      setCustomEdges(null)
+      setEditMode(false)
+    } catch (e) { console.error('Failed to reset diagram:', e) }
+    setSaving(false)
+  }
+
+  const removeNode = (nodeId: string) => {
+    if (!customNodes || !customEdges) return
+    setCustomNodes(customNodes.filter(n => n.id !== nodeId))
+    setCustomEdges(customEdges.filter(e => e.from !== nodeId && e.to !== nodeId))
+    closePanel()
+  }
+
+  const removeEdge = (idx: number) => {
+    if (!customEdges) return
+    setCustomEdges(customEdges.filter((_, i) => i !== idx))
+    closePanel()
+  }
+
+  const addNode = () => {
+    if (!newNodeLabel.trim() || !customNodes) return
+    const colX: Record<string, number> = { collection: 65, database: 225, storage: 370, processor: 515 }
+    const sameTypeNodes = customNodes.filter(n => n.type === newNodeType)
+    const y = 50 + sameTypeNodes.length * 70
+    const id = `custom-${Date.now()}`
+    setCustomNodes([...customNodes, {
+      id, label: newNodeLabel.trim(), type: newNodeType,
+      x: colX[newNodeType] || 225, y,
+      sensitive: newNodeSensitive,
+      details: { description: newNodeLabel.trim() },
+    }])
+    setNewNodeLabel('')
+    setNewNodeSensitive(false)
+    setShowAddNode(false)
+  }
+
+  const handleNodeClick = (node: DataNode) => {
+    if (editMode && connectMode) {
+      // Complete connection
+      if (connectMode !== node.id && customEdges) {
+        const fromNode = allNodes.find(n => n.id === connectMode)
+        setCustomEdges([...customEdges, {
+          from: connectMode, to: node.id,
+          details: { sourceLabel: fromNode?.label || '', destLabel: node.label, method: 'ידני', frequency: 'שוטף' },
+        }])
+      }
+      setConnectMode(null)
+    } else {
+      setSelectedEdge(null)
+      setSelectedEdgeIndex(null)
+      setSelectedNode(node)
+    }
+  }
 
   return (
     <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-4">
@@ -307,11 +420,58 @@ export default function DataFlowDiagram({ orgData, onboardingAnswers, ropaRecord
         </div>
       ) : (
         <>
-          <div className="flex gap-1 mb-2">
+          <div className="flex gap-1 mb-2 flex-wrap">
             <button onClick={() => setZoom(z => Math.min(z + 0.2, 2))} className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 transition-colors"><ZoomIn className="h-4 w-4 text-stone-600" /></button>
             <button onClick={() => setZoom(z => Math.max(z - 0.2, 0.6))} className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 transition-colors"><ZoomOut className="h-4 w-4 text-stone-600" /></button>
             <span className="text-xs text-stone-400 self-center mr-2">{Math.round(zoom * 100)}%</span>
+            <div className="mr-auto flex gap-1">
+              {!editMode ? (
+                <button onClick={enterEditMode} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-xs text-stone-600 transition-colors">
+                  <Pencil className="h-3.5 w-3.5" /> ערוך מפה
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => setShowAddNode(true)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-100 hover:bg-indigo-200 text-xs text-indigo-600 transition-colors">
+                    <Plus className="h-3.5 w-3.5" /> הוסף צומת
+                  </button>
+                  <button onClick={() => setConnectMode(connectMode ? null : '__pick__')} className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs transition-colors ${connectMode ? 'bg-amber-200 text-amber-700' : 'bg-stone-100 hover:bg-stone-200 text-stone-600'}`}>
+                    🔗 חבר
+                  </button>
+                  <button onClick={handleReset} disabled={saving} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-xs text-stone-600 transition-colors">
+                    <RotateCcw className="h-3.5 w-3.5" /> אפס
+                  </button>
+                  <button onClick={handleSave} disabled={saving} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-xs text-white transition-colors">
+                    <Save className="h-3.5 w-3.5" /> {saving ? 'שומר...' : 'שמור'}
+                  </button>
+                  <button onClick={() => setEditMode(false)} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-xs text-stone-600 transition-colors">
+                    <X className="h-3.5 w-3.5" /> בטל
+                  </button>
+                </>
+              )}
+            </div>
           </div>
+          {connectMode && <p className="text-xs text-amber-600 mb-1">לחץ על צומת מקור, ואז על צומת יעד ליצירת חיבור</p>}
+          {showAddNode && (
+            <div className="mb-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+              <div className="flex flex-wrap gap-2 items-end">
+                <div>
+                  <label className="text-xs text-stone-500 block mb-1">שם</label>
+                  <input value={newNodeLabel} onChange={e => setNewNodeLabel(e.target.value)} className="px-2 py-1 text-sm border border-stone-300 rounded-md w-36" placeholder="שם הצומת" />
+                </div>
+                <div>
+                  <label className="text-xs text-stone-500 block mb-1">סוג</label>
+                  <select value={newNodeType} onChange={e => setNewNodeType(e.target.value as DataNode['type'])} className="px-2 py-1 text-sm border border-stone-300 rounded-md">
+                    {NODE_TYPE_OPTIONS.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+                  </select>
+                </div>
+                <label className="flex items-center gap-1 text-xs text-stone-600">
+                  <input type="checkbox" checked={newNodeSensitive} onChange={e => setNewNodeSensitive(e.target.checked)} /> רגיש
+                </label>
+                <button onClick={addNode} disabled={!newNodeLabel.trim()} className="px-3 py-1 bg-indigo-500 text-white rounded-md text-xs font-medium hover:bg-indigo-600 disabled:opacity-50">הוסף</button>
+                <button onClick={() => setShowAddNode(false)} className="px-3 py-1 bg-stone-200 text-stone-600 rounded-md text-xs">ביטול</button>
+              </div>
+            </div>
+          )}
           <p className="text-xs text-stone-400 mb-1 sm:hidden">← גללו ימינה לצפייה מלאה →</p>
           <div className="relative overflow-x-auto -mx-1">
             <svg width="100%" height={svgHeight * zoom} viewBox={`0 0 580 ${svgHeight}`} preserveAspectRatio="xMidYMid meet" style={{ minWidth: 580 * zoom, maxWidth: '100%' }}>
@@ -322,7 +482,7 @@ export default function DataFlowDiagram({ orgData, onboardingAnswers, ropaRecord
                 if (!from || !to) return null
                 const isHighlighted = hoveredNode === from.id || hoveredNode === to.id
                 return (
-                  <g key={i} className="cursor-pointer" onClick={() => { setSelectedNode(null); setSelectedEdge(flow.details || { sourceLabel: from.label, destLabel: to.label }) }}>
+                  <g key={i} className="cursor-pointer" onClick={() => { setSelectedNode(null); setSelectedEdge(flow.details || { sourceLabel: from.label, destLabel: to.label }); setSelectedEdgeIndex(i) }}>
                     <line x1={from.x + 60} y1={from.y} x2={to.x - 60} y2={to.y} stroke="transparent" strokeWidth="20" />
                     <line x1={from.x + 60} y1={from.y} x2={to.x - 60} y2={to.y} stroke={isHighlighted ? '#6366f1' : '#cbd5e1'} strokeWidth={isHighlighted ? '2.5' : '2'} markerEnd="url(#arrowhead)" strokeDasharray="6 3" className="transition-all duration-150" />
                   </g>
@@ -331,7 +491,7 @@ export default function DataFlowDiagram({ orgData, onboardingAnswers, ropaRecord
               {allNodes.map(node => {
                 const colors = getNodeColor(node.type)
                 return (
-                  <g key={node.id} className="cursor-pointer" onClick={() => { setSelectedEdge(null); setSelectedNode(node) }} onMouseEnter={() => setHoveredNode(node.id)} onMouseLeave={() => setHoveredNode(null)} style={{ transition: 'transform 0.15s', transform: hoveredNode === node.id ? 'scale(1.05)' : 'scale(1)', transformOrigin: `${node.x}px ${node.y}px` }}>
+                  <g key={node.id} className="cursor-pointer" onClick={() => handleNodeClick(node)} onMouseEnter={() => setHoveredNode(node.id)} onMouseLeave={() => setHoveredNode(null)} style={{ transition: 'transform 0.15s', transform: hoveredNode === node.id ? 'scale(1.05)' : 'scale(1)', transformOrigin: `${node.x}px ${node.y}px` }}>
                     <rect x={node.x - 55} y={node.y - 25} width="110" height="50" rx="10" fill={colors.fill} stroke={colors.stroke} strokeWidth={hoveredNode === node.id ? '3' : '2'} />
                     {node.sensitive && <><circle cx={node.x + 45} cy={node.y - 18} r="8" fill="#ef4444" /><text x={node.x + 45} y={node.y - 14} textAnchor="middle" fontSize="10" fill="white">!</text></>}
                     <text x={node.x} y={node.y + 5} textAnchor="middle" fontSize="11" fontWeight="600" fill="#374151" className="select-none">{node.label.length > 14 ? node.label.slice(0, 12) + '...' : node.label}</text>
@@ -379,6 +539,11 @@ export default function DataFlowDiagram({ orgData, onboardingAnswers, ropaRecord
             </div>
           )}
           {selectedNode.sensitive && <p className="text-xs text-red-600 mt-2 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />מכיל מידע רגיש — נדרשת הגנה מוגברת</p>}
+          {editMode && (
+            <button onClick={() => removeNode(selectedNode.id)} className="mt-3 flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-xs font-medium hover:bg-red-200 transition-colors">
+              <Trash2 className="h-3.5 w-3.5" /> הסר צומת
+            </button>
+          )}
         </div>
       )}
 
@@ -394,6 +559,11 @@ export default function DataFlowDiagram({ orgData, onboardingAnswers, ropaRecord
             {selectedEdge.method && <p><span className="font-medium text-stone-700">אופן העברה: </span>{selectedEdge.method}</p>}
             {selectedEdge.frequency && <p><span className="font-medium text-stone-700">תדירות: </span>{selectedEdge.frequency}</p>}
           </div>
+          {editMode && selectedEdgeIndex !== null && (
+            <button onClick={() => removeEdge(selectedEdgeIndex)} className="mt-3 flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-600 rounded-lg text-xs font-medium hover:bg-red-200 transition-colors">
+              <Trash2 className="h-3.5 w-3.5" /> הסר חיבור
+            </button>
+          )}
         </div>
       )}
     </div>

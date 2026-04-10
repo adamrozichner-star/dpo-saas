@@ -11,6 +11,7 @@ import {
 import { DocumentVariables } from '@/lib/document-templates'
 import { generateV3Documents } from '@/lib/v3-document-templates'
 import { generateDocWithAI, AI_DOC_TYPES, OrgContext } from '@/lib/ai-doc-generator'
+import { checkAndCreateNotificationsForOrg } from '@/lib/notifications-trigger'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120 // AI generation can take longer
@@ -738,9 +739,14 @@ ${businessId ? `ח.פ / ע.מ: ${businessId}` : ''}
     }
 
     console.log('Document generation complete!')
-    
-    return NextResponse.json({ 
-      success: true, 
+
+    // Trigger notifications check (non-blocking)
+    if (orgId) {
+      checkAndCreateNotificationsForOrg(orgId, supabase).catch(e => console.error('notif trigger:', e))
+    }
+
+    return NextResponse.json({
+      success: true,
       documents: savedDocs,
       complianceScore: complianceScore,
       checklist: checklist

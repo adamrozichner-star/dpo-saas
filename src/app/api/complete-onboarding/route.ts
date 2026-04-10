@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
+import { checkAndCreateNotificationsForOrg } from '@/lib/notifications-trigger'
 
 export const dynamic = 'force-dynamic'
 
@@ -73,11 +74,14 @@ export async function POST(request: NextRequest) {
       // Send welcome email directly (non-blocking)
       sendWelcomeEmailDirect(userEmail, businessName).catch(e => console.error('[CompleteOnboarding] Email error:', e))
 
-      return NextResponse.json({ 
-        success: true, 
-        orgId: existingUser.org_id, 
+      // Trigger notifications check (non-blocking)
+      checkAndCreateNotificationsForOrg(existingUser.org_id, getServiceSupabase()).catch(e => console.error('notif trigger:', e))
+
+      return NextResponse.json({
+        success: true,
+        orgId: existingUser.org_id,
         orgName: businessName,
-        updated: true 
+        updated: true
       })
     }
 
@@ -128,11 +132,14 @@ export async function POST(request: NextRequest) {
     // Send welcome email directly (non-blocking)
     sendWelcomeEmailDirect(userEmail, orgData.name).catch(e => console.error('[CompleteOnboarding] Email error:', e))
 
-    return NextResponse.json({ 
-      success: true, 
-      orgId: orgData.id, 
+    // Trigger notifications check (non-blocking)
+    checkAndCreateNotificationsForOrg(orgData.id, getServiceSupabase()).catch(e => console.error('notif trigger:', e))
+
+    return NextResponse.json({
+      success: true,
+      orgId: orgData.id,
       orgName: orgData.name,
-      profileSaved: !profileError 
+      profileSaved: !profileError
     })
 
   } catch (err: any) {

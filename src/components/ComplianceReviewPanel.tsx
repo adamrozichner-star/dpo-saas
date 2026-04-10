@@ -94,18 +94,11 @@ export default function ComplianceReviewPanel({ orgId, supabase }: ComplianceRev
 
       {score !== null && (
         <>
-          <div className="mb-5">
-            <div className="flex items-baseline gap-2 mb-2">
-              <span className={`text-3xl font-bold ${getScoreColor(score)}`}>{score}</span>
-              <span className="text-stone-400">/100</span>
-            </div>
-            <div className="w-full h-2.5 bg-stone-100 rounded-full overflow-hidden">
-              <div className={`h-full rounded-full transition-all duration-500 ${getScoreBarColor(score)}`} style={{ width: `${score}%` }} />
-            </div>
-          </div>
+          <p className="text-sm text-stone-600 mb-1">ניתוח מפורט של ציון הציות שלך — <span className={`font-semibold ${getScoreColor(score)}`}>{score}/100</span></p>
+          <p className="text-xs text-stone-400 mb-4">לחץ על ❓ ליד כל ממצא לקבלת הסבר אישי וצעדי פעולה</p>
 
           {summary && (
-            <div className="flex gap-3 mb-5 flex-wrap">
+            <div className="flex gap-3 mb-4 flex-wrap">
               {summary.critical > 0 && <span className="flex items-center gap-1 px-2.5 py-1 bg-red-100 text-red-700 rounded-full text-xs font-medium"><AlertTriangle className="h-3 w-3" /> {summary.critical} קריטי</span>}
               {summary.warning > 0 && <span className="flex items-center gap-1 px-2.5 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium"><AlertCircle className="h-3 w-3" /> {summary.warning} אזהרות</span>}
               {summary.ok > 0 && <span className="flex items-center gap-1 px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium"><CheckCircle2 className="h-3 w-3" /> {summary.ok} תקין</span>}

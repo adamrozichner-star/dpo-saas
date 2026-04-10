@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyPayment } from '@/lib/cardcom';
+import { checkAndCreateNotificationsForOrg } from '@/lib/notifications-trigger';
 
 export const dynamic = 'force-dynamic';
 
@@ -256,6 +257,10 @@ async function handleWebhook(lowProfileId: string | null, returnValue: string | 
       }
 
       console.log(`[Webhook] ✅ Payment success: org=${payment.org_id}, plan=${payment.plan}, amount=${payment.amount}`);
+
+      // Trigger notifications check (non-blocking)
+      checkAndCreateNotificationsForOrg(payment.org_id, supabase).catch(e => console.error('notif trigger:', e));
+
       return NextResponse.json({ success: true, received: true, status: 'completed' });
 
     } else {

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Anthropic from '@anthropic-ai/sdk'
 import { Resend } from 'resend'
+import { checkAndCreateNotificationsForOrg } from '@/lib/notifications-trigger'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -442,8 +443,13 @@ export async function POST(request: NextRequest) {
         }
       }, 1000)
 
-      return NextResponse.json({ 
-        success: true, 
+      // Trigger notifications check (non-blocking)
+      if (orgId) {
+        checkAndCreateNotificationsForOrg(orgId, supabase).catch(e => console.error('notif trigger:', e))
+      }
+
+      return NextResponse.json({
+        success: true,
         incident: {
           ...incident,
           hours_remaining: getHoursRemaining(incident.authority_deadline),
