@@ -27,15 +27,30 @@ export async function GET(request: NextRequest) {
     const auth = await getOrgId(request)
     if (auth.error) return auth.error
 
-    const { data: notifications } = await supabaseAdmin
+    const { data: rows } = await supabaseAdmin
       .from('notifications')
       .select('*')
       .eq('org_id', auth.orgId!)
-      .eq('dismissed', false)
       .order('created_at', { ascending: false })
       .limit(50)
 
-    return NextResponse.json({ notifications: notifications || [] })
+    // Map DB schema to frontend format
+    const notifications = (rows || []).map(row => {
+      const typeParts = (row.type || '').split(':')
+      const severity = typeParts[1] || 'info'
+      return {
+        id: row.id,
+        type: row.type,
+        severity,
+        title: row.title,
+        description: row.body,
+        action_url: row.link,
+        read: row.read_at !== null,
+        created_at: row.created_at,
+      }
+    })
+
+    return NextResponse.json({ notifications })
   } catch (error) {
     console.error('Notifications GET error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
@@ -54,18 +69,24 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
     }
 
-    const update = action === 'dismiss'
-      ? { dismissed: true }
-      : { read: true }
-
-    const { error: updateErr } = await supabaseAdmin
-      .from('notifications')
-      .update(update)
-      .eq('id', id)
-      .eq('org_id', auth.orgId!)
-
-    if (updateErr) {
-      return NextResponse.json({ error: updateErr.message }, { status: 500 })
+    if (action === 'dismiss') {
+      const { error: deleteErr } = await supabaseAdmin
+        .from('notifications')
+        .delete()
+        .eq('id', id)
+        .eq('org_id', auth.orgId!)
+      if (deleteErr) {
+        return NextResponse.json({ error: deleteErr.message }, { status: 500 })
+      }
+    } else {
+      const { error: updateErr } = await supabaseAdmin
+        .from('notifications')
+        .update({ read_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('org_id', auth.orgId!)
+      if (updateErr) {
+        return NextResponse.json({ error: updateErr.message }, { status: 500 })
+      }
     }
 
     return NextResponse.json({ success: true })

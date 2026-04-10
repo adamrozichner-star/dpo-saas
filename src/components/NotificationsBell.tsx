@@ -11,7 +11,6 @@ interface Notification {
   title: string
   description: string | null
   action_url: string | null
-  action_label: string | null
   read: boolean
   created_at: string
 }
@@ -157,9 +156,9 @@ export default function NotificationsBell({ supabase }: NotificationsBellProps) 
                             {n.description && <p className="text-xs text-stone-500 mt-0.5 line-clamp-2">{n.description}</p>}
                             <div className="flex items-center gap-3 mt-1.5">
                               <span className="text-[10px] text-stone-400">{formatTime(n.created_at)}</span>
-                              {n.action_label && (
+                              {n.action_url && (
                                 <span className="text-xs text-indigo-500 font-medium flex items-center gap-0.5">
-                                  {n.action_label} <ExternalLink className="h-3 w-3" />
+                                  פעל <ExternalLink className="h-3 w-3" />
                                 </span>
                               )}
                             </div>
@@ -204,8 +203,8 @@ export default function NotificationsBell({ supabase }: NotificationsBellProps) 
                             {n.description && <p className="text-xs text-stone-500 mt-0.5 line-clamp-2">{n.description}</p>}
                             <div className="flex items-center gap-3 mt-1">
                               <span className="text-[10px] text-stone-400">{formatTime(n.created_at)}</span>
-                              {n.action_label && (
-                                <span className="text-xs text-indigo-500 font-medium">{n.action_label}</span>
+                              {n.action_url && (
+                                <span className="text-xs text-indigo-500 font-medium">פעל</span>
                               )}
                             </div>
                           </div>

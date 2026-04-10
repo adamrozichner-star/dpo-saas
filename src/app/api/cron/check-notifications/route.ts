@@ -33,9 +33,8 @@ export async function GET(request: NextRequest) {
     for (const org of orgs) {
       results.orgs++
       const pending: Array<{
-        org_id: string; type: string; severity: string
-        title: string; description: string; action_url: string; action_label: string
-        expires_at?: string
+        org_id: string; type: string
+        title: string; body: string; link: string
       }> = []
 
       // Fetch org data in parallel
@@ -56,10 +55,10 @@ export async function GET(request: NextRequest) {
         const age = (now.getTime() - new Date(pp.updated_at || pp.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30)
         if (age > 11) {
           pending.push({
-            org_id: org.id, type: 'doc_stale_privacy', severity: age > 12 ? 'critical' : 'warning',
+            org_id: org.id, type: `doc:${age > 12 ? 'critical' : 'warning'}`,
             title: 'מדיניות הפרטיות דורשת עדכון',
-            description: 'מדיניות הפרטיות שלך לא עודכנה מעל 11 חודשים — הרגולטור דורש עדכון שנתי.',
-            action_url: '/dashboard?tab=documents', action_label: 'עדכן מדיניות',
+            body: 'מדיניות הפרטיות שלך לא עודכנה מעל 11 חודשים — הרגולטור דורש עדכון שנתי.',
+            link: '/dashboard?tab=documents',
           })
         }
       }
@@ -69,10 +68,10 @@ export async function GET(request: NextRequest) {
         const age = (now.getTime() - new Date(secDoc.updated_at || secDoc.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30)
         if (age > 12) {
           pending.push({
-            org_id: org.id, type: 'doc_stale_security', severity: 'warning',
+            org_id: org.id, type: 'doc:warning',
             title: 'נוהל אבטחת מידע דורש סקירה שנתית',
-            description: 'נוהל אבטחת המידע לא עודכן מעל שנה. מומלץ לסקור ולעדכן.',
-            action_url: '/dashboard?tab=documents', action_label: 'סקור נוהל',
+            body: 'נוהל אבטחת המידע לא עודכן מעל שנה. מומלץ לסקור ולעדכן.',
+            link: '/dashboard?tab=documents',
           })
         }
       }
@@ -82,18 +81,18 @@ export async function GET(request: NextRequest) {
       // ──────────────────────────────────
       if (!docTypes.includes('dpo_appointment')) {
         pending.push({
-          org_id: org.id, type: 'missing_doc_dpo', severity: 'warning',
+          org_id: org.id, type: 'doc:warning',
           title: 'טרם נוצר כתב מינוי DPO',
-          description: 'כתב מינוי ממונה הגנת פרטיות נדרש לפי החוק.',
-          action_url: '/dashboard?tab=documents', action_label: 'צור כתב מינוי',
+          body: 'כתב מינוי ממונה הגנת פרטיות נדרש לפי החוק.',
+          link: '/dashboard?tab=documents',
         })
       }
       if (!docTypes.includes('ropa')) {
         pending.push({
-          org_id: org.id, type: 'missing_doc_ropa', severity: 'info',
+          org_id: org.id, type: 'doc:info',
           title: 'טרם הוגדר רישום פעילויות עיבוד (ROPA)',
-          description: 'רישום פעילויות עיבוד מידע הוא חלק חשוב מציות לחוק.',
-          action_url: '/dashboard?tab=databases', action_label: 'הגדר ROPA',
+          body: 'רישום פעילויות עיבוד מידע הוא חלק חשוב מציות לחוק.',
+          link: '/dashboard?tab=databases',
         })
       }
 
@@ -108,10 +107,10 @@ export async function GET(request: NextRequest) {
         if (criticals.length > 0 && reviewAge >= 7) {
           for (const cf of criticals) {
             pending.push({
-              org_id: org.id, type: 'critical_finding', severity: 'critical',
+              org_id: org.id, type: 'compliance:critical',
               title: `ממצא קריטי פתוח: ${cf.title}`,
-              description: cf.description || 'ממצא קריטי שטרם טופל דורש תשומת לב מיידית.',
-              action_url: '/dashboard?tab=compliance', action_label: 'טפל בממצא',
+              body: cf.description || 'ממצא קריטי שטרם טופל דורש תשומת לב מיידית.',
+              link: '/dashboard?tab=compliance',
             })
           }
         }
@@ -124,10 +123,10 @@ export async function GET(request: NextRequest) {
         const orgAge = (now.getTime() - new Date(org.created_at).getTime()) / (1000 * 60 * 60 * 24)
         if (orgAge >= 3) {
           pending.push({
-            org_id: org.id, type: 'onboarding_incomplete', severity: 'info',
+            org_id: org.id, type: 'onboarding:info',
             title: 'השלם את ההרשמה כדי לקבל מסמכים מדויקים',
-            description: 'תהליך ההרשמה טרם הושלם — חלק מהמסמכים לא ישקפו את המצב המלא.',
-            action_url: '/onboarding', action_label: 'השלם הרשמה',
+            body: 'תהליך ההרשמה טרם הושלם — חלק מהמסמכים לא ישקפו את המצב המלא.',
+            link: '/onboarding',
           })
         }
       }
@@ -140,10 +139,10 @@ export async function GET(request: NextRequest) {
         const incAge = (now.getTime() - new Date(inc.created_at).getTime()) / (1000 * 60 * 60)
         if (incAge >= 24) {
           pending.push({
-            org_id: org.id, type: 'open_incident', severity: 'critical',
+            org_id: org.id, type: 'incident:critical',
             title: `אירוע אבטחה פתוח דורש טיפול`,
-            description: `האירוע "${inc.title || 'ללא כותרת'}" פתוח מעל 24 שעות.`,
-            action_url: '/dashboard?tab=incidents', action_label: 'טפל באירוע',
+            body: `האירוע "${inc.title || 'ללא כותרת'}" פתוח מעל 24 שעות.`,
+            link: '/dashboard?tab=incidents',
           })
         }
       }
@@ -155,21 +154,32 @@ export async function GET(request: NextRequest) {
       const day = now.getDate()
       if (day === 1 && [1, 4, 7, 10].includes(month)) {
         pending.push({
-          org_id: org.id, type: 'quarterly_review', severity: 'info',
+          org_id: org.id, type: 'compliance:info',
           title: 'סקירת ציות רבעונית מומלצת',
-          description: 'תחילת רבעון חדש — זה הזמן לסקור את מצב הציות שלכם.',
-          action_url: '/dashboard?tab=compliance', action_label: 'הרץ סקירה',
-          expires_at: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          body: 'תחילת רבעון חדש — זה הזמן לסקור את מצב הציות שלכם.',
+          link: '/dashboard?tab=compliance',
         })
       }
 
       // ──────────────────────────────────
-      // Insert all pending (dedupe via unique index)
+      // Insert all pending (query-based dedupe)
       // ──────────────────────────────────
       for (const n of pending) {
+        // Check if identical notification already exists
+        const { data: existing } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('org_id', n.org_id)
+          .eq('type', n.type)
+          .eq('title', n.title)
+          .limit(1)
+          .maybeSingle()
+
+        if (existing) continue // skip duplicate
+
         const { error: insertErr } = await supabase
           .from('notifications')
-          .upsert(n, { onConflict: 'org_id,type,title', ignoreDuplicates: true })
+          .insert(n)
         if (insertErr) {
           results.errors.push(`org ${org.id}: ${insertErr.message}`)
         } else {
