@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
       .from('compliance_reviews')
       .select('*')
       .eq('org_id', orgId)
-      .order('reviewed_at', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
@@ -116,9 +116,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       findings: review.findings,
-      score: review.score,
-      summary: review.summary,
-      reviewedAt: review.reviewed_at,
+      score: review.score_after,
+      summary: review.recommendations,
+      reviewedAt: review.created_at,
     })
   } catch (error) {
     console.error('Compliance review GET error:', error)
@@ -156,10 +156,11 @@ export async function POST(request: NextRequest) {
     // Persist review to DB
     await supabaseAdmin.from('compliance_reviews').insert({
       org_id: orgId,
-      score: score,
+      review_type: 'automated',
+      status: 'completed',
       findings: findings,
-      summary: summary,
-      reviewed_at: reviewedAt,
+      recommendations: summary,
+      score_after: score,
     })
 
     return NextResponse.json({
