@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { checkAndCreateNotificationsForOrg } from '@/lib/notifications-trigger'
 
 export const dynamic = 'force-dynamic'
 
@@ -92,6 +93,21 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Notifications PATCH error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const auth = await getOrgId(request)
+    if (auth.error) return auth.error
+
+    console.log('[Notif Refresh] Manual trigger for org:', auth.orgId)
+    await checkAndCreateNotificationsForOrg(auth.orgId!, supabaseAdmin)
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Notifications POST error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

@@ -69,12 +69,19 @@ export default function ComplianceCoachPanel({ finding, supabase, onClose }: Com
           }),
         })
 
-        if (!res.ok) throw new Error('Failed to fetch')
         const result = await res.json()
+        if (!res.ok) {
+          console.error('Coach API error response:', result, 'status:', res.status)
+          throw new Error(result.details || result.error || 'Failed to fetch')
+        }
+        if (result.error) {
+          console.error('Coach API returned error:', result)
+          throw new Error(result.details || result.error)
+        }
         setData(result)
-      } catch (e) {
+      } catch (e: any) {
         console.error('Coach fetch error:', e)
-        setError('לא הצלחנו לטעון את ההסבר. נסו שוב.')
+        setError(`לא הצלחנו לטעון את ההסבר: ${e.message}`)
       } finally {
         setLoading(false)
       }

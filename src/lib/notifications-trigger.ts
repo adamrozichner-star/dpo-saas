@@ -9,6 +9,7 @@ interface PendingNotification {
 }
 
 export async function checkAndCreateNotificationsForOrg(orgId: string, supabase: SupabaseClient) {
+  console.log('[Notif Trigger] Starting for org:', orgId)
   const now = new Date()
   const pending: PendingNotification[] = []
 
@@ -115,6 +116,7 @@ export async function checkAndCreateNotificationsForOrg(orgId: string, supabase:
   }
 
   // Insert with dedupe
+  let created = 0
   for (const n of pending) {
     const { data: existing } = await supabase
       .from('notifications')
@@ -127,6 +129,12 @@ export async function checkAndCreateNotificationsForOrg(orgId: string, supabase:
 
     if (existing) continue
 
-    await supabase.from('notifications').insert(n)
+    const { error: insertErr } = await supabase.from('notifications').insert(n)
+    if (insertErr) {
+      console.error('[Notif Trigger] Insert error:', insertErr.message, 'for:', n.title)
+    } else {
+      created++
+    }
   }
+  console.log(`[Notif Trigger] Done for org ${orgId}: ${pending.length} pending, ${created} created`)
 }

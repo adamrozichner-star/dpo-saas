@@ -164,7 +164,7 @@ function SubscribeContent() {
 
   const otherTier = recommendedTier === 'basic' ? 'recommended' : 'basic'
 
-  const plans: Record<string, { name: string; price: number; desc: string; features: string[] }> = {
+  const plans: Record<string, { name: string; price: number; desc: string; features: string[]; showPrice?: boolean }> = {
     basic: {
       name: 'בסיסית',
       price: 500,
@@ -188,6 +188,32 @@ function SubscribeContent() {
         'ליווי אירועי אבטחה',
         'תמיכה טלפונית (24 שעות)',
         'עד 3 משתמשים',
+      ],
+    },
+    premium: {
+      name: 'פרימיום',
+      price: 4500,
+      desc: 'לארגונים עם דרישות מורכבות',
+      features: [
+        'הכל במומלצת, ובנוסף:',
+        '2 שעות זמן DPO בחודש',
+        'סקירה חודשית',
+        'הדרכת עובדים רבעונית',
+        'DPIA מלא כלול',
+        'זמן תגובה: 4 שעות',
+        'משתמשים ללא הגבלה',
+      ],
+    },
+    enterprise: {
+      name: 'ארגונית',
+      price: 0,
+      showPrice: false,
+      desc: 'SLA מובטח והטמעה ייעודית',
+      features: [
+        'הכל בפרימיום, ובנוסף:',
+        'SLA מובטח',
+        'הטמעה ייעודית',
+        'ייעוץ משפטי מותאם',
       ],
     },
   }
@@ -245,19 +271,48 @@ function SubscribeContent() {
         {/* Divider */}
         <div className="flex items-center gap-3 my-3.5">
           <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-[11px] text-gray-400">או</span>
+          <span className="text-[11px] text-gray-400">חבילות נוספות</span>
           <div className="flex-1 h-px bg-gray-200" />
         </div>
 
-        {/* Other plan — compact */}
-        <PlanCard
-          plan={plans[otherTier]}
-          planId={otherTier}
-          isRecommended={false}
-          isProcessing={isProcessing}
-          selectedPlan={selectedPlan}
-          onSelect={handleSelectPlan}
-        />
+        {/* Other plans — compact */}
+        <div className="space-y-3">
+          {['basic', 'recommended', 'premium'].filter(id => id !== recommendedTier).map(planId => (
+            <PlanCard
+              key={planId}
+              plan={plans[planId]}
+              planId={planId}
+              isRecommended={false}
+              isProcessing={isProcessing}
+              selectedPlan={selectedPlan}
+              onSelect={handleSelectPlan}
+            />
+          ))}
+
+          {/* Enterprise — contact */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-bold text-sm text-gray-800">חבילה {plans.enterprise.name}</span>
+                <div className="text-[11px] text-gray-500 mt-0.5">{plans.enterprise.desc}</div>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2">
+                  {plans.enterprise.features.map((f, i) => (
+                    <div key={i} className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                      <Check className="h-3 w-3 text-green-500 flex-shrink-0" />
+                      <span>{f}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <a
+              href="mailto:hello@deepo.co.il?subject=בקשה לחבילה ארגונית"
+              className="mt-3 w-full rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs py-2.5 font-bold flex items-center justify-center gap-2 transition-all"
+            >
+              <Phone className="h-4 w-4" /> צרו קשר
+            </a>
+          </div>
+        </div>
 
         {/* Error */}
         {error && (
@@ -265,14 +320,6 @@ function SubscribeContent() {
             <AlertTriangle className="h-4 w-4 flex-shrink-0" />{error}
           </div>
         )}
-
-        {/* Enterprise link */}
-        <div className="mt-5 text-center">
-          <a href="mailto:hello@deepo.co.il?subject=בקשה לחבילה ארגונית" 
-             className="text-xs text-gray-400 hover:text-gray-600 inline-flex items-center gap-1">
-            ארגון גדול? <span className="underline">צרו קשר לחבילה מותאמת</span>
-          </a>
-        </div>
 
         {/* Footer badges */}
         <div className="mt-3 flex items-center justify-center gap-3 text-[11px] text-gray-400 pb-4">

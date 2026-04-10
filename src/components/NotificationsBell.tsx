@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Bell, AlertTriangle, AlertCircle, Info, X, ExternalLink } from 'lucide-react'
+import { Bell, AlertTriangle, AlertCircle, Info, X, ExternalLink, RefreshCw } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface Notification {
@@ -29,6 +29,7 @@ export default function NotificationsBell({ supabase }: NotificationsBellProps) 
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
@@ -108,6 +109,16 @@ export default function NotificationsBell({ supabase }: NotificationsBellProps) 
     return `לפני ${days} ימים`
   }
 
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    try {
+      const headers = await getHeaders()
+      await fetch('/api/notifications', { method: 'POST', headers })
+      await fetchNotifications()
+    } catch (e) { console.error('Refresh error:', e) }
+    setRefreshing(false)
+  }
+
   return (
     <div className="relative" ref={panelRef}>
       <button
@@ -129,9 +140,14 @@ export default function NotificationsBell({ supabase }: NotificationsBellProps) 
           <div className="sm:hidden fixed inset-0 z-50 bg-white flex flex-col" dir="rtl">
             <div className="flex items-center justify-between p-4 border-b border-stone-200">
               <h3 className="font-semibold text-stone-800">התראות</h3>
-              <button onClick={() => setOpen(false)} className="p-1.5 hover:bg-stone-100 rounded-lg">
-                <X className="h-5 w-5 text-stone-500" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={handleRefresh} disabled={refreshing} className="p-1.5 hover:bg-stone-100 rounded-lg">
+                  <RefreshCw className={`h-4 w-4 text-stone-400 ${refreshing ? 'animate-spin' : ''}`} />
+                </button>
+                <button onClick={() => setOpen(false)} className="p-1.5 hover:bg-stone-100 rounded-lg">
+                  <X className="h-5 w-5 text-stone-500" />
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto">
               {notifications.length === 0 ? (
@@ -177,8 +193,11 @@ export default function NotificationsBell({ supabase }: NotificationsBellProps) 
 
           {/* Desktop: dropdown */}
           <div className="hidden sm:block absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl border border-stone-200 shadow-lg z-50 overflow-hidden" dir="rtl">
-            <div className="p-3 border-b border-stone-100">
+            <div className="p-3 border-b border-stone-100 flex items-center justify-between">
               <h3 className="font-semibold text-stone-800 text-sm">התראות</h3>
+              <button onClick={handleRefresh} disabled={refreshing} className="p-1 hover:bg-stone-100 rounded-md transition-colors" title="רענן התראות">
+                <RefreshCw className={`h-3.5 w-3.5 text-stone-400 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
             </div>
             <div className="max-h-96 overflow-y-auto">
               {notifications.length === 0 ? (

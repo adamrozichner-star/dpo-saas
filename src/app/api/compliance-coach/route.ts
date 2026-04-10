@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
     if (!userData?.org_id) return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
 
     const body = await request.json()
+    console.log('[Coach] Request body:', JSON.stringify(body).slice(0, 300))
     const { findingId, findingTitle, findingDescription, orgContext } = body
 
     if (!findingTitle) {
