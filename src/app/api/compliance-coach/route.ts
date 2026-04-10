@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 נא להסביר את הממצא הזה ולתת הנחיות לפעולה.`
 
     const message = await anthropic.messages.create({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-sonnet-4-5-20250929',
       max_tokens: 1024,
       system: SYSTEM_PROMPT,
       messages: [{ role: 'user', content: userPrompt }],
