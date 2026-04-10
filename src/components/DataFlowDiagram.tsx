@@ -380,16 +380,22 @@ export default function DataFlowDiagram({ orgData, onboardingAnswers, ropaRecord
   }
 
   const handleNodeClick = (node: DataNode) => {
-    if (editMode && connectMode) {
-      // Complete connection
-      if (connectMode !== node.id && customEdges) {
+    if (editMode && connectMode !== null) {
+      if (connectMode === '__pick__') {
+        // First click: set source node
+        setConnectMode(node.id)
+      } else if (connectMode === node.id) {
+        // Clicked same node: cancel
+        setConnectMode(null)
+      } else if (customEdges) {
+        // Second click on different node: create edge
         const fromNode = allNodes.find(n => n.id === connectMode)
         setCustomEdges([...customEdges, {
           from: connectMode, to: node.id,
           details: { sourceLabel: fromNode?.label || '', destLabel: node.label, method: 'ידני', frequency: 'שוטף' },
         }])
+        setConnectMode(null)
       }
-      setConnectMode(null)
     } else {
       setSelectedEdge(null)
       setSelectedEdgeIndex(null)
@@ -450,7 +456,8 @@ export default function DataFlowDiagram({ orgData, onboardingAnswers, ropaRecord
               )}
             </div>
           </div>
-          {connectMode && <p className="text-xs text-amber-600 mb-1">לחץ על צומת מקור, ואז על צומת יעד ליצירת חיבור</p>}
+          {connectMode === '__pick__' && <p className="text-xs text-amber-600 mb-1">לחץ על צומת מקור</p>}
+          {connectMode && connectMode !== '__pick__' && <p className="text-xs text-amber-600 mb-1">נבחר מקור: {allNodes.find(n => n.id === connectMode)?.label} — לחץ על צומת יעד</p>}
           {showAddNode && (
             <div className="mb-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
               <div className="flex flex-wrap gap-2 items-end">
@@ -492,7 +499,7 @@ export default function DataFlowDiagram({ orgData, onboardingAnswers, ropaRecord
                 const colors = getNodeColor(node.type)
                 return (
                   <g key={node.id} className="cursor-pointer" onClick={() => handleNodeClick(node)} onMouseEnter={() => setHoveredNode(node.id)} onMouseLeave={() => setHoveredNode(null)} style={{ transition: 'transform 0.15s', transform: hoveredNode === node.id ? 'scale(1.05)' : 'scale(1)', transformOrigin: `${node.x}px ${node.y}px` }}>
-                    <rect x={node.x - 55} y={node.y - 25} width="110" height="50" rx="10" fill={colors.fill} stroke={colors.stroke} strokeWidth={hoveredNode === node.id ? '3' : '2'} />
+                    <rect x={node.x - 55} y={node.y - 25} width="110" height="50" rx="10" fill={connectMode === node.id ? '#fef3c7' : colors.fill} stroke={connectMode === node.id ? '#f59e0b' : colors.stroke} strokeWidth={connectMode === node.id ? '3' : hoveredNode === node.id ? '3' : '2'} />
                     {node.sensitive && <><circle cx={node.x + 45} cy={node.y - 18} r="8" fill="#ef4444" /><text x={node.x + 45} y={node.y - 14} textAnchor="middle" fontSize="10" fill="white">!</text></>}
                     <text x={node.x} y={node.y + 5} textAnchor="middle" fontSize="11" fontWeight="600" fill="#374151" className="select-none">{node.label.length > 14 ? node.label.slice(0, 12) + '...' : node.label}</text>
                   </g>

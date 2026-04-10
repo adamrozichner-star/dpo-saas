@@ -176,7 +176,7 @@ export default function NotificationsBell({ supabase }: NotificationsBellProps) 
           </div>
 
           {/* Desktop: dropdown */}
-          <div className="hidden sm:block absolute left-0 top-full mt-2 w-80 bg-white rounded-xl border border-stone-200 shadow-lg z-50 overflow-hidden" dir="rtl">
+          <div className="hidden sm:block absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl border border-stone-200 shadow-lg z-50 overflow-hidden" dir="rtl">
             <div className="p-3 border-b border-stone-100">
               <h3 className="font-semibold text-stone-800 text-sm">התראות</h3>
             </div>
