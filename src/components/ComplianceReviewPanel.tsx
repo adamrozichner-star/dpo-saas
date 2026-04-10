@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Shield, AlertTriangle, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 
 interface Finding {
@@ -31,24 +31,45 @@ export default function ComplianceReviewPanel({ orgId, supabase }: ComplianceRev
   const [reviewedAt, setReviewedAt] = useState<string | null>(null)
   const [expandedFinding, setExpandedFinding] = useState<string | null>(null)
 
-  const authFetch = async (url: string) => {
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
     const headers: Record<string, string> = {}
     if (supabase) {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`
     }
-    return fetch(url, { headers })
+    return headers
   }
+
+  const applyReviewData = (data: any) => {
+    setFindings(data.findings || [])
+    setScore(data.score ?? null)
+    setSummary(data.summary || null)
+    setReviewedAt(data.reviewedAt || null)
+  }
+
+  // Load last saved review on mount
+  useEffect(() => {
+    const loadLastReview = async () => {
+      try {
+        const headers = await getAuthHeaders()
+        const res = await fetch('/api/compliance-review', { headers })
+        const data = await res.json()
+        if (data.score !== null && data.score !== undefined) {
+          applyReviewData(data)
+        }
+      } catch (e) { console.error('Failed to load last review:', e) }
+    }
+    loadLastReview()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const runReview = async () => {
     setLoading(true)
     try {
-      const res = await authFetch('/api/compliance-review')
+      const headers = await getAuthHeaders()
+      const res = await fetch('/api/compliance-review', { method: 'POST', headers })
       const data = await res.json()
-      setFindings(data.findings || [])
-      setScore(data.score)
-      setSummary(data.summary)
-      setReviewedAt(data.reviewedAt)
+      applyReviewData(data)
     } catch (e) { console.error('Failed to run review:', e) }
     finally { setLoading(false) }
   }

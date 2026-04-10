@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { deriveComplianceActions } from '@/lib/compliance-engine'
 
 export const dynamic = 'force-dynamic'
 
@@ -81,37 +82,91 @@ function generateFindings(docs: any[], incidents: any[], org: any): Finding[] {
   return findings
 }
 
+async function authenticateAndGetOrg(request: NextRequest) {
+  const authHeader = request.headers.get('authorization')
+  if (!authHeader) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+
+  const token = authHeader.replace('Bearer ', '')
+  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+  if (authError || !user) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+
+  const { data: userData } = await supabaseAdmin.from('users').select('org_id').eq('auth_user_id', user.id).single()
+  if (!userData?.org_id) return { error: NextResponse.json({ error: 'Organization not found' }, { status: 404 }) }
+
+  return { orgId: userData.org_id }
+}
+
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const auth = await authenticateAndGetOrg(request)
+    if ('error' in auth && auth.error) return auth.error
+    const { orgId } = auth as { orgId: string }
 
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
-    if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    const { data: review } = await supabaseAdmin
+      .from('compliance_reviews')
+      .select('*')
+      .eq('org_id', orgId)
+      .order('reviewed_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
-    const { data: userData } = await supabaseAdmin.from('users').select('org_id').eq('auth_user_id', user.id).single()
-    if (!userData?.org_id) return NextResponse.json({ error: 'Organization not found' }, { status: 404 })
+    if (!review) {
+      return NextResponse.json({ findings: [], score: null })
+    }
 
-    const orgId = userData.org_id
-    const [{ data: org }, { data: docs }, { data: incidents }] = await Promise.all([
-      supabaseAdmin.from('organizations').select('*').eq('id', orgId).single(),
+    return NextResponse.json({
+      findings: review.findings,
+      score: review.score,
+      summary: review.summary,
+      reviewedAt: review.reviewed_at,
+    })
+  } catch (error) {
+    console.error('Compliance review GET error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const auth = await authenticateAndGetOrg(request)
+    if ('error' in auth && auth.error) return auth.error
+    const { orgId } = auth as { orgId: string }
+
+    const [{ data: docs }, { data: incidents }, { data: profileData }] = await Promise.all([
       supabaseAdmin.from('documents').select('*').eq('org_id', orgId),
       supabaseAdmin.from('security_incidents').select('*').eq('org_id', orgId),
+      supabaseAdmin.from('organization_profiles').select('profile_data').eq('org_id', orgId).maybeSingle(),
     ])
 
-    const findings = generateFindings(docs || [], incidents || [], org)
+    // Generate findings (review-specific detail list)
+    const findings = generateFindings(docs || [], incidents || [], null)
+
+    // Use the same scoring logic as the dashboard
+    const v3Answers = profileData?.profile_data?.v3Answers || {}
+    const actionOverrides = profileData?.profile_data?.actionOverrides || {}
+    const complianceSummary = deriveComplianceActions(v3Answers, docs || [], incidents || [], actionOverrides)
+    const score = complianceSummary.score
+
     const criticalCount = findings.filter(f => f.severity === 'critical').length
     const warningCount = findings.filter(f => f.severity === 'warning').length
     const okCount = findings.filter(f => f.severity === 'ok').length
-    const total = findings.length
-    const score = total > 0 ? Math.round(((okCount * 1.0 + warningCount * 0.5) / total) * 100) : 0
+    const summary = { critical: criticalCount, warning: warningCount, ok: okCount }
+    const reviewedAt = new Date().toISOString()
+
+    // Persist review to DB
+    await supabaseAdmin.from('compliance_reviews').insert({
+      org_id: orgId,
+      score: score,
+      findings: findings,
+      summary: summary,
+      reviewed_at: reviewedAt,
+    })
 
     return NextResponse.json({
       score,
       findings,
-      summary: { critical: criticalCount, warning: warningCount, ok: okCount },
-      reviewedAt: new Date().toISOString(),
+      summary,
+      reviewedAt,
     })
   } catch (error) {
     console.error('Compliance review error:', error)
