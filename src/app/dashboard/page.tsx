@@ -710,7 +710,7 @@ function DashboardContent() {
               <div className="space-y-8">
                 <ROPATab orgId={organization.id} authFetch={authFetch} />
                 <div className="border-t border-stone-200 pt-6 w-full overflow-x-auto">
-                  <DataFlowDiagram />
+                  <DataFlowDiagram orgData={organization} onboardingAnswers={orgProfile?.v3Answers || {}} />
                 </div>
                 <div className="mt-6">
                   <WebsiteScanner supabase={supabase} />

@@ -1,8 +1,72 @@
 'use client'
 
-import { useState } from 'react'
-import { Database, Globe, Server, Users, AlertTriangle, X, ZoomIn, ZoomOut } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Database, AlertTriangle, X, ZoomIn, ZoomOut, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
 
+// =============================================
+// Label maps (mirrors onboarding options)
+// =============================================
+const DB_LABELS: Record<string, string> = {
+  customers: 'לקוחות',
+  cvs: 'קו"ח / מועמדים',
+  employees: 'עובדים',
+  cameras: 'מצלמות',
+  website_leads: 'לידים מהאתר',
+  suppliers_id: 'עוסק מורשה',
+  payments: 'תשלומים',
+  medical: 'רפואי',
+}
+
+const STORAGE_LABELS: Record<string, string> = {
+  email: 'מייל',
+  crm: 'CRM',
+  cloud: 'ענן',
+  paper: 'פיזי',
+  local: 'מחשב מקומי',
+  erp: 'ERP / שכר',
+}
+
+const PROCESSOR_LABELS: Record<string, string> = {
+  crm_saas: 'CRM / מערכת ניהול',
+  payroll: 'שכר / HR',
+  marketing: 'שיווק / דיוור',
+  cloud_hosting: 'אחסון ענן',
+  call_center: 'מוקד שירות',
+  accounting: 'הנה"ח / רו"ח',
+}
+
+const DB_FIELDS: Record<string, string[]> = {
+  customers: ['שם', 'טלפון', 'אימייל', 'כתובת', 'ת.ז', 'מידע פיננסי', 'היסטוריית רכישות'],
+  cvs: ['שם', 'טלפון', 'אימייל', 'ת.ז', 'ניסיון תעסוקתי', 'השכלה', 'המלצות'],
+  employees: ['שם', 'ת.ז', 'כתובת', 'שכר', 'חשבון בנק', 'ביצועים', 'מידע רפואי'],
+  cameras: ['צילום פנים', 'מיקום', 'תאריך ושעה'],
+  website_leads: ['שם', 'טלפון', 'אימייל', 'כתובת IP', 'עמודים שנצפו'],
+  suppliers_id: ['שם', 'ת.ז / ח.פ', 'טלפון', 'חשבון בנק', 'פרטי חוזה'],
+  payments: ['שם', 'מספר כרטיס', 'תוקף', 'CVV', 'כתובת חיוב'],
+  medical: ['שם', 'ת.ז', 'מידע רפואי', 'אבחנות', 'תרופות', 'ביטוח'],
+}
+
+const SENSITIVE_FIELDS = new Set([
+  'ת.ז', 'מידע פיננסי', 'שכר', 'חשבון בנק', 'מידע רפואי',
+  'אבחנות', 'תרופות', 'מספר כרטיס', 'CVV', 'צילום פנים', 'ביצועים', 'כתובת IP',
+])
+
+// Collection point mapping: which DB types imply which collection sources
+const COLLECTION_SOURCES: Record<string, { id: string; label: string }[]> = {
+  customers: [{ id: 'col-web', label: 'אתר אינטרנט' }, { id: 'col-crm', label: 'קבלת פנים' }],
+  cvs: [{ id: 'col-web', label: 'אתר אינטרנט' }, { id: 'col-email', label: 'מייל' }],
+  employees: [{ id: 'col-hr', label: 'משאבי אנוש' }],
+  cameras: [{ id: 'col-cam', label: 'מצלמות אבטחה' }],
+  website_leads: [{ id: 'col-web', label: 'אתר אינטרנט' }],
+  suppliers_id: [{ id: 'col-manual', label: 'הזנה ידנית' }],
+  payments: [{ id: 'col-web', label: 'אתר אינטרנט' }, { id: 'col-pos', label: 'קופה / סליקה' }],
+  medical: [{ id: 'col-clinic', label: 'קליניקה / מרפאה' }],
+}
+
+// =============================================
+// Types
+// =============================================
 interface DataNode {
   id: string
   label: string
@@ -10,43 +74,201 @@ interface DataNode {
   x: number
   y: number
   sensitive?: boolean
-  details?: string
+  details?: NodeDetails
+}
+
+interface NodeDetails {
+  description: string
+  fields?: string[]
+  sensitiveFields?: string[]
+  volume?: string
+  retention?: string
+  accessLevel?: string
+}
+
+interface DataEdge {
+  from: string
+  to: string
+  details?: EdgeDetails
+}
+
+interface EdgeDetails {
+  sourceLabel: string
+  destLabel: string
+  dataTypes?: string[]
+  method?: string
+  frequency?: string
 }
 
 interface DataFlowDiagramProps {
-  databases?: Array<{ name: string; purpose: string; dataTypes?: string[] }>
-  processors?: Array<{ name: string; purpose: string; location?: string }>
+  orgData?: any
+  onboardingAnswers?: any
+  ropaRecords?: any[]
 }
 
-export default function DataFlowDiagram({ databases = [], processors = [] }: DataFlowDiagramProps) {
+// =============================================
+// Node & edge builder
+// =============================================
+function buildDiagram(v3: any) {
+  const databases: string[] = [...(v3.databases || []), ...(v3.customDatabases || [])]
+  const storageList: string[] = [...(v3.storage || []), ...(v3.customStorage || [])]
+  const processorList: string[] = [...(v3.processors || []), ...(v3.customProcessors || [])]
+  const dbDetails: Record<string, any> = v3.dbDetails || {}
+
+  if (databases.length === 0 && storageList.length === 0 && processorList.length === 0) {
+    return { nodes: [], edges: [], empty: true }
+  }
+
+  const nodes: DataNode[] = []
+  const edges: DataEdge[] = []
+  const seenCollections = new Map<string, DataNode>()
+
+  // --- Column positions (RTL: collection right, processors left) ---
+  const colX = { collection: 65, database: 225, storage: 370, processor: 515 }
+
+  // --- Database nodes (column 2) ---
+  databases.forEach((dbKey, i) => {
+    const isCustom = !DB_LABELS[dbKey]
+    const label = DB_LABELS[dbKey] || dbKey
+    const fields = DB_FIELDS[dbKey] || dbDetails[dbKey]?.fields || []
+    const sensitiveFields = fields.filter((f: string) => SENSITIVE_FIELDS.has(f))
+    const hasSensitive = sensitiveFields.length > 0 || ['medical', 'cameras', 'payments'].includes(dbKey)
+    const detail = dbDetails[dbKey] || {}
+
+    const node: DataNode = {
+      id: `db-${dbKey}`,
+      label,
+      type: 'database',
+      x: colX.database,
+      y: 50 + i * 70,
+      sensitive: hasSensitive,
+      details: {
+        description: `מאגר מידע: ${label}`,
+        fields,
+        sensitiveFields,
+        volume: detail.size,
+        retention: detail.retention,
+        accessLevel: detail.access,
+      },
+    }
+    nodes.push(node)
+
+    // Derive collection sources for this DB
+    const sources = COLLECTION_SOURCES[dbKey] || [{ id: 'col-general', label: 'הזנה ידנית' }]
+    sources.forEach(src => {
+      if (!seenCollections.has(src.id)) {
+        seenCollections.set(src.id, {
+          id: src.id,
+          label: src.label,
+          type: 'collection',
+          x: colX.collection,
+          y: 0, // positioned later
+          details: { description: `נקודת איסוף: ${src.label}` },
+        })
+      }
+      edges.push({
+        from: src.id,
+        to: node.id,
+        details: {
+          sourceLabel: src.label,
+          destLabel: label,
+          dataTypes: fields.slice(0, 4),
+          method: isCustom ? 'ידני / API' : 'אוטומטי',
+          frequency: 'שוטף',
+        },
+      })
+    })
+  })
+
+  // Position collection nodes
+  const colNodes = Array.from(seenCollections.values())
+  colNodes.forEach((n, i) => { n.y = 50 + i * 70 })
+  nodes.push(...colNodes)
+
+  // --- Storage nodes (column 3) ---
+  storageList.forEach((sKey, i) => {
+    const isCustom = !STORAGE_LABELS[sKey]
+    const label = STORAGE_LABELS[sKey] || sKey
+
+    nodes.push({
+      id: `stor-${sKey}`,
+      label,
+      type: 'storage',
+      x: colX.storage,
+      y: 50 + i * 70,
+      details: { description: `מערכת אחסון: ${label}` },
+    })
+
+    // Connect each DB to each storage
+    databases.forEach(dbKey => {
+      edges.push({
+        from: `db-${dbKey}`,
+        to: `stor-${sKey}`,
+        details: {
+          sourceLabel: DB_LABELS[dbKey] || dbKey,
+          destLabel: label,
+          method: isCustom ? 'ידני' : sKey === 'cloud' ? 'סנכרון ענן' : sKey === 'email' ? 'מייל' : 'העברה',
+          frequency: sKey === 'paper' ? 'לפי צורך' : 'שוטף',
+        },
+      })
+    })
+  })
+
+  // --- Processor nodes (column 4) ---
+  processorList.forEach((pKey, i) => {
+    const isCustom = !PROCESSOR_LABELS[pKey]
+    const label = PROCESSOR_LABELS[pKey] || pKey
+
+    nodes.push({
+      id: `proc-${pKey}`,
+      label,
+      type: 'processor',
+      x: colX.processor,
+      y: 50 + i * 70,
+      details: { description: `ספק חיצוני: ${label}` },
+    })
+
+    // Connect storage to processors, or DB directly if no storage
+    if (storageList.length > 0) {
+      edges.push({
+        from: `stor-${storageList[0]}`,
+        to: `proc-${pKey}`,
+        details: {
+          sourceLabel: STORAGE_LABELS[storageList[0]] || storageList[0],
+          destLabel: label,
+          method: isCustom ? 'API / ידני' : 'API',
+          frequency: 'שוטף',
+        },
+      })
+    } else if (databases.length > 0) {
+      edges.push({
+        from: `db-${databases[0]}`,
+        to: `proc-${pKey}`,
+        details: {
+          sourceLabel: DB_LABELS[databases[0]] || databases[0],
+          destLabel: label,
+          method: 'API',
+          frequency: 'שוטף',
+        },
+      })
+    }
+  })
+
+  return { nodes, edges, empty: false }
+}
+
+// =============================================
+// Component
+// =============================================
+export default function DataFlowDiagram({ orgData, onboardingAnswers, ropaRecords }: DataFlowDiagramProps) {
   const [selectedNode, setSelectedNode] = useState<DataNode | null>(null)
+  const [selectedEdge, setSelectedEdge] = useState<EdgeDetails | null>(null)
   const [zoom, setZoom] = useState(1)
   const [hoveredNode, setHoveredNode] = useState<string | null>(null)
 
-  // Node positions — compact enough to fit in a 580-wide viewBox (scrollable on mobile)
-  const collectionNodes: DataNode[] = [
-    { id: 'web', label: 'אתר אינטרנט', type: 'collection', x: 65, y: 50, details: 'נקודת איסוף: טפסים, עוגיות, אנליטיקה' },
-    { id: 'crm', label: 'CRM / מערכת ניהול', type: 'collection', x: 65, y: 120, details: 'נקודת איסוף: פרטי לקוחות, היסטוריה' },
-    { id: 'hr', label: 'משאבי אנוש', type: 'collection', x: 65, y: 190, details: 'נקודת איסוף: פרטי עובדים, שכר', sensitive: true },
-  ]
-
-  const dbNodes: DataNode[] = databases.length > 0
-    ? databases.map((db, i) => ({ id: `db-${i}`, label: db.name, type: 'database' as const, x: 225, y: 50 + i * 70, details: `מטרה: ${db.purpose}`, sensitive: db.dataTypes?.some(t => ['health', 'biometric', 'בריאות', 'ביומטרי'].some(s => t.includes(s))) }))
-    : [{ id: 'db-main', label: 'מאגר ראשי', type: 'database' as const, x: 225, y: 70, details: 'מאגר המידע הראשי' }, { id: 'db-backup', label: 'גיבוי', type: 'database' as const, x: 225, y: 160, details: 'מאגר גיבוי מוצפן' }]
-
-  const storageNode: DataNode = { id: 'storage', label: 'אחסון ענן', type: 'storage', x: 370, y: 120, details: 'שרתי אחסון מאובטחים' }
-
-  const processorNodes: DataNode[] = processors.length > 0
-    ? processors.map((p, i) => ({ id: `proc-${i}`, label: p.name, type: 'processor' as const, x: 515, y: 50 + i * 70, details: `מטרה: ${p.purpose}${p.location ? ` (${p.location})` : ''}` }))
-    : [{ id: 'proc-analytics', label: 'אנליטיקה', type: 'processor' as const, x: 515, y: 70, details: 'עיבוד נתונים סטטיסטיים' }, { id: 'proc-email', label: 'שירות מיילים', type: 'processor' as const, x: 515, y: 160, details: 'שליחת מיילים ללקוחות' }]
-
-  const allNodes = [...collectionNodes, ...dbNodes, storageNode, ...processorNodes]
-
-  const flows = [
-    ...collectionNodes.map(c => ({ from: c.id, to: dbNodes[0]?.id || 'db-main' })),
-    ...dbNodes.map(db => ({ from: db.id, to: 'storage' })),
-    ...processorNodes.map(p => ({ from: 'storage', to: p.id })),
-  ]
+  const v3 = onboardingAnswers || {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const { nodes: allNodes, edges: flows, empty } = useMemo(() => buildDiagram(v3), [JSON.stringify(v3)])
 
   const getNodeColor = (type: string) => {
     switch (type) {
@@ -60,6 +282,8 @@ export default function DataFlowDiagram({ databases = [], processors = [] }: Dat
 
   const svgHeight = Math.max(300, allNodes.reduce((max, n) => Math.max(max, n.y + 60), 0))
 
+  const closePanel = () => { setSelectedNode(null); setSelectedEdge(null) }
+
   return (
     <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-4">
       <div className="flex items-start sm:items-center justify-between mb-3 flex-col sm:flex-row gap-2">
@@ -71,54 +295,105 @@ export default function DataFlowDiagram({ databases = [], processors = [] }: Dat
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-purple-200 inline-block" /> מעבדים</span>
         </div>
       </div>
-      <div className="flex gap-1 mb-2">
-        <button onClick={() => setZoom(z => Math.min(z + 0.2, 2))} className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 transition-colors"><ZoomIn className="h-4 w-4 text-stone-600" /></button>
-        <button onClick={() => setZoom(z => Math.max(z - 0.2, 0.6))} className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 transition-colors"><ZoomOut className="h-4 w-4 text-stone-600" /></button>
-        <span className="text-xs text-stone-400 self-center mr-2">{Math.round(zoom * 100)}%</span>
-      </div>
-      <p className="text-xs text-stone-400 mb-1 sm:hidden">← גללו ימינה לצפייה מלאה →</p>
-      <div className="relative overflow-x-auto -mx-1">
-        <svg width="100%" height={svgHeight * zoom} viewBox={`0 0 580 ${svgHeight}`} preserveAspectRatio="xMidYMid meet" style={{ minWidth: 580 * zoom, maxWidth: '100%' }}>
-          <defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" /></marker></defs>
-          {flows.map((flow, i) => {
-            const from = allNodes.find(n => n.id === flow.from)
-            const to = allNodes.find(n => n.id === flow.to)
-            if (!from || !to) return null
-            return (
-              <g key={i} className="cursor-pointer" onClick={() => setSelectedNode({
-                id: `flow-${from.id}-${to.id}`,
-                label: `${from.label} → ${to.label}`,
-                type: 'collection',
-                x: (from.x + to.x) / 2,
-                y: (from.y + to.y) / 2,
-                details: `זרימת מידע: ${from.label} מעביר נתונים ל${to.label}`
-              })}>
-                <line x1={from.x + 60} y1={from.y} x2={to.x - 60} y2={to.y} stroke="transparent" strokeWidth="20" />
-                <line x1={from.x + 60} y1={from.y} x2={to.x - 60} y2={to.y} stroke="#cbd5e1" strokeWidth="2" markerEnd="url(#arrowhead)" strokeDasharray="6 3" />
-              </g>
-            )
-          })}
-          {allNodes.map(node => {
-            const colors = getNodeColor(node.type)
-            return (
-              <g key={node.id} className="cursor-pointer" onClick={() => setSelectedNode(node)} onMouseEnter={() => setHoveredNode(node.id)} onMouseLeave={() => setHoveredNode(null)} style={{ transition: 'transform 0.15s', transform: hoveredNode === node.id ? 'scale(1.05)' : 'scale(1)', transformOrigin: `${node.x}px ${node.y}px` }}>
-                <rect x={node.x - 55} y={node.y - 25} width="110" height="50" rx="10" fill={colors.fill} stroke={colors.stroke} strokeWidth={hoveredNode === node.id ? '3' : '2'} />
-                {node.sensitive && <><circle cx={node.x + 45} cy={node.y - 18} r="8" fill="#ef4444" /><text x={node.x + 45} y={node.y - 14} textAnchor="middle" fontSize="10" fill="white">!</text></>}
-                <text x={node.x} y={node.y + 5} textAnchor="middle" fontSize="11" fontWeight="600" fill="#374151" className="select-none">{node.label.length > 14 ? node.label.slice(0, 12) + '...' : node.label}</text>
-              </g>
-            )
-          })}
-        </svg>
-      </div>
+
+      {empty ? (
+        <div className="text-center py-12">
+          <Database className="h-10 w-10 text-stone-300 mx-auto mb-3" />
+          <p className="text-sm text-stone-500 mb-3">השלימו את ההרשמה כדי לראות את מפת הזרימה שלכם</p>
+          <Link href="/onboarding" className="inline-flex items-center gap-1 px-4 py-2 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+            להרשמה
+          </Link>
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-1 mb-2">
+            <button onClick={() => setZoom(z => Math.min(z + 0.2, 2))} className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 transition-colors"><ZoomIn className="h-4 w-4 text-stone-600" /></button>
+            <button onClick={() => setZoom(z => Math.max(z - 0.2, 0.6))} className="p-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 transition-colors"><ZoomOut className="h-4 w-4 text-stone-600" /></button>
+            <span className="text-xs text-stone-400 self-center mr-2">{Math.round(zoom * 100)}%</span>
+          </div>
+          <p className="text-xs text-stone-400 mb-1 sm:hidden">← גללו ימינה לצפייה מלאה →</p>
+          <div className="relative overflow-x-auto -mx-1">
+            <svg width="100%" height={svgHeight * zoom} viewBox={`0 0 580 ${svgHeight}`} preserveAspectRatio="xMidYMid meet" style={{ minWidth: 580 * zoom, maxWidth: '100%' }}>
+              <defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#94a3b8" /></marker></defs>
+              {flows.map((flow, i) => {
+                const from = allNodes.find(n => n.id === flow.from)
+                const to = allNodes.find(n => n.id === flow.to)
+                if (!from || !to) return null
+                const isHighlighted = hoveredNode === from.id || hoveredNode === to.id
+                return (
+                  <g key={i} className="cursor-pointer" onClick={() => { setSelectedNode(null); setSelectedEdge(flow.details || { sourceLabel: from.label, destLabel: to.label }) }}>
+                    <line x1={from.x + 60} y1={from.y} x2={to.x - 60} y2={to.y} stroke="transparent" strokeWidth="20" />
+                    <line x1={from.x + 60} y1={from.y} x2={to.x - 60} y2={to.y} stroke={isHighlighted ? '#6366f1' : '#cbd5e1'} strokeWidth={isHighlighted ? '2.5' : '2'} markerEnd="url(#arrowhead)" strokeDasharray="6 3" className="transition-all duration-150" />
+                  </g>
+                )
+              })}
+              {allNodes.map(node => {
+                const colors = getNodeColor(node.type)
+                return (
+                  <g key={node.id} className="cursor-pointer" onClick={() => { setSelectedEdge(null); setSelectedNode(node) }} onMouseEnter={() => setHoveredNode(node.id)} onMouseLeave={() => setHoveredNode(null)} style={{ transition: 'transform 0.15s', transform: hoveredNode === node.id ? 'scale(1.05)' : 'scale(1)', transformOrigin: `${node.x}px ${node.y}px` }}>
+                    <rect x={node.x - 55} y={node.y - 25} width="110" height="50" rx="10" fill={colors.fill} stroke={colors.stroke} strokeWidth={hoveredNode === node.id ? '3' : '2'} />
+                    {node.sensitive && <><circle cx={node.x + 45} cy={node.y - 18} r="8" fill="#ef4444" /><text x={node.x + 45} y={node.y - 14} textAnchor="middle" fontSize="10" fill="white">!</text></>}
+                    <text x={node.x} y={node.y + 5} textAnchor="middle" fontSize="11" fontWeight="600" fill="#374151" className="select-none">{node.label.length > 14 ? node.label.slice(0, 12) + '...' : node.label}</text>
+                  </g>
+                )
+              })}
+            </svg>
+          </div>
+        </>
+      )}
+
+      {/* Node detail panel */}
       {selectedNode && (
-        <div className="mt-3 p-3 rounded-lg bg-stone-50 border border-stone-200 relative">
-          <button onClick={() => setSelectedNode(null)} className="absolute top-2 left-2 text-stone-400 hover:text-stone-600"><X className="h-4 w-4" /></button>
+        <div className="mt-3 p-4 rounded-lg bg-stone-50 border border-stone-200 relative">
+          <button onClick={closePanel} className="absolute top-2 left-2 text-stone-400 hover:text-stone-600"><X className="h-4 w-4" /></button>
           <div className="flex items-center gap-2 mb-2">
             {selectedNode.sensitive && <AlertTriangle className="h-4 w-4 text-red-500" />}
             <h4 className="font-semibold text-stone-800">{selectedNode.label}</h4>
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ backgroundColor: getNodeColor(selectedNode.type).fill, color: getNodeColor(selectedNode.type).stroke }}>
+              {{ collection: 'איסוף', database: 'מאגר', storage: 'אחסון', processor: 'מעבד' }[selectedNode.type]}
+            </span>
           </div>
-          <p className="text-sm text-stone-600">{selectedNode.details}</p>
+          {selectedNode.details && (
+            <div className="space-y-2 text-sm text-stone-600">
+              <p>{selectedNode.details.description}</p>
+              {selectedNode.details.fields && selectedNode.details.fields.length > 0 && (
+                <div>
+                  <span className="font-medium text-stone-700">שדות מידע: </span>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {selectedNode.details.fields.map((f, i) => (
+                      <span key={i} className={`text-xs px-2 py-0.5 rounded-full ${
+                        selectedNode.details!.sensitiveFields?.includes(f)
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-stone-200 text-stone-600'
+                      }`}>
+                        {selectedNode.details!.sensitiveFields?.includes(f) && '⚠️ '}{f}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {selectedNode.details.volume && <p><span className="font-medium text-stone-700">היקף: </span>{selectedNode.details.volume}</p>}
+              {selectedNode.details.retention && <p><span className="font-medium text-stone-700">תקופת שמירה: </span>{selectedNode.details.retention}</p>}
+              {selectedNode.details.accessLevel && <p><span className="font-medium text-stone-700">רמת גישה: </span>{selectedNode.details.accessLevel} אנשים</p>}
+            </div>
+          )}
           {selectedNode.sensitive && <p className="text-xs text-red-600 mt-2 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />מכיל מידע רגיש — נדרשת הגנה מוגברת</p>}
+        </div>
+      )}
+
+      {/* Edge detail panel */}
+      {selectedEdge && (
+        <div className="mt-3 p-4 rounded-lg bg-stone-50 border border-stone-200 relative">
+          <button onClick={closePanel} className="absolute top-2 left-2 text-stone-400 hover:text-stone-600"><X className="h-4 w-4" /></button>
+          <h4 className="font-semibold text-stone-800 mb-2">{selectedEdge.sourceLabel} ← {selectedEdge.destLabel}</h4>
+          <div className="space-y-1.5 text-sm text-stone-600">
+            {selectedEdge.dataTypes && selectedEdge.dataTypes.length > 0 && (
+              <p><span className="font-medium text-stone-700">מידע מועבר: </span>{selectedEdge.dataTypes.join(', ')}</p>
+            )}
+            {selectedEdge.method && <p><span className="font-medium text-stone-700">אופן העברה: </span>{selectedEdge.method}</p>}
+            {selectedEdge.frequency && <p><span className="font-medium text-stone-700">תדירות: </span>{selectedEdge.frequency}</p>}
+          </div>
         </div>
       )}
     </div>
