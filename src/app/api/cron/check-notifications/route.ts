@@ -24,10 +24,11 @@ export async function GET(request: NextRequest) {
   try {
     const { data: orgs, error } = await supabase
       .from('organizations')
-      .select('id, name, onboarding_completed, created_at')
+      .select('*')
 
     if (error || !orgs) {
-      return NextResponse.json({ error: 'Failed to fetch orgs' }, { status: 500 })
+      console.error('Cron orgs fetch error:', error)
+      return NextResponse.json({ error: 'Failed to fetch orgs', details: error?.message }, { status: 500 })
     }
 
     for (const org of orgs) {
