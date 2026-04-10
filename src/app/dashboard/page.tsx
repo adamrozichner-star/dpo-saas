@@ -53,6 +53,7 @@ import ComplianceReviewPanel from '@/components/ComplianceReviewPanel'
 import DataFlowDiagram from '@/components/DataFlowDiagram'
 import WebsiteScanner from '@/components/WebsiteScanner'
 import NotificationsBell from '@/components/NotificationsBell'
+import TrustPageSettings from '@/components/TrustPageSettings'
 import { deriveComplianceActions, ComplianceSummary, ActionOverride } from '@/lib/compliance-engine'
 
 // ============================================
@@ -2388,6 +2389,9 @@ function SettingsTab({ organization, user, orgProfile, supabase }: { organizatio
           </Link>
         </div>
       </div>
+
+      {/* Trust Page Settings */}
+      <TrustPageSettings organization={organization} supabase={supabase} />
 
       {/* MFA — Two-Factor Authentication */}
       <MfaSection supabase={supabase} />
