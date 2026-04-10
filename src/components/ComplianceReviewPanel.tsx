@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Shield, AlertTriangle, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
+import { Shield, AlertTriangle, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, ChevronUp, HelpCircle } from 'lucide-react'
+import ComplianceCoachPanel from './ComplianceCoachPanel'
 
 interface Finding {
   id: string
@@ -30,6 +31,7 @@ export default function ComplianceReviewPanel({ orgId, supabase }: ComplianceRev
   const [loading, setLoading] = useState(false)
   const [reviewedAt, setReviewedAt] = useState<string | null>(null)
   const [expandedFinding, setExpandedFinding] = useState<string | null>(null)
+  const [coachFinding, setCoachFinding] = useState<Finding | null>(null)
 
   const getAuthHeaders = async (): Promise<Record<string, string>> => {
     const headers: Record<string, string> = {}
@@ -123,6 +125,13 @@ export default function ComplianceReviewPanel({ orgId, supabase }: ComplianceRev
                       <p className={`text-sm font-medium ${config.text}`}>{finding.title}</p>
                       <span className="text-xs text-stone-500">{finding.area}</span>
                     </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setCoachFinding(finding) }}
+                      className="p-1 hover:bg-white/60 rounded-md transition-colors flex-shrink-0"
+                      title="הסבר על ממצא זה"
+                    >
+                      <HelpCircle className="h-4 w-4 text-indigo-400 hover:text-indigo-600" />
+                    </button>
                     {isExpanded ? <ChevronUp className="h-4 w-4 text-stone-400" /> : <ChevronDown className="h-4 w-4 text-stone-400" />}
                   </div>
                   {isExpanded && (
@@ -141,6 +150,14 @@ export default function ComplianceReviewPanel({ orgId, supabase }: ComplianceRev
       )}
 
       {score === null && !loading && <p className="text-sm text-stone-400 text-center py-6">לחצו על &quot;הרץ סקירה&quot; כדי לבדוק את מצב הציות</p>}
+
+      {coachFinding && (
+        <ComplianceCoachPanel
+          finding={coachFinding}
+          supabase={supabase}
+          onClose={() => setCoachFinding(null)}
+        />
+      )}
     </div>
   )
 }
