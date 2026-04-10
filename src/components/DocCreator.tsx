@@ -3,6 +3,8 @@
 import { useState, useCallback } from 'react'
 import { FileText, Loader2, CheckCircle2, Shield, Lock as LockIcon, BookOpen, Users, FileCheck, ClipboardList, Database } from 'lucide-react'
 import { useToast } from '@/components/Toast'
+import { getMissingFields, MissingField } from '@/lib/doc-requirements'
+import MissingInfoModal from '@/components/MissingInfoModal'
 
 interface DocCreatorProps {
   orgId: string
@@ -39,6 +41,8 @@ export default function DocCreator({ orgId, orgName, businessId, v3Answers, supa
   const [generating, setGenerating] = useState<string | null>(null)
   const [genProgress, setGenProgress] = useState(0)
   const [lastCreated, setLastCreated] = useState<{ type: string; label: string } | null>(null)
+  const [missingModal, setMissingModal] = useState<{ docType: string; docLabel: string; fields: MissingField[] } | null>(null)
+  const [currentV3, setCurrentV3] = useState(v3Answers)
   const { toast } = useToast()
 
   const authFetch = useCallback(async (url: string, options: RequestInit = {}): Promise<Response> => {
@@ -51,8 +55,52 @@ export default function DocCreator({ orgId, orgName, businessId, v3Answers, supa
     return fetch(url, { ...options, headers })
   }, [supabase])
 
-  const generateDocument = async (docType: string, label: string) => {
+  const handleMissingComplete = async (values: Record<string, string>) => {
+    if (!missingModal) return
+    // Merge new values into v3Answers
+    const merged = { ...currentV3, ...values }
+    setCurrentV3(merged)
+
+    // Persist to org profile
+    if (supabase && orgId) {
+      try {
+        const { data: profile } = await supabase
+          .from('organization_profiles')
+          .select('profile_data')
+          .eq('org_id', orgId)
+          .maybeSingle()
+
+        const profileData = profile?.profile_data || {}
+        profileData.v3Answers = { ...(profileData.v3Answers || {}), ...values }
+
+        await supabase
+          .from('organization_profiles')
+          .upsert({ org_id: orgId, profile_data: profileData }, { onConflict: 'org_id' })
+      } catch (e) {
+        console.error('Failed to save missing info:', e)
+      }
+    }
+
+    const { docType, docLabel } = missingModal
+    setMissingModal(null)
+    // Now generate with the updated answers
+    doGenerate(docType, docLabel, merged)
+  }
+
+  const generateDocument = (docType: string, label: string) => {
     if (!isPaid) return
+
+    // Check for missing required fields
+    const missing = getMissingFields(docType, currentV3)
+    if (missing.length > 0) {
+      setMissingModal({ docType, docLabel: label, fields: missing })
+      return
+    }
+
+    doGenerate(docType, label, currentV3)
+  }
+
+  const doGenerate = async (docType: string, label: string, answers: any) => {
     setGenerating(docType)
     setGenProgress(0)
     setLastCreated(null)
@@ -72,7 +120,7 @@ export default function DocCreator({ orgId, orgName, businessId, v3Answers, supa
           orgName,
           businessId: businessId || '',
           answers: [],
-          v3Answers,
+          v3Answers: answers,
           singleDocType: docType,
         })
       })
@@ -188,6 +236,16 @@ export default function DocCreator({ orgId, orgName, businessId, v3Answers, supa
         <div className="bg-stone-50 rounded-lg p-3 text-center text-sm text-stone-500">
           🔒 הפעילו את המערכת כדי ליצור מסמכים
         </div>
+      )}
+
+      {missingModal && (
+        <MissingInfoModal
+          docType={missingModal.docType}
+          docLabel={missingModal.docLabel}
+          missingFields={missingModal.fields}
+          onComplete={handleMissingComplete}
+          onCancel={() => setMissingModal(null)}
+        />
       )}
     </div>
   )

@@ -24,6 +24,26 @@ export async function checkAndCreateNotificationsForOrg(orgId: string, supabase:
 
   const docTypes = (docs || []).map(d => d.type)
   const activeDocs = (docs || []).filter(d => d.status === 'active')
+  const orgAgeDays = (now.getTime() - new Date(org.created_at).getTime()) / (1000 * 60 * 60 * 24)
+
+  // 0. Welcome & essential docs for new/any users
+  if (orgAgeDays < 7 && (docs || []).length === 0) {
+    pending.push({
+      org_id: orgId, type: 'welcome:info',
+      title: 'ברוכים הבאים ל-Deepo!',
+      body: 'בואו ניצור את המסמך הראשון שלכם — מדיניות פרטיות מותאמת לעסק.',
+      link: '/dashboard?tab=documents',
+    })
+  }
+
+  if (!docTypes.includes('privacy_policy')) {
+    pending.push({
+      org_id: orgId, type: 'doc:warning',
+      title: 'צרו מדיניות פרטיות',
+      body: 'מדיניות פרטיות היא מסמך חובה לפי תיקון 13. ניתן ליצור אותה בלחיצת כפתור.',
+      link: '/dashboard?tab=documents',
+    })
+  }
 
   // 1. Document staleness
   const pp = activeDocs.find(d => d.type === 'privacy_policy')
@@ -88,17 +108,14 @@ export async function checkAndCreateNotificationsForOrg(orgId: string, supabase:
     }
   }
 
-  // 4. Onboarding incomplete 3+ days
+  // 4. Onboarding incomplete
   if (org.onboarding_completed === false) {
-    const orgAge = (now.getTime() - new Date(org.created_at).getTime()) / (1000 * 60 * 60 * 24)
-    if (orgAge >= 3) {
-      pending.push({
-        org_id: orgId, type: 'onboarding:info',
-        title: 'השלם את ההרשמה כדי לקבל מסמכים מדויקים',
-        body: 'תהליך ההרשמה טרם הושלם — חלק מהמסמכים לא ישקפו את המצב המלא.',
-        link: '/onboarding',
-      })
-    }
+    pending.push({
+      org_id: orgId, type: 'onboarding:info',
+      title: 'השלימו את ההרשמה לקבלת מסמכים מדויקים',
+      body: 'תהליך ההרשמה טרם הושלם — השלימו אותו כדי שהמסמכים ישקפו את המצב המלא.',
+      link: '/onboarding',
+    })
   }
 
   // 5. Open incidents 24+ hours

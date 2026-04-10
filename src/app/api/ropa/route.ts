@@ -198,7 +198,7 @@ export async function GET(request: NextRequest) {
 
     // List activities for organization
     if (orgId) {
-      const { data: activities, error } = await supabase
+      let { data: activities, error } = await supabase
         .from('processing_activities')
         .select('*')
         .eq('org_id', orgId)
@@ -206,6 +206,65 @@ export async function GET(request: NextRequest) {
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      // Auto-generate ROPA from onboarding if no activities exist
+      if ((!activities || activities.length === 0)) {
+        const { data: profile } = await supabase
+          .from('organization_profiles')
+          .select('profile_data')
+          .eq('org_id', orgId)
+          .maybeSingle()
+
+        const v3 = profile?.profile_data?.v3Answers || {}
+        const databases: string[] = [...(v3.databases || []), ...(v3.customDatabases || [])]
+
+        if (databases.length > 0) {
+          const DB_LABELS: Record<string, string> = {
+            customers: 'ניהול לקוחות', cvs: 'גיוס ומועמדים', employees: 'ניהול עובדים',
+            cameras: 'מצלמות אבטחה', website_leads: 'לידים מהאתר',
+            suppliers_id: 'ניהול ספקים', payments: 'עיבוד תשלומים', medical: 'מידע רפואי',
+          }
+          const DB_PURPOSES: Record<string, string> = {
+            customers: 'ניהול קשרי לקוחות ומתן שירות', cvs: 'גיוס עובדים וניהול מועמדויות',
+            employees: 'ניהול משאבי אנוש ושכר', cameras: 'אבטחת מתחם ובטיחות',
+            website_leads: 'שיווק ויצירת קשר עם לידים', suppliers_id: 'ניהול ספקים והתקשרויות',
+            payments: 'עיבוד ואבטחת תשלומים', medical: 'מתן שירותי בריאות וטיפול',
+          }
+          const DB_SUBJECTS: Record<string, string[]> = {
+            customers: ['לקוחות'], cvs: ['מועמדים לעבודה'], employees: ['עובדים'],
+            cameras: ['מבקרים', 'עובדים'], website_leads: ['גולשי אתר'],
+            suppliers_id: ['ספקים'], payments: ['לקוחות'], medical: ['מטופלים'],
+          }
+
+          const generated = databases.map(dbKey => {
+            const detail = v3.dbDetails?.[dbKey] || {}
+            return {
+              org_id: orgId,
+              name: DB_LABELS[dbKey] || dbKey,
+              description: DB_PURPOSES[dbKey] || `עיבוד מידע: ${dbKey}`,
+              department: '',
+              data_categories: detail.fields || [],
+              special_categories: [],
+              data_subject_categories: DB_SUBJECTS[dbKey] || [dbKey],
+              legal_basis: 'consent',
+              purposes: [DB_PURPOSES[dbKey] || 'ניהול עסקי'],
+              retention_period: detail.retention || 'לפי דין',
+              estimated_records_count: detail.size || null,
+              status: 'active',
+              auto_generated: true,
+            }
+          })
+
+          const { data: inserted } = await supabase
+            .from('processing_activities')
+            .insert(generated)
+            .select()
+
+          if (inserted) {
+            activities = inserted
+          }
+        }
       }
 
       // Get recipients for org
