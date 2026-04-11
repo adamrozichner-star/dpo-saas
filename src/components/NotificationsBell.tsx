@@ -55,10 +55,21 @@ export default function NotificationsBell({ supabase }: NotificationsBellProps) 
   }, [getHeaders])
 
   useEffect(() => {
-    fetchNotifications()
+    // On first mount: trigger a refresh (creates new notifications if needed), then fetch
+    const init = async () => {
+      try {
+        const headers = await getHeaders()
+        if (headers['Authorization']) {
+          await fetch('/api/notifications', { method: 'POST', headers })
+        }
+      } catch {}
+      fetchNotifications()
+    }
+    init()
     const interval = setInterval(fetchNotifications, 60000)
     return () => clearInterval(interval)
-  }, [fetchNotifications])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Close on outside click
   useEffect(() => {

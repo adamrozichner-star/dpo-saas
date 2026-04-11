@@ -129,6 +129,13 @@ export default function DocCreator({ orgId, orgName, businessId, v3Answers, supa
 
       if (!res.ok) {
         const data = await res.json()
+        // Server-side missing fields — show modal
+        if (res.status === 422 && data.missingFields) {
+          setGenerating(null)
+          setGenProgress(0)
+          setMissingModal({ docType, docLabel: label, fields: data.missingFields })
+          return
+        }
         throw new Error(data.error || 'שגיאה ביצירת המסמך')
       }
 

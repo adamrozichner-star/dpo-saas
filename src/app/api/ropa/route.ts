@@ -237,6 +237,9 @@ export async function GET(request: NextRequest) {
             suppliers_id: ['ספקים'], payments: ['לקוחות'], medical: ['מטופלים'],
           }
 
+          const SIZE_TO_NUM: Record<string, number> = {
+            'under100': 50, '100-1k': 500, '1k-10k': 5000, '10k-100k': 50000, '100k+': 150000,
+          }
           const generated = databases.map(dbKey => {
             const detail = v3.dbDetails?.[dbKey] || {}
             return {
@@ -250,9 +253,8 @@ export async function GET(request: NextRequest) {
               legal_basis: 'consent',
               purposes: [DB_PURPOSES[dbKey] || 'ניהול עסקי'],
               retention_period: detail.retention || 'לפי דין',
-              estimated_records_count: detail.size || null,
-              status: 'active',
-              auto_generated: true,
+              estimated_records_count: SIZE_TO_NUM[detail.size] || null,
+              status: 'draft',
             }
           })
 

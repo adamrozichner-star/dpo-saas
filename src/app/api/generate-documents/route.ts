@@ -12,6 +12,7 @@ import { DocumentVariables } from '@/lib/document-templates'
 import { generateV3Documents } from '@/lib/v3-document-templates'
 import { generateDocWithAI, AI_DOC_TYPES, OrgContext } from '@/lib/ai-doc-generator'
 import { checkAndCreateNotificationsForOrg } from '@/lib/notifications-trigger'
+import { getMissingFields } from '@/lib/doc-requirements'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120 // AI generation can take longer
@@ -127,6 +128,15 @@ export async function POST(request: NextRequest) {
     // ── SINGLE DOC MODE ──────────────────────────────
     // When singleDocType is specified, only save that one doc
     if (singleDocType) {
+      // Server-side validation: check required fields
+      const missingFields = getMissingFields(singleDocType, v3Answers)
+      if (missingFields.length > 0) {
+        return NextResponse.json({
+          error: 'חסרים פרטים ליצירת המסמך',
+          missingFields: missingFields,
+          pendingDocType: singleDocType,
+        }, { status: 422 })
+      }
       let targetDoc: { type: string; title: string; content: string } | undefined
       let usedAI = false
 

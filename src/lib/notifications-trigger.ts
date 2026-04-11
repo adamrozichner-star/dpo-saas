@@ -20,7 +20,12 @@ export async function checkAndCreateNotificationsForOrg(orgId: string, supabase:
     supabase.from('compliance_reviews').select('id, findings, created_at').eq('org_id', orgId).order('created_at', { ascending: false }).limit(1),
   ])
 
-  if (!org) return
+  if (!org) {
+    console.log('[Notif Trigger] Org not found:', orgId)
+    return
+  }
+
+  console.log('[Notif Check] org:', org.id, 'onboarding_completed:', org.onboarding_completed, 'docs:', (docs || []).length, 'created_at:', org.created_at)
 
   const docTypes = (docs || []).map(d => d.type)
   const activeDocs = (docs || []).filter(d => d.status === 'active')

@@ -76,6 +76,16 @@ function calculateResult(answers: Record<string, boolean>): CalculatorResult {
   const reasons: string[] = []
   let riskScore = 0
 
+  // Check for unanswered critical questions
+  const answeredCount = Object.keys(answers).length
+  const unanswered = questions.filter(q => answers[q.id] === undefined)
+
+  if (unanswered.length > 0 && answeredCount < questions.length) {
+    // Some questions skipped — can't determine definitively
+    const skippedLabels = unanswered.map(q => q.text.replace('האם ', '').replace('?', ''))
+    reasons.push(`לא ניתן לקבוע בוודאות — חסרות תשובות: ${skippedLabels.join(', ')}`)
+  }
+
   // Public body = automatic requirement
   if (answers.public_body) {
     reasons.push('גוף ציבורי מחויב במינוי ממונה על פי החוק')
@@ -107,6 +117,12 @@ function calculateResult(answers: Record<string, boolean>): CalculatorResult {
   if (answers.sensitive_data) {
     reasons.push('עיבוד מידע רגיש מחייב רמת הגנה גבוהה')
     riskScore += 50
+  }
+
+  // If critical questions are unanswered, elevate risk to at least medium
+  const hasUnansweredCritical = unanswered.some(q => q.yesImplication === 'required' || q.yesImplication === 'likely')
+  if (hasUnansweredCritical && riskScore < 40) {
+    riskScore = 40 // Can't say "low" when critical questions are skipped
   }
 
   // Determine if required

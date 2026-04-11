@@ -70,13 +70,13 @@ function generateFindings(docs: any[], incidents: any[], org: any): Finding[] {
 
   const openIncidents = incidents.filter(i => !['resolved', 'closed'].includes(i.status))
   if (openIncidents.length > 0) {
-    findings.push({ id: 'open-incidents', area: '\u05D0\u05D9\u05E8\u05D5\u05E2\u05D9\u05DD', severity: openIncidents.length > 2 ? 'critical' : 'warning', title: `${openIncidents.length} \u05D0\u05D9\u05E8\u05D5\u05E2\u05D9 \u05D0\u05D1\u05D8\u05D7\u05D4 \u05E4\u05EA\u05D5\u05D7\u05D9\u05DD`, description: `\u05D9\u05E9\u05E0\u05DD ${openIncidents.length} \u05D0\u05D9\u05E8\u05D5\u05E2\u05D9 \u05D0\u05D1\u05D8\u05D7\u05D4 \u05E9\u05D8\u05E8\u05DD \u05D8\u05D5\u05E4\u05DC\u05D5.`, recommendation: '\u05D9\u05E9 \u05DC\u05D8\u05E4\u05DC \u05D1\u05D0\u05D9\u05E8\u05D5\u05E2\u05D9\u05DD \u05D4\u05E4\u05EA\u05D5\u05D7\u05D9\u05DD \u05D1\u05D4\u05E7\u05D3\u05DD \u05D5\u05DC\u05EA\u05E2\u05D3 \u05D0\u05EA \u05D4\u05D8\u05D9\u05E4\u05D5\u05DC.' })
+    findings.push({ id: 'open-incidents', area: 'אירועים', severity: openIncidents.length > 2 ? 'critical' : 'warning', title: `${openIncidents.length} אירועי אבטחה פתוחים`, description: `ישנם ${openIncidents.length} אירועי אבטחה שטרם טופלו.`, recommendation: 'יש לטפל באירועים הפתוחים בהקדם ולתעד את הטיפול.' })
   } else {
-    findings.push({ id: 'incidents-ok', area: '\u05D0\u05D9\u05E8\u05D5\u05E2\u05D9\u05DD', severity: 'ok', title: '\u05D0\u05D9\u05DF \u05D0\u05D9\u05E8\u05D5\u05E2\u05D9 \u05D0\u05D1\u05D8\u05D7\u05D4 \u05E4\u05EA\u05D5\u05D7\u05D9\u05DD', description: '\u05DB\u05DC \u05D0\u05D9\u05E8\u05D5\u05E2\u05D9 \u05D4\u05D0\u05D1\u05D8\u05D7\u05D4 \u05D8\u05D5\u05E4\u05DC\u05D5.', recommendation: '' })
+    findings.push({ id: 'incidents-ok', area: 'אירועים', severity: 'ok', title: 'אין אירועי אבטחה פתוחים', description: 'כל אירועי האבטחה טופלו.', recommendation: '' })
   }
 
   if (!docTypes.includes('ropa')) {
-    findings.push({ id: 'no-ropa', area: '\u05EA\u05D9\u05E2\u05D5\u05D3', severity: 'warning', title: '\u05D7\u05E1\u05E8\u05D4 \u05DE\u05E4\u05EA \u05E2\u05D9\u05D1\u05D5\u05D3 (ROPA)', description: '\u05DC\u05D0 \u05E0\u05DE\u05E6\u05D0\u05D4 \u05DE\u05E4\u05EA \u05E4\u05E2\u05D9\u05DC\u05D5\u05D9\u05D5\u05EA \u05E2\u05D9\u05D1\u05D5\u05D3 \u05DE\u05D9\u05D3\u05E2.', recommendation: '\u05D9\u05E9 \u05DC\u05D9\u05E6\u05D5\u05E8 \u05DE\u05E4\u05EA ROPA \u05DC\u05EA\u05D9\u05E2\u05D5\u05D3 \u05DB\u05DC\u05DC \u05E4\u05E2\u05D9\u05DC\u05D5\u05D9\u05D5\u05EA \u05D4\u05E2\u05D9\u05D1\u05D5\u05D3.' })
+    findings.push({ id: 'no-ropa', area: 'תיעוד', severity: 'warning', title: 'חסרה מפת עיבוד (ROPA)', description: 'לא נמצאה מפת פעילויות עיבוד מידע.', recommendation: 'יש ליצור מפת ROPA לתיעוד כלל פעילויות העיבוד.' })
   }
 
   return findings
