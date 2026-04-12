@@ -50,6 +50,7 @@ import IncidentReportTab from '@/components/IncidentReportTab'
 import ROPATab from '@/components/ROPATab'
 import WorkPlanTab from '@/components/WorkPlanTab'
 import ComplianceReviewPanel from '@/components/ComplianceReviewPanel'
+import DpiaTab from '@/components/DpiaTab'
 import DataFlowDiagram from '@/components/DataFlowDiagram'
 import WebsiteScanner from '@/components/WebsiteScanner'
 import NotificationsBell from '@/components/NotificationsBell'
@@ -766,7 +767,10 @@ function DashboardContent() {
             ) : <LockedTabOverlay icon="💬" title="ממונה ובקשות" description="שלחו שאלות לממונה וטפלו בבקשות פרטיות" />
           )}
           {activeTab === 'compliance' && organization?.id && (
-            <ComplianceReviewPanel orgId={organization.id} supabase={supabase} />
+            <div className="space-y-6">
+              <ComplianceReviewPanel orgId={organization.id} supabase={supabase} />
+              <DpiaTab supabase={supabase} v3Answers={orgProfile?.v3Answers || {}} />
+            </div>
           )}
           {activeTab === 'settings' && (
             <SettingsTab organization={organization} user={user} orgProfile={orgProfile} supabase={supabase} />

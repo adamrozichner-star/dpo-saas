@@ -766,6 +766,29 @@ export function deriveComplianceActions(
     sortOrder: sortOrder++,
   })
 
+  // ── 20. DPIA — required for sensitive/large-scale activities ──
+  const sizeMapDPIA: Record<string, number> = { 'under100': 50, '100-1k': 500, '1k-10k': 5000, '10k-100k': 50000, '100k+': 150000 }
+  const dpiaRequiredActivities = dbs.filter((dbKey: string) => {
+    const detail = dbDetails[dbKey] || {}
+    if (detail.sensitive) return true
+    if ((sizeMapDPIA[detail.size] || 0) >= 100000) return true
+    if (dbKey === 'medical' || dbKey === 'cameras') return true
+    return false
+  })
+  if (dpiaRequiredActivities.length > 0) {
+    tasks.push({
+      id: 'dpia-required',
+      title: 'תסקיר השפעה על הפרטיות (DPIA)',
+      description: `${dpiaRequiredActivities.length} פעילויות דורשות תסקיר השפעה לפי הנחיית הרשות להגנת הפרטיות.`,
+      legalBasis: 'תיקון 13, הנחיית הרשות להגנת הפרטיות',
+      icon: '🛡️',
+      priority: 'high',
+      status: 'pending_user',
+      actionType: 'manual_task',
+      sortOrder: sortOrder++,
+    })
+  }
+
   // ═══════════════════════════════════════════════════
   // APPLY USER OVERRIDES
   // ═══════════════════════════════════════════════════
@@ -842,6 +865,7 @@ export function deriveComplianceActions(
     'breach-procedures': 5,
     'subject-rights': 5,
     'ropa-maintenance': 3,
+    'dpia-required': 10,
   }
 
   let totalWeight = 0

@@ -701,3 +701,84 @@ export function generateDatabaseStructure(ctx: V3DocContext): string {
 
   return doc
 }
+
+// =============================================
+// DPIA — Privacy Impact Assessment document
+// =============================================
+export interface DpiaDocData {
+  activity_name: string
+  description: string
+  legal_basis: string
+  data_categories: string[]
+  risks: Array<{ name: string; category: string; initial: number; residual: number; initialLevel: string; residualLevel: string }>
+  controls: string[]
+  residual_score: number
+  risk_level: string
+  action_plan: Array<{ text: string; owner: string; deadline: string; completed: boolean }>
+}
+
+export function generateDPIA(ctx: V3DocContext, dpia: DpiaDocData): string {
+  const date = formatDate()
+  const bizName = ctx.v3Answers?.bizName || ctx.orgName
+  const legalLabels: Record<string, string> = {
+    consent: 'הסכמת נושא המידע',
+    contract: 'ביצוע חוזה',
+    legal_obligation: 'חובה חוקית',
+    legitimate_interest: 'אינטרס לגיטימי',
+    vital_interests: 'אינטרסים חיוניים',
+  }
+  const levelLabels: Record<string, string> = { low: 'נמוך', medium: 'בינוני', high: 'גבוה', critical: 'קריטי' }
+
+  let doc = `# תסקיר השפעה על הפרטיות (DPIA)\n\n`
+  doc += `**ארגון:** ${bizName}\n`
+  doc += `**פעילות:** ${dpia.activity_name}\n`
+  doc += `**תאריך עריכה:** ${date}\n`
+  doc += `**רמת סיכון שיורי:** ${levelLabels[dpia.risk_level] || dpia.risk_level} (${dpia.residual_score}/25)\n\n`
+  doc += `---\n\n`
+
+  doc += `## 1. תיאור הפעילות\n\n${dpia.description || 'לא הוגדר'}\n\n`
+
+  doc += `## 2. בסיס חוקי לעיבוד\n\n${legalLabels[dpia.legal_basis] || dpia.legal_basis || 'לא הוגדר'}\n\n`
+
+  doc += `## 3. מיפוי זרימת המידע\n\nקטגוריות מידע: ${(dpia.data_categories || []).join(', ') || 'לא צוין'}\n\n`
+
+  doc += `## 4. זיהוי סיכונים\n\n`
+  doc += `| סיכון | קטגוריה | סיכון ראשוני | סיכון שיורי |\n|---|---|---|---|\n`
+  dpia.risks.forEach(r => {
+    doc += `| ${r.name} | ${r.category} | ${r.initial} (${levelLabels[r.initialLevel] || r.initialLevel}) | ${r.residual} (${levelLabels[r.residualLevel] || r.residualLevel}) |\n`
+  })
+  doc += `\n`
+
+  doc += `## 5. בקרות קיימות\n\n`
+  if (dpia.controls.length === 0) {
+    doc += `אין בקרות פעילות מתועדות.\n\n`
+  } else {
+    dpia.controls.forEach(c => { doc += `- ${c}\n` })
+    doc += `\n`
+  }
+
+  doc += `## 6. הערכת סיכון שיורי\n\n`
+  doc += `לאחר יישום הבקרות, רמת הסיכון הכוללת היא **${levelLabels[dpia.risk_level]}** (ציון ${dpia.residual_score} מתוך 25).\n\n`
+
+  doc += `## 7. תוכנית פעולה\n\n`
+  if (dpia.action_plan.length === 0) {
+    doc += `לא הוגדרו פעולות נוספות.\n\n`
+  } else {
+    dpia.action_plan.forEach((a, i) => {
+      doc += `${i + 1}. **${a.text}**\n`
+      if (a.owner) doc += `   - אחראי: ${a.owner}\n`
+      if (a.deadline) doc += `   - יעד: ${a.deadline}\n`
+      doc += `   - סטטוס: ${a.completed ? 'הושלם ✓' : 'פתוח'}\n\n`
+    })
+  }
+
+  doc += `## 8. אישור הנהלה\n\nתסקיר זה מחייב אישור של בעל הארגון או הממונה הממונה.\n\n`
+
+  const reviewDate = new Date()
+  reviewDate.setMonth(reviewDate.getMonth() + 18)
+  doc += `## 9. תאריך סקירה הבאה\n\n${reviewDate.toLocaleDateString('he-IL')} (18 חודשים ממועד האישור)\n\n`
+
+  doc += `---\n\n*מסמך זה נוצר אוטומטית על ידי מערכת Deepo בהתאם למתודולוגיית הרשות להגנת הפרטיות.*\n`
+
+  return doc
+}

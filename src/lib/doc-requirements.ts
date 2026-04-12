@@ -23,6 +23,9 @@ export const DOC_REQUIREMENTS: Record<string, { field: string; label: string }[]
     { field: 'bizName', label: 'שם העסק' },
     { field: 'databases', label: 'מאגרי מידע' },
   ],
+  // DPIA is generated from the DpiaWizard (not from onboarding answers).
+  // Listed here for completeness; wizard supplies activity_name, risks, controls.
+  dpia: [],
 }
 
 export interface MissingField {
