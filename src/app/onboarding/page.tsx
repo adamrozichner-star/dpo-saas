@@ -121,6 +121,7 @@ interface V3Answers {
   processors?: string[]
   customProcessors?: string[]
   hasConsent?: string
+  rightsWorkflow?: string
   dbDetails?: Record<string, { fields?: string[]; size?: string; retention?: string; access?: string }>
   [key: string]: any
 }
@@ -333,6 +334,10 @@ const QUESTION_TIPS: Record<string, { tip: string; why: string }> = {
   hasConsent: {
     tip: 'מנגנון הסכמה = באנר עוגיות, טופס הרשמה עם צ\'קבוקס, או מדיניות פרטיות באתר.',
     why: 'חובת הסכמה מדעת קיימת בחוק. בלי מנגנון — יש הפרה פוטנציאלית.'
+  },
+  rightsWorkflow: {
+    tip: 'תהליך טיפול בבקשות זכויות = נוהל מסודר שאומר מי עונה, איך בודקים זהות, ותוך כמה זמן.',
+    why: 'סעיפים 13-14 לחוק מחייבים לענות לבקשות עיון, תיקון ומחיקה תוך פרקי זמן קבועים.'
   }
 }
 
@@ -1065,6 +1070,9 @@ function OnboardingContent() {
     { id: 'hasConsent', icon: '🍪', q: 'יש לכם מנגנון הסכמה (consent) באתר?', type: 'pick',
       hint: 'תיקון 13 מרחיב את חובת השקיפות וההסכמה מדעת',
       lawRef: 'תיקון 13, סעיף יידוע מורחב' },
+    { id: 'rightsWorkflow', icon: '📬', q: 'האם יש לכם תהליך לטיפול בבקשות זכויות של נושאי מידע?', type: 'pick',
+      hint: 'סעיף 13-14 לחוק מחייב לטפל בבקשות עיון, תיקון ומחיקה תוך פרק זמן קבוע',
+      lawRef: 'חוק הגנת הפרטיות, סעיפים 13-14' },
   ]
 
   const mainLen = CARDS.length
@@ -1402,6 +1410,12 @@ function OnboardingContent() {
         { v: 'yes', l: '✅ כן, יש' },
         { v: 'no', l: '❌ אין' },
         { v: 'no_website', l: '🚫 אין אתר' },
+      ]
+      case 'rightsWorkflow': return [
+        { v: 'yes_documented', l: '✅ כן, יש תהליך מתועד' },
+        { v: 'yes_informal', l: '📝 כן, אבל לא מתועד' },
+        { v: 'no', l: '❌ לא, אין תהליך' },
+        { v: 'unknown', l: '🤷 לא יודע' },
       ]
       default: return OWNER_OPTIONS
     }

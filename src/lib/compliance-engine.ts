@@ -752,6 +752,34 @@ export function deriveComplianceActions(
     sortOrder: sortOrder++,
   })
 
+  // ── 18b. Rights Workflow (user-declared) ──
+  const rightsWorkflow = v3Answers?.rightsWorkflow
+  if (rightsWorkflow === 'no' || rightsWorkflow === 'unknown') {
+    tasks.push({
+      id: 'rights-workflow',
+      title: 'אין תהליך לטיפול בבקשות זכויות נושאי מידע',
+      description: 'סעיפים 13-14 לחוק מחייבים תהליך מסודר לטיפול בבקשות עיון, תיקון ומחיקה.',
+      legalBasis: 'חוק הגנת הפרטיות, סעיפים 13-14',
+      icon: '📬',
+      priority: 'high',
+      status: 'pending_user',
+      actionType: 'manual_task',
+      sortOrder: sortOrder++,
+    })
+  } else if (rightsWorkflow === 'yes_informal') {
+    tasks.push({
+      id: 'rights-workflow',
+      title: 'תהליך טיפול בבקשות זכויות אינו מתועד',
+      description: 'התהליך קיים אך לא תועד — מומלץ לתעד כדי לעמוד בדרישות הרגולטור.',
+      legalBasis: 'חוק הגנת הפרטיות, סעיפים 13-14',
+      icon: '📬',
+      priority: 'medium',
+      status: 'pending_user',
+      actionType: 'manual_task',
+      sortOrder: sortOrder++,
+    })
+  }
+
   // ── 19. ROPA Maintenance (auto-resolved — system module) ──
   tasks.push({
     id: 'ropa-maintenance',
@@ -864,6 +892,7 @@ export function deriveComplianceActions(
     'open-incidents': 10,
     'breach-procedures': 5,
     'subject-rights': 5,
+    'rights-workflow': 8,
     'ropa-maintenance': 3,
     'dpia-required': 10,
   }

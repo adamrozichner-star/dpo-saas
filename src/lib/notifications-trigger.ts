@@ -140,6 +140,17 @@ export async function checkAndCreateNotificationsForOrg(orgId: string, supabase:
     }
   }
 
+  // 5b. Rights workflow missing
+  const v3Early = profile?.profile_data?.v3Answers || {}
+  if (v3Early.rightsWorkflow === 'no') {
+    pending.push({
+      org_id: orgId, type: 'compliance:critical',
+      title: 'הקימו תהליך טיפול בבקשות זכויות תוך 30 יום',
+      body: 'סעיפים 13-14 לחוק הגנת הפרטיות מחייבים תהליך מסודר לטיפול בבקשות עיון, תיקון ומחיקה.',
+      link: `/rights/${orgId}`,
+    })
+  }
+
   // 6. DPIA checks
   const v3 = profile?.profile_data?.v3Answers || {}
   const databases: string[] = [...(v3.databases || []), ...(v3.customDatabases || [])]
