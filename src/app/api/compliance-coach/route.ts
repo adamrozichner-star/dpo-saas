@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     console.log('[Coach] Request body:', JSON.stringify(body).slice(0, 300))
-    const { findingId, findingTitle, findingDescription, orgContext } = body
+    const { findingId, findingTitle, findingDescription, orgContext, documentStatus } = body
 
     if (!findingTitle) {
       return NextResponse.json({ error: 'Missing findingTitle' }, { status: 400 })
@@ -83,13 +83,23 @@ export async function POST(request: NextRequest) {
       orgSize = orgSize || v3.employeeCount || v3.orgSize || 'לא ידוע'
     }
 
+    const statusGuidance = documentStatus === 'pending_approval'
+      ? `\n\nחשוב: המסמך כבר קיים וממתין לאישור הממונה. אל תציעו ליצור מסמך חדש! במקום זה, actionSteps צריכים להנחות לאשר את המסמך הקיים, ו-documentToCreate חייב להיות null.`
+      : documentStatus === 'expired'
+      ? `\n\nחשוב: המסמך קיים אך פג תוקפו. actionSteps צריכים להנחות לעדכן את המסמך הקיים. documentToCreate יכול להיות סוג המסמך לעדכון.`
+      : documentStatus === 'approved'
+      ? `\n\nחשוב: המסמך קיים ומאושר. אל תציעו ליצור מסמך חדש. documentToCreate חייב להיות null.`
+      : ''
+
     const userPrompt = `ממצא ציות:
 כותרת: ${findingTitle}
 תיאור: ${findingDescription || 'אין תיאור נוסף'}
+סטטוס מסמך: ${documentStatus || 'לא ידוע'}
 
 פרטי הארגון:
 תחום: ${industry}
 גודל: ${orgSize}
+${statusGuidance}
 
 נא להסביר את הממצא הזה ולתת הנחיות לפעולה.`
 

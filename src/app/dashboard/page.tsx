@@ -121,8 +121,15 @@ function DashboardContent() {
       window.history.replaceState({}, '', '/dashboard')
     }
     const tabParam = searchParams.get('tab')
-    if (tabParam && ['overview','tasks','documents','incidents','messages','rights','reminders','settings'].includes(tabParam)) {
+    if (tabParam && ['overview','tasks','documents','incidents','messages','rights','reminders','settings','compliance','databases'].includes(tabParam)) {
       setActiveTab(tabParam as any)
+    }
+    const section = searchParams.get('section')
+    if (section) {
+      setTimeout(() => {
+        const el = document.getElementById(section)
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 300)
     }
   }, [searchParams, user])
 
@@ -2366,6 +2373,9 @@ function SettingsTab({ organization, user, orgProfile, supabase }: { organizatio
         </div>
       </div>
 
+      {/* Rights Workflow Section */}
+      <RightsWorkflowSection organization={organization} orgProfile={orgProfile} supabase={supabase} />
+
       <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
         <h2 className="font-semibold text-stone-800 mb-4">👤 פרטי משתמש</h2>
         <div className="grid sm:grid-cols-2 gap-6">
@@ -2407,6 +2417,121 @@ function SettingsTab({ organization, user, orgProfile, supabase }: { organizatio
 }
 
 // MFA Enrollment sub-component
+function RightsWorkflowSection({ organization, orgProfile, supabase }: { organization: any, orgProfile: any, supabase: any }) {
+  const v3 = orgProfile?.v3Answers || {}
+  const existingResponsible = orgProfile?.rights_responsible || {}
+  const [responsibleName, setResponsibleName] = useState(existingResponsible.name || '')
+  const [responsibleEmail, setResponsibleEmail] = useState(existingResponsible.email || '')
+  const [sla, setSla] = useState(existingResponsible.sla_days || 30)
+  const [workflow, setWorkflow] = useState(v3.rightsWorkflow || 'unknown')
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  const isDocumented = workflow === 'yes_documented'
+
+  const handleSave = async (markDocumented: boolean = false) => {
+    if (!supabase || !organization?.id) return
+    setSaving(true)
+    try {
+      const newWorkflow = markDocumented ? 'yes_documented' : workflow
+      const updatedProfileData = {
+        ...(orgProfile || {}),
+        rights_responsible: { name: responsibleName, email: responsibleEmail, sla_days: sla },
+        v3Answers: { ...v3, rightsWorkflow: newWorkflow },
+      }
+      await supabase
+        .from('organization_profiles')
+        .upsert({ org_id: organization.id, profile_data: updatedProfileData }, { onConflict: 'org_id' })
+      if (markDocumented) setWorkflow('yes_documented')
+      setMsg('נשמר בהצלחה ✓')
+      setTimeout(() => setMsg(''), 3000)
+    } catch (e) {
+      setMsg('שגיאה בשמירה')
+    }
+    setSaving(false)
+  }
+
+  return (
+    <div id="rights-workflow" className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200 scroll-mt-20">
+      <h2 className="font-semibold text-stone-800 mb-2">📬 תהליך טיפול בבקשות זכויות</h2>
+      <p className="text-sm text-stone-500 mb-4">
+        סעיפים 13-14 לחוק הגנת הפרטיות מחייבים תהליך מסודר לטיפול בבקשות עיון, תיקון ומחיקה — תוך פרק זמן קבוע.
+      </p>
+
+      {isDocumented && (
+        <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
+          <p className="text-sm text-emerald-700 font-medium">✓ התהליך סומן כמתועד</p>
+        </div>
+      )}
+
+      <div className="grid sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label className="text-sm text-stone-500 block mb-1">שם אחראי הטיפול</label>
+          <input
+            value={responsibleName}
+            onChange={e => setResponsibleName(e.target.value)}
+            placeholder="לדוגמה: בעל העסק / מנהל"
+            className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
+          />
+        </div>
+        <div>
+          <label className="text-sm text-stone-500 block mb-1">דוא״ל אחראי</label>
+          <input
+            type="email"
+            value={responsibleEmail}
+            onChange={e => setResponsibleEmail(e.target.value)}
+            placeholder="email@example.com"
+            dir="ltr"
+            className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm focus:outline-none focus:border-indigo-400"
+          />
+        </div>
+        <div>
+          <label className="text-sm text-stone-500 block mb-1">זמן מענה (ימים)</label>
+          <select
+            value={sla}
+            onChange={e => setSla(parseInt(e.target.value))}
+            className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm"
+          >
+            <option value={30}>30 ימים (ברירת מחדל לפי חוק)</option>
+            <option value={14}>14 ימים</option>
+            <option value={7}>7 ימים</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="bg-stone-50 border border-stone-200 rounded-lg p-3 mb-4 text-xs text-stone-600 leading-relaxed">
+        <strong>מה התהליך צריך לכלול:</strong>
+        <ul className="list-disc pr-4 mt-1 space-y-0.5">
+          <li>קבלת בקשה דרך טופס הציבורי או דוא״ל</li>
+          <li>אימות זהות המבקש</li>
+          <li>בדיקה אם המידע קיים ומתן תגובה תוך {sla} ימים</li>
+          <li>תיעוד הבקשה והטיפול בה</li>
+        </ul>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => handleSave(false)}
+          disabled={saving}
+          className="px-4 py-2 bg-stone-100 text-stone-700 rounded-lg text-sm font-medium hover:bg-stone-200 disabled:opacity-50"
+        >
+          שמור פרטים
+        </button>
+        {!isDocumented && (
+          <button
+            onClick={() => handleSave(true)}
+            disabled={saving || !responsibleName || !responsibleEmail}
+            className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 disabled:opacity-50"
+          >
+            סמן כתהליך מתועד
+          </button>
+        )}
+        {msg && <span className={`text-sm ${msg.includes('✓') ? 'text-emerald-600' : 'text-red-600'}`}>{msg}</span>}
+      </div>
+    </div>
+  )
+}
+
 function MfaSection({ supabase }: { supabase: any }) {
   const [mfaEnabled, setMfaEnabled] = useState<boolean | null>(null)
   const [factorId, setFactorId] = useState<string | null>(null)

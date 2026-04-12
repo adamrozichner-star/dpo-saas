@@ -147,7 +147,7 @@ export async function checkAndCreateNotificationsForOrg(orgId: string, supabase:
       org_id: orgId, type: 'compliance:critical',
       title: 'הקימו תהליך טיפול בבקשות זכויות תוך 30 יום',
       body: 'סעיפים 13-14 לחוק הגנת הפרטיות מחייבים תהליך מסודר לטיפול בבקשות עיון, תיקון ומחיקה.',
-      link: `/rights/${orgId}`,
+      link: '/dashboard?tab=settings&section=rights-workflow',
     })
   }
 

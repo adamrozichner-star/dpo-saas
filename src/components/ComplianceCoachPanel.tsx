@@ -13,6 +13,16 @@ interface Finding {
   recommendation: string
 }
 
+// Derive document status from finding id pattern
+function deriveDocumentStatus(finding: Finding): string {
+  const id = finding.id || ''
+  if (id.startsWith('pending-')) return 'pending_approval'
+  if (id.startsWith('stale-')) return 'expired'
+  if (id.startsWith('no-') || id.startsWith('missing-')) return 'missing'
+  if (id.endsWith('-ok')) return 'approved'
+  return 'unknown'
+}
+
 interface CoachResponse {
   explanation: string
   whyItMatters: string
@@ -66,6 +76,7 @@ export default function ComplianceCoachPanel({ finding, supabase, onClose }: Com
             findingId: finding.id,
             findingTitle: finding.title,
             findingDescription: finding.description,
+            documentStatus: deriveDocumentStatus(finding),
           }),
         })
 
@@ -90,7 +101,15 @@ export default function ComplianceCoachPanel({ finding, supabase, onClose }: Com
     fetchCoach()
   }, [finding.id, finding.title, finding.description, supabase])
 
+  const docStatus = deriveDocumentStatus(finding)
+  const isPendingApproval = docStatus === 'pending_approval'
+
   const handleCreateDoc = () => {
+    if (isPendingApproval) {
+      router.push('/dashboard?tab=documents')
+      onClose()
+      return
+    }
     if (data?.documentToCreate) {
       router.push(`/dashboard?tab=documents&createDoc=${data.documentToCreate}`)
       onClose()
@@ -192,14 +211,22 @@ export default function ComplianceCoachPanel({ finding, supabase, onClose }: Com
                 </div>
               )}
 
-              {/* Create document CTA */}
-              {data.documentToCreate && (
+              {/* Action CTA — adapts to document status */}
+              {isPendingApproval ? (
+                <button
+                  onClick={handleCreateDoc}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 text-white rounded-xl text-sm font-medium hover:bg-amber-600 transition-colors shadow-sm"
+                >
+                  <FileText className="h-4 w-4" />
+                  צפו במסמך לאישור
+                </button>
+              ) : data.documentToCreate && (
                 <button
                   onClick={handleCreateDoc}
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-indigo-500 text-white rounded-xl text-sm font-medium hover:bg-indigo-600 transition-colors shadow-sm"
                 >
                   <FileText className="h-4 w-4" />
-                  צור {docTypeLabels[data.documentToCreate] || 'מסמך'} עכשיו
+                  {docStatus === 'expired' ? `עדכנו ${docTypeLabels[data.documentToCreate] || 'מסמך'}` : `צור ${docTypeLabels[data.documentToCreate] || 'מסמך'} עכשיו`}
                 </button>
               )}
             </>
