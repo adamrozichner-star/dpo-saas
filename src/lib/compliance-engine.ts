@@ -762,8 +762,8 @@ export function deriveComplianceActions(
       legalBasis: 'חוק הגנת הפרטיות, סעיפים 13-14',
       icon: '📬',
       priority: 'high',
-      status: 'pending_user',
-      actionType: 'manual_task',
+      status: 'needs_action',
+      actionType: 'external_guide',
       sortOrder: sortOrder++,
     })
   } else if (rightsWorkflow === 'yes_informal') {
@@ -774,8 +774,8 @@ export function deriveComplianceActions(
       legalBasis: 'חוק הגנת הפרטיות, סעיפים 13-14',
       icon: '📬',
       priority: 'medium',
-      status: 'pending_user',
-      actionType: 'manual_task',
+      status: 'needs_action',
+      actionType: 'external_guide',
       sortOrder: sortOrder++,
     })
   }
@@ -811,8 +811,8 @@ export function deriveComplianceActions(
       legalBasis: 'תיקון 13, הנחיית הרשות להגנת הפרטיות',
       icon: '🛡️',
       priority: 'high',
-      status: 'pending_user',
-      actionType: 'manual_task',
+      status: 'needs_action',
+      actionType: 'external_guide',
       sortOrder: sortOrder++,
     })
   }
