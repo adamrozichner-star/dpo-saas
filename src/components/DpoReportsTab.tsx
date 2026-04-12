@@ -260,13 +260,19 @@ function DpoReportEditor({ report, supabase, onSaved, onSubmitted, onClose, onDe
         }),
       })
       if (res.ok) {
+        const data = await res.json()
+        if (data.emailStatus === 'failed') {
+          alert(`הדוח נשמר אך שליחת האימייל נכשלה: ${data.emailError || 'שגיאה לא ידועה'}`)
+        } else if (data.emailStatus === 'skipped') {
+          alert('הדוח נשמר. שירות המייל לא מוגדר בשרת — ניתן להוריד PDF ולשלוח ידנית.')
+        }
         onSubmitted()
       } else {
         const err = await res.json()
-        alert(`שגיאה: ${err.details || err.error}`)
+        alert(`שליחה נכשלה — נסו שוב. ${err.details || err.error || ''}`)
       }
     } catch (e: any) {
-      alert(`שגיאה: ${e.message}`)
+      alert(`שליחה נכשלה — נסו שוב. ${e.message}`)
     }
     setSubmitting(false)
   }

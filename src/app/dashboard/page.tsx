@@ -131,8 +131,12 @@ function DashboardContent() {
         const el = document.getElementById(section)
         if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
       }, 300)
+      // Remove ?section from URL so it doesn't re-fire on re-renders (e.g. when opening modals)
+      const cleanUrl = tabParam ? `/dashboard?tab=${tabParam}` : '/dashboard'
+      window.history.replaceState({}, '', cleanUrl)
     }
-  }, [searchParams, user])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
   useEffect(() => {
     if (user && supabase) {

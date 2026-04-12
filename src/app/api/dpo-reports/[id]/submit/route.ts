@@ -60,9 +60,20 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       })
       .eq('id', params.id)
 
-    // Send email (best-effort)
-    if (process.env.RESEND_API_KEY) {
+    // Send email
+    let emailStatus: 'sent' | 'skipped' | 'failed' = 'skipped'
+    let emailError: string | undefined
+
+    if (!process.env.RESEND_API_KEY) {
+      console.warn('[DPO Report] RESEND_API_KEY not set — skipping email')
+    } else {
       try {
+        const cleanEmail = recipient_email.trim().toLowerCase()
+        // Match existing codebase pattern — use FROM_EMAIL env var with resend.dev fallback
+        const fromAddress = process.env.FROM_EMAIL || 'Deepo <noreply@resend.dev>'
+
+        console.log('[DPO Report] Sending email:', { to: cleanEmail, from: fromAddress, period: report.report_period })
+
         const recommendations = Array.isArray(report.recommendations) ? report.recommendations : []
         const html = `
 <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -94,18 +105,29 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   </div>
 </div>`
 
-        await resend.emails.send({
-          from: 'Deepo <noreply@deepo.co.il>',
-          to: [recipient_email],
+        const { data: sendData, error: sendError } = await resend.emails.send({
+          from: fromAddress,
+          to: [cleanEmail],
           subject: `דוח רבעוני להנהלה — ${org?.name || ''} — ${report.report_period}`,
           html,
         })
+
+        if (sendError) {
+          console.error('[DPO Report] Resend API error:', sendError)
+          emailStatus = 'failed'
+          emailError = sendError.message || JSON.stringify(sendError)
+        } else {
+          console.log('[DPO Report] Email sent, id:', sendData?.id)
+          emailStatus = 'sent'
+        }
       } catch (e: any) {
-        console.error('Failed to send report email:', e.message)
+        console.error('[DPO Report] Email send threw:', e)
+        emailStatus = 'failed'
+        emailError = e.message
       }
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, emailStatus, emailError })
   } catch (error: any) {
     console.error('DPO report submit error:', error)
     return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 })
