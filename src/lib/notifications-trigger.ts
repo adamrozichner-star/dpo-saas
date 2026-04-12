@@ -14,13 +14,14 @@ export async function checkAndCreateNotificationsForOrg(orgId: string, supabase:
   const now = new Date()
   const pending: PendingNotification[] = []
 
-  const [{ data: org }, { data: docs }, { data: incidents }, { data: reviews }, { data: profile }, { data: dpias }] = await Promise.all([
+  const [{ data: org }, { data: docs }, { data: incidents }, { data: reviews }, { data: profile }, { data: dpias }, { data: dpoReports }] = await Promise.all([
     supabase.from('organizations').select('*').eq('id', orgId).single(),
     supabase.from('documents').select('id, type, status, updated_at, created_at').eq('org_id', orgId),
     supabase.from('security_incidents').select('id, title, status, created_at').eq('org_id', orgId),
     supabase.from('compliance_reviews').select('id, findings, created_at').eq('org_id', orgId).order('created_at', { ascending: false }).limit(1),
     supabase.from('organization_profiles').select('profile_data').eq('org_id', orgId).maybeSingle(),
     supabase.from('dpia_assessments').select('id, activity_id, activity_name, next_review_date, action_plan').eq('org_id', orgId),
+    supabase.from('dpo_reports').select('id, status, period_end, submitted_at').eq('org_id', orgId).order('period_end', { ascending: false }).limit(4),
   ])
 
   if (!org) {
@@ -193,6 +194,44 @@ export async function checkAndCreateNotificationsForOrg(orgId: string, supabase:
         title: `פעולה בתסקיר "${dpia.activity_name}" באיחור`,
         body: `${overdue.length} פעולות באיחור בתוכנית הטיפול.`,
         link: '/dashboard?tab=compliance',
+      })
+    }
+  }
+
+  // 7. DPO quarterly reports
+  const currentMonth = now.getMonth()
+  const quarterEndMonth = Math.floor(currentMonth / 3) * 3 + 2 // 2, 5, 8, 11
+  const quarterEnd = new Date(now.getFullYear(), quarterEndMonth + 1, 0, 23, 59, 59)
+  const daysToQuarterEnd = (quarterEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+
+  const latestReport = (dpoReports || [])[0]
+  const latestPeriodEnd = latestReport ? new Date(latestReport.period_end) : null
+  const hasCurrentQuarterSubmitted = latestReport?.status === 'submitted' &&
+    latestPeriodEnd && latestPeriodEnd.getTime() >= new Date(now.getFullYear(), Math.floor(currentMonth / 3) * 3, 1).getTime()
+
+  // 14 days before quarter end → prep reminder
+  if (daysToQuarterEnd <= 14 && daysToQuarterEnd > 0 && !hasCurrentQuarterSubmitted) {
+    pending.push({
+      org_id: orgId, type: 'dpo_report:info',
+      title: 'דוח רבעוני להנהלה — מומלץ להתחיל בהכנה',
+      body: `תום הרבעון בעוד ${Math.round(daysToQuarterEnd)} ימים. צרו טיוטה וערכו אותה לפני שליחה להנהלה.`,
+      link: '/dashboard?tab=messages',
+    })
+  }
+
+  // Overdue: past quarter didn't get a submitted report
+  const orgAgeDaysForReport = (now.getTime() - new Date(org.created_at).getTime()) / (1000 * 60 * 60 * 24)
+  if (orgAgeDaysForReport > 90) {
+    const submittedInLast90 = (dpoReports || []).some((r: any) =>
+      r.status === 'submitted' && r.submitted_at &&
+      (now.getTime() - new Date(r.submitted_at).getTime()) / (1000 * 60 * 60 * 24) <= 90
+    )
+    if (!submittedInLast90) {
+      pending.push({
+        org_id: orgId, type: 'dpo_report:warning',
+        title: 'דוח רבעוני באיחור — נדרש להגיש להנהלה',
+        body: 'לא הוגש דוח ציות רבעוני להנהלה ב-90 הימים האחרונים.',
+        link: '/dashboard?tab=messages',
       })
     }
   }

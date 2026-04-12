@@ -51,6 +51,7 @@ import ROPATab from '@/components/ROPATab'
 import WorkPlanTab from '@/components/WorkPlanTab'
 import ComplianceReviewPanel from '@/components/ComplianceReviewPanel'
 import DpiaTab from '@/components/DpiaTab'
+import DpoReportsTab from '@/components/DpoReportsTab'
 import DataFlowDiagram from '@/components/DataFlowDiagram'
 import WebsiteScanner from '@/components/WebsiteScanner'
 import NotificationsBell from '@/components/NotificationsBell'
@@ -769,6 +770,9 @@ function DashboardContent() {
                     isPaid={gateIsPaid}
                     supabase={supabase}
                   />
+                </div>
+                <div className="border-t border-stone-200 pt-6">
+                  <DpoReportsTab supabase={supabase} />
                 </div>
               </div>
             ) : <LockedTabOverlay icon="💬" title="ממונה ובקשות" description="שלחו שאלות לממונה וטפלו בבקשות פרטיות" />

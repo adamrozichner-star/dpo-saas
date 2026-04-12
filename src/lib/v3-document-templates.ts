@@ -782,3 +782,102 @@ export function generateDPIA(ctx: V3DocContext, dpia: DpiaDocData): string {
 
   return doc
 }
+
+// =============================================
+// DPO Quarterly Report to C-level
+// =============================================
+export interface DpoReportDocData {
+  report_period: string
+  period_start: string
+  period_end: string
+  executive_summary: string
+  compliance_score_start: number | null
+  compliance_score_end: number | null
+  incidents_count: number
+  incidents_summary: Array<{ title: string; severity: string; status: string }>
+  findings_open: number
+  findings_resolved: number
+  dpia_count: number
+  dpia_high_risk: number
+  rights_requests_count: number
+  documents_updated: number
+  recommendations: string[]
+  approved_by?: string | null
+  approved_at?: string | null
+  submitted_to_name?: string | null
+  submitted_to_role?: string | null
+}
+
+export function generateDpoReport(ctx: V3DocContext, report: DpoReportDocData): string {
+  const bizName = ctx.v3Answers?.bizName || ctx.orgName
+  const today = formatDate()
+
+  let doc = `# דוח רבעוני להנהלה — ${report.report_period}\n\n`
+  doc += `**ארגון:** ${bizName}\n`
+  doc += `**תקופת הדיווח:** ${new Date(report.period_start).toLocaleDateString('he-IL')} – ${new Date(report.period_end).toLocaleDateString('he-IL')}\n`
+  doc += `**תאריך הפקה:** ${today}\n\n`
+  doc += `---\n\n`
+
+  doc += `## 1. תקציר מנהלים\n\n${report.executive_summary || '—'}\n\n`
+
+  doc += `## 2. מדדי ציות מרכזיים\n\n`
+  doc += `| מדד | ערך |\n|---|---|\n`
+  doc += `| ציון ציות בתחילת התקופה | ${report.compliance_score_start ?? 'לא נמדד'}/100 |\n`
+  doc += `| ציון ציות בסוף התקופה | ${report.compliance_score_end ?? 'לא נמדד'}/100 |\n`
+  doc += `| אירועי אבטחה | ${report.incidents_count} |\n`
+  doc += `| תסקירי השפעה (DPIA) פעילים | ${report.dpia_count} |\n`
+  doc += `| תסקירים ברמת סיכון גבוהה | ${report.dpia_high_risk} |\n`
+  doc += `| בקשות נושאי מידע | ${report.rights_requests_count} |\n`
+  doc += `| מסמכים רגולטוריים שעודכנו | ${report.documents_updated} |\n`
+  doc += `| ממצאי ציות פתוחים | ${report.findings_open} |\n\n`
+
+  doc += `## 3. אירועי אבטחה\n\n`
+  if (report.incidents_summary.length === 0) {
+    doc += `לא דווחו אירועי אבטחה בתקופה זו.\n\n`
+  } else {
+    doc += `| אירוע | חומרה | סטטוס |\n|---|---|---|\n`
+    report.incidents_summary.forEach(i => {
+      doc += `| ${i.title || '—'} | ${i.severity || '—'} | ${i.status || '—'} |\n`
+    })
+    doc += `\n`
+  }
+
+  doc += `## 4. תסקירי השפעה על פרטיות\n\n`
+  doc += `${report.dpia_count} תסקירים פעילים. ${report.dpia_high_risk > 0 ? `${report.dpia_high_risk} מהם ברמת סיכון גבוהה או קריטית.` : 'אין תסקירים ברמת סיכון גבוהה.'}\n\n`
+
+  doc += `## 5. בקשות נושאי מידע\n\n`
+  doc += `${report.rights_requests_count} בקשות זכויות ${report.rights_requests_count > 0 ? 'טופלו בתקופה זו' : '— לא התקבלו בקשות בתקופה זו'}.\n\n`
+
+  doc += `## 6. מצב המסמכים הרגולטוריים\n\n`
+  doc += `${report.documents_updated} מסמכים עודכנו בתקופה זו.\n\n`
+
+  doc += `## 7. המלצות להנהלה\n\n`
+  if (report.recommendations.length === 0) {
+    doc += `להמשיך בתחזוקה השוטפת.\n\n`
+  } else {
+    report.recommendations.forEach((r, i) => { doc += `${i + 1}. ${r}\n` })
+    doc += `\n`
+  }
+
+  doc += `## 8. אישור הממונה\n\n`
+  if (report.approved_by) {
+    doc += `דוח זה אושר על ידי **${report.approved_by}**`
+    if (report.approved_at) doc += ` בתאריך ${new Date(report.approved_at).toLocaleDateString('he-IL')}`
+    doc += `.\n\n`
+  } else {
+    doc += `_טיוטה — טרם אושר_\n\n`
+  }
+
+  doc += `## 9. חתימת ההנהלה\n\n`
+  if (report.submitted_to_name) {
+    const roleLabels: Record<string, string> = { ceo: 'מנכ״ל', vp: 'סמנכ״ל', cfo: 'סמנכ״ל כספים', board: 'דירקטוריון' }
+    doc += `הוגש אל: **${report.submitted_to_name}**`
+    if (report.submitted_to_role) doc += ` (${roleLabels[report.submitted_to_role] || report.submitted_to_role})`
+    doc += `\n\n`
+  }
+  doc += `_חתימה: ________________________ &nbsp;&nbsp;&nbsp; תאריך: __________________\n\n`
+
+  doc += `---\n\n*מוגן על ידי Deepo · דוח זה הופק אוטומטית ונערך על ידי ממונה הגנת הפרטיות של הארגון.*\n`
+
+  return doc
+}

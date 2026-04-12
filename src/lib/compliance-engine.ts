@@ -895,6 +895,7 @@ export function deriveComplianceActions(
     'rights-workflow': 8,
     'ropa-maintenance': 3,
     'dpia-required': 10,
+    'dpo-report-missing': 6,
   }
 
   let totalWeight = 0
