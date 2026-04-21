@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Lock, CheckCircle2, Loader2, FileText, Eye, Download, Sparkles, ArrowLeft } from 'lucide-react'
+import { Lock, CheckCircle2, Loader2, FileText, Eye, Download, Sparkles, ArrowLeft, Shield } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
 const DOC_LABELS: Record<string, string> = {
