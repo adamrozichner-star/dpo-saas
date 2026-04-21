@@ -53,6 +53,7 @@ import WorkPlanTab from '@/components/WorkPlanTab'
 import ComplianceReviewPanel from '@/components/ComplianceReviewPanel'
 import DpiaTab from '@/components/DpiaTab'
 import DpoReportsTab from '@/components/DpoReportsTab'
+import PreScreeningChat from '@/components/PreScreeningChat'
 import DataFlowDiagram from '@/components/DataFlowDiagram'
 import WebsiteScanner from '@/components/WebsiteScanner'
 import NotificationsBell from '@/components/NotificationsBell'
@@ -1724,6 +1725,7 @@ function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: a
   }
   const [isLoadingThread, setIsLoadingThread] = useState(false)
   const [showNewMessage, setShowNewMessage] = useState(false)
+  const [preScreening, setPreScreening] = useState(false)
   const [newSubject, setNewSubject] = useState('')
   const [newContent, setNewContent] = useState('')
 
@@ -1777,8 +1779,49 @@ function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: a
     }
   }
 
+  const startPreScreening = () => {
+    if (!newContent.trim()) return
+    setPreScreening(true)
+  }
+
+  const handlePreScreeningComplete = async (summary: string, subject: string, _history: any[]) => {
+    setIsSending(true)
+    try {
+      const threadSubject = newSubject.trim() || subject || 'פנייה חדשה'
+      const res = await authFetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create_thread',
+          orgId,
+          subject: threadSubject,
+          content: summary,
+          senderType: 'user',
+          senderName: 'לקוח',
+          priority: 'normal'
+        })
+      })
+      const data = await res.json()
+      setShowNewMessage(false)
+      setPreScreening(false)
+      setNewSubject('')
+      setNewContent('')
+      onRefresh()
+      if (data.thread) openThread(data.thread)
+    } catch (e) {
+      console.error('Failed to create thread:', e)
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  const handlePreScreeningSkip = () => {
+    setPreScreening(false)
+    createNewThread()
+  }
+
   const createNewThread = async () => {
-    if (!newSubject.trim() || !newContent.trim() || isSending) return
+    if (!newContent.trim() || isSending) return
     setIsSending(true)
 
     try {
@@ -1788,7 +1831,7 @@ function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: a
         body: JSON.stringify({
           action: 'create_thread',
           orgId,
-          subject: newSubject,
+          subject: newSubject.trim() || 'פנייה חדשה',
           content: newContent,
           senderType: 'user',
           senderName: 'לקוח',
@@ -1798,11 +1841,11 @@ function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: a
 
       const data = await res.json()
       setShowNewMessage(false)
+      setPreScreening(false)
       setNewSubject('')
       setNewContent('')
-      onRefresh() // Refresh everything
-      
-      // Open the new thread
+      onRefresh()
+
       if (data.thread) {
         openThread(data.thread)
       }
@@ -1960,40 +2003,62 @@ function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: a
       )}
 
       {/* New Message Form */}
-      {showNewMessage && (
+      {showNewMessage && !preScreening && (
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-indigo-200">
           <h3 className="font-semibold text-stone-800 mb-4">שליחת הודעה לממונה</h3>
           <div className="space-y-3">
             <input
               type="text"
-              placeholder="נושא ההודעה"
+              placeholder="נושא ההודעה (אופציונלי)"
               value={newSubject}
               onChange={(e) => setNewSubject(e.target.value)}
               className="w-full px-4 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
             <textarea
-              placeholder="תוכן ההודעה..."
+              placeholder="תארו את השאלה או הבעיה..."
               value={newContent}
               onChange={(e) => setNewContent(e.target.value)}
               rows={4}
               className="w-full px-4 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
             />
-            <div className="flex gap-2 justify-end">
-              <button 
+            <div className="flex gap-2 justify-between items-center">
+              <button
                 onClick={() => { setShowNewMessage(false); setNewSubject(''); setNewContent('') }}
                 className="px-4 py-2 text-stone-500 hover:bg-stone-100 rounded-lg text-sm transition-colors"
               >
                 ביטול
               </button>
-              <button 
-                onClick={createNewThread}
-                disabled={!newSubject.trim() || !newContent.trim() || isSending}
-                className="px-4 py-2 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 disabled:bg-stone-300 transition-colors"
-              >
-                {isSending ? 'שולח...' : 'שלח לממונה'}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={createNewThread}
+                  disabled={!newContent.trim() || isSending}
+                  className="px-4 py-2 text-stone-500 hover:bg-stone-100 rounded-lg text-xs transition-colors"
+                  title="דלג על שלב ההבהרה ושלח ישירות"
+                >
+                  פנייה ישירה
+                </button>
+                <button
+                  onClick={startPreScreening}
+                  disabled={!newContent.trim() || isSending}
+                  className="px-4 py-2 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 disabled:bg-stone-300 transition-colors"
+                >
+                  {isSending ? 'שולח...' : 'המשך'}
+                </button>
+              </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* AI Pre-screening Chat */}
+      {showNewMessage && preScreening && (
+        <div className="bg-white rounded-2xl shadow-sm border border-amber-200 overflow-hidden" style={{ minHeight: 400 }}>
+          <PreScreeningChat
+            initialMessage={newContent}
+            supabase={supabase}
+            onComplete={handlePreScreeningComplete}
+            onSkip={handlePreScreeningSkip}
+          />
         </div>
       )}
 
