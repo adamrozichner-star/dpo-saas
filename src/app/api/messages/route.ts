@@ -361,7 +361,7 @@ ${additionalMessage}` : ''}
           priority: priority === 'urgent' ? 'high' : 'medium',
           status: 'pending',
           title: `הודעה חדשה: ${subject}`,
-          description: content.substring(0, 500),
+          description: content,
           related_thread_id: thread.id
         })
       } catch (e) {
@@ -462,7 +462,7 @@ ${additionalMessage}` : ''}
               priority: 'medium',
               status: 'pending',
               title: `תגובה חדשה: ${thread.subject}`,
-              description: content.substring(0, 500),
+              description: content,
               related_thread_id: threadId
             })
           } catch (e) {

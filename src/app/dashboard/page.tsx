@@ -1784,10 +1784,12 @@ function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: a
     setPreScreening(true)
   }
 
-  const handlePreScreeningComplete = async (summary: string, subject: string, _history: any[]) => {
+  const handlePreScreeningComplete = async (summary: string, subject: string, history: any[], urgency: string = 'regular') => {
     setIsSending(true)
     try {
-      const threadSubject = newSubject.trim() || subject || 'פנייה חדשה'
+      const threadSubject = urgency === 'urgent'
+        ? `🔴 ${newSubject.trim() || subject || 'פנייה דחופה'}`
+        : newSubject.trim() || subject || 'פנייה חדשה'
       const res = await authFetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1798,7 +1800,7 @@ function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: a
           content: summary,
           senderType: 'user',
           senderName: 'לקוח',
-          priority: 'normal'
+          priority: urgency === 'urgent' ? 'urgent' : 'normal'
         })
       })
       const data = await res.json()
@@ -1916,7 +1918,11 @@ function MessagesTab({ threads, orgId, onRefresh, supabase, tier }: { threads: a
                         {msg.sender_type === 'dpo' ? '🛡️ ממונה הגנת פרטיות' : msg.sender_type === 'system' ? '🤖 מערכת' : '👤 אתה'}
                       </span>
                     </div>
-                    <p className="text-sm text-stone-700 whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                    {msg.content?.startsWith('📋 פנייה מסוכמת') ? (
+                      <PreScreenedSummaryView content={msg.content} />
+                    ) : (
+                      <p className="text-sm text-stone-700 whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                    )}
                     <p className="text-xs text-stone-400 mt-2">
                       {new Date(msg.created_at).toLocaleString('he-IL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                     </p>
@@ -2485,6 +2491,46 @@ function SettingsTab({ organization, user, orgProfile, supabase }: { organizatio
 }
 
 // MFA Enrollment sub-component
+function PreScreenedSummaryView({ content }: { content: string }) {
+  const lines = content.split('\n').filter(l => l.trim())
+  const sections: { key: string; lines: string[] }[] = []
+  let currentSection = { key: 'header', lines: [] as string[] }
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    if (trimmed === '📋 פנייה מסוכמת') continue
+    if (['נושא:', 'דחיפות:', 'רקע:', 'פרטים:', 'שאלה מדויקת:', 'הערות:'].some(h => trimmed.startsWith(h))) {
+      if (currentSection.lines.length > 0) sections.push(currentSection)
+      currentSection = { key: trimmed.replace(':', ''), lines: [] }
+      const rest = trimmed.split(':').slice(1).join(':').trim()
+      if (rest) currentSection.lines.push(rest)
+    } else {
+      currentSection.lines.push(trimmed)
+    }
+  }
+  if (currentSection.lines.length > 0) sections.push(currentSection)
+
+  const isUrgent = sections.some(s => s.key === 'דחיפות' && s.lines.some(l => l.includes('דחוף')))
+
+  return (
+    <div className={`rounded-lg border p-3 text-sm space-y-2.5 ${isUrgent ? 'bg-red-50 border-red-200' : 'bg-indigo-50 border-indigo-200'}`}>
+      <div className="flex items-center gap-1.5">
+        <span className="text-base">📋</span>
+        <span className="font-semibold text-stone-800">פנייה מסוכמת</span>
+        {isUrgent && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-bold">דחוף</span>}
+      </div>
+      {sections.map((s, i) => (
+        <div key={i}>
+          <p className="text-xs font-semibold text-stone-600 mb-0.5">{s.key}</p>
+          {s.lines.map((l, j) => (
+            <p key={j} className={`text-sm text-stone-700 ${l.startsWith('•') ? 'pr-2' : ''}`}>{l}</p>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function RightsWorkflowSection({ organization, orgProfile, supabase }: { organization: any, orgProfile: any, supabase: any }) {
   const v3 = orgProfile?.v3Answers || {}
   const existingResponsible = orgProfile?.rights_responsible || {}

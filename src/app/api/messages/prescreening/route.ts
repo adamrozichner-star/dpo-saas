@@ -22,15 +22,22 @@ const SYSTEM_PROMPT = `אתה עוזר ממיין פניות לממונה הגנ
 כללים:
 - דבר בעברית, בטון מקצועי וחם
 - שאל שאלה אחת ממוקדת בכל פעם
-- המשך לשאול עד שיש לך את כל הפרטים הנדרשים
-- תחומים חשובים להבהרה: סוג המידע, מי ניגש, איפה מאוחסן, בסיס חוקי, צדדים שלישיים, מה הטריגר לשאלה, משך שמירה
-- כשיש לך מספיק מידע, החזר JSON בלבד בפורמט הבא:
-
-{"ready":true,"summary":{"subject":"כותרת קצרה","background":"תיאור המצב","details":{"data_type":"סוג מידע","involved_parties":"גורמים מעורבים","storage_location":"מיקום אחסון","legal_basis":"בסיס חוקי","trigger":"טריגר"},"question":"השאלה המדויקת","notes":"הערות"}}
-
-- אם אתה עדיין צריך מידע, החזר JSON: {"ready":false,"message":"השאלה הבאה שלך"}
+- היה חכם — אם הלקוח כתב "מצלמות במשרד", אתה כבר יודע שזה וידאו, במקום עבודה, מערב עובדים. אל תשאל מה שאפשר להסיק.
+- אם הלקוח נותן תשובה ארוכה, חלץ ממנה כמה שיותר פרטים ודלג על שאלות שכבר נענו
+- מקסימום 3-4 שאלות. אחרי 3 שאלות, אם יש לך תמונה סבירה — סכם ושלח לממונה. עדיף סיכום עם 80% מהפרטים מאשר לאבד את הלקוח ב-7 שאלות.
+- לפני השאלה האחרונה, תגיד משהו כמו "עוד שאלה אחת וסיימנו" כדי שהלקוח ידע שזה כמעט נגמר
+- סווג את הדחיפות: אירוע אבטחה/דליפה/תלונת רגולטור = urgent, שאר השאלות = regular
 - אל תמציא תשובות משפטיות. התפקיד שלך הוא רק לחדד את השאלה.
-- חובה: תמיד החזר רק JSON תקין, ללא markdown, ללא טקסט נוסף.
+
+פורמט תשובה — תמיד JSON תקין בלבד:
+
+אם צריך עוד מידע:
+{"ready":false,"message":"השאלה הבאה שלך"}
+
+כשמספיק מידע:
+{"ready":true,"summary":{"subject":"כותרת קצרה","urgency":"regular או urgent","background":"2-3 משפטים שמתארים את המצב","details":{"data_type":"סוג מידע","involved_parties":"גורמים מעורבים","storage_location":"מיקום אחסון","legal_basis":"בסיס חוקי","trigger":"מה גרם ללקוח לשאול"},"question":"השאלה המדויקת — משפט אחד או שניים שהממונה יכול לענות עליהם ישירות","notes":"דגשים נוספים, סיכונים פוטנציאליים"}}
+
+חובה: רק JSON, ללא markdown, ללא טקסט נוסף.
 
 הקשר רגולטורי: תיקון 13 לחוק הגנת הפרטיות, תקנות אבטחת מידע 2017, סעיף 11 לחוק.`
 
@@ -57,27 +64,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing message' }, { status: 400 })
     }
 
-    // Build messages array for Claude
     const messages: Array<{ role: 'user' | 'assistant'; content: string }> = []
 
-    // Add conversation history
     if (Array.isArray(conversationHistory)) {
       for (const msg of conversationHistory) {
         if (msg.role === 'user') {
           messages.push({ role: 'user', content: msg.content })
         } else if (msg.role === 'assistant') {
-          // Re-serialize the AI's original JSON response as content
           messages.push({ role: 'assistant', content: JSON.stringify(msg.rawJson || { ready: false, message: msg.content }) })
         }
       }
     }
 
-    // Add the new user message
     messages.push({ role: 'user', content: userMessage })
 
     const aiResponse = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: SYSTEM_PROMPT,
       messages,
     })
@@ -90,32 +93,40 @@ export async function POST(request: NextRequest) {
     const parsed = extractJSON(textContent.text)
 
     if (parsed?.ready && parsed.summary) {
-      // Format the summary for DPO
       const s = parsed.summary
+      const urgency = s.urgency === 'urgent' ? 'urgent' : 'regular'
+      const urgencyLabel = urgency === 'urgent' ? '🔴 דחוף' : '🟢 רגיל'
+
       const formattedSummary = `📋 פנייה מסוכמת
 
 נושא: ${s.subject || ''}
-רקע: ${s.background || ''}
-פרטים:
-- סוג מידע: ${s.details?.data_type || 'לא צוין'}
-- גורמים מעורבים: ${s.details?.involved_parties || 'לא צוין'}
-- מיקום אחסון: ${s.details?.storage_location || 'לא צוין'}
-- בסיס חוקי: ${s.details?.legal_basis || 'לא צוין'}
-- טריגר: ${s.details?.trigger || 'לא צוין'}
+דחיפות: ${urgencyLabel}
 
-שאלה מדויקת: ${s.question || ''}
-${s.notes ? `הערות: ${s.notes}` : ''}`
+רקע:
+${s.background || 'לא צוין'}
+
+פרטים:
+• סוג מידע: ${s.details?.data_type || 'לא צוין'}
+• גורמים מעורבים: ${s.details?.involved_parties || 'לא צוין'}
+• מיקום אחסון: ${s.details?.storage_location || 'לא צוין'}
+• בסיס חוקי: ${s.details?.legal_basis || 'לא צוין'}
+• טריגר: ${s.details?.trigger || 'לא צוין'}
+
+שאלה מדויקת:
+${s.question || ''}
+
+${s.notes ? `הערות:\n${s.notes}` : ''}`
 
       return NextResponse.json({
         ready: true,
         message: 'תודה רבה! יש לי מספיק מידע. אני מעביר את הפנייה המסוכמת לממונה.',
         summary: formattedSummary,
         subject: s.subject || 'פנייה חדשה',
+        urgency,
         rawJson: parsed,
       })
     }
 
-    // Still clarifying
     const aiMessage = parsed?.message || textContent.text
     return NextResponse.json({
       ready: false,

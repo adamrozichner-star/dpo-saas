@@ -7,12 +7,13 @@ interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   rawJson?: any
+  timestamp?: string
 }
 
 interface PreScreeningChatProps {
   initialMessage: string
   supabase: any
-  onComplete: (summary: string, subject: string, history: ChatMessage[]) => void
+  onComplete: (summary: string, subject: string, history: ChatMessage[], urgency: string) => void
   onSkip: () => void
 }
 
@@ -21,8 +22,8 @@ export default function PreScreeningChat({ initialMessage, supabase, onComplete,
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [ready, setReady] = useState(false)
+  const [exchangeCount, setExchangeCount] = useState(0)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
   const initialSent = useRef(false)
 
   const getHeaders = async (): Promise<Record<string, string>> => {
@@ -47,39 +48,40 @@ export default function PreScreeningChat({ initialMessage, supabase, onComplete,
       if (!res.ok) throw new Error('AI unavailable')
       const data = await res.json()
 
+      const now = new Date().toISOString()
       const aiMsg: ChatMessage = {
         role: 'assistant',
         content: data.message,
         rawJson: data.rawJson,
+        timestamp: now,
       }
 
-      const updated = [...history, { role: 'user' as const, content: userMsg }, aiMsg]
+      const updated = [...history, { role: 'user' as const, content: userMsg, timestamp: now }, aiMsg]
       setMessages(updated)
+      setExchangeCount(prev => prev + 1)
 
       if (data.ready) {
         setReady(true)
-        setTimeout(() => onComplete(data.summary, data.subject, updated), 2000)
+        setTimeout(() => onComplete(data.summary, data.subject, updated, data.urgency || 'regular'), 2000)
       }
     } catch (e) {
       console.error('Pre-screening error:', e)
-      setMessages(prev => [...prev, { role: 'user', content: userMsg }, {
-        role: 'assistant',
-        content: 'מצטער, נתקלתי בבעיה טכנית. ניתן לפנות ישירות לממונה.',
-      }])
+      setMessages(prev => [...prev,
+        { role: 'user', content: userMsg, timestamp: new Date().toISOString() },
+        { role: 'assistant', content: 'מצטער, נתקלתי בבעיה טכנית. ניתן לפנות ישירות לממונה.', timestamp: new Date().toISOString() },
+      ])
     }
     setLoading(false)
   }
 
-  // Send initial message automatically
   useEffect(() => {
     if (initialMessage && !initialSent.current) {
       initialSent.current = true
-      const intro: ChatMessage = {
-        role: 'assistant',
-        content: 'כדי שהממונה יוכל לתת מענה מדויק, אשמח להבין כמה פרטים...',
-      }
-      setMessages([{ role: 'user', content: initialMessage }, intro])
-      // Now send to AI for first clarification
+      const now = new Date().toISOString()
+      setMessages([
+        { role: 'user', content: initialMessage, timestamp: now },
+        { role: 'assistant', content: 'כדי שהממונה יוכל לתת מענה מדויק, אשמח להבין כמה פרטים...', timestamp: now },
+      ])
       sendToAI(initialMessage, [])
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -105,6 +107,12 @@ export default function PreScreeningChat({ initialMessage, supabase, onComplete,
     }
   }
 
+  const progressText = ready
+    ? 'מעבירים לממונה...'
+    : exchangeCount >= 2
+    ? 'עוד שאלה אחת או שתיים'
+    : 'ממיינים את הפנייה שלכם...'
+
   return (
     <div className="flex flex-col h-full max-h-[60vh]">
       {/* Header */}
@@ -115,7 +123,7 @@ export default function PreScreeningChat({ initialMessage, supabase, onComplete,
           </div>
           <div>
             <p className="text-sm font-medium text-stone-800">עוזר Deepo</p>
-            <p className="text-[10px] text-stone-500">מחדד את הפנייה שלכם לממונה</p>
+            <p className="text-[10px] text-stone-500">{progressText}</p>
           </div>
         </div>
         <button
@@ -172,7 +180,6 @@ export default function PreScreeningChat({ initialMessage, supabase, onComplete,
         <div className="p-3 border-t border-stone-200">
           <div className="flex gap-2">
             <textarea
-              ref={inputRef}
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
