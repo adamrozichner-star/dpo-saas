@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { 
   Shield, 
@@ -170,7 +171,7 @@ export default function HomePage() {
       {/* ===== NAV ===== */}
       <nav className="sticky top-0 z-50 bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-5 flex justify-between items-center h-16">
-          <Link href="/" className="font-bold text-xl text-blue-600">Deepo</Link>
+          <Link href="/"><Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} priority /></Link>
           <div className="flex items-center gap-2">
             <Link href="/login">
               <Button variant="ghost" size="sm" className="text-slate-600">התחברות</Button>
@@ -528,8 +529,7 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
             <div className="text-right">
               <div className="flex items-center gap-2 justify-end mb-3">
-                <span className="font-bold text-white text-lg">Deepo</span>
-                <Shield className="h-5 w-5 text-blue-400" />
+                <Image src="/logos/deepo-logo-white-512.png" alt="Deepo" width={100} height={31} />
               </div>
               <p className="text-slate-400 text-sm leading-relaxed">
                 שירות ממונה הגנת פרטיות חיצוני לעסקים. 

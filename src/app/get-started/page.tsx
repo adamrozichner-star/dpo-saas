@@ -13,6 +13,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import Image from 'next/image'
 
 // Quick assessment - just 2 questions to get to payment fast
 const industries = [
@@ -127,10 +128,7 @@ export default function GetStartedPage() {
       <header className="border-b bg-white/80 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
-              <Shield className="h-6 w-6 text-white" />
-            </div>
-            <span className="font-bold text-xl text-slate-900">Deepo</span>
+            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
           </Link>
           <div className="text-sm text-slate-500">
             שלב {step} מתוך 3

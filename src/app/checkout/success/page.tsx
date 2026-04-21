@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Shield, CheckCircle2, ArrowLeft, PartyPopper, Loader2 } from 'lucide-react';
+import Image from 'next/image';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
@@ -36,10 +37,7 @@ function SuccessContent() {
       <header className="border-b bg-white/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
-              <Shield className="h-6 w-6 text-white" />
-            </div>
-            <span className="font-bold text-xl text-slate-900">Deepo</span>
+            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
           </Link>
         </div>
       </header>

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Shield, Loader2, CheckCircle2, AlertCircle } from 'lucide-react'
+import Image from 'next/image'
 import { useAuth } from '@/lib/auth-context'
 import { PasswordStrength, validatePassword } from '@/components/PasswordStrength'
 
@@ -79,10 +80,7 @@ export default function ResetPasswordPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <Link href="/" className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
-              <Shield className="h-7 w-7 text-white" />
-            </div>
-            <span className="font-bold text-2xl" style={{color: '#1e40af'}}>Deepo</span>
+            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
           </Link>
           <CardTitle>בחר סיסמה חדשה</CardTitle>
           <CardDescription>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { 
@@ -222,11 +223,8 @@ function SubscribeContent() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white" dir="rtl">
       {/* Compact header */}
       <div className="flex items-center justify-between px-4 py-3 bg-white/80 backdrop-blur-sm border-b">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
-            <Shield className="h-5 w-5 text-white" />
-          </div>
-          <span className="font-bold text-[#1e40af]">Deepo</span>
+        <div className="flex items-center">
+          <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={100} height={31} priority />
         </div>
         <Link href="/dashboard" className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
           <Eye className="h-3 w-3" />

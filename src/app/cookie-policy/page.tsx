@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 
 export default function CookiePolicyPage() {
   return (
@@ -8,10 +9,7 @@ export default function CookiePolicyPage() {
       <header className="bg-white border-b border-stone-200">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
-            </div>
-            <span className="font-bold text-lg text-indigo-700">Deepo</span>
+            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
           </Link>
           <Link href="/" className="text-sm text-indigo-600 hover:text-indigo-700">
             ← חזרה לדף הבית

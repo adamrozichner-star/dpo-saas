@@ -3,16 +3,14 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Shield, Home, ArrowRight } from 'lucide-react'
+import Image from 'next/image'
 
 export default function NotFound() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4" dir="rtl">
       <div className="text-center">
         <Link href="/" className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-14 h-14 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
-            <Shield className="h-8 w-8 text-white" />
-          </div>
-          <span className="font-bold text-3xl" style={{color: '#1e40af'}}>Deepo</span>
+          <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
         </Link>
         
         <h1 className="text-8xl font-bold text-gray-200 mb-4">404</h1>

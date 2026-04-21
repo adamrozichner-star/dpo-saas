@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Shield, ArrowRight } from 'lucide-react'
+import Image from 'next/image'
 
 export default function TermsPage() {
   return (
@@ -8,8 +9,7 @@ export default function TermsPage() {
       <header className="bg-white border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <Shield className="h-8 w-8 text-emerald-600" />
-            <span className="font-bold text-xl text-slate-800">Deepo</span>
+            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
           </Link>
           <Link href="/">
             <Button variant="ghost" className="gap-2">

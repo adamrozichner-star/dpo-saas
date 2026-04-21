@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { 
   Shield, 
@@ -511,11 +512,8 @@ function DashboardContent() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-5 flex items-center justify-between">
-            <Link href="/dashboard" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center">
-                <Shield className="h-5 w-5 text-white" />
-              </div>
-              <span className="font-semibold text-lg text-stone-800">Deepo</span>
+            <Link href="/dashboard" className="flex items-center">
+              <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} priority />
             </Link>
             <NotificationsBell supabase={supabase} />
           </div>
@@ -628,11 +626,8 @@ function DashboardContent() {
       <main className="flex-1 min-h-screen min-w-0 w-full overflow-x-hidden">
         {/* Mobile Header */}
         <header className="lg:hidden sticky top-0 z-30 bg-stone-50/90 backdrop-blur-sm border-b border-stone-200 px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center">
-              <Shield className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-semibold text-stone-800">Deepo</span>
+          <div className="flex items-center">
+            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={100} height={31} priority />
           </div>
           <div className="flex items-center gap-2">
             <NotificationsBell supabase={supabase} />

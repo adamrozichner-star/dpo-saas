@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { 
@@ -1442,11 +1443,8 @@ function OnboardingContent() {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
-                <Shield className="h-5 w-5 text-white" />
-              </div>
-              <span className="font-bold text-[#1e40af] text-lg">Deepo</span>
+            <div className="inline-flex items-center">
+              <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} priority />
             </div>
           </div>
 
@@ -1546,12 +1544,7 @@ function OnboardingContent() {
       <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white p-4" dir="rtl">
         <div className="max-w-md mx-auto">
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
-                <Shield className="h-5 w-5 text-white" />
-              </div>
-              <span className="font-bold text-[#1e40af]">Deepo</span>
-            </div>
+            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={100} height={31} />
             <button onClick={() => { setShowDpoIntro(false); setShowReport(true) }}
               className="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
               <ArrowRight className="h-3 w-3" />חזרה
@@ -1679,12 +1672,7 @@ function OnboardingContent() {
                   <ArrowRight className="h-4 w-4" />חזרה לשאלון
                 </button>
               )}
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
-                <Shield className="h-5 w-5 text-white" />
-              </div>
-              <span className="font-bold text-[#1e40af]">Deepo</span>
-            </div>
+            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={100} height={31} />
           </div>
           <ClassificationReport answers={v3Answers} onContinue={handleReportContinue} isReview={isReviewMode} />
         </div>
@@ -1698,12 +1686,7 @@ function OnboardingContent() {
     <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white p-4" dir="rtl">
       <div className="max-w-md mx-auto">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#1e40af]">
-              <Shield className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-bold text-[#1e40af]">Deepo</span>
-          </div>
+          <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={100} height={31} />
           <div className="flex items-center gap-4">
             {step > 0 && (
               <button

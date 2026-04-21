@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { 
   Send, Upload, Paperclip, Mic, Check, CheckCheck, FileText, Shield, 
   AlertTriangle, Plus, X, Sparkles, Download, Loader2, Phone, 
@@ -1193,12 +1194,7 @@ ${summaryText}
         {/* Sidebar Header */}
         <div className="p-4 border-b border-stone-200">
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center">
-                <Shield className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-lg text-stone-800">Deepo</span>
-            </div>
+            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={100} height={31} />
             <button 
               onClick={() => setSidebarOpen(false)}
               className="p-1.5 hover:bg-stone-200 rounded-lg transition"

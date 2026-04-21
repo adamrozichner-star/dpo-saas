@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -75,11 +76,8 @@ export default function CalculatorPage() {
       <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
-                <Shield className="h-6 w-6 text-white" />
-              </div>
-              <span className="font-bold text-xl" style={{color: '#1e40af'}}>Deepo</span>
+            <Link href="/" className="flex items-center">
+              <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} priority />
             </Link>
             <div className="flex items-center gap-4">
               <Link href="/login">

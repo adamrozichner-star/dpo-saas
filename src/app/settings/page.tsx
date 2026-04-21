@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { useSubscriptionGate } from '@/lib/use-subscription-gate'
+import Image from 'next/image'
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -203,8 +204,7 @@ export default function SettingsPage() {
       <header className="bg-white border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <Shield className="h-8 w-8 text-primary" />
-            <span className="font-bold text-xl">Deepo</span>
+            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
           </Link>
           <div className="flex items-center gap-4">
             <Link href="/dashboard">

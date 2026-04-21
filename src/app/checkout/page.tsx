@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Shield, Check, ArrowRight, Loader2, CreditCard, Lock, Clock, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import Image from 'next/image';
 
 type Plan = 'basic' | 'recommended' | 'premium' | 'enterprise';
 
@@ -196,10 +197,7 @@ export default function CheckoutPage() {
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
-              <Shield className="h-6 w-6 text-white" />
-            </div>
-            <span className="font-bold text-xl text-slate-900">Deepo</span>
+            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
           </Link>
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <Lock className="h-4 w-4" />

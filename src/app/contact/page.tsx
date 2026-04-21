@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   MessageSquare
 } from 'lucide-react'
+import Image from 'next/image'
 
 export default function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -44,10 +45,7 @@ export default function ContactPage() {
         <header className="bg-white border-b">
           <div className="container mx-auto px-4 py-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
-              <Shield className="h-6 w-6 text-white" />
-            </div>
-            <span className="font-bold text-xl" style={{color: '#1e40af'}}>Deepo</span>
+            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
           </Link>
           </div>
         </header>
@@ -70,10 +68,7 @@ export default function ContactPage() {
       <header className="bg-white border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
-              <Shield className="h-6 w-6 text-white" />
-            </div>
-            <span className="font-bold text-xl" style={{color: '#1e40af'}}>Deepo</span>
+            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
           </Link>
           <Link href="/"><Button variant="ghost" className="gap-2"><ArrowRight className="h-4 w-4" />חזרה</Button></Link>
         </div>

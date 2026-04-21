@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -138,11 +139,8 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4" style={{background: 'linear-gradient(to bottom, #dbeafe, white)'}}>
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <Link href="/" className="inline-flex items-center justify-center gap-2 mb-4">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
-              <Shield className="h-6 w-6 text-white" />
-            </div>
-            <span className="font-bold text-xl" style={{color: '#1e40af'}}>Deepo</span>
+          <Link href="/" className="inline-flex items-center justify-center mb-4">
+            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={140} height={43} priority />
           </Link>
           <CardTitle>התחברות</CardTitle>
           <CardDescription>היכנסו לחשבון שלכם לניהול הפרטיות</CardDescription>
