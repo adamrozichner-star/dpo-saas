@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/Toast'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
@@ -488,7 +489,7 @@ export default function DPODashboard() {
         ═══════════════════════════════════════════ */}
         <nav className="dp-nav">
           <div className="dp-nav-r">
-            <span className="dp-logo">Deepo</span>
+            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={100} height={31} className="dp-logo" />
             <span className="dp-sep">|</span>
             <span className="dp-name">{DPO_NAME}</span>
           </div>

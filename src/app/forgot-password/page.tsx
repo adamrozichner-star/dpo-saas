@@ -2,11 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Shield, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react'
+import { ArrowRight, Loader2, CheckCircle2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
 export default function ForgotPasswordPage() {
@@ -66,11 +67,8 @@ export default function ForgotPasswordPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{backgroundColor: '#1e40af'}}>
-                <Shield className="h-6 w-6 text-white" />
-              </div>
-              <span className="font-bold text-xl" style={{color: '#1e40af'}}>Deepo</span>
+            <Link href="/" className="flex items-center">
+              <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
             </Link>
           </div>
           <CardTitle>שכחתי סיסמה</CardTitle>

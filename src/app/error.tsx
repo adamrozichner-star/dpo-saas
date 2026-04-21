@@ -2,8 +2,9 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { Shield, RefreshCw, Home } from 'lucide-react'
+import { RefreshCw, Home } from 'lucide-react'
 
 export default function Error({
   error,
@@ -19,9 +20,8 @@ export default function Error({
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4" dir="rtl">
       <div className="text-center">
-        <Link href="/" className="flex items-center justify-center gap-2 mb-8">
-          <Shield className="h-12 w-12 text-primary" />
-          <span className="font-bold text-3xl">Deepo</span>
+        <Link href="/" className="flex items-center justify-center mb-8">
+          <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
         </Link>
         
         <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
