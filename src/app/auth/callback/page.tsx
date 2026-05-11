@@ -89,14 +89,18 @@ export default function AuthCallbackPage() {
 
         if (!existingUser) {
           setStatus('יוצר חשבון...');
-          
-          // Clear any old onboarding data for fresh start
-          localStorage.removeItem('dpo_onboarding_answers');
-          localStorage.removeItem('dpo_onboarding_step');
-          localStorage.removeItem('dpo_onboarding_org_id');
-          localStorage.removeItem('dpo_onboarding_org_name');
-          localStorage.removeItem('dpo_v3_answers');
-          localStorage.removeItem('dpo_v3_step');
+
+          // Fresh signup: sweep any app-owned localStorage so this user starts clean.
+          // v3 keys are user-scoped now, but legacy global keys from old sessions
+          // (or quick-assessment payloads) could still pollute the onboarding flow.
+          try {
+            const stale: string[] = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (k && (k.startsWith('dpo_') || k.startsWith('deepo_'))) stale.push(k);
+            }
+            stale.forEach(k => localStorage.removeItem(k));
+          } catch { /* storage unavailable — ignore */ }
           
           const name = session.user.user_metadata?.full_name || 
                        session.user.user_metadata?.name ||

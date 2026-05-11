@@ -282,9 +282,9 @@ function DashboardContent() {
         
         // Derive compliance actions from onboarding data
         let v3 = profileData?.v3Answers || {}
-        // Fallback: try localStorage (saved during onboarding on same browser)
-        if (Object.keys(v3).length === 0) {
-          try { v3 = JSON.parse(localStorage.getItem('dpo_v3_answers') || '{}') } catch {}
+        // Fallback: try user-scoped localStorage draft (same browser, mid-onboarding)
+        if (Object.keys(v3).length === 0 && user) {
+          try { v3 = JSON.parse(localStorage.getItem(`dpo_v3_answers_${user.id}`) || '{}') } catch {}
         }
         // Load persisted action overrides (user-completed actions)
         const overrides = profileData?.actionOverrides || {}
@@ -365,8 +365,8 @@ function DashboardContent() {
 
     // Recalculate summary immediately with new overrides
     let v3 = orgProfile?.v3Answers || {}
-    if (Object.keys(v3).length === 0) {
-      try { v3 = JSON.parse(localStorage.getItem('dpo_v3_answers') || '{}') } catch {}
+    if (Object.keys(v3).length === 0 && user) {
+      try { v3 = JSON.parse(localStorage.getItem(`dpo_v3_answers_${user.id}`) || '{}') } catch {}
     }
     const newSummary = deriveComplianceActions(v3, documents, incidents, newOverrides, organization?.tier)
     setComplianceSummary(newSummary)
@@ -417,8 +417,8 @@ function DashboardContent() {
 
     // Recalculate
     let v3 = orgProfile?.v3Answers || {}
-    if (Object.keys(v3).length === 0) {
-      try { v3 = JSON.parse(localStorage.getItem('dpo_v3_answers') || '{}') } catch {}
+    if (Object.keys(v3).length === 0 && user) {
+      try { v3 = JSON.parse(localStorage.getItem(`dpo_v3_answers_${user.id}`) || '{}') } catch {}
     }
     const newSummary = deriveComplianceActions(v3, documents, incidents, newOverrides, organization?.tier)
     setComplianceSummary(newSummary)

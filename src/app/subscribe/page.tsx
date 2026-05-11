@@ -47,13 +47,15 @@ function SubscribeContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, user, supabase, searchParams])
 
-  // Load recommendation from localStorage
+  // Load recommendation from localStorage. v3Answers is user-scoped (keyed by auth id)
+  // to prevent cross-user pollution; the tier hint is per-session and stays global.
   useEffect(() => {
     const tier = localStorage.getItem('dpo_recommended_tier')
     if (tier === 'basic' || tier === 'recommended') setRecommendedTier(tier)
 
+    if (!user) return
     try {
-      const saved = localStorage.getItem('dpo_v3_answers')
+      const saved = localStorage.getItem(`dpo_v3_answers_${user.id}`)
       if (!saved) return
       const v3 = JSON.parse(saved)
       const r: string[] = []
@@ -77,7 +79,7 @@ function SubscribeContent() {
 
       setReasons(r)
     } catch (e) { /* ignore */ }
-  }, [])
+  }, [user])
 
   const loadOrganization = async () => {
     if (!supabase || !user) return

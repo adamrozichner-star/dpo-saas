@@ -140,6 +140,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
+    // Sweep app-owned localStorage before tearing down the session so the next
+    // login on this device can't inherit the previous user's onboarding draft,
+    // tier hint, or quick-assessment payload.
+    if (typeof window !== 'undefined') {
+      try {
+        const keys: string[] = []
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i)
+          if (k && (k.startsWith('dpo_') || k.startsWith('deepo_'))) keys.push(k)
+        }
+        keys.forEach(k => localStorage.removeItem(k))
+      } catch { /* storage unavailable — ignore */ }
+    }
     if (supabaseClient) {
       await supabaseClient.auth.signOut()
     }

@@ -1112,10 +1112,31 @@ function OnboardingContent() {
     if (!loading && !user) router.push('/login')
   }, [loading, user, router])
 
+  // Mount loader: DB is source of truth, user-scoped localStorage is an offline draft cache.
+  //
+  // Decision tree (one async pass, runs once per user):
+  //   1. Active subscription → dashboard.
+  //   2. DB profile has v3Answers with bizName + databases →
+  //        review mode (showReport=true). This is the "completed-but-unpaid" path.
+  //   3. user-scoped localStorage draft exists →
+  //        resume mid-flow (v3Answers + step). Never trips review mode.
+  //   4. Otherwise → fresh start at step 0. Never trips review mode.
+  //
+  // Cross-user pollution is structurally prevented: keys are namespaced by user.id, so
+  // a different user simply reads from a different cell. No "savedUser" marker needed.
   useEffect(() => {
     if (!supabase || !user) return
-    const checkExisting = async () => {
-      const { data: userData } = await supabase.from('users').select('org_id').eq('auth_user_id', user.id).single()
+    if (sessionStarted.current) return
+
+    let cancelled = false
+    const load = async () => {
+      // 1. Check subscription state.
+      const { data: userData } = await supabase
+        .from('users')
+        .select('org_id')
+        .eq('auth_user_id', user.id)
+        .single()
+
       if (userData?.org_id) {
         const { data: sub } = await supabase
           .from('subscriptions')
@@ -1125,76 +1146,64 @@ function OnboardingContent() {
           .maybeSingle()
 
         if (sub) {
-          localStorage.removeItem('dpo_v3_answers')
+          // Paid user has no business here.
+          localStorage.removeItem(`dpo_v3_answers_${user.id}`)
+          localStorage.removeItem(`dpo_v3_step_${user.id}`)
           router.push('/dashboard')
           return
         }
 
+        // 2. DB profile → review mode.
         const { data: profileData } = await supabase
           .from('organization_profiles')
           .select('profile_data')
           .eq('org_id', userData.org_id)
           .single()
 
-        if (profileData?.profile_data?.v3Answers && !sessionStarted.current) {
-          // Only restore from DB if user hasn't started a new session
-          console.log('[Onboarding] Restoring from DB profile:', profileData.profile_data.v3Answers.bizName)
-          setV3Answers(profileData.profile_data.v3Answers)
+        const dbAnswers = profileData?.profile_data?.v3Answers
+        if (!cancelled && !sessionStarted.current && dbAnswers?.bizName && (dbAnswers?.databases?.length || 0) > 0) {
+          console.log('[Onboarding] Restoring from DB profile:', dbAnswers.bizName)
+          setV3Answers(dbAnswers)
           setShowReport(true)
           setIsReviewMode(true)
+          return
         }
       }
+
+      // 3. user-scoped localStorage draft (offline cache) → resume mid-flow.
+      if (cancelled || sessionStarted.current) return
+      try {
+        const saved = localStorage.getItem(`dpo_v3_answers_${user.id}`)
+        const savedStep = localStorage.getItem(`dpo_v3_step_${user.id}`)
+        if (saved && savedStep) {
+          const parsed = JSON.parse(saved)
+          const resumeStep = parseInt(savedStep)
+          if (resumeStep > 0 && parsed?.bizName) {
+            console.log('[Onboarding] Resuming from cache at step', resumeStep, 'bizName:', parsed.bizName)
+            setV3Answers(parsed)
+            setStep(resumeStep)
+            return
+          }
+          // Stale/incomplete cache — discard.
+          localStorage.removeItem(`dpo_v3_answers_${user.id}`)
+          localStorage.removeItem(`dpo_v3_step_${user.id}`)
+        }
+      } catch { /* ignore corrupt cache */ }
+
+      // 4. Fresh start. No setShowReport, no setStep — stay at step 0.
     }
-    checkExisting()
+
+    load()
+    return () => { cancelled = true }
   }, [supabase, user, router])
 
+  // Persist user-scoped draft on every step/answer change.
   useEffect(() => {
     if (step > 0 && user) {
-      localStorage.setItem('dpo_v3_answers', JSON.stringify(v3Answers))
-      localStorage.setItem('dpo_v3_step', String(step))
-      localStorage.setItem('dpo_v3_user', user.id)
+      localStorage.setItem(`dpo_v3_answers_${user.id}`, JSON.stringify(v3Answers))
+      localStorage.setItem(`dpo_v3_step_${user.id}`, String(step))
     }
   }, [v3Answers, step, user])
-
-  useEffect(() => {
-    if (!user) return
-    // If user already started interacting, NEVER overwrite
-    if (sessionStarted.current) return
-    
-    const savedUser = localStorage.getItem('dpo_v3_user')
-    // Clear stale data from a different user
-    if (savedUser && savedUser !== user.id) {
-      console.log('[Onboarding] Different user, clearing localStorage')
-      localStorage.removeItem('dpo_v3_answers')
-      localStorage.removeItem('dpo_v3_step')
-      localStorage.removeItem('dpo_v3_user')
-      localStorage.removeItem('dpo_recommended_tier')
-      return
-    }
-    const saved = localStorage.getItem('dpo_v3_answers')
-    const savedStep = localStorage.getItem('dpo_v3_step')
-    if (saved && savedStep) {
-      try {
-        const parsed = JSON.parse(saved)
-        const resumeStep = parseInt(savedStep)
-        if (resumeStep > 2 && parsed.bizName) {
-          console.log('[Onboarding] Resuming from step', resumeStep, 'bizName:', parsed.bizName)
-          setV3Answers(parsed)
-          setStep(resumeStep)
-        } else if (parsed.databases?.length > 0) {
-          console.log('[Onboarding] Resuming to report, bizName:', parsed.bizName)
-          setV3Answers(parsed)
-          setShowReport(true)
-          setIsReviewMode(true)
-        } else {
-          // Incomplete data — start fresh
-          console.log('[Onboarding] Stale data, clearing')
-          localStorage.removeItem('dpo_v3_answers')
-          localStorage.removeItem('dpo_v3_step')
-        }
-      } catch (e) { /* ignore */ }
-    }
-  }, [user])
 
   const [textInput, setTextInput] = useState('')
   const [validationError, setValidationError] = useState<string | null>(null)
@@ -1251,13 +1260,17 @@ function OnboardingContent() {
 
   // Save progress and redirect to dashboard (complete later)
   const completeLater = useCallback(async () => {
-    // Always save to localStorage
-    localStorage.setItem('dpo_v3_answers', JSON.stringify(v3Answers))
-    localStorage.setItem('dpo_v3_step', String(step))
+    // Save user-scoped draft. Without a logged-in user there is no scope to save into,
+    // so we just navigate — anonymous drafts aren't a supported state.
+    if (!user) {
+      router.push('/dashboard')
+      return
+    }
+    localStorage.setItem(`dpo_v3_answers_${user.id}`, JSON.stringify(v3Answers))
+    localStorage.setItem(`dpo_v3_step_${user.id}`, String(step))
 
-    if (supabase && user) {
+    if (supabase) {
       try {
-        localStorage.setItem('dpo_v3_user', user.id)
         const { data: userData } = await supabase.from('users').select('org_id').eq('auth_user_id', user.id).single()
         if (userData?.org_id) {
           await supabase.from('organizations').update({
@@ -1390,8 +1403,10 @@ function OnboardingContent() {
         else console.log('[Onboarding] Doc generation failed:', await docRes.text())
       } catch (docError) { console.log('[Onboarding] Doc generation skipped:', docError) }
 
-      localStorage.setItem('dpo_v3_answers', JSON.stringify(finalV3))
-      localStorage.removeItem('dpo_v3_step')
+      // Onboarding is committed to the DB — clear the user-scoped draft cache.
+      localStorage.removeItem(`dpo_v3_answers_${user.id}`)
+      localStorage.removeItem(`dpo_v3_step_${user.id}`)
+      // Tier recommendation is a per-session hint, not user data — kept as a global key.
       localStorage.setItem('dpo_recommended_tier', autoTier)
 
       setGenerationProgress(100)
