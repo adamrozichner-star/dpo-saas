@@ -1609,6 +1609,46 @@ function OnboardingContent() {
               </div>
             )}
 
+            {/* DPO conflict-of-interest screening */}
+            <div className="bg-indigo-50/60 rounded-xl p-4 mb-4 text-right">
+              <label className="text-xs text-gray-500 mb-2 block">באיזה תפקיד נוסף משמש הממונה בארגון?</label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: 'none', label: 'אינו ממלא תפקיד נוסף' },
+                  { value: 'ceo', label: 'מנכ"ל / מנהל כללי' },
+                  { value: 'ciso', label: 'מנהל אבטחת מידע (CISO)' },
+                  { value: 'legal', label: 'יועץ משפטי / משפטן' },
+                  { value: 'hr', label: 'מנהל משאבי אנוש' },
+                  { value: 'cfo', label: 'סמנכ"ל כספים (CFO)' },
+                  { value: 'hr_director', label: 'מנהל HR' },
+                  { value: 'other', label: 'תפקיד אחר' },
+                ].map(opt => {
+                  const current = sessionAnswers.current.dpoRoleInOrg || v3Answers.dpoRoleInOrg
+                  const selected = current === opt.value
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        sessionStarted.current = true
+                        sessionAnswers.current.dpoRoleInOrg = opt.value
+                        set('dpoRoleInOrg', opt.value)
+                      }}
+                      className={`px-3 py-2 rounded-lg border text-xs text-right transition-all ${
+                        selected
+                          ? 'border-indigo-400 bg-white text-indigo-700 font-medium'
+                          : 'border-indigo-100 bg-white text-gray-700 hover:border-indigo-300'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="text-[10px] text-gray-500 mt-3 leading-relaxed">
+                ממונה הגנת פרטיות לא יכול לשמש במקביל בתפקידים מסוימים שעלולים ליצור ניגוד עניינים. אם קיים ניגוד עניינים, נציע פתרונות לאחר ההרשמה.
+              </p>
+            </div>
+
             {/* Business name confirmation */}
             <div className="bg-indigo-50/60 rounded-xl p-4 mb-4 text-right">
               <label className="text-xs text-gray-500 mb-1 block">שם העסק שירשם:</label>

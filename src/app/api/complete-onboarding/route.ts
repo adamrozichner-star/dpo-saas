@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 import { welcomeEmail } from '@/lib/email'
+import { deriveOnboardingConflictStatus, type DpoRoleInOrg } from '@/lib/dpo-conflict'
 import { checkAndCreateNotificationsForOrg } from '@/lib/notifications-trigger'
 
 export const dynamic = 'force-dynamic'
@@ -30,6 +31,11 @@ export async function POST(request: NextRequest) {
     const companyId = v3Answers.companyId || ''
     const autoTier = tier || 'basic'
 
+    // Derive initial DPO conflict-of-interest state from the onboarding answer.
+    // No answer → 'not_assessed' (legacy nudge will surface on dashboard).
+    const dpoRoleInOrg: DpoRoleInOrg | null = v3Answers.dpoRoleInOrg || null
+    const dpoConflictStatus = deriveOnboardingConflictStatus(dpoRoleInOrg)
+
     console.log('[CompleteOnboarding] Starting:', { 
       userId, userEmail, businessName, companyId, autoTier,
       bizNameFromV3: v3Answers.bizName
@@ -48,10 +54,12 @@ export async function POST(request: NextRequest) {
       // User already has org — update it with correct name and save profile
       console.log('[CompleteOnboarding] User already has org:', existingUser.org_id, '— updating')
       
-      await supabase.from('organizations').update({ 
-        name: businessName, 
+      await supabase.from('organizations').update({
+        name: businessName,
         business_id: companyId,
-        tier: autoTier 
+        tier: autoTier,
+        dpo_role_in_org: dpoRoleInOrg,
+        dpo_conflict_status: dpoConflictStatus,
       }).eq('id', existingUser.org_id)
 
       // Upsert profile
@@ -89,7 +97,14 @@ export async function POST(request: NextRequest) {
     // 2. Create new organization
     const { data: orgData, error: orgError } = await supabase
       .from('organizations')
-      .insert({ name: businessName, business_id: companyId, tier: autoTier, status: 'active' })
+      .insert({
+        name: businessName,
+        business_id: companyId,
+        tier: autoTier,
+        status: 'active',
+        dpo_role_in_org: dpoRoleInOrg,
+        dpo_conflict_status: dpoConflictStatus,
+      })
       .select('id, name')
       .single()
 

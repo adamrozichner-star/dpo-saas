@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js'
+import { DPO_ROLE_LABELS, type DpoRoleInOrg } from './dpo-conflict'
 
 export interface Period {
   start: Date
@@ -57,7 +58,29 @@ export async function generateDpoReportDraft(orgId: string, supabaseAdmin: Supab
     ? (scoreEnd > scoreStart ? 'שיפור' : scoreEnd < scoreStart ? 'ירידה' : 'יציבות')
     : 'אין נתונים מספיקים'
 
-  const summary = `במהלך התקופה ${formatPeriod(period)}, ${org?.name || 'הארגון'} הראה ${trend} בציון הציות.
+  // Prepend conflict-of-interest transparency section when the org acknowledged
+  // a known conflict (Israeli תיקון 13 requires disclosure).
+  let conflictDisclosure = ''
+  if (org?.dpo_conflict_status === 'conflict_acknowledged' && org?.dpo_role_in_org) {
+    const roleKey = org.dpo_role_in_org as DpoRoleInOrg
+    const roleLabel = DPO_ROLE_LABELS[roleKey] || org.dpo_role_in_org
+    const ackDate = org.dpo_conflict_acknowledged_at
+      ? new Date(org.dpo_conflict_acknowledged_at).toLocaleDateString('he-IL')
+      : 'לא צוין'
+    const ackBy = org.dpo_conflict_acknowledged_by || 'לא צוין'
+    conflictDisclosure = `## ניגוד עניינים
+ממונה הגנת הפרטיות הנוכחי משמש גם בתפקיד ${roleLabel} בארגון.
+הארגון אישר את המצב ב-${ackDate} על ידי ${ackBy}
+ולקח על עצמו את האחריות לסיכון הציות הנובע מכך.
+
+המלצה: שקלו מינוי ממונה חיצוני להפחתת חשיפה רגולטורית.
+
+---
+
+`
+  }
+
+  const summary = `${conflictDisclosure}במהלך התקופה ${formatPeriod(period)}, ${org?.name || 'הארגון'} הראה ${trend} בציון הציות.
 
 ציון פתיחה: ${scoreStart ?? 'לא נמדד'}/100
 ציון סיום: ${scoreEnd ?? 'לא נמדד'}/100
@@ -76,6 +99,11 @@ ${docsList.length > 0 ? `• ${docsList.length} מסמכי רגולציה עוד
   if (scoreEnd != null && scoreEnd < 60) recommendations.push('ציון הציות מתחת לסף המומלץ — נדרשת תוכנית פעולה מואצת')
   if (rightsList.length === 0) recommendations.push('לוודא שתהליך טיפול בבקשות נושאי מידע מתועד וזמין')
   if (findingsOpen > 5) recommendations.push(`לטפל ב-${findingsOpen} ממצאי ציות פתוחים`)
+  if (org?.dpo_conflict_status === 'conflict_acknowledged' && org?.dpo_role_in_org) {
+    const roleKey = org.dpo_role_in_org as DpoRoleInOrg
+    const roleLabel = DPO_ROLE_LABELS[roleKey] || org.dpo_role_in_org
+    recommendations.push(`שקלו מינוי ממונה חיצוני להפחתת חשיפה רגולטורית — הממונה הנוכחי משמש גם בתפקיד ${roleLabel}`)
+  }
   if (recommendations.length === 0) recommendations.push('להמשיך בתחזוקה השוטפת ובסקירה רבעונית')
 
   return {

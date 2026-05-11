@@ -54,6 +54,7 @@ import ComplianceReviewPanel from '@/components/ComplianceReviewPanel'
 import DpiaTab from '@/components/DpiaTab'
 import DpoReportsTab from '@/components/DpoReportsTab'
 import TierGateOverlay from '@/components/TierGateOverlay'
+import ConflictOfInterestCard from '@/components/ConflictOfInterestCard'
 import PreScreeningChat from '@/components/PreScreeningChat'
 import DataFlowDiagram from '@/components/DataFlowDiagram'
 import WebsiteScanner from '@/components/WebsiteScanner'
@@ -981,6 +982,18 @@ function OverviewTab({
         </h1>
         <p className="text-stone-500 mt-1">הנה סקירה של מצב הציות שלכם</p>
       </div>
+
+      {/* DPO conflict-of-interest card (only when unresolved or not yet assessed) */}
+      {organization?.id && (organization?.dpo_conflict_status === 'conflict_unresolved' || organization?.dpo_conflict_status === 'not_assessed') && (
+        <ConflictOfInterestCard
+          orgId={organization.id}
+          tier={organization.tier}
+          dpoRoleInOrg={organization.dpo_role_in_org}
+          conflictStatus={organization.dpo_conflict_status}
+          supabase={supabase}
+          onResolved={onRefreshDocs}
+        />
+      )}
 
       {/* Top Row: Score + Next Step */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
