@@ -53,6 +53,7 @@ import WorkPlanTab from '@/components/WorkPlanTab'
 import ComplianceReviewPanel from '@/components/ComplianceReviewPanel'
 import DpiaTab from '@/components/DpiaTab'
 import DpoReportsTab from '@/components/DpoReportsTab'
+import TierGateOverlay from '@/components/TierGateOverlay'
 import PreScreeningChat from '@/components/PreScreeningChat'
 import DataFlowDiagram from '@/components/DataFlowDiagram'
 import WebsiteScanner from '@/components/WebsiteScanner'
@@ -772,15 +773,40 @@ function DashboardContent() {
                   />
                 </div>
                 <div className="border-t border-stone-200 pt-6">
-                  <DpoReportsTab supabase={supabase} />
+                  {organization?.tier === 'basic' ? (
+                    <TierGateOverlay
+                      icon={<FileText className="h-6 w-6" />}
+                      title="דוחות ממונה רבעוניים"
+                      description="הפקת דוחות רבעוניים מסודרים להגשה להנהלה — זמין בחבילה מומלצת ומעלה."
+                    />
+                  ) : (
+                    <DpoReportsTab supabase={supabase} />
+                  )}
                 </div>
               </div>
             ) : <LockedTabOverlay icon="💬" title="ממונה ובקשות" description="שלחו שאלות לממונה וטפלו בבקשות פרטיות" />
           )}
           {activeTab === 'compliance' && organization?.id && (
             <div className="space-y-6">
-              <ComplianceReviewPanel orgId={organization.id} supabase={supabase} />
-              <DpiaTab supabase={supabase} v3Answers={orgProfile?.v3Answers || {}} />
+              {organization?.tier === 'basic' ? (
+                <>
+                  <TierGateOverlay
+                    icon={<CheckCircle2 className="h-6 w-6" />}
+                    title="סקירת ציות"
+                    description="הרצת סקירה אוטומטית מלאה של מצב הציות עם ניתוח ממצאים ופערים — זמין בחבילה מומלצת ומעלה."
+                  />
+                  <TierGateOverlay
+                    icon={<ClipboardList className="h-6 w-6" />}
+                    title="הערכת השפעה על פרטיות (DPIA)"
+                    description="ביצוע הערכות סיכון מובנות לפעילויות עיבוד מידע — זמין בחבילה מומלצת ומעלה."
+                  />
+                </>
+              ) : (
+                <>
+                  <ComplianceReviewPanel orgId={organization.id} supabase={supabase} />
+                  <DpiaTab supabase={supabase} v3Answers={orgProfile?.v3Answers || {}} />
+                </>
+              )}
             </div>
           )}
           {activeTab === 'settings' && (

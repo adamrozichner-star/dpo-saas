@@ -60,6 +60,11 @@ export async function POST(request: NextRequest) {
     const auth = await getOrgId(request)
     if (auth.error) return auth.error
 
+    const { data: orgData } = await supabaseAdmin.from('organizations').select('tier').eq('id', auth.orgId!).single()
+    if (orgData?.tier === 'basic') {
+      return NextResponse.json({ error: 'שדרגו לחבילה מומלצת לגישה למודול זה' }, { status: 403 })
+    }
+
     const body = await request.json()
     const { activity_name, activity_id, description, legal_basis, data_categories, risks, controls, residual_score, action_plan, status } = body
 

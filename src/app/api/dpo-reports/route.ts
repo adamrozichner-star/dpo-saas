@@ -60,6 +60,11 @@ export async function POST(request: NextRequest) {
     const auth = await getOrgId(request)
     if (auth.error) return auth.error
 
+    const { data: orgData } = await supabaseAdmin.from('organizations').select('tier').eq('id', auth.orgId!).single()
+    if (orgData?.tier === 'basic') {
+      return NextResponse.json({ error: 'שדרגו לחבילה מומלצת לגישה למודול זה' }, { status: 403 })
+    }
+
     const period = getCurrentQuarterPeriod()
 
     // Check if draft already exists for this period

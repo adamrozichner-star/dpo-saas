@@ -132,6 +132,11 @@ export async function POST(request: NextRequest) {
     if ('error' in auth && auth.error) return auth.error
     const { orgId } = auth as { orgId: string }
 
+    const { data: orgData } = await supabaseAdmin.from('organizations').select('tier').eq('id', orgId).single()
+    if (orgData?.tier === 'basic') {
+      return NextResponse.json({ error: 'שדרגו לחבילה מומלצת לגישה למודול זה' }, { status: 403 })
+    }
+
     const [{ data: docs }, { data: incidents }, { data: profileData }] = await Promise.all([
       supabaseAdmin.from('documents').select('*').eq('org_id', orgId),
       supabaseAdmin.from('security_incidents').select('*').eq('org_id', orgId),
