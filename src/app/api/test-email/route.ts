@@ -3,6 +3,7 @@
 // Usage: GET /api/test-email?to=adam@example.com&template=welcome
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
+import { welcomeEmail } from '@/lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,28 +46,14 @@ export async function GET(request: NextRequest) {
   const fromEmail = process.env.FROM_EMAIL || 'Deepo <noreply@deepo.co.il>'
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://deepo.co.il'
 
+  // Allow ?orgName=... override; default to a realistic Hebrew org for the welcome template.
+  const orgNameParam = searchParams.get('orgName') || 'דיפו'
+  const welcomeTpl = welcomeEmail({ orgName: orgNameParam })
+
   const templates: Record<string, { subject: string; html: string }> = {
     welcome: {
-      subject: '🧪 [TEST] ברוכים הבאים ל-Deepo!',
-      html: `<!DOCTYPE html><html dir="rtl" lang="he"><head><meta charset="UTF-8"></head>
-<body style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
-<div style="background: linear-gradient(135deg, #0f172a, #1e40af); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
-  <h1 style="color: white; margin: 0;">🛡️ Deepo — TEST EMAIL</h1>
-</div>
-<div style="background: white; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
-  <h2 style="color: #1e40af;">שלום! 👋</h2>
-  <p>זוהי <strong>הודעת בדיקה</strong> לוידוא שמערכת האימיילים פעילה.</p>
-  <p>Template: <code>${template}</code></p>
-  <p>From: <code>${fromEmail}</code></p>
-  <p>Sent at: <code>${new Date().toISOString()}</code></p>
-  <div style="text-align: center; margin: 24px 0;">
-    <a href="${appUrl}/dashboard" style="background: #059669; color: white; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">כניסה ללוח הבקרה ←</a>
-  </div>
-</div>
-<div style="background: #1e293b; color: #94a3b8; padding: 16px; border-radius: 0 0 12px 12px; text-align: center; font-size: 12px;">
-  <p style="margin: 0;">Test email from Deepo email system</p>
-</div>
-</body></html>`
+      subject: welcomeTpl.subject,
+      html: welcomeTpl.html,
     },
 
     gap_analysis: {

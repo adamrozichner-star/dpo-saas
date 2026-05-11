@@ -14,38 +14,72 @@ interface EmailTemplate {
 
 // Welcome email after registration — pre-payment, no DPO appointment
 export function welcomeEmail(data: {
-  userName: string
-  orgName: string
-  dpoName: string
+  orgName?: string
+  // Legacy fields kept for back-compat with older callers; ignored.
+  userName?: string
+  dpoName?: string
 }): EmailTemplate {
+  const rawOrgName = (data.orgName || '').trim()
+  const isPlaceholder = !rawOrgName || rawOrgName === 'עסק חדש'
+  const greeting = isPlaceholder ? 'שלום וברוכים הבאים' : `שלום ${rawOrgName}`
+  const introHtml = isPlaceholder
+    ? ''
+    : `<p style="margin:0 0 16px 0; text-align:right; color:#1f2937;">ברוכים הבאים ל-Deepo.</p>`
+  const introText = isPlaceholder ? '' : 'ברוכים הבאים ל-Deepo.\n\n'
+
   return {
-    subject: `ברוכים הבאים ל-Deepo! 🛡️`,
-    html: `
-<!DOCTYPE html>
+    subject: `ברוכים הבאים ל-Deepo`,
+    html: `<!DOCTYPE html>
 <html dir="rtl" lang="he">
-<head><meta charset="UTF-8"></head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1e40af 100%); padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-    <h1 style="color: white; margin: 0; font-size: 28px;">🛡️ Deepo</h1>
-  </div>
-  <div style="background: #f8fafc; padding: 30px; border: 1px solid #e2e8f0; border-top: none;">
-    <h2 style="color: #1e40af; margin-top: 0;">שלום ${data.userName}! 👋</h2>
-    <p>ברוכים הבאים ל-Deepo. הארגון <strong>${data.orgName}</strong> נרשם בהצלחה.</p>
-    <p>המערכת ניתחה את פעילות הארגון ומוכנה עם מפת ציות מלאה — כולל ציון ציות, רשימת פעולות נדרשות, ומסמכים מותאמים.</p>
-    <div style="background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 18px; margin: 20px 0;">
-      <p style="margin: 0; color: #92400e; font-weight: bold;">⚡ הצעד הבא:</p>
-      <p style="margin: 6px 0 0 0; color: #78350f;">היכנסו ללוח הבקרה לצפייה בציון הציות ובפעולות הנדרשות.</p>
-    </div>
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${APP_URL}/dashboard" style="background: #059669; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold;">כניסה ללוח הבקרה ←</a>
-    </div>
-  </div>
-  <div style="background: #1e293b; color: #94a3b8; padding: 20px; border-radius: 0 0 12px 12px; text-align: center; font-size: 12px;">
-    <p style="margin: 0;">Deepo © ${new Date().getFullYear()}</p>
-  </div>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ברוכים הבאים ל-Deepo</title>
+</head>
+<body dir="rtl" style="margin:0; padding:0; background-color:#F4F6FA; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color:#1f2937;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="background-color:#F4F6FA;">
+    <tr>
+      <td align="center" style="padding:24px 12px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="max-width:600px; width:100%; background:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 1px 3px rgba(15,27,61,0.08);">
+          <tr>
+            <td align="center" style="background-color:#0F1B3D; padding:28px 24px;">
+              <div style="color:#ffffff; font-size:26px; font-weight:700; letter-spacing:0.5px; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;">Deepo</div>
+            </td>
+          </tr>
+          <tr>
+            <td dir="rtl" style="padding:36px 32px; text-align:right; color:#1f2937; font-size:16px; line-height:1.7;">
+              <h1 style="margin:0 0 20px 0; font-size:22px; font-weight:700; color:#0F1B3D; text-align:right;">${greeting},</h1>
+              ${introHtml}
+              <p style="margin:0 0 28px 0; text-align:right; color:#374151;">המערכת ניתחה את פעילות הארגון והכינה עבורכם מפת ציות מלאה — כולל ציון ציות, רשימת פעולות נדרשות ומסמכים מותאמים.</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl" style="background-color:#F5F7FA; border:1px solid #E5E9F0; border-radius:6px; margin:0 0 28px 0;">
+                <tr>
+                  <td dir="rtl" style="padding:18px 20px; text-align:right;">
+                    <div style="font-weight:700; color:#0F1B3D; margin:0 0 6px 0; font-size:15px;">הצעד הבא</div>
+                    <div style="color:#374151; font-size:15px; line-height:1.6;">היכנסו ללוח הבקרה לצפייה בציון הציות ובפעולות הנדרשות.</div>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" dir="rtl">
+                <tr>
+                  <td align="center" style="padding:0;">
+                    <a href="${APP_URL}/dashboard" style="display:block; width:100%; box-sizing:border-box; background-color:#0E9F6E; color:#ffffff; text-decoration:none; padding:16px 24px; border-radius:6px; font-weight:700; font-size:16px; text-align:center; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;">כניסה ללוח הבקרה ←</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td dir="rtl" align="center" style="background-color:#F5F7FA; padding:20px 24px; text-align:center; color:#6B7280; font-size:12px; line-height:1.6; border-top:1px solid #E5E9F0;">
+              Deepo — שירות ממונה הגנת פרטיות מבוסס בינה מלאכותית | <a href="${APP_URL}" style="color:#6B7280; text-decoration:underline;">deepo.co.il</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`,
-    text: `שלום ${data.userName}!\n\nברוכים הבאים ל-Deepo!\nהארגון ${data.orgName} נרשם בהצלחה.\nהמערכת מוכנה עם מפת ציות מלאה.\n\nכניסה: ${APP_URL}/dashboard`
+    text: `${greeting},\n\n${introText}המערכת ניתחה את פעילות הארגון והכינה עבורכם מפת ציות מלאה — כולל ציון ציות, רשימת פעולות נדרשות ומסמכים מותאמים.\n\nהצעד הבא:\nהיכנסו ללוח הבקרה לצפייה בציון הציות ובפעולות הנדרשות.\n\nכניסה ללוח הבקרה: ${APP_URL}/dashboard\n\n—\nDeepo — שירות ממונה הגנת פרטיות מבוסס בינה מלאכותית\ndeepo.co.il`
   }
 }
 
