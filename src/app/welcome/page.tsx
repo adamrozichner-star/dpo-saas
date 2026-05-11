@@ -33,6 +33,7 @@ export default function WelcomePage() {
       router.push('/login')
       return
     }
+    if (!supabase) return
 
     const load = async () => {
       try {
