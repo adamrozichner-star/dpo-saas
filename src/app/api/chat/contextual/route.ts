@@ -108,7 +108,7 @@ ${extraContext ? `\nמידע נוסף: ${extraContext}` : ''}`
 
     // Stream response (Haiku for speed)
     const stream = await anthropic.messages.stream({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-haiku-4-5',
       max_tokens: 500,
       system: systemPrompt,
       messages: [{ role: 'user', content: piiResult.masked }]

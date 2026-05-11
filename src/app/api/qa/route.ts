@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
         const anthropic = new Anthropic({ apiKey: anthropicKey })
 
         const message = await anthropic.messages.create({
-          model: 'claude-3-haiku-20240307',
+          model: 'claude-haiku-4-5',
           max_tokens: 1000,
           system: `אתה עוזר מומחה בהגנת פרטיות בישראל. אתה עונה על שאלות של עובדים בארגון בנושאי פרטיות, GDPR, וחוק הגנת הפרטיות הישראלי.
 

@@ -49,7 +49,7 @@ export interface AssembledContext {
 const SUMMARY_THRESHOLD = 10 // Summarize every 10 messages
 const MAX_RECENT_MESSAGES = 8 // Keep last 8 raw messages
 const MAX_MEMORY_FACTS = 15 // Top 15 org facts in context
-const SUMMARY_MODEL = 'claude-3-haiku-20240307' // Cheap model for summaries
+const SUMMARY_MODEL = 'claude-haiku-4-5' // Cheap model for summaries
 const SUMMARY_MAX_TOKENS = 500
 
 // =============================================
