@@ -134,9 +134,15 @@ export default function DpiaWizard({ supabase, v3Answers, prefillActivityId, onC
 
   const handleSave = async () => {
     if (!supabase) return
+    const name = activityId === 'custom'
+      ? customName.trim()
+      : (activityName || DB_LABELS_DPIA[activityId] || activityId)
+    if (!name || !name.trim()) {
+      alert('שגיאה: נא לבחור פעילות עיבוד לפני שמירה')
+      return
+    }
     setSaving(true)
     try {
-      const name = activityId === 'custom' ? customName : activityName
       const { data: { session } } = await supabase.auth.getSession()
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
       if (session?.access_token) headers['Authorization'] = `Bearer ${session.access_token}`

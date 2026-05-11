@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { activity_name, activity_id, description, legal_basis, data_categories, risks, controls, residual_score, action_plan, status } = body
 
-    if (!activity_name) {
-      return NextResponse.json({ error: 'Missing activity_name' }, { status: 400 })
+    if (!activity_name || typeof activity_name !== 'string' || !activity_name.trim()) {
+      return NextResponse.json({ error: 'נא לבחור פעילות עיבוד לפני שמירה' }, { status: 400 })
     }
 
     const risk_level = residual_score ? getRiskLevel(residual_score) : 'medium'
