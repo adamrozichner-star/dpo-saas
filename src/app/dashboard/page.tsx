@@ -289,7 +289,7 @@ function DashboardContent() {
         // Load persisted action overrides (user-completed actions)
         const overrides = profileData?.actionOverrides || {}
         setActionOverrides(overrides)
-        const summary = deriveComplianceActions(v3, docs || [], incidentData || [], overrides)
+        const summary = deriveComplianceActions(v3, docs || [], incidentData || [], overrides, org?.tier)
         setComplianceSummary(summary)
         // Use engine score if we have v3 data, otherwise fallback to doc-based score
         if (Object.keys(v3).length > 0) {
@@ -368,7 +368,7 @@ function DashboardContent() {
     if (Object.keys(v3).length === 0) {
       try { v3 = JSON.parse(localStorage.getItem('dpo_v3_answers') || '{}') } catch {}
     }
-    const newSummary = deriveComplianceActions(v3, documents, incidents, newOverrides)
+    const newSummary = deriveComplianceActions(v3, documents, incidents, newOverrides, organization?.tier)
     setComplianceSummary(newSummary)
     setComplianceScore(newSummary.score)
 
@@ -420,7 +420,7 @@ function DashboardContent() {
     if (Object.keys(v3).length === 0) {
       try { v3 = JSON.parse(localStorage.getItem('dpo_v3_answers') || '{}') } catch {}
     }
-    const newSummary = deriveComplianceActions(v3, documents, incidents, newOverrides)
+    const newSummary = deriveComplianceActions(v3, documents, incidents, newOverrides, organization?.tier)
     setComplianceSummary(newSummary)
     setComplianceScore(newSummary.score)
 
@@ -952,6 +952,7 @@ function OverviewTab({
 }) {
   const [confirmingAction, setConfirmingAction] = useState<string | null>(null)
   const actions = complianceSummary?.actions || []
+  const isBasicTier = organization?.tier === 'basic'
 
   // Group actions by category
   const doneActions = actions.filter(a => a.category === 'done')
@@ -1059,7 +1060,7 @@ function OverviewTab({
               )}
             </div>
           </div>
-        ) : isPaid ? (
+        ) : isPaid && !isBasicTier ? (
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200 cursor-pointer hover:border-indigo-200 transition-colors" onClick={() => onNavigate('messages')}>
             <div className="flex items-center justify-between mb-4">
               <p className="text-sm font-medium text-stone-500">הממונה שלכם</p>
@@ -1077,24 +1078,45 @@ function OverviewTab({
                 <p className="font-semibold text-stone-800">{DPO_CONFIG.name}</p>
                 <p className="text-sm text-stone-500">ממונה הגנת פרטיות</p>
               </div>
-              {isPaid ? (
-                <Link href="/chat">
-                  <button className="px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium">
-                    שלח הודעה
-                  </button>
-                </Link>
-              ) : (
-                <Link href="/subscribe">
-                  <button className="px-3 py-2 text-sm text-stone-400 bg-stone-100 rounded-lg font-medium flex items-center gap-1">
-                    <Lock className="h-3 w-3" />
-                    שלח הודעה
-                  </button>
-                </Link>
-              )}
+              <Link href="/chat">
+                <button className="px-3 py-2 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium">
+                  שלח הודעה
+                </button>
+              </Link>
             </div>
           </div>
+        ) : isPaid && isBasicTier ? (
+          /* Basic tier: self-managed DPO card with soft upsell */
+          <div className="bg-gradient-to-l from-indigo-50 to-white rounded-2xl p-6 shadow-sm border border-indigo-200">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-indigo-600">🛡️ ניהול עצמי — אתם הממונה</p>
+            </div>
+            <p className="text-sm text-stone-600 mb-4 leading-relaxed">
+              בחבילת ניהול עצמי, {organization?.name || 'הארגון'} משמש כממונה הגנת הפרטיות שלו.
+              Deepo מספקת את התבניות, רשימת המשימות והליווי.
+            </p>
+            <Link href="/subscribe">
+              <button className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1">
+                שדרגו למומלצת לקבלת ממונה מוסמכת ←
+              </button>
+            </Link>
+          </div>
+        ) : isBasicTier ? (
+          /* Unpaid + basic-recommended: self-managed teaser, no DPO bait */
+          <div className="bg-gradient-to-l from-indigo-50 to-white rounded-2xl p-6 shadow-sm border border-indigo-200">
+            <p className="text-sm font-medium text-indigo-500 mb-3">🛡️ ניהול עצמי + ליווי Deepo</p>
+            <p className="text-sm text-stone-600 mb-4 leading-relaxed">
+              בחבילה הבסיסית, {organization?.name || 'הארגון'} משמש כממונה הגנת הפרטיות.
+              Deepo מספקת תבניות, רשימת משימות וכלי דיווח. שדרוג למומלצת מוסיף ממונה מוסמכת.
+            </p>
+            <Link href="/subscribe">
+              <button className="w-full px-4 py-2.5 bg-indigo-500 text-white rounded-lg text-sm font-bold hover:bg-indigo-600 transition-colors">
+                בחירת חבילה ←
+              </button>
+            </Link>
+          </div>
         ) : (
-          /* Unpaid: DPO availability teaser */
+          /* Unpaid + recommended/premium recommendation: DPO teaser */
           <div className="bg-gradient-to-l from-indigo-50 to-white rounded-2xl p-6 shadow-sm border border-indigo-200">
             <p className="text-sm font-medium text-indigo-500 mb-3">🛡️ ממונה מוסמך/ת מוכן/ה עבורכם</p>
             <div className="flex items-center gap-4 mb-4">
@@ -1151,8 +1173,8 @@ function OverviewTab({
         />
       )}
 
-      {/* DPO Card — only for paid users (DPO is appointed) */}
-      {isPaid && (
+      {/* DPO Card — only for paid recommended/premium users (basic = self-managed) */}
+      {isPaid && !isBasicTier && (
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-stone-200 cursor-pointer hover:border-indigo-200 transition-colors" onClick={() => onNavigate('messages')}>
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
@@ -2464,28 +2486,49 @@ function SettingsTab({ organization, user, orgProfile, supabase }: { organizatio
         )
       })()}
 
-      {/* DPO Info */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
-        <h2 className="font-semibold text-stone-800 mb-4">🛡️ ממונה הגנת הפרטיות</h2>
-        <div className="grid sm:grid-cols-2 gap-6">
-          <div>
-            <label className="text-sm text-stone-500">שם הממונה</label>
-            <p className="font-medium text-stone-800 mt-1">{DPO_CONFIG.name}</p>
+      {/* DPO Info — tier-aware */}
+      {organization?.tier === 'basic' ? (
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
+          <h2 className="font-semibold text-stone-800 mb-4">🛡️ ממונה הגנת הפרטיות</h2>
+          <div className="grid sm:grid-cols-2 gap-6">
+            <div>
+              <label className="text-sm text-stone-500">סוג מינוי</label>
+              <p className="font-medium text-stone-800 mt-1">ניהול עצמי</p>
+            </div>
+            <div>
+              <label className="text-sm text-stone-500">הממונה</label>
+              <p className="font-medium text-stone-800 mt-1">
+                {orgProfile?.internalDpo?.name || organization?.name || '-'}
+              </p>
+            </div>
           </div>
-          <div>
-            <label className="text-sm text-stone-500">מספר רישיון</label>
-            <p className="font-medium text-stone-800 mt-1">{DPO_CONFIG.licenseNumber}</p>
-          </div>
-          <div>
-            <label className="text-sm text-stone-500">דוא״ל ממונה</label>
-            <p className="font-medium text-stone-800 mt-1">{DPO_CONFIG.email}</p>
-          </div>
-          <div>
-            <label className="text-sm text-stone-500">חברה</label>
-            <p className="font-medium text-stone-800 mt-1">{DPO_CONFIG.company.name}</p>
+          <Link href="/subscribe" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 inline-flex items-center gap-1 mt-4">
+            שדרגו למומלצת למינוי ממונה מוסמכת ←
+          </Link>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200">
+          <h2 className="font-semibold text-stone-800 mb-4">🛡️ ממונה הגנת הפרטיות</h2>
+          <div className="grid sm:grid-cols-2 gap-6">
+            <div>
+              <label className="text-sm text-stone-500">שם הממונה</label>
+              <p className="font-medium text-stone-800 mt-1">{DPO_CONFIG.name}</p>
+            </div>
+            <div>
+              <label className="text-sm text-stone-500">מספר רישיון</label>
+              <p className="font-medium text-stone-800 mt-1">{DPO_CONFIG.licenseNumber}</p>
+            </div>
+            <div>
+              <label className="text-sm text-stone-500">דוא״ל ממונה</label>
+              <p className="font-medium text-stone-800 mt-1">{DPO_CONFIG.email}</p>
+            </div>
+            <div>
+              <label className="text-sm text-stone-500">חברה</label>
+              <p className="font-medium text-stone-800 mt-1">{DPO_CONFIG.company.name}</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Rights Workflow Section */}
       <RightsWorkflowSection organization={organization} orgProfile={orgProfile} supabase={supabase} />

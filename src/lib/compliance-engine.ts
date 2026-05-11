@@ -220,8 +220,13 @@ export function deriveComplianceActions(
   v3Answers: any,
   documents: any[],
   incidents: any[],
-  actionOverrides?: Record<string, ActionOverride>
+  actionOverrides?: Record<string, ActionOverride>,
+  tier?: string | null
 ): ComplianceSummary {
+  // Basic tier = self-managed: the org names itself as DPO (no Dana Cohen).
+  // Recommended/Premium = Deepo-appointed DPO. Affects only DPO-facing
+  // task copy; the underlying obligations are identical.
+  const isBasicTier = !tier || tier === 'basic'
   const tasks: ComplianceTask[] = []
   const docTypes = documents.map(d => d.type)
   const activeDocs = documents.filter(d => d.status === 'active')
@@ -298,16 +303,19 @@ export function deriveComplianceActions(
   let sortOrder = 0
 
   // ── 1. DPO Appointment (auto-resolved) ──
+  const internalDpoName = v3Answers?.dpoName || v3Answers?.bizName || 'הארגון'
   tasks.push({
     id: 'dpo-appointed',
     title: 'מינוי ממונה הגנת פרטיות',
-    description: 'עו״ד דנה כהן מונתה כממונה הגנת הפרטיות שלכם באמצעות Deepo.',
+    description: isBasicTier
+      ? `בחבילת ניהול עצמי, ${internalDpoName} משמש כממונה הגנת הפרטיות של הארגון.`
+      : 'עו״ד דנה כהן מונתה כממונה הגנת הפרטיות שלכם באמצעות Deepo.',
     legalBasis: 'תיקון 13, סעיף 17ב',
     icon: '🛡️',
     priority: 'critical',
     status: 'auto_resolved',
     actionType: 'auto_resolved',
-    resolvedNote: 'בוצע אוטומטית — עו״ד דנה כהן',
+    resolvedNote: isBasicTier ? 'ניהול עצמי' : 'בוצע אוטומטית — עו״ד דנה כהן',
     sortOrder: sortOrder++,
   })
 

@@ -31,10 +31,17 @@ export async function POST(request: NextRequest) {
     const companyId = v3Answers.companyId || ''
     const autoTier = tier || 'basic'
 
-    // Derive initial DPO conflict-of-interest state from the onboarding answer.
-    // No answer → 'not_assessed' (legacy nudge will surface on dashboard).
-    const dpoRoleInOrg: DpoRoleInOrg | null = v3Answers.dpoRoleInOrg || null
-    const dpoConflictStatus = deriveOnboardingConflictStatus(dpoRoleInOrg)
+    // Internal DPO designation captured during onboarding (Part B):
+    //   hasDpo='yes'  → org has an internal DPO; capture role + derive conflict status
+    //   hasDpo='no'/'not_sure' → no internal DPO; conflict status stays 'not_assessed'
+    const hasInternalDpo = v3Answers.hasDpo === 'yes'
+    const dpoRoleInOrg: DpoRoleInOrg | null = hasInternalDpo ? (v3Answers.dpoRoleInOrg || null) : null
+    const dpoConflictStatus = hasInternalDpo
+      ? deriveOnboardingConflictStatus(dpoRoleInOrg)
+      : 'not_assessed'
+    const internalDpo = hasInternalDpo
+      ? { name: v3Answers.dpoName || null, roleInOrg: dpoRoleInOrg }
+      : null
 
     console.log('[CompleteOnboarding] Starting:', { 
       userId, userEmail, businessName, companyId, autoTier,
@@ -71,11 +78,11 @@ export async function POST(request: NextRequest) {
 
       if (existingProfile) {
         await supabase.from('organization_profiles')
-          .update({ profile_data: { answers: legacyAnswers || [], v3Answers, completedAt: new Date().toISOString() } })
+          .update({ profile_data: { answers: legacyAnswers || [], v3Answers, internalDpo, completedAt: new Date().toISOString() } })
           .eq('org_id', existingUser.org_id)
       } else {
         await supabase.from('organization_profiles')
-          .insert({ org_id: existingUser.org_id, profile_data: { answers: legacyAnswers || [], v3Answers, completedAt: new Date().toISOString() } })
+          .insert({ org_id: existingUser.org_id, profile_data: { answers: legacyAnswers || [], v3Answers, internalDpo, completedAt: new Date().toISOString() } })
       }
 
       console.log('[CompleteOnboarding] Updated existing org:', existingUser.org_id, 'name:', businessName)
@@ -134,6 +141,7 @@ export async function POST(request: NextRequest) {
         profile_data: {
           answers: legacyAnswers || [],
           v3Answers: v3Answers,
+          internalDpo,
           completedAt: new Date().toISOString()
         }
       })

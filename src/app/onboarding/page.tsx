@@ -3,12 +3,9 @@
 import { useState, useEffect, Suspense, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { Card, CardContent } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
-import { 
-  Shield, ArrowRight, CheckCircle2, Database,
-  Lock, FileCheck, Loader2, AlertCircle, User, Sparkles,
-  Mail, MessageCircle, Send, ChevronDown, ChevronUp
+import {
+  ArrowRight, CheckCircle2, Loader2,
+  MessageCircle, Send, ChevronDown, ChevronUp
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { OnboardingAnswer } from '@/types'
@@ -123,6 +120,9 @@ interface V3Answers {
   customProcessors?: string[]
   hasConsent?: string
   rightsWorkflow?: string
+  hasDpo?: 'yes' | 'no' | 'not_sure'
+  dpoName?: string
+  dpoRoleInOrg?: string
   dbDetails?: Record<string, { fields?: string[]; size?: string; retention?: string; access?: string }>
   [key: string]: any
 }
@@ -339,6 +339,18 @@ const QUESTION_TIPS: Record<string, { tip: string; why: string }> = {
   rightsWorkflow: {
     tip: 'תהליך טיפול בבקשות זכויות = נוהל מסודר שאומר מי עונה, איך בודקים זהות, ותוך כמה זמן.',
     why: 'סעיפים 13-14 לחוק מחייבים לענות לבקשות עיון, תיקון ומחיקה תוך פרקי זמן קבועים.'
+  },
+  hasDpo: {
+    tip: 'ממונה הגנת פרטיות (DPO) = אדם בארגון שאחראי על קיום חוק הגנת הפרטיות ועל הקשר מול הרשות. אם אין לכם — אנחנו נציע לכם פתרון.',
+    why: 'תיקון 13 (סעיף 17ב) מחייב מינוי ממונה לארגונים מסוימים, ועצמאיים יכולים למלא את התפקיד בעצמם.'
+  },
+  dpoName: {
+    tip: 'הכניסו את השם המלא של האדם שמשמש כיום כממונה הגנת פרטיות בארגון.',
+    why: 'השם יופיע בכתב המינוי, במסמכי הציות ובדיווחים לרשות.'
+  },
+  dpoRoleInOrg: {
+    tip: 'אם הממונה ממלא במקביל תפקיד שעלול ליצור ניגוד עניינים (מנכ"ל, CISO, יועמ"ש, HR וכד׳) — נסמן זאת ונציע פתרון לאחר ההרשמה.',
+    why: 'תיקון 13 מחייב שהממונה יוכל לפעול ללא ניגוד עניינים מול תפקידים אחרים בארגון.'
   }
 }
 
@@ -1015,7 +1027,7 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
         className="w-full mt-4 mb-20 py-3.5 rounded-xl border-none text-white text-base font-bold cursor-pointer"
         style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
       >
-        {isReview ? 'בחירת חבילה ותשלום' : 'הכירו את הממונה שלכם'}
+        {isReview ? 'בחירת חבילה ותשלום' : 'המשך לבחירת חבילה ⬅'}
       </button>
     </div>
   )
@@ -1035,7 +1047,6 @@ function OnboardingContent() {
   const [tempName, setTempName] = useState('')
   const [showReport, setShowReport] = useState(false)
 
-  const [showDpoIntro, setShowDpoIntro] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState('')
@@ -1051,10 +1062,21 @@ function OnboardingContent() {
   const selectedDBs = v3Answers.databases || []
   const needsCam = selectedDBs.includes('cameras')
 
+  const hasDpoYes = (v3Answers.hasDpo === 'yes')
+
   const CARDS: CardDef[] = [
     { id: 'bizName', icon: '🏢', q: 'מה שם העסק?', type: 'text', placeholder: 'שם מלא של העסק' },
     { id: 'companyId', icon: '🔢', q: 'מה מספר ח.פ / ע.מ?', type: 'text', placeholder: 'לדוגמה: 515000000' },
     { id: 'industry', icon: '🎯', q: 'מה התחום?', type: 'pick_other' },
+    { id: 'hasDpo', icon: '🛡️', q: 'האם יש לכם כיום ממונה הגנת פרטיות בארגון?', type: 'pick',
+      hint: 'ממונה הגנת פרטיות (DPO) = מי שאחראי על קיום החוק והתנהלות מול הרשות',
+      lawRef: 'תיקון 13, סעיף 17ב' },
+    ...(hasDpoYes ? [
+      { id: 'dpoName', icon: '👤', q: 'מי משמש כממונה בארגון?', type: 'text', placeholder: 'שם מלא של הממונה' } as CardDef,
+      { id: 'dpoRoleInOrg', icon: '🧭', q: 'באיזה תפקיד נוסף משמש הממונה בארגון?', type: 'pick',
+        hint: 'תפקידים מסוימים עלולים ליצור ניגוד עניינים מול תפקיד הממונה. נציע פתרון אם נדרש.',
+        lawRef: 'תיקון 13 — חובת אי-תלות הממונה' } as CardDef,
+    ] : []),
     { id: 'databases', icon: '📊', q: 'אילו מאגרי מידע אישי קיימים בעסק?', type: 'multi_other',
       hint: 'מייל + CRM + תיקיות = מאגר אחד. ספק עצמאי עם ת.ז = מידע פרטי!' },
     { id: 'totalSize', icon: '📏', q: 'כמה רשומות של אנשים יש לכם בכל המאגרים?', type: 'pick',
@@ -1252,14 +1274,14 @@ function OnboardingContent() {
   }, [supabase, user, v3Answers, step, router])
 
   useEffect(() => {
-    if (step >= mainLen && !showReport && !showDpoIntro && !isGenerating) {
+    if (step >= mainLen && !showReport && !isGenerating) {
       const predefinedDBs = v3Answers.databases || []
       if (predefinedDBs.length === 0 || step >= mainLen + predefinedDBs.length) {
         setShowReport(true)
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, mainLen, showReport, showDpoIntro, isGenerating])
+  }, [step, mainLen, showReport, isGenerating])
 
   const handleDBDetailDone = useCallback((dbType: string, detail: any) => {
     sessionStarted.current = true
@@ -1292,15 +1314,13 @@ function OnboardingContent() {
     return 'basic'
   }, [v3Answers])
 
-  const handleReportContinue = useCallback(() => {
+  const handleReportContinue = () => {
     if (isReviewMode) {
       router.push('/dashboard')
     } else {
-      setShowReport(false)
-      setShowDpoIntro(true)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      handleComplete()
     }
-  }, [isReviewMode, router])
+  }
 
   const handleComplete = async () => {
     if (!supabase || !user) { setError('לא מחובר למערכת'); return }
@@ -1375,20 +1395,10 @@ function OnboardingContent() {
       localStorage.setItem('dpo_recommended_tier', autoTier)
 
       setGenerationProgress(100)
-      setStatus('הכל מוכן! מעבירים אתכם...')
+      setStatus('הכל מוכן! מעבירים לבחירת חבילה...')
 
-      try {
-        await fetch('/api/email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            template: 'welcome', to: user?.email,
-            data: { name: user?.user_metadata?.name || user?.email?.split('@')[0] || 'משתמש', orgName }
-          })
-        })
-      } catch (emailErr) { console.log('Welcome email skipped:', emailErr) }
-
-      setTimeout(() => router.push('/dashboard?welcome=true'), 1500)
+      // Welcome email is dispatched server-side by /api/complete-onboarding.
+      setTimeout(() => router.push('/subscribe'), 1500)
     } catch (err: any) {
       console.error('[Onboarding] handleComplete error:', err)
       setError(err.message || 'אירעה שגיאה בתהליך ההרשמה')
@@ -1417,6 +1427,21 @@ function OnboardingContent() {
         { v: 'yes_informal', l: '📝 כן, אבל לא מתועד' },
         { v: 'no', l: '❌ לא, אין תהליך' },
         { v: 'unknown', l: '🤷 לא יודע' },
+      ]
+      case 'hasDpo': return [
+        { v: 'yes', l: '✅ כן, יש לנו ממונה' },
+        { v: 'no', l: '🔍 אין — אנחנו זקוקים לאחד' },
+        { v: 'not_sure', l: '🤷 לא בטוח / לא יודע' },
+      ]
+      case 'dpoRoleInOrg': return [
+        { v: 'none', l: 'אינו ממלא תפקיד נוסף' },
+        { v: 'ceo', l: 'מנכ"ל / מנהל כללי' },
+        { v: 'ciso', l: 'מנהל אבטחת מידע (CISO)' },
+        { v: 'legal', l: 'יועץ משפטי / משפטן' },
+        { v: 'hr', l: 'מנהל משאבי אנוש' },
+        { v: 'cfo', l: 'סמנכ"ל כספים (CFO)' },
+        { v: 'hr_director', l: 'מנהל HR' },
+        { v: 'other', l: 'תפקיד אחר' },
       ]
       default: return OWNER_OPTIONS
     }
@@ -1539,163 +1564,6 @@ function OnboardingContent() {
     )
   }
 
-  if (showDpoIntro) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white p-4" dir="rtl">
-        <div className="max-w-md mx-auto">
-          <div className="flex items-center justify-between mb-6">
-            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={100} height={31} />
-            <button onClick={() => { setShowDpoIntro(false); setShowReport(true) }}
-              className="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1">
-              <ArrowRight className="h-3 w-3" />חזרה
-            </button>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-lg text-center">
-            <div className="relative w-28 h-28 mx-auto mb-4">
-              <div className="w-28 h-28 rounded-full overflow-hidden border-3 border-amber-200 shadow-lg bg-gradient-to-br from-amber-100 to-indigo-100">
-                <img 
-                  src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&h=300&fit=crop&crop=face"
-                  alt="עו״ד דנה כהן" className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                    (e.target as HTMLImageElement).parentElement!.innerHTML = '<div class="w-full h-full flex items-center justify-center text-indigo-600 text-3xl font-bold bg-indigo-50">ד״כ</div>';
-                  }} 
-                />
-              </div>
-              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 bg-emerald-500 text-white px-3 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 shadow">
-                <CheckCircle2 className="h-3 w-3" />מוסמכת
-              </div>
-            </div>
-
-            <div className="inline-block text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full mb-2">
-              הממונה שלכם
-            </div>
-
-            <h1 className="text-2xl font-bold text-gray-800 mb-1">עו״ד דנה כהן</h1>
-            <p className="text-sm text-gray-500 mb-4">ממונה הגנת פרטיות מוסמכת | 12 שנות ניסיון</p>
-
-            <div className="flex flex-wrap gap-2 justify-center mb-5">
-              <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg text-xs text-gray-600">
-                <Mail className="h-3.5 w-3.5 text-indigo-500" />dpo@deepo.co.il
-              </div>
-              <div className="flex items-center gap-1.5 bg-gray-50 px-3 py-1.5 rounded-lg text-xs text-gray-600">
-                <FileCheck className="h-3.5 w-3.5 text-indigo-500" />רישיון DPO-2025-001
-              </div>
-            </div>
-
-            <div className="bg-amber-50/60 rounded-xl p-4 mb-5 text-right">
-              <h4 className="font-semibold text-gray-700 mb-2 flex items-center gap-2 text-sm justify-center">
-                <Sparkles className="h-4 w-4 text-amber-500" />מה הממונה תעשה עבורכם?
-              </h4>
-              <div className="grid grid-cols-1 gap-1.5 text-sm">
-                {[
-                  'פיקוח שוטף על עמידה בחוק הגנת הפרטיות',
-                  'טיפול בפניות נושאי מידע וזכויות',
-                  'ייעוץ פרטיות ואבטחת מידע',
-                  'קשר עם הרשות להגנת הפרטיות',
-                ].map(item => (
-                  <div key={item} className="flex items-center gap-2 justify-start">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
-                    <span className="text-gray-600">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
-                <AlertCircle className="h-4 w-4" />{error}
-              </div>
-            )}
-
-            {/* DPO conflict-of-interest screening */}
-            <div className="bg-indigo-50/60 rounded-xl p-4 mb-4 text-right">
-              <label className="text-xs text-gray-500 mb-2 block">באיזה תפקיד נוסף משמש הממונה בארגון?</label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { value: 'none', label: 'אינו ממלא תפקיד נוסף' },
-                  { value: 'ceo', label: 'מנכ"ל / מנהל כללי' },
-                  { value: 'ciso', label: 'מנהל אבטחת מידע (CISO)' },
-                  { value: 'legal', label: 'יועץ משפטי / משפטן' },
-                  { value: 'hr', label: 'מנהל משאבי אנוש' },
-                  { value: 'cfo', label: 'סמנכ"ל כספים (CFO)' },
-                  { value: 'hr_director', label: 'מנהל HR' },
-                  { value: 'other', label: 'תפקיד אחר' },
-                ].map(opt => {
-                  const current = sessionAnswers.current.dpoRoleInOrg || v3Answers.dpoRoleInOrg
-                  const selected = current === opt.value
-                  return (
-                    <button
-                      key={opt.value}
-                      onClick={() => {
-                        sessionStarted.current = true
-                        sessionAnswers.current.dpoRoleInOrg = opt.value
-                        set('dpoRoleInOrg', opt.value)
-                      }}
-                      className={`px-3 py-2 rounded-lg border text-xs text-right transition-all ${
-                        selected
-                          ? 'border-indigo-400 bg-white text-indigo-700 font-medium'
-                          : 'border-indigo-100 bg-white text-gray-700 hover:border-indigo-300'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  )
-                })}
-              </div>
-              <p className="text-[10px] text-gray-500 mt-3 leading-relaxed">
-                ממונה הגנת פרטיות לא יכול לשמש במקביל בתפקידים מסוימים שעלולים ליצור ניגוד עניינים. אם קיים ניגוד עניינים, נציע פתרונות לאחר ההרשמה.
-              </p>
-            </div>
-
-            {/* Business name confirmation */}
-            <div className="bg-indigo-50/60 rounded-xl p-4 mb-4 text-right">
-              <label className="text-xs text-gray-500 mb-1 block">שם העסק שירשם:</label>
-              <input
-                value={sessionAnswers.current.bizName || v3Answers.bizName || ''}
-                onChange={e => {
-                  sessionStarted.current = true
-                  sessionAnswers.current.bizName = e.target.value
-                  set('bizName', e.target.value)
-                  if (error) setError(null)
-                }}
-                className="w-full px-3 py-2 rounded-lg border border-indigo-200 text-center font-semibold text-gray-800 bg-white focus:outline-none focus:border-indigo-400"
-                placeholder="שם העסק"
-              />
-            </div>
-
-            <button
-              onClick={() => {
-                const name = (sessionAnswers.current.bizName || v3Answers.bizName || '').trim()
-                if (!name || name.length < 2) {
-                  setError('נא להזין שם עסק (לפחות 2 תווים)')
-                  return
-                }
-                handleComplete()
-              }}
-              disabled={isGenerating}
-              className="w-full py-3.5 rounded-xl border-none text-white text-base font-bold cursor-pointer disabled:opacity-60"
-              style={{ background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}
-            >
-              {isGenerating ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Loader2 className="h-5 w-5 animate-spin" />{status || 'מכינים את המערכת...'}
-                </span>
-              ) : (
-                'סיום והפקת מסמכים ⬅'
-              )}
-            </button>
-            <p className="text-center text-[11px] text-gray-400 mt-3">
-              המסמכים יופקו אוטומטית ויהיו זמינים בלוח הבקרה
-            </p>
-            <p className="text-center text-[9px] text-gray-300 mt-1">v10</p>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   if (showReport) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white p-4">
@@ -1714,6 +1582,11 @@ function OnboardingContent() {
               )}
             <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={100} height={31} />
           </div>
+          {error && (
+            <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm text-center">
+              {error}
+            </div>
+          )}
           <ClassificationReport answers={v3Answers} onContinue={handleReportContinue} isReview={isReviewMode} />
         </div>
       </div>
@@ -1748,7 +1621,7 @@ function OnboardingContent() {
                 חזרה
               </button>
             )}
-            {step >= 2 && !showReport && !showDpoIntro && !isGenerating && (
+            {step >= 2 && !showReport && !isGenerating && (
               <button onClick={completeLater} className="text-gray-400 hover:text-gray-600 text-xs min-h-[44px] min-w-[44px] flex items-center">
                 השלם מאוחר יותר
               </button>

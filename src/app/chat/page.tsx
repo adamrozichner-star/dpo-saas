@@ -1307,7 +1307,9 @@ ${summaryText}
             </div>
             
             <div className="flex-1">
-              <h1 className="font-bold text-lg">הממונה שלך</h1>
+              <h1 className="font-bold text-lg">
+                {organization?.tier === 'basic' ? 'עוזר Deepo' : 'הממונה שלך'}
+              </h1>
               <p className="text-sm text-indigo-200 flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3" />
                 {orgLoading ? 'טוען...' : (organization?.name || 'לא נמצא ארגון')}
@@ -1401,7 +1403,9 @@ ${summaryText}
                   <div className="flex items-center gap-1.5 px-4 pt-2.5 pb-0">
                     <span className="text-[11px]">{msg.intent === 'escalate' || msg.intent === 'system' ? '👤' : '🤖'}</span>
                     <span className="text-[11px] text-stone-400 font-medium">
-                      {msg.intent === 'escalate' || msg.intent === 'system' ? DPO_CONFIG.name : 'עוזר AI'}
+                      {msg.intent === 'escalate' || msg.intent === 'system'
+                        ? (organization?.tier === 'basic' ? 'הודעת מערכת' : DPO_CONFIG.name)
+                        : 'עוזר AI'}
                     </span>
                   </div>
                 )}

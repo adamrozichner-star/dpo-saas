@@ -63,9 +63,10 @@ export default function PaymentSuccessPage() {
         console.error('Check onboarding status error:', e);
       }
 
-      // Default: redirect to dashboard
+      // Default: redirect to celebratory /welcome (tier-fork: meet-the-DPO for paid plans,
+      // self-managed messaging for basic). /welcome then routes the user to /dashboard.
       setTimeout(() => {
-        router.push('/dashboard');
+        router.push('/welcome');
       }, 4000);
     };
 
@@ -130,10 +131,10 @@ export default function PaymentSuccessPage() {
               </Link>
             ) : (
               <Link
-                href="/dashboard"
+                href="/welcome"
                 className="inline-flex items-center justify-center gap-2 w-full bg-emerald-600 text-white py-3 px-6 rounded-xl font-medium hover:bg-emerald-700 transition-colors"
               >
-                <span>המשך ללוח הבקרה</span>
+                <span>המשך</span>
                 <ArrowLeft className="w-4 h-4" />
               </Link>
             )}

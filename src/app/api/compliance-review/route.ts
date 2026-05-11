@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
     // Use the same scoring logic as the dashboard
     const v3Answers = profileData?.profile_data?.v3Answers || {}
     const actionOverrides = profileData?.profile_data?.actionOverrides || {}
-    const complianceSummary = deriveComplianceActions(v3Answers, docs || [], incidents || [], actionOverrides)
+    const complianceSummary = deriveComplianceActions(v3Answers, docs || [], incidents || [], actionOverrides, orgData?.tier)
     const score = complianceSummary.score
 
     const criticalCount = findings.filter(f => f.severity === 'critical').length
