@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/Toast'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import DatabaseOptimizer from '@/components/DatabaseOptimizer'
+import PreScreenedSummaryView, { isStructuredSummary } from '@/components/PreScreenedSummaryView'
 
 // ═══════════════════════════════════════════════
 // CONFIG
@@ -103,6 +104,17 @@ function parseChat(text: string): { isChat: boolean; msgs: { role: string; text:
     return null
   }).filter(Boolean) as { role: string; text: string }[]
   return { isChat: true, msgs: msgs.slice(-4) }
+}
+
+// Truncate `text` to ~max chars at a word boundary, append "…" — keeps inbox
+// row previews readable without mid-sentence cuts like "...גורמים מעורבים: עובדים, מ".
+function snippet(text: string | null | undefined, max = 180): string {
+  if (!text) return ''
+  const oneLine = text.replace(/\s+/g, ' ').trim()
+  if (oneLine.length <= max) return oneLine
+  const sliced = oneLine.slice(0, max)
+  const lastSpace = sliced.lastIndexOf(' ')
+  return (lastSpace > max * 0.6 ? sliced.slice(0, lastSpace) : sliced) + '…'
 }
 
 const scoreNum = (n: any) => Math.round(Number(n) || 0)
@@ -568,6 +580,10 @@ export default function DPODashboard() {
                           <span className="dp-row-arrow">{isOpen ? '▲' : '▼'}</span>
                         </div>
 
+                        {!isOpen && (item.ai_summary || item.ai_draft_response) && (
+                          <div className="dp-row-preview">{snippet(item.ai_summary || item.ai_draft_response, 180)}</div>
+                        )}
+
                         {isOpen && (
                           <div className="dp-row-body">
                             {loadingCtx ? <div className="dp-spinner" style={{ margin: '24px auto' }} /> : (
@@ -581,33 +597,51 @@ export default function DPODashboard() {
                                   </div>
                                 )}
 
-                                {/* Chat messages */}
+                                {/* Chat messages — render structured prescreening summaries with the
+                                    shared component so the DPO sees full sectioned content, not a
+                                    mid-sentence slice. */}
                                 {itemContext?.messages?.length > 0 && (
                                   <div className="dp-bubbles">
                                     <span className="dp-label">💬 שיחה</span>
-                                    {itemContext.messages.slice(-4).map((m: any, i: number) => (
-                                      <div key={i} className={`dp-bubble ${m.role === 'user' ? 'u' : 'a'}`}>
-                                        <div className="dp-bubble-who">{m.role === 'user' ? '👤 לקוח' : '🤖 AI'}</div>
-                                        {(m.content || '').slice(0, 300)}
-                                      </div>
-                                    ))}
+                                    {itemContext.messages.slice(-4).map((m: any, i: number) => {
+                                      const content = m.content || ''
+                                      const isUser = m.role === 'user'
+                                      if (isStructuredSummary(content)) {
+                                        return (
+                                          <div key={i} className={`dp-bubble ${isUser ? 'u' : 'a'}`}>
+                                            <div className="dp-bubble-who">{isUser ? '👤 לקוח' : '🤖 AI'}</div>
+                                            <PreScreenedSummaryView content={content} />
+                                          </div>
+                                        )
+                                      }
+                                      return (
+                                        <div key={i} className={`dp-bubble ${isUser ? 'u' : 'a'}`}>
+                                          <div className="dp-bubble-who">{isUser ? '👤 לקוח' : '🤖 AI'}</div>
+                                          <div style={{ whiteSpace: 'pre-wrap' }}>{content}</div>
+                                        </div>
+                                      )
+                                    })}
                                   </div>
                                 )}
 
-                                {/* AI summary fallback */}
+                                {/* AI summary fallback — full content, structured renderer when applicable */}
                                 {item.ai_summary && !itemContext?.messages?.length && (() => {
+                                  if (isStructuredSummary(item.ai_summary)) {
+                                    return <PreScreenedSummaryView content={item.ai_summary} />
+                                  }
                                   const p = parseChat(item.ai_summary)
                                   if (p.isChat) return (
                                     <div className="dp-bubbles">
                                       <span className="dp-label">💬 שיחה</span>
                                       {p.msgs.map((m, i) => (
                                         <div key={i} className={`dp-bubble ${m.role === 'user' ? 'u' : 'a'}`}>
-                                          <div className="dp-bubble-who">{m.role === 'user' ? '👤' : '🤖'}</div>{m.text.slice(0, 300)}
+                                          <div className="dp-bubble-who">{m.role === 'user' ? '👤' : '🤖'}</div>
+                                          <div style={{ whiteSpace: 'pre-wrap' }}>{m.text}</div>
                                         </div>
                                       ))}
                                     </div>
                                   )
-                                  return <div className="dp-ai-box"><span className="dp-label">✦ ניתוח AI</span>{item.ai_summary.slice(0, 400)}</div>
+                                  return <div className="dp-ai-box"><span className="dp-label">✦ ניתוח AI</span><div style={{ whiteSpace: 'pre-wrap' }}>{item.ai_summary}</div></div>
                                 })()}
 
                                 {/* Doc review */}
@@ -694,16 +728,32 @@ export default function DPODashboard() {
                                   <span className="dp-chip">{cfg.emoji} {cfg.label}</span>
                                   <span className="dp-chip">🏢 {item.organizations?.name}</span>
                                 </div>
-                                {item.ai_summary && <div className="dp-ai-box"><span className="dp-label">✦ ניתוח AI</span>{item.ai_summary.slice(0, 400)}</div>}
+                                {item.ai_summary && (
+                                  isStructuredSummary(item.ai_summary)
+                                    ? <PreScreenedSummaryView content={item.ai_summary} />
+                                    : <div className="dp-ai-box"><span className="dp-label">✦ ניתוח AI</span><div style={{ whiteSpace: 'pre-wrap' }}>{item.ai_summary}</div></div>
+                                )}
                                 {itemContext?.messages?.length > 0 && (
                                   <div className="dp-bubbles">
                                     <span className="dp-label">💬 שיחה</span>
-                                    {itemContext.messages.slice(-4).map((m: any, i: number) => (
-                                      <div key={i} className={`dp-bubble ${m.role === 'user' ? 'u' : 'a'}`}>
-                                        <div className="dp-bubble-who">{m.role === 'user' ? '👤 לקוח' : '🤖 AI'}</div>
-                                        {(m.content || '').slice(0, 200)}
-                                      </div>
-                                    ))}
+                                    {itemContext.messages.slice(-4).map((m: any, i: number) => {
+                                      const content = m.content || ''
+                                      const isUser = m.role === 'user'
+                                      if (isStructuredSummary(content)) {
+                                        return (
+                                          <div key={i} className={`dp-bubble ${isUser ? 'u' : 'a'}`}>
+                                            <div className="dp-bubble-who">{isUser ? '👤 לקוח' : '🤖 AI'}</div>
+                                            <PreScreenedSummaryView content={content} />
+                                          </div>
+                                        )
+                                      }
+                                      return (
+                                        <div key={i} className={`dp-bubble ${isUser ? 'u' : 'a'}`}>
+                                          <div className="dp-bubble-who">{isUser ? '👤 לקוח' : '🤖 AI'}</div>
+                                          <div style={{ whiteSpace: 'pre-wrap' }}>{content}</div>
+                                        </div>
+                                      )
+                                    })}
                                   </div>
                                 )}
                                 {item.ai_draft_response && (
@@ -1542,6 +1592,7 @@ const CSS = `
 .dp-section-head{padding:6px 0;margin-bottom:8px}
 .dp-section-head h2{font-size:14px;font-weight:700;color:#52525b;margin:0}
 
+.dp-row-preview{padding:0 14px 12px 14px;font-size:12px;color:#71717a;line-height:1.55;border-top:1px solid #f4f4f5;padding-top:8px;margin-top:0;background:#fafafa;border-bottom-left-radius:8px;border-bottom-right-radius:8px}
 /* ── Queue Row (inbox) ── */
 .dp-row{background:#fff;border:1px solid #f0f0f0;border-radius:10px;margin-bottom:6px;overflow:hidden;transition:border-color .15s,box-shadow .15s}
 .dp-row:hover{border-color:#d4d4d8}
