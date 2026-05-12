@@ -17,7 +17,10 @@
 
 BEGIN;
 
--- 1. De-dupe: keep the oldest id per (org_id, type, title).
+-- 1. De-dupe: keep the row with the earliest created_at per
+--    (org_id, type, title); delete the rest. Self-join pattern instead of
+--    `MIN(id) … GROUP BY` because notifications.id is a UUID and uuid has
+--    no native aggregate min on it.
 DELETE FROM notifications a
 USING notifications b
 WHERE a.org_id    = b.org_id
@@ -26,6 +29,8 @@ WHERE a.org_id    = b.org_id
   AND a.created_at > b.created_at;
 
 -- Tie-break for rows that share created_at down to the millisecond.
+-- UUID comparison in Postgres is by byte order — not semantically meaningful,
+-- but deterministic, which is all we need to keep exactly one row.
 DELETE FROM notifications a
 USING notifications b
 WHERE a.org_id    = b.org_id
