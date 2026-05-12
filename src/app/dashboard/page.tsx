@@ -96,7 +96,7 @@ function DashboardContent() {
     return fetch(url, { ...options, headers })
   }
   const { isAuthorized, isChecking, isPaid: gateIsPaid } = useSubscriptionGate()
-  
+
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'documents' | 'databases' | 'incidents' | 'messages' | 'compliance' | 'settings'>('overview')
   const [organization, setOrganization] = useState<any>(null)
   const [documents, setDocuments] = useState<Document[]>([])
@@ -112,6 +112,12 @@ function DashboardContent() {
   const [orgProfile, setOrgProfile] = useState<any>(null)
   const [complianceSummary, setComplianceSummary] = useState<ComplianceSummary | null>(null)
   const [actionOverrides, setActionOverrides] = useState<Record<string, ActionOverride>>({})
+
+  // Entitlement for recommended-tier features. `org.tier` alone is unreliable
+  // because onboarding writes the recommended tier pre-payment — a non-paying
+  // user can have `org.tier='recommended'` and bypass every `tier === 'basic'`
+  // check. See memory/project_tier_field_split.md.
+  const isPaidUpper = gateIsPaid && organization?.tier !== 'basic'
 
   useEffect(() => {
     if (!loading && !session) {
@@ -744,7 +750,7 @@ function DashboardContent() {
           {activeTab === 'messages' && (
             gateIsPaid ? (
               <div className="space-y-8">
-                {organization?.tier === 'basic' ? (
+                {!isPaidUpper ? (
                   <div className="bg-white rounded-2xl p-8 shadow-sm border border-stone-200 text-center">
                     <MessageSquare className="h-12 w-12 text-stone-300 mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-stone-800 mb-2">גישה ישירה לממונה</h3>
@@ -775,7 +781,7 @@ function DashboardContent() {
                   />
                 </div>
                 <div className="border-t border-stone-200 pt-6">
-                  {organization?.tier === 'basic' ? (
+                  {!isPaidUpper ? (
                     <TierGateOverlay
                       icon={<FileText className="h-6 w-6" />}
                       title="דוחות ממונה רבעוניים"
@@ -790,7 +796,7 @@ function DashboardContent() {
           )}
           {activeTab === 'compliance' && organization?.id && (
             <div className="space-y-6">
-              {organization?.tier === 'basic' ? (
+              {!isPaidUpper ? (
                 <>
                   <TierGateOverlay
                     icon={<CheckCircle2 className="h-6 w-6" />}
@@ -2336,6 +2342,38 @@ function SettingsTab({ organization, user, orgProfile, supabase }: { organizatio
   const [editBusinessId, setEditBusinessId] = useState(organization?.business_id || '')
   const [saveMsg, setSaveMsg] = useState('')
 
+  // Effective tier = active subscription's tier. `organization.tier` is unreliable —
+  // onboarding writes the recommended tier pre-payment, so we'd show "מומלצת / פעיל"
+  // for a user who hasn't actually subscribed. See memory/project_tier_field_split.md.
+  const [activeSub, setActiveSub] = useState<{ tier: string | null } | null | undefined>(undefined)
+  useEffect(() => {
+    if (!supabase || !organization?.id) return
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase
+        .from('subscriptions')
+        .select('tier')
+        .eq('org_id', organization.id)
+        .in('status', ['active', 'past_due'])
+        .maybeSingle()
+      if (!cancelled) setActiveSub(data ?? null)
+    })()
+    return () => { cancelled = true }
+  }, [supabase, organization?.id])
+
+  const tierLabels: Record<string, string> = {
+    basic: 'בסיסית',
+    recommended: 'מומלצת',
+    premium: 'פרימיום',
+    enterprise: 'ארגונית',
+  }
+  // While loading, render the loading dash to avoid a flash of the wrong label.
+  const tierIsLoading = activeSub === undefined
+  const isActive = !!activeSub
+  const effectiveTier = activeSub?.tier || null
+  const tierLabel = tierIsLoading ? '…' : (isActive && effectiveTier ? (tierLabels[effectiveTier] || effectiveTier) : 'ללא תשלום')
+  const statusLabel = tierIsLoading ? '…' : (isActive ? 'פעיל' : 'לא פעיל')
+
   const handleSave = async () => {
     if (!supabase || !organization?.id) return
     setSaving(true)
@@ -2402,16 +2440,16 @@ function SettingsTab({ organization, user, orgProfile, supabase }: { organizatio
           <div>
             <label className="text-sm text-stone-500">חבילה</label>
             <p className="mt-1">
-              <span className="px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-700">
-                {organization?.tier === 'recommended' ? 'מומלצת' : organization?.tier === 'enterprise' ? 'ארגונית' : 'בסיסית'}
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${isActive ? 'bg-indigo-100 text-indigo-700' : 'bg-stone-100 text-stone-600'}`}>
+                {tierLabel}
               </span>
             </p>
           </div>
           <div>
             <label className="text-sm text-stone-500">סטטוס</label>
             <p className="mt-1">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${organization?.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                {organization?.status === 'active' ? 'פעיל' : 'בהקמה'}
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-600'}`}>
+                {statusLabel}
               </span>
             </p>
           </div>

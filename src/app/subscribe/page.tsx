@@ -5,9 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { 
+import {
   Shield, Check, Loader2, CreditCard, CheckCircle2,
-  Phone, Sparkles, AlertTriangle, Eye
+  Phone, Sparkles, AlertTriangle, ArrowLeft
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 
@@ -228,9 +228,12 @@ function SubscribeContent() {
         <div className="flex items-center">
           <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={100} height={31} priority />
         </div>
-        <Link href="/dashboard" className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1">
-          <Eye className="h-3 w-3" />
-          חזרה ללוח הבקרה
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-sm font-medium transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          המשך ללוח הבקרה
         </Link>
       </div>
 

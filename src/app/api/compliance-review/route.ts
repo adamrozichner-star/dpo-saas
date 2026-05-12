@@ -132,8 +132,12 @@ export async function POST(request: NextRequest) {
     if ('error' in auth && auth.error) return auth.error
     const { orgId } = auth as { orgId: string }
 
-    const { data: orgData } = await supabaseAdmin.from('organizations').select('tier').eq('id', orgId).single()
-    if (orgData?.tier === 'basic') {
+    // Entitlement = active subscription AND non-basic tier. See dpia/route.ts.
+    const [{ data: orgData }, { data: sub }] = await Promise.all([
+      supabaseAdmin.from('organizations').select('tier').eq('id', orgId).single(),
+      supabaseAdmin.from('subscriptions').select('id').eq('org_id', orgId).in('status', ['active', 'past_due']).maybeSingle(),
+    ])
+    if (!sub || orgData?.tier === 'basic') {
       return NextResponse.json({ error: 'שדרגו לחבילה מומלצת לגישה למודול זה' }, { status: 403 })
     }
 

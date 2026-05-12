@@ -236,7 +236,11 @@ export async function checkAndCreateNotificationsForOrg(orgId: string, supabase:
     }
   }
 
-  // Insert with dedupe
+  // Insert with dedupe. The SELECT is a cheap optimization; correctness comes from
+  // the UNIQUE INDEX on (org_id, type, title) — see migrations/015_notifications_dedup.sql.
+  // `upsert` with `ignoreDuplicates` makes concurrent callers (webhook + dashboard
+  // refresh + cron) safe: the duplicate insert silently no-ops instead of producing
+  // a second row, fixing the double-notification race.
   let created = 0
   for (const n of pending) {
     const { data: existing } = await supabase
@@ -250,7 +254,9 @@ export async function checkAndCreateNotificationsForOrg(orgId: string, supabase:
 
     if (existing) continue
 
-    const { error: insertErr } = await supabase.from('notifications').insert(n)
+    const { error: insertErr } = await supabase
+      .from('notifications')
+      .upsert(n, { onConflict: 'org_id,type,title', ignoreDuplicates: true })
     if (insertErr) {
       console.error('[Notif Trigger] Insert error:', insertErr.message, 'for:', n.title)
     } else {
