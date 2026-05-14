@@ -7,6 +7,7 @@ import { useToast } from '@/components/Toast'
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import DatabaseOptimizer from '@/components/DatabaseOptimizer'
 import PreScreenedSummaryView, { isStructuredSummary } from '@/components/PreScreenedSummaryView'
+import { isOnboardingDataComplete } from '@/lib/onboarding-validation'
 
 // ═══════════════════════════════════════════════
 // CONFIG
@@ -415,15 +416,35 @@ export default function DPODashboard() {
   // ═══════════════════════════════════════════════
   // RENDER: Doc Review (shared between inbox + org page)
   // ═══════════════════════════════════════════════
-  const renderDocReview = (docs: OrgDoc[]) => {
+  // Source-data gate: block approval when the org's v3Answers is incomplete.
+  // Approval is the irreversible step — view/edit/regenerate stay enabled so
+  // the DPO can still triage. Tooltip explains the gate.
+  const APPROVE_BLOCKED_MSG = 'הארגון טרם השלים את השאלון — המתינו עד שהמסמך מבוסס על מידע מלא'
+
+  const renderDocReview = (docs: OrgDoc[], srcV3Answers?: any) => {
     const pendingDocs = docs.filter(d => d.status === 'pending_review')
     if (docs.length === 0) return <div className="dp-muted">⚠️ לא נמצאו מסמכים</div>
+    const srcDataIncomplete = !isOnboardingDataComplete(srcV3Answers || {})
     return (
       <>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <span className="dp-label">📄 מסמכים ({pendingDocs.length} ממתינים)</span>
-          {pendingDocs.length > 1 && <button className="dp-btn dp-btn-g" disabled={docBusy} onClick={() => approveAllDocs(docs)}>✓ אשר הכל</button>}
+          {pendingDocs.length > 1 && (
+            <button
+              className="dp-btn dp-btn-g"
+              disabled={docBusy || srcDataIncomplete}
+              onClick={() => approveAllDocs(docs)}
+              title={srcDataIncomplete ? APPROVE_BLOCKED_MSG : undefined}
+            >
+              ✓ אשר הכל
+            </button>
+          )}
         </div>
+        {srcDataIncomplete && (
+          <div style={{ padding: '8px 10px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, marginBottom: 8, fontSize: 12, color: '#854d0e' }}>
+            ⚠️ {APPROVE_BLOCKED_MSG}. ניתן לצפות, לערוך וליצור מחדש — אישור חסום עד שיושלם השאלון.
+          </div>
+        )}
         {docs.map(doc => (
           <div key={doc.id} className="dp-doc">
             <div className="dp-doc-row">
@@ -436,7 +457,14 @@ export default function DPODashboard() {
               </div>
               {doc.status !== 'active' && (
                 <div style={{ display: 'flex', gap: 4 }}>
-                  <button className="dp-btn dp-btn-g" disabled={docBusy} onClick={() => approveDoc(doc.id)}>✓ אשר</button>
+                  <button
+                    className="dp-btn dp-btn-g"
+                    disabled={docBusy || srcDataIncomplete}
+                    onClick={() => approveDoc(doc.id)}
+                    title={srcDataIncomplete ? APPROVE_BLOCKED_MSG : undefined}
+                  >
+                    ✓ אשר
+                  </button>
                   <button className="dp-btn" onClick={() => { setEditingDoc(doc.id); setEditContent(doc.content || ''); setExpandedDoc(doc.id) }}>✏️ ערוך</button>
                   <button className="dp-btn" onClick={() => { setRegenId(regenId === doc.id ? null : doc.id); setRegenFeedback('') }}>🔄</button>
                 </div>
@@ -645,7 +673,7 @@ export default function DPODashboard() {
                                 })()}
 
                                 {/* Doc review */}
-                                {item.type === 'review' && renderDocReview(itemContext?.documents || [])}
+                                {item.type === 'review' && renderDocReview(itemContext?.documents || [], itemContext?.profile?.v3Answers)}
 
                                 {/* Response editor for non-review */}
                                 {item.type !== 'review' && (
@@ -1074,22 +1102,36 @@ export default function DPODashboard() {
                   )}
 
                   {/* DOCS - Full version management */}
-                  {orgTab === 'docs' && (
+                  {orgTab === 'docs' && (() => {
+                    const orgDataIncomplete = !isOnboardingDataComplete(selectedOrg.profile?.v3Answers || {})
+                    return (
                     <div>
+                      {orgDataIncomplete && (
+                        <div style={{ padding: '10px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, marginBottom: 14, fontSize: 13, color: '#854d0e' }}>
+                          ⚠️ {APPROVE_BLOCKED_MSG}. ניתן לצפות, לערוך וליצור מחדש — אישור חסום עד שיושלם השאלון.
+                        </div>
+                      )}
                       {selectedOrg.documents?.filter((d: any) => d.status !== 'active').length > 0 && (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: '#fffbeb', border: '1px solid #fef08a', borderRadius: 10, marginBottom: 14 }}>
                           <span style={{ fontSize: 13, color: '#854d0e', fontWeight: 600 }}>
                             ⏳ {selectedOrg.documents.filter((d: any) => d.status !== 'active').length} מסמכים ממתינים לאישור
                           </span>
-                          <button className="dp-btn dp-btn-g" disabled={modalDocBusy} onClick={async () => {
-                            setModalDocBusy(true)
-                            for (const d of selectedOrg.documents.filter((doc: any) => doc.status !== 'active')) {
-                              await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'approve_document', documentId: d.id }) })
-                            }
-                            toast('✅ כל המסמכים אושרו')
-                            loadOrgDetail(selectedOrg.organization.id)
-                            setModalDocBusy(false)
-                          }}>{modalDocBusy ? '...' : '✓ אשר הכל'}</button>
+                          <button
+                            className="dp-btn dp-btn-g"
+                            disabled={modalDocBusy || orgDataIncomplete}
+                            title={orgDataIncomplete ? APPROVE_BLOCKED_MSG : undefined}
+                            onClick={async () => {
+                              setModalDocBusy(true)
+                              for (const d of selectedOrg.documents.filter((doc: any) => doc.status !== 'active')) {
+                                await dpoFetch('/api/dpo', { method: 'POST', body: JSON.stringify({ action: 'approve_document', documentId: d.id }) })
+                              }
+                              toast('✅ כל המסמכים אושרו')
+                              loadOrgDetail(selectedOrg.organization.id)
+                              setModalDocBusy(false)
+                            }}
+                          >
+                            {modalDocBusy ? '...' : '✓ אשר הכל'}
+                          </button>
                         </div>
                       )}
                       {!selectedOrg.documents?.length ? (
@@ -1134,8 +1176,22 @@ export default function DPODashboard() {
                                   <div style={{ display: 'flex', gap: 4 }}>
                                     {latest.status !== 'active' && (
                                       <>
-                                        <button className="dp-btn dp-btn-g" disabled={modalDocBusy} onClick={() => modalFinalizeDoc(latest.id, (latest.version || 0) + 1)}>🔒 סמן סופי</button>
-                                        <button className="dp-btn dp-btn-g" disabled={modalDocBusy} onClick={() => modalApproveDoc(latest.id)}>✓ אשר</button>
+                                        <button
+                                          className="dp-btn dp-btn-g"
+                                          disabled={modalDocBusy || orgDataIncomplete}
+                                          title={orgDataIncomplete ? APPROVE_BLOCKED_MSG : undefined}
+                                          onClick={() => modalFinalizeDoc(latest.id, (latest.version || 0) + 1)}
+                                        >
+                                          🔒 סמן סופי
+                                        </button>
+                                        <button
+                                          className="dp-btn dp-btn-g"
+                                          disabled={modalDocBusy || orgDataIncomplete}
+                                          title={orgDataIncomplete ? APPROVE_BLOCKED_MSG : undefined}
+                                          onClick={() => modalApproveDoc(latest.id)}
+                                        >
+                                          ✓ אשר
+                                        </button>
                                       </>
                                     )}
                                     <button className="dp-btn" onClick={() => {
@@ -1218,7 +1274,8 @@ export default function DPODashboard() {
                         })
                       })()}
                     </div>
-                  )}
+                    )
+                  })()}
 
                   {/* RIGHTS REQUESTS */}
                   {orgTab === 'rights' && (

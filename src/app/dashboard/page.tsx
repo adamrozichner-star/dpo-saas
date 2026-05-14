@@ -62,6 +62,7 @@ import WebsiteScanner from '@/components/WebsiteScanner'
 import NotificationsBell from '@/components/NotificationsBell'
 import TrustPageSettings from '@/components/TrustPageSettings'
 import { deriveComplianceActions, ComplianceSummary, ActionOverride } from '@/lib/compliance-engine'
+import { isOnboardingDataComplete } from '@/lib/onboarding-validation'
 
 // ============================================
 // TYPES
@@ -514,6 +515,11 @@ function DashboardContent() {
           orgName={organization?.name || ''}
           documentsCount={documents.length}
           complianceScore={complianceScore}
+          dpoName={
+            organization?.tier === 'basic'
+              ? (organization?.name || 'ניהול עצמי')
+              : undefined
+          }
         />
       )}
 
@@ -652,20 +658,30 @@ function DashboardContent() {
 
         {/* Page Content */}
         <div className="px-3 py-4 sm:px-4 lg:p-8 pb-24 sm:pb-8 max-w-5xl mx-auto w-full overflow-x-hidden">
-          {/* Incomplete onboarding banner */}
-          {organization && organization.onboarding_completed === false && (
-            <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
-                <div>
-                  <span className="text-sm text-amber-800 font-medium block">ההרשמה שלך לא הושלמה — חלק מהמידע חסר ליצירת מסמכים מדויקים</span>
+          {/* Partial-data banner — broader than onboarding_completed.
+              Catches users who clicked through but skipped critical questions
+              (industry/databases/totalSize), not just users who hit "השלם מאוחר יותר".
+              Waits for orgProfile to load so we don't accuse the user during the
+              loading flash. Not dismissible — this is load-bearing context. */}
+          {orgProfile && !isOnboardingDataComplete(orgProfile.v3Answers || {}) && (
+            <div className="mb-4 p-4 bg-amber-50 border-2 border-amber-300 rounded-xl">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h3 className="text-sm font-bold text-amber-900 mb-1">
+                    ⚠️ השלימו את הפרופיל לקבלת מסמכים מדויקים
+                  </h3>
+                  <p className="text-xs text-amber-900/80 leading-relaxed mb-3">
+                    הפקנו עבורכם מסמכי טיוטה על בסיס המידע שמסרתם, אך הם מבוססים על מידע חלקי.
+                    כדי שהמסמכים יהיו תקפים ומדויקים, השלימו את השאלון.
+                  </p>
+                  <Link href="/onboarding?resume=true">
+                    <button className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors">
+                      השלמת השאלון ←
+                    </button>
+                  </Link>
                 </div>
               </div>
-              <Link href="/onboarding">
-                <button className="px-4 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition-colors whitespace-nowrap">
-                  המשך הרשמה
-                </button>
-              </Link>
             </div>
           )}
 
@@ -1144,23 +1160,10 @@ function OverviewTab({
         )}
       </div>
 
-      {/* Incomplete onboarding task */}
-      {organization?.onboarding_completed === false && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-xl flex-shrink-0">📋</span>
-            <div className="min-w-0">
-              <p className="font-medium text-amber-800 text-sm">השלמת פרטים חסרים מההרשמה</p>
-              <p className="text-xs text-amber-600 mt-0.5">השלימו את השאלות לקבלת מסמכים מדויקים</p>
-            </div>
-          </div>
-          <Link href="/onboarding">
-            <button className="px-3 py-1.5 bg-amber-500 text-white rounded-lg text-xs font-medium hover:bg-amber-600 flex-shrink-0">
-              המשך
-            </button>
-          </Link>
-        </div>
-      )}
+      {/* (Removed: the older "השלמת פרטים חסרים מההרשמה" block lived here.
+          The page-level partial-data banner in DashboardContent is strictly
+          broader — it fires on missing critical answers rather than only on
+          organization.onboarding_completed === false.) */}
 
       {/* Unified Task List — replaces GuidelinesPanel + action sections */}
       {complianceSummary?.tasks && (
@@ -1267,6 +1270,10 @@ function OverviewTab({
 // DOCUMENTS TAB
 // ============================================
 function DocumentsTab({ documents, organization, supabase, isPaid, orgProfile, onRefresh }: { documents: Document[], organization: any, supabase: any, isPaid: boolean, orgProfile: any, onRefresh: () => void }) {
+  // Docs generated from partial onboarding answers are flagged in-line so the
+  // user knows they're working drafts. Approval is gated separately on the DPO
+  // side — see /dpo/page.tsx.
+  const dataComplete = isOnboardingDataComplete(orgProfile?.v3Answers || {})
   const [viewMode, setViewMode] = useState<'grid'|'list'>('grid')
   const { toast } = useToast()
   const [filter, setFilter] = useState<string>('all')
@@ -1554,7 +1561,7 @@ function DocumentsTab({ documents, organization, supabase, isPaid, orgProfile, o
             <div key={doc.id} className="flex items-center gap-3 px-4 py-3 hover:bg-stone-50 transition-colors">
               <FileText className="h-4 w-4 text-indigo-500 flex-shrink-0" />
               <span className="flex-1 min-w-0 font-medium text-stone-800 text-sm truncate">{doc.title || getDocTypeLabel(doc.type)}</span>
-              <span 
+              <span
                 className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusStyle(doc.status)} cursor-help`}
                 title={
                   doc.status === 'pending_review' ? 'הממונה צריך לסקור ולאשר את המסמך' :
@@ -1564,6 +1571,14 @@ function DocumentsTab({ documents, organization, supabase, isPaid, orgProfile, o
               >
                 {getStatusLabel(doc.status)}
               </span>
+              {!dataComplete && (
+                <span
+                  className="px-2 py-0.5 rounded-full text-[11px] font-medium border border-amber-300 bg-amber-50 text-amber-800 cursor-help whitespace-nowrap"
+                  title="המסמך הופק לפני שהשלמתם את השאלון. השלימו את השאלות החסרות כדי שנעדכן את התוכן."
+                >
+                  טיוטה — מבוסס על מידע חלקי
+                </span>
+              )}
               <span className="text-xs text-stone-400 flex-shrink-0">{new Date(doc.created_at).toLocaleDateString('he-IL')}</span>
               <button onClick={() => openDoc(doc)} className="p-1.5 hover:bg-stone-200 rounded-lg transition" title="צפייה">
                 <Eye className="h-3.5 w-3.5 text-stone-500" />
@@ -1584,8 +1599,8 @@ function DocumentsTab({ documents, organization, supabase, isPaid, orgProfile, o
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium text-stone-800 truncate">{doc.title || doc.name || getDocTypeLabel(doc.type)}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span 
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span
                       className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusStyle(doc.status)} cursor-help`}
                       title={
                         doc.status === 'pending_review' ? 'הממונה צריך לסקור ולאשר את המסמך' :
@@ -1596,6 +1611,14 @@ function DocumentsTab({ documents, organization, supabase, isPaid, orgProfile, o
                     >
                       {getStatusLabel(doc.status)}
                     </span>
+                    {!dataComplete && (
+                      <span
+                        className="px-2 py-0.5 rounded-full text-[11px] font-medium border border-amber-300 bg-amber-50 text-amber-800 cursor-help"
+                        title="המסמך הופק לפני שהשלמתם את השאלון. השלימו את השאלות החסרות כדי שנעדכן את התוכן."
+                      >
+                        טיוטה — מבוסס על מידע חלקי
+                      </span>
+                    )}
                     <span className="text-xs text-stone-400">
                       {new Date(doc.created_at).toLocaleDateString('he-IL')}
                     </span>
@@ -1637,6 +1660,15 @@ function DocumentsTab({ documents, organization, supabase, isPaid, orgProfile, o
                   )}
                 </div>
               </div>
+              {!dataComplete && (
+                <Link
+                  href="/onboarding?resume=true"
+                  className="mt-3 -mb-1 flex items-center justify-between gap-2 text-xs text-amber-700 hover:text-amber-800 px-2 py-1.5 rounded-md bg-amber-50/60 border border-amber-200/70"
+                >
+                  <span>⚠️ השלימו את השאלון לעדכון המסמך</span>
+                  <span className="text-amber-600">←</span>
+                </Link>
+              )}
             </div>
           ))}
         </div>

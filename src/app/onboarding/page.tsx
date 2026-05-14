@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import {
   ArrowRight, CheckCircle2, Loader2,
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { OnboardingAnswer } from '@/types'
-import { isOnboardingDataComplete } from '@/lib/onboarding-validation'
+import { isOnboardingDataComplete, getMissingOnboardingFields } from '@/lib/onboarding-validation'
 
 // ═══════════════════════════════════════════════════════
 // CARD DATA CONSTANTS
@@ -148,6 +148,33 @@ interface CardDef {
   placeholder?: string
   hint?: string
   lawRef?: string
+}
+
+// Stable card-id order for step indexing. Mirrors the CARDS array built inside
+// OnboardingContent — keep in sync if you reorder there. Used by resume-mode
+// (?resume=true) to jump to the first missing card without depending on a
+// per-render CARDS reference.
+function getStepForFieldId(fieldId: string, v3: V3Answers): number {
+  const hasDpoYes = v3.hasDpo === 'yes'
+  const needsCam = (v3.databases || []).includes('cameras')
+  const ids: string[] = [
+    'bizName',
+    'companyId',
+    'industry',
+    'hasDpo',
+    ...(hasDpoYes ? ['dpoName', 'dpoRoleInOrg'] : []),
+    'databases',
+    'totalSize',
+    'storage',
+    'securityOwner',
+    ...(needsCam ? ['cameraOwner'] : []),
+    'accessControl',
+    'processors',
+    'hasConsent',
+    'rightsWorkflow',
+  ]
+  const idx = ids.indexOf(fieldId)
+  return idx >= 0 ? idx : 0
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1052,7 +1079,11 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
 
 function OnboardingContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { user, supabase, loading } = useAuth()
+  // Returning user from /dashboard?resume=true: skip review mode and jump to the
+  // first card whose answer is still missing. See mount loader path 2.
+  const resumeMode = searchParams?.get('resume') === 'true'
 
   const [step, setStep] = useState(0)
   const [v3Answers, setV3Answers] = useState<V3Answers>({ dbDetails: {}, customDatabases: [], customProcessors: [], customStorage: [] })
@@ -1166,7 +1197,7 @@ function OnboardingContent() {
           return
         }
 
-        // 2. DB profile → review mode.
+        // 2. DB profile → review mode (or resume to first missing card if ?resume=true).
         const { data: profileData } = await supabase
           .from('organization_profiles')
           .select('profile_data')
@@ -1175,10 +1206,18 @@ function OnboardingContent() {
 
         const dbAnswers = profileData?.profile_data?.v3Answers
         if (!cancelled && !sessionStarted.current && dbAnswers?.bizName && (dbAnswers?.databases?.length || 0) > 0) {
-          console.log('[Onboarding] Restoring from DB profile:', dbAnswers.bizName)
-          setV3Answers(dbAnswers)
-          setShowReport(true)
-          setIsReviewMode(true)
+          if (resumeMode && !isOnboardingDataComplete(dbAnswers)) {
+            const missing = getMissingOnboardingFields(dbAnswers)
+            const targetStep = missing.length > 0 ? getStepForFieldId(missing[0], dbAnswers) : 0
+            console.log('[Onboarding] Resume mode → jumping to first missing card:', missing[0], 'at step', targetStep)
+            setV3Answers(dbAnswers)
+            setStep(targetStep)
+          } else {
+            console.log('[Onboarding] Restoring from DB profile:', dbAnswers.bizName)
+            setV3Answers(dbAnswers)
+            setShowReport(true)
+            setIsReviewMode(true)
+          }
           return
         }
       }
@@ -1208,7 +1247,7 @@ function OnboardingContent() {
 
     load()
     return () => { cancelled = true }
-  }, [supabase, user, router])
+  }, [supabase, user, router, resumeMode])
 
   // Persist user-scoped draft on every step/answer change.
   useEffect(() => {
@@ -1667,11 +1706,17 @@ function OnboardingContent() {
           <span className="text-[11px] text-gray-400">{Math.round(progress)}%</span>
         </div>
         <div className="h-1 bg-gray-200 rounded-full mb-5 overflow-hidden">
-          <div 
+          <div
             className="h-full rounded-full transition-all duration-300"
             style={{ width: `${progress}%`, background: isDBPhase ? '#6366f1' : '#f59e0b' }}
           />
         </div>
+
+        {resumeMode && card && !isDBPhase && (
+          <div className="mb-3 p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg text-xs text-indigo-700 text-center">
+            ממשיכים מאיפה שעצרתם — נא להשלים את השאלות הבאות
+          </div>
+        )}
 
         {card && !isDBPhase && (
           <CardShell icon={card.icon} question={card.q} hint={card.hint} lawRef={card.lawRef} animDir={animDir}>

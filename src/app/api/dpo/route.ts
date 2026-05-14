@@ -462,6 +462,14 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false })
         .limit(5)
 
+      // Org profile (v3Answers) — needed by DPO inbox to gate approval when
+      // the source org's onboarding answers are incomplete.
+      const { data: orgProfile } = await supabase
+        .from('organization_profiles')
+        .select('profile_data')
+        .eq('org_id', item.org_id)
+        .maybeSingle()
+
       return NextResponse.json({
         item,
         thread,
@@ -469,7 +477,8 @@ export async function GET(request: NextRequest) {
         dsr,
         documents,
         compliance,
-        history
+        history,
+        profile: orgProfile?.profile_data || null,
       })
     }
 

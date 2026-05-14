@@ -80,12 +80,19 @@ export default async function TrustPage({ params }: { params: { slug: string } }
   const { review, profile, docs } = await getTrustData(org.id)
 
   const v3 = profile?.profile_data?.v3Answers || {}
+  const internalDpo = profile?.profile_data?.internalDpo || null
   const databases: string[] = [...(v3.databases || []), ...(v3.customDatabases || [])]
   const complianceScore = review?.score_after ?? null
   const lastReviewDate = review?.created_at
   const activeDocs = docs || []
   const privacyPolicy = activeDocs.find((d: any) => d.type === 'privacy_policy')
   const isCompliant = complianceScore !== null && complianceScore >= 50
+
+  // Tier-aware DPO display: basic-tier orgs self-manage, so the trust page
+  // should not advertise Deepo's external DPO as their officer. Falls back
+  // to the org name if the user didn't name themselves explicitly.
+  const isBasicTier = org.tier === 'basic'
+  const internalDpoName = internalDpo?.name || v3.dpoName || null
 
   const initials = org.name
     ?.split(' ')
@@ -190,22 +197,28 @@ export default async function TrustPage({ params }: { params: { slug: string } }
                 <span className="text-lg">🛡️</span>
                 <span className="text-sm font-medium text-stone-700">ממונה הגנת הפרטיות</span>
               </div>
-              <span className="text-sm text-stone-500">{DPO_CONFIG.name}</span>
+              <span className="text-sm text-stone-500">
+                {isBasicTier ? (internalDpoName || org.name) : DPO_CONFIG.name}
+              </span>
             </div>
-            <div className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-lg">📧</span>
-                <span className="text-sm font-medium text-stone-700">דוא״ל ממונה</span>
-              </div>
-              <a href={`mailto:${DPO_CONFIG.email}`} className="text-sm text-indigo-600 hover:underline">{DPO_CONFIG.email}</a>
-            </div>
-            <div className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-lg">📞</span>
-                <span className="text-sm font-medium text-stone-700">טלפון</span>
-              </div>
-              <a href={`tel:${DPO_CONFIG.phone}`} className="text-sm text-indigo-600 hover:underline">{DPO_CONFIG.phone}</a>
-            </div>
+            {!isBasicTier && (
+              <>
+                <div className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">📧</span>
+                    <span className="text-sm font-medium text-stone-700">דוא״ל ממונה</span>
+                  </div>
+                  <a href={`mailto:${DPO_CONFIG.email}`} className="text-sm text-indigo-600 hover:underline">{DPO_CONFIG.email}</a>
+                </div>
+                <div className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">📞</span>
+                    <span className="text-sm font-medium text-stone-700">טלפון</span>
+                  </div>
+                  <a href={`tel:${DPO_CONFIG.phone}`} className="text-sm text-indigo-600 hover:underline">{DPO_CONFIG.phone}</a>
+                </div>
+              </>
+            )}
           </div>
         </section>
 
