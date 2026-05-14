@@ -10,6 +10,7 @@ import {
   Phone, Sparkles, AlertTriangle, ArrowLeft
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { isOnboardingDataComplete } from '@/lib/onboarding-validation'
 
 function SubscribeContent() {
   const router = useRouter()
@@ -23,6 +24,9 @@ function SubscribeContent() {
   const [error, setError] = useState<string | null>(null)
   const [recommendedTier, setRecommendedTier] = useState<string>('basic')
   const [reasons, setReasons] = useState<string[]>([])
+  // false = "we don't have enough to give a confident recommendation".
+  // Resolution order: explicit ?dataComplete param → localStorage v3Answers → false.
+  const [dataComplete, setDataComplete] = useState<boolean>(false)
 
   // Reset processing state on mount / back-button
   useEffect(() => {
@@ -53,11 +57,23 @@ function SubscribeContent() {
     const tier = localStorage.getItem('dpo_recommended_tier')
     if (tier === 'basic' || tier === 'recommended') setRecommendedTier(tier)
 
+    // Resolve data-completeness for the recommendation copy.
+    // 1) Explicit query param wins (onboarding always sets it).
+    // 2) Otherwise compute from the user-scoped v3Answers cache.
+    // 3) Fall back to false — better to under-claim than over-claim.
+    const paramRaw = searchParams.get('dataComplete')
+    if (paramRaw === 'true' || paramRaw === 'false') {
+      setDataComplete(paramRaw === 'true')
+    }
+
     if (!user) return
     try {
       const saved = localStorage.getItem(`dpo_v3_answers_${user.id}`)
       if (!saved) return
       const v3 = JSON.parse(saved)
+      if (paramRaw !== 'true' && paramRaw !== 'false') {
+        setDataComplete(isOnboardingDataComplete(v3))
+      }
       const r: string[] = []
 
       const dbs = v3.databases || []
@@ -79,7 +95,7 @@ function SubscribeContent() {
 
       setReasons(r)
     } catch (e) { /* ignore */ }
-  }, [user])
+  }, [user, searchParams])
 
   const loadOrganization = async () => {
     if (!supabase || !user) return
@@ -165,7 +181,12 @@ function SubscribeContent() {
     )
   }
 
-  const otherTier = recommendedTier === 'basic' ? 'recommended' : 'basic'
+  // When data is partial the recommendation engine ran on thin inputs — fall back
+  // to basic so we don't push the user toward a paid tier we can't justify yet.
+  // Layout-wise this puts Basic in the prominent slot with the existing "מומלץ" badge,
+  // which is the de-emphasis the spec asks for without restructuring the grid.
+  const effectiveRecommendedTier = dataComplete ? recommendedTier : 'basic'
+  const otherTier = effectiveRecommendedTier === 'basic' ? 'recommended' : 'basic'
 
   const plans: Record<string, { name: string; price: number; desc: string; features: string[]; showPrice?: boolean }> = {
     basic: {
@@ -245,9 +266,20 @@ function SubscribeContent() {
               <Sparkles className="h-4 w-4 text-blue-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-bold text-gray-800 mb-1">
-                על בסיס הניתוח, אנחנו ממליצים על חבילה {plans[recommendedTier].name}
-              </div>
+              {dataComplete ? (
+                <div className="text-sm font-bold text-gray-800 mb-1">
+                  על בסיס הניתוח, אנחנו ממליצים על חבילה {plans[effectiveRecommendedTier].name}
+                </div>
+              ) : (
+                <>
+                  <div className="text-sm font-bold text-gray-800 mb-1">
+                    המלצה ראשונית על בסיס מידע חלקי
+                  </div>
+                  <div className="text-[11px] text-gray-600 leading-relaxed mb-1.5">
+                    תוכלו להתחיל עם החבילה הבסיסית, ולשדרג בכל שלב כשתשלימו את המידע ותראו את הצרכים האמיתיים שלכם.
+                  </div>
+                </>
+              )}
               {reasons.length > 0 && (
                 <div className="space-y-0.5">
                   {reasons.slice(0, 4).map((r, i) => (
@@ -261,10 +293,11 @@ function SubscribeContent() {
           </div>
         </div>
 
-        {/* Recommended plan — prominent */}
+        {/* Recommended plan — prominent. effectiveRecommendedTier forces basic when
+            the recommendation engine ran on partial data. */}
         <PlanCard
-          plan={plans[recommendedTier]}
-          planId={recommendedTier}
+          plan={plans[effectiveRecommendedTier]}
+          planId={effectiveRecommendedTier}
           isRecommended={true}
           isProcessing={isProcessing}
           selectedPlan={selectedPlan}
@@ -280,7 +313,7 @@ function SubscribeContent() {
 
         {/* Other plans — compact */}
         <div className="space-y-3">
-          {['basic', 'recommended', 'premium'].filter(id => id !== recommendedTier).map(planId => (
+          {['basic', 'recommended', 'premium'].filter(id => id !== effectiveRecommendedTier).map(planId => (
             <PlanCard
               key={planId}
               plan={plans[planId]}

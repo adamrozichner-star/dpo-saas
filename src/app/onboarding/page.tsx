@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { OnboardingAnswer } from '@/types'
+import { isOnboardingDataComplete } from '@/lib/onboarding-validation'
 
 // ═══════════════════════════════════════════════════════
 // CARD DATA CONSTANTS
@@ -912,6 +913,8 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
     ...((answers.processors?.length || 0) > 0 || (answers.customProcessors?.length || 0) > 0 ? ['הסכם עיבוד מידע לספקים'] : []),
   ]
 
+  const dataComplete = isOnboardingDataComplete(answers)
+
   return (
     <div dir="rtl">
       <div className="text-center mb-5">
@@ -923,7 +926,17 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
         </p>
       </div>
 
-      <div 
+      {!dataComplete && (
+        <div className="p-4 rounded-2xl mb-4 border-2 border-amber-300 bg-amber-50">
+          <div className="text-sm font-bold text-amber-800 mb-1">⚠️ חסר מידע חיוני</div>
+          <p className="text-xs text-amber-900 leading-relaxed">
+            השלמתם רק חלק מהשאלון. ההמלצה למטה מבוססת על מידע חלקי. אנו ממליצים להשלים
+            את כל השאלון לקבלת המלצה מדויקת יותר. אפשר תמיד לחזור לעדכן את התשובות בלוח הבקרה.
+          </p>
+        </div>
+      )}
+
+      <div
         className="p-4 rounded-2xl mb-4 text-center border-2"
         style={{
           background: highest.level === 'high' ? '#fef2f2' : highest.level === 'medium' ? '#fffbeb' : '#f0fdf4',
@@ -1413,7 +1426,10 @@ function OnboardingContent() {
       setStatus('הכל מוכן! מעבירים לבחירת חבילה...')
 
       // Welcome email is dispatched server-side by /api/complete-onboarding.
-      setTimeout(() => router.push('/subscribe'), 1500)
+      // Pass completeness so the subscribe page can swap to "partial-data" copy
+      // when the user skipped critical questions (industry, databases, totalSize).
+      const dataComplete = isOnboardingDataComplete(finalV3)
+      setTimeout(() => router.push(`/subscribe?dataComplete=${dataComplete}`), 1500)
     } catch (err: any) {
       console.error('[Onboarding] handleComplete error:', err)
       setError(err.message || 'אירעה שגיאה בתהליך ההרשמה')
