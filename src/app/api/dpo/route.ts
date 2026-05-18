@@ -16,7 +16,11 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!
 })
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+let _resend: Resend | null = null
+function getResend(): Resend {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY)
+  return _resend
+}
 
 // =========================================
 // Email Templates
@@ -139,7 +143,7 @@ async function sendResponseEmail(
 ): Promise<boolean> {
   try {
     // Use resend.dev for testing until deepo.co.il is verified
-    const { data, error } = await resend.emails.send({
+    const { data, error } = await getResend().emails.send({
       from: process.env.FROM_EMAIL || 'Deepo <onboarding@resend.dev>',
       to: [to],
       subject: subject,

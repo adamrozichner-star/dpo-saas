@@ -1,7 +1,12 @@
 // Email Service using Resend
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+let _resend: Resend | null = null
+function getResend(): Resend | null {
+  if (!process.env.RESEND_API_KEY) return null
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY)
+  return _resend
+}
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'Deepo <noreply@resend.dev>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://deepo.co.il'
@@ -221,7 +226,8 @@ export async function sendEmail(
   template: EmailTemplate
 ): Promise<{ success: boolean; error?: string; id?: string }> {
   try {
-    if (!process.env.RESEND_API_KEY) {
+    const resend = getResend()
+    if (!resend) {
       console.warn('RESEND_API_KEY not set')
       return { success: false, error: 'Email not configured' }
     }

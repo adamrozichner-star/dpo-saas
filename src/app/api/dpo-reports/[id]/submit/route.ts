@@ -9,7 +9,11 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+let _resend: Resend | null = null
+function getResend(): Resend {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY)
+  return _resend
+}
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -105,7 +109,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   </div>
 </div>`
 
-        const { data: sendData, error: sendError } = await resend.emails.send({
+        const { data: sendData, error: sendError } = await getResend().emails.send({
           from: fromAddress,
           to: [cleanEmail],
           subject: `דוח רבעוני להנהלה — ${org?.name || ''} — ${report.report_period}`,
