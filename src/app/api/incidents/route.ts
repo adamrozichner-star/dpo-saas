@@ -17,7 +17,11 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY!
 })
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+let _resend: Resend | null = null
+function getResend(): Resend {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY)
+  return _resend
+}
 
 // =============================================
 // HELPER: Calculate hours remaining
@@ -169,7 +173,7 @@ async function sendDPOAlert(incident: any, orgName: string): Promise<boolean> {
 `
 
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: 'Deepo <onboarding@resend.dev>',
       to: [process.env.DPO_EMAIL || 'dpo@example.com'],
       subject: `🚨 אירוע אבטחה חדש - ${orgName} - ${incident.severity}`,
