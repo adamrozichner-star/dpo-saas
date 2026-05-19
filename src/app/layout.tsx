@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Heebo } from 'next/font/google'
+import * as Sentry from '@sentry/nextjs'
 import './globals.css'
 import { AuthProvider } from '@/lib/auth-context'
 import { ToastProvider } from '@/components/Toast'
@@ -11,13 +12,18 @@ const heebo = Heebo({
   variable: '--font-heebo',
 })
 
-export const metadata: Metadata = {
-  title: 'DPO-as-a-Service | שירות ממונה הגנת פרטיות',
-  description: 'פתרון AI מקיף לעמידה ברגולציית הגנת הפרטיות - תיקון 13',
-  icons: {
-    icon: '/logos/deepo-icon-navy-32.png',
-    apple: '/logos/deepo-icon-navy-192.png',
-  },
+export function generateMetadata(): Metadata {
+  return {
+    title: 'DPO-as-a-Service | שירות ממונה הגנת פרטיות',
+    description: 'פתרון AI מקיף לעמידה ברגולציית הגנת הפרטיות - תיקון 13',
+    icons: {
+      icon: '/logos/deepo-icon-navy-32.png',
+      apple: '/logos/deepo-icon-navy-192.png',
+    },
+    other: {
+      ...Sentry.getTraceData(),
+    },
+  }
 }
 
 export const viewport: Viewport = {
