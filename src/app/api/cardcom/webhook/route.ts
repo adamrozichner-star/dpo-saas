@@ -2,6 +2,7 @@
 // Cardcom v11 webhook handler
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import * as Sentry from '@sentry/nextjs';
 import { verifyPayment } from '@/lib/cardcom';
 import { checkAndCreateNotificationsForOrg } from '@/lib/notifications-trigger';
 
@@ -59,6 +60,38 @@ async function handleWebhook(lowProfileId: string | null, returnValue: string | 
   }
 
   try {
+    const supabase = getSupabase();
+
+    // === EARLY IDEMPOTENCY CHECK ===
+    // If this LowProfileId has already been processed (completed or failed),
+    // skip the Cardcom verification call and return 200 immediately. Prevents
+    // double-processing on webhook retries.
+    {
+      const { data: existing, error: idempErr } = await supabase
+        .from('payment_transactions')
+        .select('id, status')
+        .eq('lowprofile_code', lowProfileId)
+        .limit(1)
+        .maybeSingle();
+
+      if (idempErr) {
+        Sentry.captureException(idempErr, {
+          extra: { lowProfileId, stage: 'idempotency-check' },
+        });
+      }
+
+      if (existing && (existing.status === 'completed' || existing.status === 'failed')) {
+        Sentry.addBreadcrumb({
+          category: 'cardcom-webhook',
+          message: 'Idempotent replay — already processed',
+          data: { lowProfileId, paymentId: existing.id, status: existing.status },
+          level: 'info',
+        });
+        console.log('[Webhook] Idempotent replay:', { lowProfileId, paymentId: existing.id, status: existing.status });
+        return NextResponse.json({ ok: true, idempotent: true });
+      }
+    }
+
     // Verify payment with Cardcom v11 API
     const verification = await verifyPayment(lowProfileId);
 
@@ -69,8 +102,6 @@ async function handleWebhook(lowProfileId: string | null, returnValue: string | 
       returnValue: verification.returnValue,
       error: verification.error,
     });
-
-    const supabase = getSupabase();
 
     // Find the pending payment transaction
     // The ReturnValue we sent is the txnId
@@ -104,24 +135,25 @@ async function handleWebhook(lowProfileId: string | null, returnValue: string | 
       }
     }
 
-    // Strategy 3: Most recent pending
-    if (!payment) {
-      const { data } = await supabase
-        .from('payment_transactions')
-        .select('*')
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (data) {
-        payment = data;
-        console.log('[Webhook] Found payment by recency fallback:', payment.id);
-      }
-    }
+    // No "most-recent pending" fallback: matching by recency is a multi-tenant
+    // correctness hazard (could complete a payment row for the wrong org).
 
     if (!payment) {
       console.error('[Webhook] No payment found for:', { lowProfileId, txnId });
-      return NextResponse.json({ success: false, error: 'Payment not found', received: true });
+      Sentry.captureMessage('Cardcom webhook: no matching payment_transactions row', {
+        level: 'error',
+        extra: {
+          lowProfileId,
+          txnId,
+          verification: {
+            success: verification.success,
+            transactionId: verification.transactionId,
+            error: verification.error,
+          },
+        },
+      });
+      // Return 200 so Cardcom doesn't retry indefinitely.
+      return NextResponse.json({ ok: true, received: true, matched: false });
     }
 
     // Already processed?
@@ -142,7 +174,7 @@ async function handleWebhook(lowProfileId: string | null, returnValue: string | 
       const dbTier = payment.plan;
 
       // 1. Update payment record
-      await supabase.from('payment_transactions').update({
+      const { error: paymentUpdErr } = await supabase.from('payment_transactions').update({
         status: 'completed',
         lowprofile_code: lowProfileId,
         cardcom_transaction_id: verification.transactionId?.toString() || null,
@@ -154,6 +186,12 @@ async function handleWebhook(lowProfileId: string | null, returnValue: string | 
         invoice_number: verification.invoiceNumber?.toString() || null,
         completed_at: now.toISOString(),
       }).eq('id', payment.id);
+      if (paymentUpdErr) {
+        Sentry.captureException(paymentUpdErr, {
+          extra: { paymentId: payment.id, lowProfileId, branch: 'success' },
+        });
+        throw new Error(`payment_transactions update (success) failed: ${paymentUpdErr.message}`);
+      }
 
       // 2. Update organization
       await supabase.from('organizations').update({
@@ -265,13 +303,19 @@ async function handleWebhook(lowProfileId: string | null, returnValue: string | 
 
     } else {
       // ===== PAYMENT FAILED =====
-      await supabase.from('payment_transactions').update({
+      const { error: paymentUpdErr } = await supabase.from('payment_transactions').update({
         status: 'failed',
         lowprofile_code: lowProfileId,
         error_message: verification.error || null,
         cardcom_response: verification.responseCode?.toString() || null,
         completed_at: new Date().toISOString(),
       }).eq('id', payment.id);
+      if (paymentUpdErr) {
+        Sentry.captureException(paymentUpdErr, {
+          extra: { paymentId: payment.id, lowProfileId, branch: 'failure' },
+        });
+        throw new Error(`payment_transactions update (failure) failed: ${paymentUpdErr.message}`);
+      }
 
       console.log(`[Webhook] ❌ Payment failed: ${verification.error}`);
       return NextResponse.json({ success: false, received: true, error: verification.error });
@@ -279,6 +323,7 @@ async function handleWebhook(lowProfileId: string | null, returnValue: string | 
 
   } catch (error) {
     console.error('[Webhook] Error:', error);
+    Sentry.captureException(error, { extra: { lowProfileId, returnValue } });
     return NextResponse.json({ success: false, received: true, error: 'Internal error' });
   }
 }
