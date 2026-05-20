@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
+import { createMessage } from '@/lib/anthropic'
 import { authenticateRequest, unauthorizedResponse, forbiddenResponse, verifyOrgAccess } from '@/lib/api-auth'
 import { maskPII, unmaskPII } from '@/lib/pii-guard'
 import { checkRateLimit, RATE_LIMITS, rateLimitKey, isDuplicateAbuse, isRapidFire } from '@/lib/rate-limiter'
@@ -13,10 +13,6 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!
-})
 
 // ===========================================
 // DPO SYSTEM PROMPT - Best Practices Built In
@@ -499,7 +495,7 @@ ${intent === 'off_topic' ? '\n🚫 זוהתה שאלה שאינה בתחום ה�
       
       const aiModel = (intent === 'document' || isRevision) ? 'claude-sonnet-4-6' : 'claude-haiku-4-5'
       
-      const response = await anthropic.messages.create({
+      const response = await createMessage({
         model: aiModel,
         max_tokens: maxTokens,
         system: contextPrompt,
