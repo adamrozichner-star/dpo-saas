@@ -1,54 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-import { generateDpoReportDraft, getCurrentQuarterPeriod } from '@/lib/dpo-report-generator'
+import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+// Deprecated. Quarterly DPO report generation is now owned by Inngest:
+//   src/inngest/functions/quarterly-reports.ts
+// The Vercel cron entry that used to fire this route was removed from
+// vercel.json; Inngest's `dispatchQuarterlyReports` runs on the same
+// 0 6 1 1,4,7,10 * schedule and fans out per-org via the
+// `deepo/reports.org.generate` event.
+//
+// This stub returns 410 Gone for any leftover external caller. The file is
+// kept (not deleted) so anyone arriving from logs or bookmarks sees a clear
+// deprecation signal.
+export async function GET() {
+  return NextResponse.json(
+    {
+      deprecated: true,
+      message: 'Cron moved to Inngest /api/inngest functions',
+    },
+    { status: 410 },
   )
-
-  const period = getCurrentQuarterPeriod()
-  const periodStart = period.start.toISOString().split('T')[0]
-  const results = { created: 0, skipped: 0, errors: [] as string[] }
-
-  try {
-    const { data: orgs } = await supabase.from('organizations').select('id, name')
-
-    for (const org of orgs || []) {
-      try {
-        const { data: existing } = await supabase
-          .from('dpo_reports')
-          .select('id')
-          .eq('org_id', org.id)
-          .eq('period_start', periodStart)
-          .maybeSingle()
-
-        if (existing) { results.skipped++; continue }
-
-        const draft = await generateDpoReportDraft(org.id, supabase, period)
-        const { error } = await supabase
-          .from('dpo_reports')
-          .insert({ org_id: org.id, ...draft, status: 'draft' })
-
-        if (error) results.errors.push(`org ${org.id}: ${error.message}`)
-        else results.created++
-      } catch (e: any) {
-        results.errors.push(`org ${org.id}: ${e.message}`)
-      }
-    }
-
-    return NextResponse.json({ success: true, ...results })
-  } catch (error: any) {
-    console.error('Quarterly reports cron error:', error)
-    return NextResponse.json({ error: 'Internal server error', details: error.message }, { status: 500 })
-  }
 }
