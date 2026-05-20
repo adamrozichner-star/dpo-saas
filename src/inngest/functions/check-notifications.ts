@@ -61,7 +61,7 @@ export const dispatchDailyNotifications = inngest.createFunction(
 export const checkOrgNotifications = inngest.createFunction(
   {
     id: 'notifications-org-check',
-    concurrency: { limit: 10 },
+    concurrency: { limit: 5 },
     retries: 3,
     triggers: [{ event: ORG_CHECK_EVENT }],
   },
