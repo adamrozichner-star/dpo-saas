@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import Anthropic from '@anthropic-ai/sdk'
+import { streamMessage } from '@/lib/anthropic'
 import { authenticateRequest, unauthorizedResponse } from '@/lib/api-auth'
 import { maskPII, unmaskPII } from '@/lib/pii-guard'
 import { checkRateLimit, RATE_LIMITS, rateLimitKey, isDuplicateAbuse, isRapidFire } from '@/lib/rate-limiter'
@@ -14,10 +14,6 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!
-})
 
 // Import the system prompt and helpers from the main chat route
 // (Duplicated here to keep the streaming endpoint self-contained)
@@ -290,7 +286,7 @@ ${isRevision ? '\n✏️ המשתמש מבקש לערוך מסמך קודם. ב�
     const aiModel = (intent === 'document' || isRevision) ? 'claude-sonnet-4-6' : 'claude-haiku-4-5'
 
     // Create streaming response
-    const stream = await anthropic.messages.stream({
+    const stream = await streamMessage({
       model: aiModel,
       max_tokens: maxTokens,
       system: contextPrompt,
