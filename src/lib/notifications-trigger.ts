@@ -9,8 +9,12 @@ interface PendingNotification {
   link: string
 }
 
-export async function checkAndCreateNotificationsForOrg(orgId: string, supabase: SupabaseClient) {
-  console.log('[Notif Trigger] Starting for org:', orgId)
+export async function checkAndCreateNotificationsForOrg(
+  orgId: string,
+  supabase: SupabaseClient,
+  opts: { runQuarterlyPass?: boolean } = {},
+) {
+  console.log('[Notif Trigger] Starting for org:', orgId, 'opts:', opts)
   const now = new Date()
   const pending: PendingNotification[] = []
 
@@ -118,6 +122,7 @@ export async function checkAndCreateNotificationsForOrg(orgId: string, supabase:
   }
 
   // 4. Onboarding incomplete
+  // TODO(post-sprint): organizations table has onboarding_progress (jsonb) not onboarding_completed — this check is always falsy. Migrate to onboarding_progress->>'completed' check.
   if (org.onboarding_completed === false) {
     pending.push({
       org_id: orgId, type: 'onboarding:info',
@@ -234,6 +239,18 @@ export async function checkAndCreateNotificationsForOrg(orgId: string, supabase:
         link: '/dashboard?tab=messages',
       })
     }
+  }
+
+  // 8. Quarterly reminder — only when the caller (cron dispatcher) signals it's the
+  // 1st of Jan/Apr/Jul/Oct. Goes through the same dedupe loop below so re-runs
+  // within the same day are safe via the UNIQUE INDEX on (org_id, type, title).
+  if (opts.runQuarterlyPass) {
+    pending.push({
+      org_id: orgId, type: 'compliance:info',
+      title: 'סקירת ציות רבעונית מומלצת',
+      body: 'תחילת רבעון חדש — זה הזמן לסקור את מצב הציות שלכם.',
+      link: '/dashboard?tab=compliance',
+    })
   }
 
   // Insert with dedupe. The SELECT is a cheap optimization; correctness comes from
