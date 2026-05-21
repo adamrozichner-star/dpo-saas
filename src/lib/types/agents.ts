@@ -153,6 +153,21 @@ export const OrgFactSchema = z.object({
 }));
 
 // -----------------------------------------------------------------------------
+// Event payloads
+// -----------------------------------------------------------------------------
+
+// Payload for 'deepo/agent.invoke' Inngest event. Matches
+// src/inngest/functions/agent-invoke.ts AgentInvokeEventData.
+export interface AgentInvokeEventPayload {
+  orgId: string;
+  personaSlug: string;
+  trigger: {
+    type: TriggerType;
+    payload?: unknown;
+  };
+}
+
+// -----------------------------------------------------------------------------
 // AgentScratchpad
 // -----------------------------------------------------------------------------
 

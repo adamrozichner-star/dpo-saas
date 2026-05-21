@@ -12,6 +12,7 @@ import {
   dispatchRecurringBilling,
   chargeOrgRecurring,
 } from '@/inngest/functions/billing-recurring';
+import { agentInvoke } from '@/inngest/functions/agent-invoke';
 
 // Inngest's Next.js serve handler. Inngest Cloud sends GET (introspect),
 // POST (function invocation), and PUT (register functions on deploy) to this
@@ -25,5 +26,6 @@ export const { GET, POST, PUT } = serve({
     generateOrgQuarterlyReport,
     dispatchRecurringBilling,
     chargeOrgRecurring,
+    agentInvoke,
   ],
 });

@@ -8,3 +8,4 @@ tsconfig.tsbuildinfo
 # Build artifacts and dependencies (previously untracked but not ignored)
 .next/
 node_modules/
+.env*.local
