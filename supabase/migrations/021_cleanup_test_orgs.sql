@@ -15,6 +15,10 @@
 --     (Today payment_logs has 0 delete-list rows, so this is a defensive
 --     no-op — but the migration would block if any row were added between
 --     backup and apply time.)
+--   - Orphan users with NULL org_id (caught by the dry-run; there were 18
+--     test signups that never linked to an org) are not reached by the
+--     CASCADE because they have no parent to cascade from. We DELETE them
+--     explicitly.
 --
 -- Out of scope (separate follow-up):
 --   51 auth.users rows tied to the deleted public.users will be left
@@ -52,7 +56,12 @@ WHERE id NOT IN (
   'be8c5dbe-52e4-470f-ac98-dd7caf6297d0'
 );
 
--- 3. Verification — counts should match the "Keep" column of Phase 1 inventory.
+-- 3. Delete orphan users with NULL org_id (test signups never linked to an
+-- org; the dry-run caught 18 of these). They're not reached by the cascade
+-- because they have no parent organization.
+DELETE FROM users WHERE org_id IS NULL;
+
+-- 4. Verification — counts should match the "Keep" column of Phase 1 inventory.
 SELECT 'organizations'  AS tbl, COUNT(*) AS rows_remaining FROM organizations;   -- expect 2
 SELECT 'users'          AS tbl, COUNT(*) AS rows_remaining FROM users;           -- expect 2
 SELECT 'notifications'  AS tbl, COUNT(*) AS rows_remaining FROM notifications;   -- expect 0
