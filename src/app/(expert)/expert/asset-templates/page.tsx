@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { formatExpertError } from '@/lib/expert-i18n';
 
 interface ListRow {
   id: string;
@@ -32,7 +33,7 @@ export default function AssetTemplatesListPage() {
         const res = await fetch('/api/expert/asset-templates', {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
-        if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+        if (!res.ok) throw new Error(formatExpertError(res.status, await res.text()));
         const json = await res.json();
         setRows(json.rows ?? []);
       } catch (err) {
@@ -47,13 +48,13 @@ export default function AssetTemplatesListPage() {
     <div>
       <header className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Asset Templates</h1>
+          <h1 className="text-2xl font-semibold">תבניות נכסים</h1>
           <p className="text-slate-500 mt-1">
-            The asset TYPES customers can have (cameras, mailing list, etc.).
+            סוגי הנכסים שהלקוחות יכולים להחזיק (מצלמות, רשימת תפוצה, וכו׳).
           </p>
         </div>
         <Link href="/expert/asset-templates/new">
-          <Button>New template</Button>
+          <Button>תבנית חדשה</Button>
         </Link>
       </header>
 
@@ -65,21 +66,21 @@ export default function AssetTemplatesListPage() {
 
       <Card className="p-0 overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-slate-500">Loading…</div>
+          <div className="p-8 text-center text-slate-500">טוען…</div>
         ) : rows.length === 0 ? (
           <div className="p-8 text-center text-slate-500">
-            No asset templates yet. Click <span className="font-semibold">New template</span> to add the first one.
+            אין עדיין תבניות נכסים. לחצו על <span className="font-semibold">תבנית חדשה</span> כדי להוסיף את הראשונה.
           </div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-slate-50">
-              <tr className="text-left text-xs uppercase tracking-wider text-slate-500">
-                <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Slug</th>
-                <th className="px-4 py-3">v</th>
-                <th className="px-4 py-3">Source tier</th>
-                <th className="px-4 py-3">Confidence</th>
-                <th className="px-4 py-3">Updated</th>
+              <tr className="text-right text-xs tracking-wide text-slate-500">
+                <th className="px-4 py-3">שם</th>
+                <th className="px-4 py-3">מזהה (slug)</th>
+                <th className="px-4 py-3">ג׳</th>
+                <th className="px-4 py-3">דרגת מקור</th>
+                <th className="px-4 py-3">ודאות</th>
+                <th className="px-4 py-3">עודכן</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -94,11 +95,11 @@ export default function AssetTemplatesListPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-slate-500 font-mono text-xs">{r.slug}</td>
-                  <td className="px-4 py-3 text-slate-500">v{r.version}</td>
+                  <td className="px-4 py-3 text-slate-500">ג׳{r.version}</td>
                   <td className="px-4 py-3 text-slate-500">{r.sourceTier}</td>
                   <td className="px-4 py-3 text-slate-500">{r.confidence.toFixed(2)}</td>
                   <td className="px-4 py-3 text-slate-500">
-                    {new Date(r.updatedAt).toLocaleDateString()}
+                    {new Date(r.updatedAt).toLocaleDateString('he-IL')}
                   </td>
                 </tr>
               ))}

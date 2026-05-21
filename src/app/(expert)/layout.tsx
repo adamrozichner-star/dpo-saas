@@ -14,13 +14,13 @@ interface CuratorState {
 }
 
 const NAV_ITEMS: Array<{ href: string; label: string; ready: boolean }> = [
-  { href: '/expert',                          label: 'Overview',              ready: true },
-  { href: '/expert/asset-templates',          label: 'Asset Templates',       ready: true },
-  { href: '/expert/questions',                label: 'Questions',             ready: false },
-  { href: '/expert/document-templates',       label: 'Document Templates',    ready: false },
-  { href: '/expert/control-playbooks',        label: 'Control Playbooks',     ready: false },
-  { href: '/expert/gap-rules',                label: 'Gap Rules',             ready: false },
-  { href: '/expert/continuation-services',    label: 'Continuation Services', ready: false },
+  { href: '/expert',                          label: 'סקירה',              ready: true },
+  { href: '/expert/asset-templates',          label: 'תבניות נכסים',       ready: true },
+  { href: '/expert/questions',                label: 'שאלות',              ready: false },
+  { href: '/expert/document-templates',       label: 'תבניות מסמכים',      ready: false },
+  { href: '/expert/control-playbooks',        label: 'ספרי פעולה לבקרה',   ready: false },
+  { href: '/expert/gap-rules',                label: 'כללי פערים',         ready: false },
+  { href: '/expert/continuation-services',    label: 'שירותי המשך',        ready: false },
 ];
 
 export default function ExpertLayout({ children }: { children: ReactNode }) {
@@ -54,7 +54,7 @@ export default function ExpertLayout({ children }: { children: ReactNode }) {
   if (state.status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-500">
-        <span>Loading…</span>
+        <span>טוען…</span>
       </div>
     );
   }
@@ -62,22 +62,22 @@ export default function ExpertLayout({ children }: { children: ReactNode }) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-700">
         <div className="text-center">
-          <h1 className="text-2xl font-semibold mb-2">Not authorized</h1>
-          <p className="text-slate-500">Expert Console is for curators only.</p>
+          <h1 className="text-2xl font-semibold mb-2">אין הרשאה</h1>
+          <p className="text-slate-500">קונסולת המומחים מיועדת לאוצרים בלבד.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900" dir="ltr">
+    <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="flex">
-        <aside className="w-64 min-h-screen border-r border-slate-200 bg-white p-4">
+        <aside className="w-64 min-h-screen border-l border-slate-200 bg-white p-4">
           <div className="mb-6">
             <Link href="/expert" className="block text-lg font-semibold text-slate-900">
-              Deepo Expert Console
+              קונסולת מומחים Deepo
             </Link>
-            <p className="text-xs text-slate-500 mt-1">L1 Hub library</p>
+            <p className="text-xs text-slate-500 mt-1">ספריית Hub L1</p>
           </div>
           <nav className="space-y-1">
             {NAV_ITEMS.map(item => {
@@ -88,10 +88,10 @@ export default function ExpertLayout({ children }: { children: ReactNode }) {
                   <span
                     key={item.href}
                     className={`${baseCls} text-slate-400 cursor-not-allowed`}
-                    title="Schema ready — UI coming"
+                    title="הסכמה מוכנה — ממשק בקרוב"
                   >
                     {item.label}
-                    <span className="text-[10px] uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded">soon</span>
+                    <span className="text-[10px] uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded">בקרוב</span>
                   </span>
                 );
               }

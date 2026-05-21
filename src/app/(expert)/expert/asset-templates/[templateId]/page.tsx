@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
+import { formatExpertError } from '@/lib/expert-i18n';
 import AssetTemplateForm, {
   EMPTY_FORM,
   AssetTemplateFormValues,
@@ -33,7 +34,7 @@ export default function EditAssetTemplatePage({ params }: Props) {
         const res = await fetch(`/api/expert/asset-templates/${params.templateId}`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
-        if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+        if (!res.ok) throw new Error(formatExpertError(res.status, await res.text()));
         const row = await res.json();
         setValues({
           slug: row.slug,
@@ -56,7 +57,7 @@ export default function EditAssetTemplatePage({ params }: Props) {
   }, [session, params.templateId]);
 
   async function handleSubmit(formValues: AssetTemplateFormValues) {
-    if (!session) throw new Error('Not authenticated');
+    if (!session) throw new Error('אינך מחובר');
     const res = await fetch(`/api/expert/asset-templates/${params.templateId}`, {
       method: 'PUT',
       headers: {
@@ -79,7 +80,7 @@ export default function EditAssetTemplatePage({ params }: Props) {
       }),
     });
     if (!res.ok) {
-      throw new Error(`${res.status} ${await res.text()}`);
+      throw new Error(formatExpertError(res.status, await res.text()));
     }
     router.refresh();
     // refetch
@@ -94,14 +95,14 @@ export default function EditAssetTemplatePage({ params }: Props) {
 
   async function handleDelete() {
     if (!session) return;
-    if (!confirm('Deactivate ALL versions of this asset template? Customers will stop seeing it. This can be undone manually.')) return;
+    if (!confirm('להשבית את כל הגרסאות של תבנית הנכס הזו? הלקוחות יפסיקו לראות אותה. ניתן לבטל ידנית במסד הנתונים.')) return;
     setDeleting(true);
     try {
       const res = await fetch(`/api/expert/asset-templates/${params.templateId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
-      if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+      if (!res.ok) throw new Error(formatExpertError(res.status, await res.text()));
       router.push('/expert/asset-templates');
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -110,22 +111,22 @@ export default function EditAssetTemplatePage({ params }: Props) {
   }
 
   if (!values) {
-    return <div className="text-slate-500">Loading…</div>;
+    return <div className="text-slate-500">טוען…</div>;
   }
 
   return (
     <div className="max-w-2xl">
       <header className="mb-6 flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{values.name || 'Asset template'}</h1>
+          <h1 className="text-2xl font-semibold">{values.name || 'תבנית נכס'}</h1>
           {meta && (
             <p className="text-slate-500 text-sm mt-1">
-              v{meta.version} · updated {new Date(meta.updatedAt).toLocaleString()}
+              ג׳{meta.version} · עודכן {new Date(meta.updatedAt).toLocaleString('he-IL')}
             </p>
           )}
         </div>
         <Button variant="outline" onClick={handleDelete} disabled={deleting}>
-          {deleting ? 'Deactivating…' : 'Deactivate'}
+          {deleting ? 'משבית…' : 'השבת'}
         </Button>
       </header>
 
@@ -137,7 +138,7 @@ export default function EditAssetTemplatePage({ params }: Props) {
 
       <AssetTemplateForm
         initialValues={values}
-        submitLabel="Save as new version"
+        submitLabel="שמור כגרסה חדשה"
         onSubmit={handleSubmit}
         slugReadOnly
       />

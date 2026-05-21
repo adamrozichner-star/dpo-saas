@@ -76,9 +76,9 @@ export default function ExpertOverviewPage() {
   return (
     <div>
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold">L1 Hub Library</h1>
+        <h1 className="text-2xl font-semibold">ספריית L1 Hub</h1>
         <p className="text-slate-500 mt-1">
-          Curate the global compliance library. Every customer reads from these tables.
+          אצרו את ספריית הציות הגלובלית. כל הלקוחות קוראים מהטבלאות האלה.
         </p>
       </header>
 
@@ -89,27 +89,27 @@ export default function ExpertOverviewPage() {
       )}
 
       <section className="grid grid-cols-2 gap-4 mb-8">
-        <CountCard label="Asset Templates"       n={counts?.assetTemplates} href="/expert/asset-templates" ready />
-        <CountCard label="Questions"             n={counts?.questions}                                     />
-        <CountCard label="Document Templates"    n={counts?.documents}                                     />
-        <CountCard label="Control Playbooks"     n={counts?.controls}                                      />
-        <CountCard label="Gap Rules"             n={counts?.gaps}                                          />
-        <CountCard label="Continuation Services" n={counts?.services}                                      />
+        <CountCard label="תבניות נכסים"     n={counts?.assetTemplates} href="/expert/asset-templates" ready />
+        <CountCard label="שאלות"            n={counts?.questions}                                     />
+        <CountCard label="תבניות מסמכים"     n={counts?.documents}                                     />
+        <CountCard label="ספרי פעולה לבקרה" n={counts?.controls}                                      />
+        <CountCard label="כללי פערים"       n={counts?.gaps}                                          />
+        <CountCard label="שירותי המשך"      n={counts?.services}                                      />
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500 mb-2">
-          Recent asset templates
+        <h2 className="text-sm font-semibold tracking-wide text-slate-500 mb-2">
+          תבניות נכסים אחרונות
         </h2>
         <Card className="p-4">
           {recent.length === 0 ? (
-            <p className="text-slate-500 text-sm">No asset templates yet.</p>
+            <p className="text-slate-500 text-sm">אין עדיין תבניות נכסים.</p>
           ) : (
             <ul className="divide-y divide-slate-100">
               {recent.map((r, i) => (
                 <li key={i} className="py-2 flex justify-between text-sm">
                   <span>{r.name}</span>
-                  <span className="text-slate-400">{new Date(r.updatedAt).toLocaleString()}</span>
+                  <span className="text-slate-400">{new Date(r.updatedAt).toLocaleString('he-IL')}</span>
                 </li>
               ))}
             </ul>
@@ -125,11 +125,11 @@ function CountCard({ label, n, href, ready }: { label: string; n: number | undef
     <Card className={`p-5 ${ready ? 'hover:border-slate-400 transition-colors' : 'opacity-60'}`}>
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-xs uppercase tracking-wider text-slate-500">{label}</div>
+          <div className="text-xs tracking-wide text-slate-500">{label}</div>
           <div className="text-3xl font-semibold mt-1">{n ?? '—'}</div>
         </div>
         {!ready && (
-          <span className="text-[10px] uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded">soon</span>
+          <span className="text-[10px] uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded">בקרוב</span>
         )}
       </div>
     </Card>

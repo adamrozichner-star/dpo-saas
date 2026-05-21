@@ -106,7 +106,7 @@ export default function AssetTemplateForm({
 
       <Card className="p-5 space-y-4">
         <div>
-          <Label htmlFor="slug">Slug</Label>
+          <Label htmlFor="slug">מזהה (slug)</Label>
           <Input
             id="slug"
             value={values.slug}
@@ -115,67 +115,69 @@ export default function AssetTemplateForm({
             required
             readOnly={slugReadOnly}
             className={slugReadOnly ? 'bg-slate-50' : ''}
+            dir="ltr"
           />
           <p className="text-xs text-slate-500 mt-1">
-            Stable code identifier; lowercase a-z 0-9 underscore. Don&apos;t change after first save.
+            מזהה קוד יציב; אותיות לועזיות קטנות, ספרות וקו תחתון בלבד. אל תשנו לאחר שמירה ראשונה.
           </p>
         </div>
 
         <div>
-          <Label htmlFor="name">Name (display)</Label>
+          <Label htmlFor="name">שם להצגה</Label>
           <Input
             id="name"
             value={values.name}
             onChange={e => set('name', e.target.value)}
-            placeholder="Cameras"
+            placeholder="מצלמות"
             required
           />
         </div>
 
         <div>
-          <Label htmlFor="definition">Definition</Label>
+          <Label htmlFor="definition">הגדרה</Label>
           <Textarea
             id="definition"
             value={values.definition}
             onChange={e => set('definition', e.target.value)}
             rows={5}
-            placeholder="When does this asset type apply to an org? Describe the boundary."
+            placeholder="מתי תבנית הנכס הזו רלוונטית לארגון? תארו את הגבולות."
             required
           />
         </div>
 
         <div>
-          <Label htmlFor="iconName">Icon name (lucide)</Label>
+          <Label htmlFor="iconName">שם אייקון (lucide)</Label>
           <Input
             id="iconName"
             value={values.iconName}
             onChange={e => set('iconName', e.target.value)}
             placeholder="camera"
+            dir="ltr"
           />
         </div>
       </Card>
 
       <Card className="p-5 space-y-4">
-        <div className="text-sm font-semibold text-slate-700">Source / confidence</div>
+        <div className="text-sm font-semibold text-slate-700">מקור וודאות</div>
 
         <div>
-          <Label htmlFor="sourceTier">Source tier</Label>
+          <Label htmlFor="sourceTier">דרגת מקור</Label>
           <Select
             id="sourceTier"
             value={values.sourceTier}
             onChange={e => set('sourceTier', e.target.value as AssetTemplateFormValues['sourceTier'])}
             required
             options={[
-              { value: 'legal',                label: 'Legal (statute / case law)' },
-              { value: 'regulatory_guidance',  label: 'Regulatory guidance' },
-              { value: 'industry_norm',        label: 'Industry norm' },
-              { value: 'expert_judgment',      label: 'Expert judgment' },
+              { value: 'legal',                label: 'חוק (חקיקה / פסיקה)' },
+              { value: 'regulatory_guidance',  label: 'הנחיה רגולטורית' },
+              { value: 'industry_norm',        label: 'נורמה ענפית' },
+              { value: 'expert_judgment',      label: 'שיקול מומחה' },
             ]}
           />
         </div>
 
         <div>
-          <Label htmlFor="confidence">Confidence ({values.confidence.toFixed(2)})</Label>
+          <Label htmlFor="confidence">ודאות ({values.confidence.toFixed(2)})</Label>
           <Input
             id="confidence"
             type="range"
@@ -188,20 +190,20 @@ export default function AssetTemplateForm({
         </div>
 
         <div>
-          <Label htmlFor="reviewedBy">Reviewed by</Label>
+          <Label htmlFor="reviewedBy">נסקר על ידי</Label>
           <Input
             id="reviewedBy"
             value={values.reviewedBy}
             onChange={e => set('reviewedBy', e.target.value)}
-            placeholder="Name of the curator who last reviewed this"
+            placeholder="שם האוצר שסקר לאחרונה"
           />
           <p className="text-xs text-slate-500 mt-1">
-            Independent of the timestamp below — you can backfill a name without stamping a fresh review.
+            עצמאי מהחותמת למטה — אפשר למלא שם בלי לתייג סקירה חדשה, ולהפך.
           </p>
         </div>
 
         <div>
-          <Label htmlFor="lastReviewedAtLocal">Last reviewed at</Label>
+          <Label htmlFor="lastReviewedAtLocal">תאריך סקירה אחרון</Label>
           <div className="flex gap-2">
             <Input
               id="lastReviewedAtLocal"
@@ -214,7 +216,7 @@ export default function AssetTemplateForm({
               variant="outline"
               onClick={() => set('lastReviewedAtLocal', nowAsLocalDatetime())}
             >
-              Stamp as now
+              תייג כעכשיו
             </Button>
             {values.lastReviewedAtLocal && (
               <Button
@@ -222,38 +224,38 @@ export default function AssetTemplateForm({
                 variant="ghost"
                 onClick={() => set('lastReviewedAtLocal', '')}
               >
-                Clear
+                נקה
               </Button>
             )}
           </div>
         </div>
 
         <div>
-          <Label htmlFor="relatedSources">Related sources</Label>
+          <Label htmlFor="relatedSources">מקורות קשורים</Label>
           <Textarea
             id="relatedSources"
             value={values.relatedSources}
             onChange={e => set('relatedSources', e.target.value)}
             rows={4}
-            placeholder="One per line. URLs, citations, document refs."
+            placeholder="שורה לכל מקור. כתובות URL, ציטוטים, הפניות למסמכים."
           />
         </div>
 
         <div>
-          <Label htmlFor="notes">Notes (internal)</Label>
+          <Label htmlFor="notes">הערות (פנימי)</Label>
           <Textarea
             id="notes"
             value={values.notes}
             onChange={e => set('notes', e.target.value)}
             rows={3}
-            placeholder="Anything curators should know about this template that isn't user-facing."
+            placeholder="מידע שאוצרים צריכים לדעת על התבנית, אך לא חשוף ללקוחות."
           />
         </div>
       </Card>
 
       <div className="flex justify-end">
         <Button type="submit" disabled={submitting}>
-          {submitting ? 'Saving…' : submitLabel}
+          {submitting ? 'שומר…' : submitLabel}
         </Button>
       </div>
     </form>
