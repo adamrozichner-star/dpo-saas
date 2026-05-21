@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "vercel-build": "next build"
+    "vercel-build": "next build",
+    "test:agent": "tsx scripts/test-agent-runtime.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.20.0",
@@ -46,6 +47,7 @@
     "eslint-config-next": "14.2.0",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
+    "tsx": "^4.22.3",
     "typescript": "^5.3.0"
   }
 }

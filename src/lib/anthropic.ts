@@ -19,6 +19,10 @@ import type {
   MessageStreamParams,
 } from '@anthropic-ai/sdk/resources/messages';
 import type { MessageStream } from '@anthropic-ai/sdk/lib/MessageStream';
+import type {
+  MessageCreateParamsNonStreaming as ToolsMessageCreateParamsNonStreaming,
+  ToolsBetaMessage,
+} from '@anthropic-ai/sdk/resources/beta/tools/messages';
 import * as Sentry from '@sentry/nextjs';
 
 const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -107,6 +111,56 @@ function emitBreadcrumb(t: Telemetry): void {
     console.warn(
       `[anthropic] large call: ${total} tokens (in=${t.inputTokens} out=${t.outputTokens}) model=${t.model}`,
     );
+  }
+}
+
+// SDK 0.20.x keeps tool-use under the beta namespace
+// (anthropic.beta.tools.messages). Same retry / concurrency / Sentry
+// machinery as createMessage — different SDK endpoint and a different
+// response shape (ToolsBetaMessage with TextBlock | ToolUseBlock content).
+// When the SDK ships a stable tools API, this method should converge with
+// createMessage; for now they coexist.
+export async function createToolMessage(
+  params: ToolsMessageCreateParamsNonStreaming,
+): Promise<ToolsBetaMessage> {
+  await acquire();
+  try {
+    let attempt = 0;
+    let lastErr: unknown;
+    while (attempt < MAX_ATTEMPTS) {
+      attempt++;
+      const startedAt = Date.now();
+      try {
+        const message = await anthropic.beta.tools.messages.create(params, {
+          timeout: TIMEOUT_MS,
+        });
+        emitBreadcrumb({
+          model: params.model,
+          inputTokens: message.usage?.input_tokens ?? 0,
+          outputTokens: message.usage?.output_tokens ?? 0,
+          durationMs: Date.now() - startedAt,
+          attemptCount: attempt,
+          streamed: false,
+        });
+        return message;
+      } catch (err) {
+        lastErr = err;
+        if (!isRetryable(err) || attempt >= MAX_ATTEMPTS) break;
+        await sleep(BACKOFF_MS[attempt - 1]);
+      }
+    }
+    Sentry.captureException(lastErr, {
+      extra: {
+        model: params.model,
+        attempt_count: attempt,
+        last_error_status: errorStatus(lastErr),
+        streamed: false,
+        endpoint: 'beta.tools.messages',
+      },
+    });
+    throw lastErr;
+  } finally {
+    release();
   }
 }
 
