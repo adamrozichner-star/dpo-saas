@@ -4,6 +4,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { formatExpertError } from '@/lib/expert-i18n';
 import AssetTemplateForm, {
   EMPTY_FORM,
   AssetTemplateFormValues,
@@ -15,7 +16,7 @@ export default function NewAssetTemplatePage() {
   const { session } = useAuth();
 
   async function handleSubmit(values: AssetTemplateFormValues) {
-    if (!session) throw new Error('Not authenticated');
+    if (!session) throw new Error('אינך מחובר');
     const res = await fetch('/api/expert/asset-templates', {
       method: 'POST',
       headers: {
@@ -39,7 +40,7 @@ export default function NewAssetTemplatePage() {
       }),
     });
     if (!res.ok) {
-      throw new Error(`${res.status} ${await res.text()}`);
+      throw new Error(formatExpertError(res.status, await res.text()));
     }
     const { templateId } = await res.json();
     router.push(`/expert/asset-templates/${templateId}`);
@@ -48,12 +49,12 @@ export default function NewAssetTemplatePage() {
   return (
     <div className="max-w-2xl">
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold">New asset template</h1>
-        <p className="text-slate-500 mt-1">Create the first version. New versions on every save after this.</p>
+        <h1 className="text-2xl font-semibold">תבנית נכס חדשה</h1>
+        <p className="text-slate-500 mt-1">צרו את הגרסה הראשונה. כל שמירה נוספת תיצור גרסה חדשה.</p>
       </header>
       <AssetTemplateForm
         initialValues={EMPTY_FORM}
-        submitLabel="Create"
+        submitLabel="צור"
         onSubmit={handleSubmit}
       />
     </div>
