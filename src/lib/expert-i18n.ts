@@ -16,10 +16,37 @@ const FIELD_HE: Record<string, string> = {
   slug: 'מזהה (slug)',
   name: 'שם',
   definition: 'הגדרה',
+  description: 'תיאור',
   source_tier: 'דרגת מקור',
   confidence: 'ודאות',
   related_sources: 'מקורות קשורים',
   last_reviewed_at: 'תאריך סקירה אחרון',
+  // hub_questions
+  asset_template_id: 'תבנית נכס',
+  order_index: 'סדר',
+  question_text: 'נוסח השאלה',
+  question_type: 'סוג שאלה',
+  choices: 'אפשרויות',
+  depends_on: 'תלוי בשאלה',
+  help_text: 'טקסט עזרה',
+  required: 'חובה',
+  // hub_document_templates
+  body: 'תוכן',
+  variables: 'משתנים',
+  output_format: 'פורמט פלט',
+  // hub_control_playbooks
+  cadence: 'תדירות',
+  owner_role: 'תפקיד אחראי',
+  checklist: 'רשימת בדיקה',
+  // hub_gap_rules
+  severity: 'חומרה',
+  rule_dsl: 'כלל זיהוי',
+  remediation_text: 'טיפול מומלץ',
+  continuation_service_ids: 'שירותי המשך',
+  // hub_continuation_services
+  service_kind: 'סוג שירות',
+  price_model: 'מודל תמחור',
+  estimated_price_text: 'מחיר משוער',
 };
 
 export function formatExpertError(status: number, rawBody: string): string {

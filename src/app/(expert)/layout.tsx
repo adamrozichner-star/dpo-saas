@@ -16,11 +16,11 @@ interface CuratorState {
 const NAV_ITEMS: Array<{ href: string; label: string; ready: boolean }> = [
   { href: '/expert',                          label: 'סקירה',              ready: true },
   { href: '/expert/asset-templates',          label: 'תבניות נכסים',       ready: true },
-  { href: '/expert/questions',                label: 'שאלות',              ready: false },
-  { href: '/expert/document-templates',       label: 'תבניות מסמכים',      ready: false },
-  { href: '/expert/control-playbooks',        label: 'ספרי פעולה לבקרה',   ready: false },
-  { href: '/expert/gap-rules',                label: 'כללי פערים',         ready: false },
-  { href: '/expert/continuation-services',    label: 'שירותי המשך',        ready: false },
+  { href: '/expert/questions',                label: 'שאלות',              ready: true  },
+  { href: '/expert/document-templates',       label: 'תבניות מסמכים',      ready: true  },
+  { href: '/expert/control-playbooks',        label: 'ספרי פעולה לבקרה',   ready: true  },
+  { href: '/expert/gap-rules',                label: 'כללי פערים',         ready: true  },
+  { href: '/expert/continuation-services',    label: 'שירותי המשך',        ready: true  },
 ];
 
 export default function ExpertLayout({ children }: { children: ReactNode }) {
