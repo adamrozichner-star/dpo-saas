@@ -58,7 +58,18 @@ interface ParsedDocument {
 interface UploadResponse {
   draft_id: string;
   storage_path: string;
+  file_content_hash?: string; // round-tripped to /approve so persister can store it
   parsed_document: ParsedDocument;
+}
+
+// Short-circuit response when the uploaded PDF bytes match an existing
+// non-superseded document. UI shows a dialog with 3 actions instead of
+// running the normal extract → review flow.
+interface ExactDuplicateResponse {
+  exact_duplicate: true;
+  existing_document_id: string;
+  existing_title: string;
+  existing_fetched_at: string;
 }
 
 interface ApproveResponse {
@@ -74,6 +85,10 @@ interface ApproveResponse {
 type Stage =
   | { kind: 'empty' }
   | { kind: 'uploading'; fileName: string }
+  // The dialog state for the byte-level dedup short-circuit. Holds the
+  // original File so the curator can choose "re-upload anyway" without
+  // re-selecting from disk.
+  | { kind: 'duplicate'; info: ExactDuplicateResponse; file: File }
   | { kind: 'review'; draft: UploadResponse; resolutions: Record<number, Resolution> }
   | { kind: 'saving' }
   | { kind: 'success'; result: ApproveResponse; title: string };
@@ -99,7 +114,7 @@ export default function RegulatorySourceUploadPage() {
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  async function startUpload(file: File) {
+  async function startUpload(file: File, opts: { force?: boolean } = {}) {
     if (!session) {
       setError('אינך מחובר');
       return;
@@ -117,7 +132,11 @@ export default function RegulatorySourceUploadPage() {
       if (sourceUrl.trim()) formData.append('source_url', sourceUrl.trim());
       formData.append('source_org_hint', sourceOrgHint);
 
-      const res = await fetch('/api/admin/regulatory-sources/upload', {
+      // ?force=true bypasses the byte-level dedup short-circuit when
+      // the curator chose "re-upload anyway" from the dialog.
+      const url = '/api/admin/regulatory-sources/upload'
+        + (opts.force ? '?force=true' : '');
+      const res = await fetch(url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${session.access_token}` },
         body: formData,
@@ -126,10 +145,17 @@ export default function RegulatorySourceUploadPage() {
       if (!res.ok) {
         throw new Error(formatExpertError(res.status, await res.text()));
       }
-      const json: UploadResponse = await res.json();
+      const json = await res.json() as UploadResponse | ExactDuplicateResponse;
+
+      if ('exact_duplicate' in json && json.exact_duplicate) {
+        // Hold the File so a force-retry doesn't need a fresh file picker.
+        setStage({ kind: 'duplicate', info: json, file });
+        return;
+      }
+
       setStage({
         kind: 'review',
-        draft: json,
+        draft: json as UploadResponse,
         resolutions: {},
       });
     } catch (err) {
@@ -243,6 +269,46 @@ export default function RegulatorySourceUploadPage() {
     );
   }
 
+  if (stage.kind === 'duplicate') {
+    const { info, file } = stage;
+    const dateLabel = new Date(info.existing_fetched_at).toLocaleDateString('he-IL');
+    return (
+      <div className="max-w-2xl">
+        <header className="mb-6">
+          <h1 className="text-2xl font-semibold">המסמך הזה כבר קיים בספרייה</h1>
+          <p className="text-slate-500 mt-1">
+            זוהה לפי תוכן הקובץ. המעבד דילג כדי לחסוך זמן עיבוד.
+          </p>
+        </header>
+
+        <Card className="p-5 mb-6">
+          <div className="text-xs uppercase tracking-wide text-slate-500 mb-1">קיים בספרייה</div>
+          <div className="font-medium text-slate-900 mb-2">{info.existing_title}</div>
+          <div className="text-xs text-slate-500">הועלה ב-{dateLabel}</div>
+          <div className="text-xs text-slate-400 font-mono mt-2" dir="ltr">{info.existing_document_id}</div>
+        </Card>
+
+        <div className="flex flex-wrap gap-3">
+          <Link href={`/expert/regulatory-sources`}>
+            <Button>ראה את המסמך הקיים</Button>
+          </Link>
+          <Button variant="outline" onClick={() => startUpload(file, { force: true })}>
+            העלה בכל זאת מחדש
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setStage({ kind: 'empty' });
+              setError(null);
+            }}
+          >
+            ביטול
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   if (stage.kind === 'review') {
     return (
       <ReviewStage
@@ -289,6 +355,7 @@ export default function RegulatorySourceUploadPage() {
                 draft_id: finalDraft.draft_id,
                 storage_path: finalDraft.storage_path,
                 source_url: sourceUrl || null,
+                file_content_hash: finalDraft.file_content_hash,
                 parsed_document: {
                   ...finalDraft.parsed_document,
                   sections: wireSections,
