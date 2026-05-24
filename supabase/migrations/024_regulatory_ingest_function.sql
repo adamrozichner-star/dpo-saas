@@ -37,6 +37,7 @@ BEGIN;
 -- -----------------------------------------------------------------------------
 
 GRANT regulatory_ingest_worker TO postgres;
+GRANT CREATE ON SCHEMA public TO regulatory_ingest_worker;
 
 
 -- -----------------------------------------------------------------------------
