@@ -27,7 +27,7 @@ import { diffSections } from './semantic-diff';
 // If Haiku output quality regresses materially, revisit by promoting
 // only complex doc types (court rulings, multi-section laws) back to
 // Sonnet behind a per-source-org flag.
-const MODEL = 'claude-haiku-4-5';
+const MODEL = 'claude-haiku-4-5-20251001';
 const MAX_TOKENS = 8192;
 
 const SYSTEM_PROMPT = `You are a Hebrew legal document parser. Extract the structure of this regulatory document as JSON. Return ONLY a JSON object, no prose, no markdown fences. Schema:
