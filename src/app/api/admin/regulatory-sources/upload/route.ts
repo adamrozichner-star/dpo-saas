@@ -14,6 +14,7 @@
 // is always possible.
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createHash } from 'crypto';
 import { authenticateCurator } from '@/lib/expert-auth';
 import { getServiceSupabase } from '@/lib/api-auth';
 import { extractPdfStructure } from '@/lib/regulatory/pdf-extractor';
@@ -43,7 +44,7 @@ const ALLOWED_SOURCE_ORGS: RegulatorySourceOrg[] = [
 // in structured logs without each stage needing its own try/catch.
 type Stage =
   | 'auth' | 'parse_form' | 'validate_file' | 'read_buffer'
-  | 'storage_upload' | 'extract' | 'respond';
+  | 'dedup_lookup' | 'storage_upload' | 'extract' | 'respond';
 
 export async function POST(request: NextRequest) {
   let stage: Stage = 'auth';
@@ -86,13 +87,49 @@ export async function POST(request: NextRequest) {
     const draftId = crypto.randomUUID();
     const storagePath = `${draftId}.pdf`;
 
-    // 2. Read buffer once; reuse for both Storage upload and extraction.
+    // 2. Read buffer once; reuse for hash, Storage upload, and extraction.
     stage = 'read_buffer';
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // 3. Upload to Storage. service_role bypasses storage RLS.
-    stage = 'storage_upload';
+    // 3. Byte-level dedup. SHA-256 the PDF bytes BEFORE any extraction
+    //    runs. If a non-superseded document with the same file hash
+    //    already exists, short-circuit — return the existing row's
+    //    metadata so the UI can prompt the curator (view existing /
+    //    re-upload anyway / cancel) instead of running Haiku again on
+    //    bytes we've already processed. ?force=true bypasses the
+    //    short-circuit (curator chose "re-upload anyway").
     const sb = getServiceSupabase();
+    const fileContentHash = createHash('sha256').update(buffer).digest('hex');
+    const force = new URL(request.url).searchParams.get('force') === 'true';
+
+    if (!force) {
+      stage = 'dedup_lookup';
+      const { data: existing, error: lookupErr } = await sb.rpc(
+        'find_document_by_file_hash',
+        { p_file_hash: fileContentHash },
+      );
+      if (lookupErr) {
+        // Lookup failure is not fatal — log and continue with normal
+        // path. We'd rather process a duplicate than block the upload.
+        console.error('[regulatory-upload] dedup_lookup_failed:', {
+          stage,
+          error: lookupErr.message,
+          file_hash: fileContentHash,
+          elapsed_ms: Date.now() - startedAt,
+        });
+      } else if (Array.isArray(existing) && existing.length > 0) {
+        const hit = existing[0] as { id: string; title: string; fetched_at: string };
+        return NextResponse.json({
+          exact_duplicate: true,
+          existing_document_id: hit.id,
+          existing_title: hit.title,
+          existing_fetched_at: hit.fetched_at,
+        });
+      }
+    }
+
+    // 4. Upload to Storage. service_role bypasses storage RLS.
+    stage = 'storage_upload';
     const { error: uploadErr } = await sb.storage
       .from(BUCKET)
       .upload(storagePath, buffer, {
@@ -112,7 +149,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Extract structure. Errors here include both pdf-parse failures,
+    // 5. Extract structure. Errors here include both pdf-parse failures,
     //    Claude call failures, semantic-diff failures, and JSON validation
     //    failures.
     stage = 'extract';
@@ -145,6 +182,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       draft_id: draftId,
       storage_path: storagePath,
+      // Round-trip the file hash through the client so the /approve
+      // route can persist it on the new document row. Hash is computed
+      // once (at stage='read_buffer') and never recomputed.
+      file_content_hash: fileContentHash,
       parsed_document: {
         url: parsedDocument.url,
         title: parsedDocument.title,

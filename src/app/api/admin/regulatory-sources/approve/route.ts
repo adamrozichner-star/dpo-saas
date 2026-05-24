@@ -47,6 +47,11 @@ const BODY_SCHEMA = z.object({
   storage_path: z.string().min(1),
   parsed_document: PARSED_DOC_SCHEMA,
   source_url: z.string().nullable().optional(), // override; takes precedence over parsed_document.url
+  // Round-tripped from the upload route. Optional for backward
+  // compatibility — if absent (e.g. an in-flight approve from a
+  // client that uploaded before this deploy), the persister stores
+  // NULL and byte-level dedup just won't fire for this row.
+  file_content_hash: z.string().regex(/^[0-9a-f]{64}$/i).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -169,6 +174,7 @@ export async function POST(request: NextRequest) {
         contentHash: input.parsed_document.contentHash,
       },
       persistSections,
+      input.file_content_hash,
     );
 
     return NextResponse.json({
