@@ -70,7 +70,10 @@ export function formatExpertError(status: number, rawBody: string): string {
       return `חילוץ המסמך נכשל. נסו שוב או פנו לתמיכה.${detail ? ` (${detail.slice(0, 120)})` : ''}`;
     }
     if (body.error === 'storage_upload_failed') return 'העלאת הקובץ לאחסון נכשלה.';
-    if (body.error === 'persistence_failed') return 'שמירת המסמך נכשלה.';
+    if (body.error === 'persistence_failed') {
+      const detail = (body as { detail?: string }).detail;
+      return `שמירת המסמך נכשלה.${detail ? ` פרטים: ${detail.slice(0, 240)}` : ''}`;
+    }
   }
   if (status === 404) {
     return 'התבנית לא נמצאה.';

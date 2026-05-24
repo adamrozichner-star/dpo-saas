@@ -70,7 +70,23 @@ export async function persistDocument(
     // path), the error message will mention "permission denied for table
     // hub_<name>" — that's the firewall doing its job and should surface
     // visibly to the operator.
-    throw new Error(`persistDocument: ${error.message}`);
+    //
+    // Log the full Supabase error object (code, message, details, hint)
+    // to Vercel runtime logs. The thrown Error only carries .message, so
+    // missing-function / signature-mismatch / RLS errors would otherwise
+    // be invisible in the structured logs.
+    // eslint-disable-next-line no-console
+    console.error(JSON.stringify({
+      event: 'persist_document_rpc_failed',
+      ts: new Date().toISOString(),
+      supabase_error: {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      },
+    }));
+    throw new Error(`persistDocument: ${error.message}${error.hint ? ` (hint: ${error.hint})` : ''}`);
   }
   if (!data) {
     throw new Error('persistDocument: no result from regulatory_ingest_persist');
