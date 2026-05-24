@@ -60,6 +60,18 @@ export function formatExpertError(status: number, rawBody: string): string {
   if (status === 403) {
     return 'אין הרשאה — חשבון זה אינו מסומן כאוצר.';
   }
+
+  // Regulatory-source upload-specific error codes.
+  if (body && typeof body.error === 'string') {
+    if (body.error === 'pdf_too_large') return 'הקובץ גדול מדי (מקסימום 50MB).';
+    if (body.error === 'pdf_invalid') return 'הקובץ אינו PDF תקין.';
+    if (body.error === 'extraction_failed') {
+      const detail = (body as { detail?: string }).detail;
+      return `חילוץ המסמך נכשל. נסו שוב או פנו לתמיכה.${detail ? ` (${detail.slice(0, 120)})` : ''}`;
+    }
+    if (body.error === 'storage_upload_failed') return 'העלאת הקובץ לאחסון נכשלה.';
+    if (body.error === 'persistence_failed') return 'שמירת המסמך נכשלה.';
+  }
   if (status === 404) {
     return 'התבנית לא נמצאה.';
   }

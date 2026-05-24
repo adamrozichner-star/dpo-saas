@@ -13,9 +13,13 @@ interface CuratorState {
   status: 'loading' | 'authorized' | 'denied';
 }
 
-const NAV_ITEMS: Array<{ href: string; label: string; ready: boolean }> = [
+// Two-section nav: raw regulatory sources (uploaded PDFs / scraped pages)
+// are conceptually separate from the curated Hub artifacts that cite them.
+// `divider: true` on an item draws a hairline above it in the sidebar.
+const NAV_ITEMS: Array<{ href: string; label: string; ready: boolean; divider?: boolean }> = [
   { href: '/expert',                          label: 'סקירה',              ready: true },
-  { href: '/expert/asset-templates',          label: 'תבניות נכסים',       ready: true },
+  { href: '/expert/regulatory-sources',       label: 'מקורות רגולציה',      ready: true },
+  { href: '/expert/asset-templates',          label: 'תבניות נכסים',       ready: true, divider: true },
   { href: '/expert/questions',                label: 'שאלות',              ready: true  },
   { href: '/expert/document-templates',       label: 'תבניות מסמכים',      ready: true  },
   { href: '/expert/control-playbooks',        label: 'ספרי פעולה לבקרה',   ready: true  },
@@ -83,26 +87,29 @@ export default function ExpertLayout({ children }: { children: ReactNode }) {
             {NAV_ITEMS.map(item => {
               const isActive = pathname === item.href || (item.href !== '/expert' && pathname?.startsWith(item.href));
               const baseCls = 'flex items-center justify-between px-3 py-2 rounded-md text-sm';
+              const dividerCls = item.divider ? 'border-t border-slate-200 mt-3 pt-3' : '';
               if (!item.ready) {
                 return (
-                  <span
-                    key={item.href}
-                    className={`${baseCls} text-slate-400 cursor-not-allowed`}
-                    title="הסכמה מוכנה — ממשק בקרוב"
-                  >
-                    {item.label}
-                    <span className="text-[10px] uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded">בקרוב</span>
-                  </span>
+                  <div key={item.href} className={dividerCls}>
+                    <span
+                      className={`${baseCls} text-slate-400 cursor-not-allowed`}
+                      title="הסכמה מוכנה — ממשק בקרוב"
+                    >
+                      {item.label}
+                      <span className="text-[10px] uppercase tracking-wider bg-slate-100 px-1.5 py-0.5 rounded">בקרוב</span>
+                    </span>
+                  </div>
                 );
               }
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`${baseCls} ${isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
-                >
-                  {item.label}
-                </Link>
+                <div key={item.href} className={dividerCls}>
+                  <Link
+                    href={item.href}
+                    className={`${baseCls} ${isActive ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-100'}`}
+                  >
+                    {item.label}
+                  </Link>
+                </div>
               );
             })}
           </nav>
