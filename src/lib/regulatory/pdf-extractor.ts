@@ -18,7 +18,16 @@ import type { RegulatorySourceOrg } from '@/lib/types/regulatory';
 import type { ParsedDocument } from './types';
 import { diffSections } from './semantic-diff';
 
-const MODEL = 'claude-sonnet-4-6';
+// Model selection: Haiku 4.5 over Sonnet 4.6 for the extraction call.
+// Haiku is ~3-5× faster and the structured-output task (parse Hebrew
+// text into a flat JSON schema) does not depend on Sonnet's deeper
+// reasoning. Tradeoff: Haiku is less nuanced on Hebrew legal
+// terminology — occasional section-boundary misses are the expected
+// failure mode. Curator review (Stage 2) is the quality gate.
+// If Haiku output quality regresses materially, revisit by promoting
+// only complex doc types (court rulings, multi-section laws) back to
+// Sonnet behind a per-source-org flag.
+const MODEL = 'claude-haiku-4-5';
 const MAX_TOKENS = 8192;
 
 const SYSTEM_PROMPT = `You are a Hebrew legal document parser. Extract the structure of this regulatory document as JSON. Return ONLY a JSON object, no prose, no markdown fences. Schema:
@@ -105,12 +114,19 @@ ${pdfText}
 
   let claudeResponse;
   try {
-    claudeResponse = await createMessage({
-      model: MODEL,
-      max_tokens: MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userContent }],
-    });
+    // retries: 1 — the route runs inside a 60s Vercel function. The
+    // default 3-retry budget (1s + 2s + 4s backoff plus up to 3×60s
+    // per-attempt timeout) cannot fit. One attempt; if it fails the
+    // curator retries the upload.
+    claudeResponse = await createMessage(
+      {
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: 'user', content: userContent }],
+      },
+      { retries: 1 },
+    );
   } catch (err) {
     throw new Error(`Claude extraction call failed: ${err instanceof Error ? err.message : String(err)}`);
   }
