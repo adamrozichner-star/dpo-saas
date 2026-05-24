@@ -23,6 +23,23 @@
 BEGIN;
 
 -- -----------------------------------------------------------------------------
+-- 0. Grant the executor role membership in regulatory_ingest_worker.
+--
+-- ALTER FUNCTION ... OWNER TO regulatory_ingest_worker requires the
+-- executor (the role running this migration, typically postgres via the
+-- Supabase SQL Editor) to be able to SET ROLE to the target owner. SET
+-- ROLE requires either superuser status OR explicit membership in the
+-- target role. Even when postgres IS superuser in plain Postgres,
+-- Supabase's hosted environment may run the SQL Editor through a wrapper
+-- that doesn't carry superuser privileges into this check, so we grant
+-- the formal membership explicitly. Idempotent and harmless: re-granting
+-- an existing membership is a no-op.
+-- -----------------------------------------------------------------------------
+
+GRANT regulatory_ingest_worker TO postgres;
+
+
+-- -----------------------------------------------------------------------------
 -- regulatory_ingest_persist
 --
 -- Single-call persistence: idempotency, version bumping, document insert,

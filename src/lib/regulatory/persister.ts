@@ -1,11 +1,32 @@
-// Persister — calls the regulatory_ingest_persist Postgres function via
-// supabase.rpc(). The function (migration 024) is SECURITY DEFINER owned
-// by regulatory_ingest_worker, so the firewall is enforced at the
-// function-call boundary: writes inside the function body execute with
-// worker privileges (regulatory_* allowed, hub_* denied).
+// =============================================================================
+// FIREWALL ENFORCEMENT — DO NOT MODIFY WITHOUT READING THIS
+// =============================================================================
+// This module is the ONLY code path that writes to regulatory_documents
+// and regulatory_sections. All writes route through a single Postgres
+// function call: supabase.rpc('regulatory_ingest_persist', …).
 //
-// Service-role Supabase client is the caller. The firewall is NOT the
-// Supabase JS client's privilege; it's the function-ownership boundary.
+// The Postgres function (migration 024) is:
+//   - SECURITY DEFINER (runs with the owner's privileges, not the caller's)
+//   - OWNED BY regulatory_ingest_worker
+//   - granted EXECUTE only to service_role; revoked from PUBLIC
+//
+// The worker role has GRANTs (from migration 023) on regulatory_* tables
+// only. NO grants on hub_* tables. Therefore any INSERT/UPDATE inside the
+// function body that targets a hub_* table fails at Postgres with
+// "permission denied". That's the firewall — enforced by privilege
+// separation at the function-call boundary, not by application discipline.
+//
+// DO NOT:
+//   - export serviceSupabase() — keep the service_role client private.
+//   - cache the Supabase client at module level — fresh per call, lazy.
+//   - add a second write path (direct INSERT, RPC to a different function).
+//   - import anything from hub.ts in this file.
+//   - rewrite the function body to bypass the role drop.
+//
+// If you need a new write capability, add it as another SECURITY DEFINER
+// function in a migration, owned by the worker, granted EXECUTE to
+// service_role — and call THAT from here. Don't reach around.
+// =============================================================================
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { FetchResult } from './scraper';
@@ -18,24 +39,16 @@ export interface PersistResult {
   sectionsCount: number;
 }
 
-function serviceSupabase(): SupabaseClient {
-  // The OUTER caller is service_role — required to invoke the RPC. The
-  // actual WRITES happen inside regulatory_ingest_persist(), which is
-  // SECURITY DEFINER and owned by regulatory_ingest_worker. Inside that
-  // function body, the effective role is the worker, and any hub_* write
-  // attempt fails with "permission denied". This is the firewall: the
-  // caller's privilege ≠ the writes' privilege.
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
-}
-
 export async function persistDocument(
   doc: ParsedDocument,
   fetched: FetchResult,
 ): Promise<PersistResult> {
-  const sb = serviceSupabase();
+  // Lazy client construction inside the function — never stored
+  // module-level, never exported, never returned to callers.
+  const sb: SupabaseClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
 
   const { data, error } = await sb.rpc('regulatory_ingest_persist', {
     p_url: doc.url,
@@ -54,8 +67,8 @@ export async function persistDocument(
   });
 
   if (error) {
-    // If the function attempts a hub_* write (e.g. via future bad code),
-    // the error message will mention "permission denied for table
+    // If the function attempts a hub_* write (via some future bad code
+    // path), the error message will mention "permission denied for table
     // hub_<name>" — that's the firewall doing its job and should surface
     // visibly to the operator.
     throw new Error(`persistDocument: ${error.message}`);
