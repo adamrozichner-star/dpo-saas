@@ -30,17 +30,38 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { FetchResult, ParsedDocument } from './types';
+import { vectorToPgText } from './embeddings';
 
 export interface PersistResult {
   status: 'created' | 'updated' | 'unchanged';
   documentId: string;
   version: number;
   sectionsCount: number;
+  inserted: number;
+  replaced: number;
+  skipped: number;
+}
+
+// Per-section action vocabulary understood by migration 031's
+// regulatory_ingest_persist function. UI 'keep_both' maps to 'insert'
+// at the caller level (this module is action-vocabulary-agnostic).
+export type SectionAction = 'insert' | 'replace' | 'skip';
+
+export interface PersistSection {
+  ordinal: number;
+  heading: string | null;
+  anchor: string | null;
+  contentText: string;
+  contentHash: string;
+  action: SectionAction;
+  targetSectionId?: string;     // required when action='replace'
+  embedding?: number[];         // 1024-dim; omitted → embedding stays NULL on insert / unchanged on replace
 }
 
 export async function persistDocument(
   doc: ParsedDocument,
   fetched: FetchResult,
+  sections?: PersistSection[],
 ): Promise<PersistResult> {
   // Lazy client construction inside the function — never stored
   // module-level, never exported, never returned to callers.
@@ -49,6 +70,17 @@ export async function persistDocument(
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
 
+  // If the caller didn't supply per-section actions, default to
+  // inserting every section under the new doc (legacy contract).
+  const effectiveSections: PersistSection[] = sections ?? doc.sections.map(s => ({
+    ordinal: s.ordinal,
+    heading: s.heading,
+    anchor: s.anchor,
+    contentText: s.contentText,
+    contentHash: s.contentHash,
+    action: 'insert' as const,
+  }));
+
   const { data, error } = await sb.rpc('regulatory_ingest_persist', {
     p_url: doc.url,
     p_title: doc.title,
@@ -56,12 +88,17 @@ export async function persistDocument(
     p_content_hash: doc.contentHash,
     p_raw_html: fetched.rawHtml,
     p_metadata: doc.metadata,
-    p_sections: doc.sections.map(s => ({
+    p_sections: effectiveSections.map(s => ({
       ordinal: s.ordinal,
       heading: s.heading,
       anchor: s.anchor,
       content_text: s.contentText,
       content_hash: s.contentHash,
+      action: s.action,
+      target_section_id: s.targetSectionId ?? null,
+      embedding_text: s.embedding && s.embedding.length > 0
+        ? vectorToPgText(s.embedding)
+        : null,
     })),
   });
 
@@ -97,5 +134,8 @@ export async function persistDocument(
     documentId: data.document_id as string,
     version: data.version as number,
     sectionsCount: data.sections_count as number,
+    inserted: (data.inserted ?? data.sections_count ?? 0) as number,
+    replaced: (data.replaced ?? 0) as number,
+    skipped: (data.skipped ?? 0) as number,
   };
 }
