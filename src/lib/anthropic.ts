@@ -164,14 +164,24 @@ export async function createToolMessage(
   }
 }
 
+interface CreateMessageOptions {
+  // Override the default retry attempts (MAX_ATTEMPTS = 3). Callers
+  // with a tight wall-clock budget (e.g. PDF extraction, which runs
+  // inside a 60s Vercel function) should pass `retries: 1` so a hung
+  // Anthropic call doesn't chain into 3×60s before surfacing failure.
+  retries?: number;
+}
+
 export async function createMessage(
   params: MessageCreateParamsNonStreaming,
+  options: CreateMessageOptions = {},
 ): Promise<Message> {
+  const maxAttempts = options.retries ?? MAX_ATTEMPTS;
   await acquire();
   try {
     let attempt = 0;
     let lastErr: unknown;
-    while (attempt < MAX_ATTEMPTS) {
+    while (attempt < maxAttempts) {
       attempt++;
       const startedAt = Date.now();
       try {
@@ -189,7 +199,7 @@ export async function createMessage(
         return message;
       } catch (err) {
         lastErr = err;
-        if (!isRetryable(err) || attempt >= MAX_ATTEMPTS) break;
+        if (!isRetryable(err) || attempt >= maxAttempts) break;
         await sleep(BACKOFF_MS[attempt - 1]);
       }
     }
