@@ -2,7 +2,9 @@
 
 // Regulatory source PDF upload — 3-stage single page.
 //   Stage 1: dropzone + optional metadata
-//   Stage 2: editable review of extracted structure
+//   Stage 2: editable review of extracted structure, GROUPED BY DIFF STATUS
+//            (new / conflict / duplicate); curator resolves conflicts before
+//            approve becomes available.
 //   Stage 3: success summary
 
 import { useState, useRef, ChangeEvent, DragEvent } from 'react';
@@ -12,12 +14,22 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { formatExpertError } from '@/lib/expert-i18n';
 
 type SourceOrg = 'privacy_protection_authority' | 'knesset' | 'court' | 'eu_edpb' | 'other';
+
+type DiffStatus = 'new' | 'duplicate' | 'conflict';
+type Resolution = 'replace' | 'keep_both' | 'skip';
+
+interface SimilarSectionPreview {
+  id: string;
+  documentId: string;
+  documentTitle: string;
+  ordinal: number;
+  heading: string | null;
+  contentText: string;
+}
 
 interface Section {
   ordinal: number;
@@ -25,6 +37,13 @@ interface Section {
   anchor: string | null;
   contentText: string;
   contentHash: string;
+
+  // Diff fields populated by the extraction pipeline (semantic-diff.ts).
+  // Absent → treat as 'new' (legacy fallback / Voyage outage).
+  diffStatus?: DiffStatus;
+  similarity?: number | null;
+  similarSection?: SimilarSectionPreview | null;
+  embedding?: number[];
 }
 
 interface ParsedDocument {
@@ -47,12 +66,15 @@ interface ApproveResponse {
   version: number;
   sections_count: number;
   status: 'created' | 'updated' | 'unchanged';
+  inserted: number;
+  replaced: number;
+  skipped: number;
 }
 
 type Stage =
   | { kind: 'empty' }
   | { kind: 'uploading'; fileName: string }
-  | { kind: 'review'; draft: UploadResponse; included: boolean[] }
+  | { kind: 'review'; draft: UploadResponse; resolutions: Record<number, Resolution> }
   | { kind: 'saving' }
   | { kind: 'success'; result: ApproveResponse; title: string };
 
@@ -63,6 +85,10 @@ const SOURCE_ORG_OPTIONS: Array<{ value: SourceOrg; label: string }> = [
   { value: 'eu_edpb',                       label: 'EDPB (האיחוד האירופי)' },
   { value: 'other',                         label: 'אחר' },
 ];
+
+function effectiveStatus(s: Section): DiffStatus {
+  return s.diffStatus ?? 'new';
+}
 
 export default function RegulatorySourceUploadPage() {
   const { session } = useAuth();
@@ -104,7 +130,7 @@ export default function RegulatorySourceUploadPage() {
       setStage({
         kind: 'review',
         draft: json,
-        included: new Array(json.parsed_document.sections.length).fill(true),
+        resolutions: {},
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -153,7 +179,6 @@ export default function RegulatorySourceUploadPage() {
           ].join(' ')}
         >
           <div className="mx-auto mb-4 w-12 h-12 flex items-center justify-center rounded-full bg-slate-100">
-            {/* Subtle upload icon — inline SVG to avoid an extra import */}
             <svg className="w-6 h-6 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
               <polyline points="17 8 12 3 7 8" />
@@ -222,24 +247,38 @@ export default function RegulatorySourceUploadPage() {
     return (
       <ReviewStage
         draft={stage.draft}
-        included={stage.included}
-        sourceUrlOverride={sourceUrl || null}
-        onIncludedChange={(included) => setStage({ ...stage, included })}
+        resolutions={stage.resolutions}
+        onResolutionsChange={(next) => setStage({ ...stage, resolutions: next })}
         onDraftChange={(draft) => setStage({ ...stage, draft })}
         onRestart={() => {
           setStage({ kind: 'empty' });
           setError(null);
         }}
-        onApprove={async (finalDraft, finalIncluded) => {
+        onApprove={async (finalDraft, finalResolutions) => {
           if (!session) {
             setError('אינך מחובר');
             return;
           }
           setStage({ kind: 'saving' });
           try {
-            const filteredSections = finalDraft.parsed_document.sections
-              .filter((_, i) => finalIncluded[i])
-              .map((s, i) => ({ ...s, ordinal: i + 1 }));
+            // Build the on-the-wire sections array. Each section carries
+            // its diffStatus + (for conflicts) resolution + similarSectionId
+            // + embedding. The server translates these to wire actions.
+            const wireSections = finalDraft.parsed_document.sections.map((s, i) => {
+              const status = effectiveStatus(s);
+              const resolution = status === 'conflict' ? finalResolutions[i] : undefined;
+              return {
+                ordinal: s.ordinal,
+                heading: s.heading,
+                anchor: s.anchor,
+                contentText: s.contentText,
+                contentHash: s.contentHash,
+                diffStatus: status,
+                similarSectionId: s.similarSection?.id,
+                resolution,
+                embedding: s.embedding,
+              };
+            });
             const res = await fetch('/api/admin/regulatory-sources/approve', {
               method: 'POST',
               headers: {
@@ -252,7 +291,7 @@ export default function RegulatorySourceUploadPage() {
                 source_url: sourceUrl || null,
                 parsed_document: {
                   ...finalDraft.parsed_document,
-                  sections: filteredSections,
+                  sections: wireSections,
                 },
               }),
             });
@@ -266,7 +305,7 @@ export default function RegulatorySourceUploadPage() {
             setStage({
               kind: 'review',
               draft: finalDraft,
-              included: finalIncluded,
+              resolutions: finalResolutions,
             });
           }
         }}
@@ -289,7 +328,7 @@ export default function RegulatorySourceUploadPage() {
       <header className="mb-6">
         <h1 className="text-2xl font-semibold">נשמר בהצלחה</h1>
         <p className="text-slate-500 mt-1">
-          {stage.result.sections_count} סקציות נוספו לספריית הרגולציה.
+          {stage.result.inserted} סקציות חדשות נוספו · {stage.result.replaced} עודכנו · {stage.result.skipped} דולגו.
         </p>
       </header>
 
@@ -321,28 +360,27 @@ export default function RegulatorySourceUploadPage() {
 }
 
 // -----------------------------------------------------------------------------
-// Review stage — editable form for the extracted draft
+// Review stage — grouped by diff status, conflict resolution required
 // -----------------------------------------------------------------------------
 
 interface ReviewStageProps {
   draft: UploadResponse;
-  included: boolean[];
-  sourceUrlOverride: string | null;
+  resolutions: Record<number, Resolution>;
   error: string | null;
-  onIncludedChange: (next: boolean[]) => void;
+  onResolutionsChange: (next: Record<number, Resolution>) => void;
   onDraftChange: (next: UploadResponse) => void;
   onRestart: () => void;
-  onApprove: (draft: UploadResponse, included: boolean[]) => Promise<void>;
+  onApprove: (draft: UploadResponse, resolutions: Record<number, Resolution>) => Promise<void>;
 }
 
-function ReviewStage({ draft, included, error, onIncludedChange, onDraftChange, onRestart, onApprove }: ReviewStageProps) {
+function ReviewStage({
+  draft, resolutions, error,
+  onResolutionsChange, onDraftChange, onRestart, onApprove,
+}: ReviewStageProps) {
   const pd = draft.parsed_document;
 
   function updateDoc<K extends keyof ParsedDocument>(key: K, val: ParsedDocument[K]) {
-    onDraftChange({
-      ...draft,
-      parsed_document: { ...pd, [key]: val },
-    });
+    onDraftChange({ ...draft, parsed_document: { ...pd, [key]: val } });
   }
 
   function updateSection(idx: number, patch: Partial<Section>) {
@@ -350,31 +388,27 @@ function ReviewStage({ draft, included, error, onIncludedChange, onDraftChange, 
     onDraftChange({ ...draft, parsed_document: { ...pd, sections: next } });
   }
 
-  function moveSection(idx: number, dir: -1 | 1) {
-    const target = idx + dir;
-    if (target < 0 || target >= pd.sections.length) return;
-    const next = [...pd.sections];
-    [next[idx], next[target]] = [next[target], next[idx]];
-    const inc = [...included];
-    [inc[idx], inc[target]] = [inc[target], inc[idx]];
-    onDraftChange({ ...draft, parsed_document: { ...pd, sections: next } });
-    onIncludedChange(inc);
+  function setResolution(idx: number, r: Resolution) {
+    onResolutionsChange({ ...resolutions, [idx]: r });
   }
 
-  function toggleIncluded(idx: number, val: boolean) {
-    const next = [...included];
-    next[idx] = val;
-    onIncludedChange(next);
-  }
+  // Bucket sections by status. We keep their ORIGINAL index inside the
+  // bucket so updateSection/setResolution work without reindexing.
+  const buckets: Record<DiffStatus, Array<{ section: Section; idx: number }>> = {
+    new: [], conflict: [], duplicate: [],
+  };
+  pd.sections.forEach((s, i) => buckets[effectiveStatus(s)].push({ section: s, idx: i }));
 
-  const includedCount = included.filter(Boolean).length;
+  // Approve gate: every conflict must have a resolution.
+  const unresolvedConflicts = buckets.conflict.filter(({ idx }) => !resolutions[idx]).length;
+  const canApprove = unresolvedConflicts === 0;
 
   return (
     <div className="max-w-3xl">
       <header className="mb-6">
         <h1 className="text-2xl font-semibold">סקירת המסמך שחולץ</h1>
         <p className="text-slate-500 mt-1">
-          עיינו במבנה שחולץ, ערכו ככל שצריך, ואשרו לשמירה בספריית הרגולציה.
+          חדש: יתווסף לספרייה · קונפליקטים: צריך החלטה · כפילויות: כבר קיים, יידלג.
         </p>
       </header>
 
@@ -400,83 +434,269 @@ function ReviewStage({ draft, included, error, onIncludedChange, onDraftChange, 
           />
         </div>
 
-        <div className="text-xs text-slate-500">
-          {includedCount} מתוך {pd.sections.length} סקציות מסומנות לשמירה.
+        <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-slate-500">
+          <span>ידע חדש: <span className="font-semibold text-slate-900">{buckets.new.length}</span></span>
+          <span>קונפליקטים: <span className="font-semibold text-slate-900">{buckets.conflict.length}</span></span>
+          <span>כפילויות: <span className="font-semibold text-slate-900">{buckets.duplicate.length}</span></span>
         </div>
       </Card>
 
-      <div className="space-y-3 mb-6">
-        {pd.sections.map((section, idx) => (
-          <Card key={idx} className={`p-4 ${included[idx] ? '' : 'opacity-50'}`}>
-            <div className="flex items-start gap-3 mb-3">
-              <div className="flex items-center gap-2 pt-2">
-                <Checkbox
-                  checked={included[idx]}
-                  onChange={e => toggleIncluded(idx, e.target.checked)}
-                />
-              </div>
-              <div className="flex-1 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-500">סקציה {idx + 1}</span>
-                  <div className="flex-1" />
-                  <button
-                    type="button"
-                    onClick={() => moveSection(idx, -1)}
-                    disabled={idx === 0}
-                    className="text-xs text-slate-500 hover:text-slate-900 disabled:opacity-30 px-2 py-1 rounded hover:bg-slate-100"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveSection(idx, 1)}
-                    disabled={idx === pd.sections.length - 1}
-                    className="text-xs text-slate-500 hover:text-slate-900 disabled:opacity-30 px-2 py-1 rounded hover:bg-slate-100"
-                  >
-                    ↓
-                  </button>
-                </div>
+      {/* NEW bucket — green, expanded, editable */}
+      {buckets.new.length > 0 && (
+        <DiffGroup
+          title={`ידע חדש (${buckets.new.length})`}
+          tone="green"
+          description="סקציות שלא נמצאו בספרייה. ייווספו לאחר אישור."
+        >
+          {buckets.new.map(({ section, idx }) => (
+            <NewSectionCard
+              key={idx}
+              section={section}
+              idx={idx}
+              onUpdate={patch => updateSection(idx, patch)}
+            />
+          ))}
+        </DiffGroup>
+      )}
 
-                <div>
-                  <Label htmlFor={`heading-${idx}`}>כותרת הסקציה</Label>
-                  <Input
-                    id={`heading-${idx}`}
-                    value={section.heading ?? ''}
-                    onChange={e => updateSection(idx, { heading: e.target.value || null })}
-                    placeholder="ללא כותרת"
-                  />
-                </div>
+      {/* CONFLICT bucket — yellow, expanded, requires resolution */}
+      {buckets.conflict.length > 0 && (
+        <DiffGroup
+          title={`קונפליקטים (${buckets.conflict.length})`}
+          tone="yellow"
+          description="סקציות דומות למה שכבר קיים אך עם תוכן שונה. בחרו פעולה לכל אחת."
+        >
+          {buckets.conflict.map(({ section, idx }) => (
+            <ConflictSectionCard
+              key={idx}
+              section={section}
+              idx={idx}
+              resolution={resolutions[idx]}
+              onUpdate={patch => updateSection(idx, patch)}
+              onResolve={r => setResolution(idx, r)}
+            />
+          ))}
+        </DiffGroup>
+      )}
 
-                <div>
-                  <Label htmlFor={`anchor-${idx}`}>עוגן / מספור</Label>
-                  <Input
-                    id={`anchor-${idx}`}
-                    value={section.anchor ?? ''}
-                    onChange={e => updateSection(idx, { anchor: e.target.value || null })}
-                    placeholder="למשל: סעיף 17ב"
-                  />
-                </div>
+      {/* DUPLICATE bucket — grey, collapsed by default */}
+      {buckets.duplicate.length > 0 && (
+        <DiffGroup
+          title={`כפילויות (${buckets.duplicate.length})`}
+          tone="grey"
+          description="סקציות שכבר קיימות בספרייה. יידלגו אוטומטית."
+          defaultCollapsed
+        >
+          {buckets.duplicate.map(({ section, idx }) => (
+            <DuplicateSectionRow key={idx} section={section} />
+          ))}
+        </DiffGroup>
+      )}
 
-                <div>
-                  <Label>תוכן (קריאה בלבד)</Label>
-                  <div className="font-mono text-xs bg-slate-50 border border-slate-200 rounded p-3 max-h-48 overflow-y-auto whitespace-pre-wrap">
-                    {section.contentText}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-        ))}
+      <div className="flex justify-end gap-3 sticky bottom-4 bg-slate-50/80 backdrop-blur p-3 -mx-3 rounded-lg border border-slate-200 mt-6">
+        <Button variant="outline" onClick={onRestart}>ביטול</Button>
+        <Button
+          onClick={() => onApprove(draft, resolutions)}
+          disabled={!canApprove}
+          title={canApprove ? '' : `${unresolvedConflicts} קונפליקטים לא נפתרו`}
+        >
+          {canApprove ? 'אשר ושמור' : `אשר ושמור (${unresolvedConflicts} ממתינים)`}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Diff-group wrapper (header + collapsible body)
+// -----------------------------------------------------------------------------
+
+interface DiffGroupProps {
+  title: string;
+  tone: 'green' | 'yellow' | 'grey';
+  description: string;
+  defaultCollapsed?: boolean;
+  children: React.ReactNode;
+}
+
+const TONE_STYLES: Record<DiffGroupProps['tone'], { header: string; dot: string }> = {
+  green:  { header: 'bg-emerald-50 border-emerald-200 text-emerald-900', dot: 'bg-emerald-500' },
+  yellow: { header: 'bg-amber-50 border-amber-200 text-amber-900',       dot: 'bg-amber-500' },
+  grey:   { header: 'bg-slate-50 border-slate-200 text-slate-700',       dot: 'bg-slate-400' },
+};
+
+function DiffGroup({ title, tone, description, defaultCollapsed, children }: DiffGroupProps) {
+  const [collapsed, setCollapsed] = useState(!!defaultCollapsed);
+  const styles = TONE_STYLES[tone];
+  return (
+    <div className={`mb-5 rounded-lg border ${styles.header.split(' ')[1]}`}>
+      <button
+        type="button"
+        onClick={() => setCollapsed(!collapsed)}
+        className={`w-full flex items-center justify-between px-4 py-3 text-right ${styles.header} rounded-t-lg`}
+      >
+        <div className="flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full ${styles.dot}`} />
+          <span className="font-semibold">{title}</span>
+        </div>
+        <span className="text-xs">{collapsed ? 'הצג ▾' : 'הסתר ▴'}</span>
+      </button>
+      {!collapsed && (
+        <div className="bg-white p-4 space-y-3 rounded-b-lg">
+          <div className="text-xs text-slate-500">{description}</div>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Section cards — one per diff status
+// -----------------------------------------------------------------------------
+
+function NewSectionCard({
+  section, idx, onUpdate,
+}: { section: Section; idx: number; onUpdate: (patch: Partial<Section>) => void }) {
+  return (
+    <Card className="p-4 border-emerald-100">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-xs font-semibold text-emerald-700">חדש</span>
+        <span className="text-xs text-slate-500">סקציה {idx + 1}</span>
+      </div>
+      <div className="space-y-3">
+        <div>
+          <Label htmlFor={`new-heading-${idx}`}>כותרת הסקציה</Label>
+          <Input
+            id={`new-heading-${idx}`}
+            value={section.heading ?? ''}
+            onChange={e => onUpdate({ heading: e.target.value || null })}
+            placeholder="ללא כותרת"
+          />
+        </div>
+        <div>
+          <Label htmlFor={`new-anchor-${idx}`}>עוגן / מספור</Label>
+          <Input
+            id={`new-anchor-${idx}`}
+            value={section.anchor ?? ''}
+            onChange={e => onUpdate({ anchor: e.target.value || null })}
+            placeholder="למשל: סעיף 17ב"
+          />
+        </div>
+        <div>
+          <Label>תוכן</Label>
+          <div className="font-mono text-xs bg-slate-50 border border-slate-200 rounded p-3 max-h-48 overflow-y-auto whitespace-pre-wrap">
+            {section.contentText}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function ConflictSectionCard({
+  section, idx, resolution, onUpdate, onResolve,
+}: {
+  section: Section;
+  idx: number;
+  resolution: Resolution | undefined;
+  onUpdate: (patch: Partial<Section>) => void;
+  onResolve: (r: Resolution) => void;
+}) {
+  const sim = section.similarSection;
+  const simPct = typeof section.similarity === 'number'
+    ? `${Math.round(section.similarity * 100)}%`
+    : '—';
+  return (
+    <Card className="p-4 border-amber-100">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="text-xs font-semibold text-amber-700">קונפליקט · התאמה {simPct}</span>
+        <span className="text-xs text-slate-500">סקציה {idx + 1}</span>
       </div>
 
-      <div className="flex justify-end gap-3 sticky bottom-4 bg-slate-50/80 backdrop-blur p-3 -mx-3 rounded-lg border border-slate-200">
-        <Button variant="outline" onClick={onRestart}>התחל מחדש</Button>
-        <Button
-          onClick={() => onApprove(draft, included)}
-          disabled={includedCount === 0}
-        >
-          אשר ושמור ({includedCount})
-        </Button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+        <div>
+          <div className="text-xs text-slate-500 mb-1">סקציה חדשה (מהמסמך שהועלה)</div>
+          <Input
+            value={section.heading ?? ''}
+            onChange={e => onUpdate({ heading: e.target.value || null })}
+            placeholder="כותרת"
+            className="mb-2"
+          />
+          <div className="font-mono text-xs bg-amber-50/40 border border-amber-100 rounded p-3 max-h-48 overflow-y-auto whitespace-pre-wrap">
+            {section.contentText}
+          </div>
+        </div>
+        <div>
+          <div className="text-xs text-slate-500 mb-1">
+            סקציה קיימת — מתוך «{sim?.documentTitle ?? '?'}»
+          </div>
+          <div className="text-sm font-medium text-slate-700 mb-2 truncate">
+            {sim?.heading ?? '(ללא כותרת)'}
+          </div>
+          <div className="font-mono text-xs bg-slate-50 border border-slate-200 rounded p-3 max-h-48 overflow-y-auto whitespace-pre-wrap">
+            {sim?.contentText ?? '—'}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <ResolutionButton
+          active={resolution === 'replace'}
+          onClick={() => onResolve('replace')}
+          label="החלף את הקיים"
+        />
+        <ResolutionButton
+          active={resolution === 'keep_both'}
+          onClick={() => onResolve('keep_both')}
+          label="שמור את שניהם"
+        />
+        <ResolutionButton
+          active={resolution === 'skip'}
+          onClick={() => onResolve('skip')}
+          label="דלג"
+        />
+        {!resolution && (
+          <span className="text-xs text-amber-700 self-center mr-2">⚠ לא נפתר</span>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function ResolutionButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={[
+        'px-3 py-1.5 rounded-md text-sm border transition-colors',
+        active
+          ? 'bg-amber-600 text-white border-amber-700'
+          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50',
+      ].join(' ')}
+    >
+      {label}
+    </button>
+  );
+}
+
+function DuplicateSectionRow({ section }: { section: Section }) {
+  const sim = section.similarSection;
+  const simPct = typeof section.similarity === 'number'
+    ? `${Math.round(section.similarity * 100)}%`
+    : '—';
+  return (
+    <div className="flex items-center gap-3 py-2 px-3 rounded border border-slate-100 bg-slate-50/50">
+      <span className="text-slate-400 shrink-0">◯</span>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm text-slate-700 truncate">
+          {section.heading ?? section.contentText.slice(0, 80)}
+        </div>
+        <div className="text-xs text-slate-500 truncate">
+          דומה ל: <span className="font-medium">{sim?.heading ?? sim?.documentTitle ?? '?'}</span>
+          {' '}({simPct} התאמה)
+        </div>
       </div>
     </div>
   );

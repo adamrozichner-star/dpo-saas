@@ -16,6 +16,7 @@ import { z } from 'zod';
 import { createMessage } from '@/lib/anthropic';
 import type { RegulatorySourceOrg } from '@/lib/types/regulatory';
 import type { ParsedDocument } from './types';
+import { diffSections } from './semantic-diff';
 
 const MODEL = 'claude-sonnet-4-6';
 const MAX_TOKENS = 8192;
@@ -150,18 +151,46 @@ ${pdfText}
   if (validated.data.publication_date) metadata.publication_date = validated.data.publication_date;
   if (validated.data.detected_source_org) metadata.detected_source_org = validated.data.detected_source_org;
 
+  const baseSections = validated.data.sections.map(s => ({
+    ordinal: s.ordinal,
+    heading: s.heading,
+    anchor: s.anchor,
+    contentText: s.content_text,
+    contentHash: sha256(s.content_text),
+  }));
+
+  // 7. Semantic diff: embed + classify each section against the
+  //    existing library. If diff fails (Voyage outage, missing API key,
+  //    empty library) we fall back to treating every section as 'new'
+  //    so the upload flow stays unblocked. Curator can still proceed
+  //    and the failure is logged for visibility.
+  let diffResults: Awaited<ReturnType<typeof diffSections>> = [];
+  try {
+    diffResults = await diffSections(baseSections.map(s => s.contentText));
+  } catch (err) {
+    console.error('[regulatory] semantic-diff failed; falling back to all-new:', err);
+    diffResults = baseSections.map(() => ({
+      diffStatus: 'new' as const,
+      similarity: null,
+      similarSection: null,
+      embedding: [],
+    }));
+  }
+
+  const sections = baseSections.map((s, i) => ({
+    ...s,
+    diffStatus: diffResults[i]?.diffStatus,
+    similarity: diffResults[i]?.similarity ?? null,
+    similarSection: diffResults[i]?.similarSection ?? null,
+    embedding: diffResults[i]?.embedding ?? [],
+  }));
+
   return {
     url: sourceUrl ?? '',
     title: validated.data.title,
     sourceOrg: effectiveSourceOrg,
     contentHash,
     metadata,
-    sections: validated.data.sections.map(s => ({
-      ordinal: s.ordinal,
-      heading: s.heading,
-      anchor: s.anchor,
-      contentText: s.content_text,
-      contentHash: sha256(s.content_text),
-    })),
+    sections,
   };
 }

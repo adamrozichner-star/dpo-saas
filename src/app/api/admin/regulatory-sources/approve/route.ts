@@ -11,18 +11,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { authenticateCurator } from '@/lib/expert-auth';
-import { persistDocument } from '@/lib/regulatory/persister';
+import { persistDocument, type PersistSection, type SectionAction } from '@/lib/regulatory/persister';
 import type { ParsedDocument } from '@/lib/regulatory/types';
 import type { RegulatorySourceOrg } from '@/lib/types/regulatory';
 
 export const dynamic = 'force-dynamic';
 
+// UI-level per-section decision. diff_status comes from the semantic-diff
+// pass during extraction. resolution is only relevant when diff_status =
+// 'conflict' and is set by the curator in the Stage 2 review UI.
 const SECTION_SCHEMA = z.object({
   ordinal: z.number().int().min(1),
   heading: z.string().nullable(),
   anchor: z.string().nullable(),
   contentText: z.string(),
   contentHash: z.string().min(1),
+
+  diffStatus: z.enum(['new', 'duplicate', 'conflict']).optional(),
+  similarSectionId: z.string().uuid().optional(),
+  resolution: z.enum(['replace', 'keep_both', 'skip']).optional(),
+  embedding: z.array(z.number()).optional(),
 });
 
 const PARSED_DOC_SCHEMA = z.object({
@@ -85,21 +93,92 @@ export async function POST(request: NextRequest) {
     })),
   };
 
-  try {
-    const result = await persistDocument(doc, {
-      url,
-      fetchedAt: new Date().toISOString(),
-      status: 200,
-      contentType: 'application/pdf',
-      rawHtml: '', // No HTML for PDF uploads; raw bytes live in Storage.
-      contentHash: input.parsed_document.contentHash,
+  // Translate UI-level (diffStatus + resolution) into wire-level action.
+  //
+  //   diffStatus='new'                            → action='insert'
+  //   diffStatus='duplicate'                      → action='skip'
+  //   diffStatus='conflict' + resolution='replace'  → action='replace'
+  //   diffStatus='conflict' + resolution='keep_both'→ action='insert'
+  //   diffStatus='conflict' + resolution='skip'     → action='skip'
+  //   diffStatus undefined (legacy / no diff)     → action='insert'
+  //
+  // Unresolved conflicts are a 400 — the UI is supposed to gate
+  // approve until every conflict has a resolution; this is defense
+  // in depth.
+  const persistSections: PersistSection[] = [];
+  for (const s of input.parsed_document.sections) {
+    let action: SectionAction;
+    let targetSectionId: string | undefined;
+
+    if (s.diffStatus === 'duplicate') {
+      action = 'skip';
+    } else if (s.diffStatus === 'conflict') {
+      if (!s.resolution) {
+        return NextResponse.json(
+          {
+            error: 'unresolved_conflict',
+            detail: `Section ordinal ${s.ordinal} is a conflict with no resolution. Resolve all conflicts in the review UI before approving.`,
+          },
+          { status: 400 },
+        );
+      }
+      if (s.resolution === 'skip') {
+        action = 'skip';
+      } else if (s.resolution === 'replace') {
+        if (!s.similarSectionId) {
+          return NextResponse.json(
+            {
+              error: 'replace_missing_target',
+              detail: `Section ordinal ${s.ordinal} resolution=replace but no similarSectionId supplied.`,
+            },
+            { status: 400 },
+          );
+        }
+        action = 'replace';
+        targetSectionId = s.similarSectionId;
+      } else {
+        // keep_both
+        action = 'insert';
+      }
+    } else {
+      // 'new' or undefined (legacy path) → insert
+      action = 'insert';
+    }
+
+    persistSections.push({
+      ordinal: s.ordinal,
+      heading: s.heading,
+      anchor: s.anchor,
+      contentText: s.contentText,
+      contentHash: s.contentHash,
+      action,
+      targetSectionId,
+      embedding: s.embedding,
     });
+  }
+
+  try {
+    const result = await persistDocument(
+      doc,
+      {
+        url,
+        fetchedAt: new Date().toISOString(),
+        status: 200,
+        contentType: 'application/pdf',
+        rawHtml: '', // No HTML for PDF uploads; raw bytes live in Storage.
+        contentHash: input.parsed_document.contentHash,
+      },
+      persistSections,
+    );
 
     return NextResponse.json({
       document_id: result.documentId,
       version: result.version,
       sections_count: result.sectionsCount,
       status: result.status,
+      inserted: result.inserted,
+      replaced: result.replaced,
+      skipped: result.skipped,
     });
   } catch (err) {
     return NextResponse.json(

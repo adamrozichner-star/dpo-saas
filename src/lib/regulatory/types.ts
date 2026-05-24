@@ -5,12 +5,31 @@
 // OUT of the database). The types here describe the IN-FLIGHT shape used
 // during ingest: parsed-but-not-yet-persisted documents and fetch results.
 
+export type DiffStatus = 'new' | 'duplicate' | 'conflict';
+
+export interface SimilarSectionPreview {
+  id: string;
+  documentId: string;
+  documentTitle: string;
+  ordinal: number;
+  heading: string | null;
+  contentText: string;
+}
+
 export interface ParsedSection {
   ordinal: number;
   heading: string | null;
   anchor: string | null;
   contentText: string;
   contentHash: string;
+
+  // Semantic-diff fields. Populated by extractPdfStructure when an
+  // embedding model + library exist; absent on legacy callers.
+  // The embedding is carried on the proposal so persist doesn't re-embed.
+  diffStatus?: DiffStatus;
+  similarity?: number | null;
+  similarSection?: SimilarSectionPreview | null;
+  embedding?: number[];
 }
 
 export interface ParsedDocument {
