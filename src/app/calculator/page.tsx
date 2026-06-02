@@ -262,12 +262,12 @@ export default function CalculatorPage() {
               </p>
               <Link href={signupHref('/onboarding')}>
                 <Button size="lg" className="text-lg px-8">
-                  מינוי DPO + מערכת מלאה ב-₪1,000/חודש
+                  הצטרפות לגישה מוקדמת
                   <ArrowLeft className="mr-2 h-5 w-5" />
                 </Button>
               </Link>
               <p className="text-sm text-gray-500">
-                14 ימי ניסיון חינם • ללא התחייבות
+                נעדכן אתכם ראשונים כשהשירות ייפתח לרישום
               </p>
             </div>
 

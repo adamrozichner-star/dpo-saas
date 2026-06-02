@@ -71,7 +71,7 @@ function MiniCalculator() {
           {required ? (
             <Link href={signupHref('/register')}>
               <Button className="w-full py-5 rounded-xl font-bold text-base" style={{ backgroundColor: '#059669' }}>
-                התחל עכשיו — החל מ-₪1,000/חודש
+                הצטרפות לגישה מוקדמת
                 <ArrowLeft className="h-4 w-4 mr-2" />
               </Button>
             </Link>

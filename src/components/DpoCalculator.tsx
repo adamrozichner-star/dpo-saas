@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
+import { signupHref } from '@/lib/signup-flag'
 import { 
   Shield, 
   Building2, 
@@ -311,9 +312,9 @@ export default function DpoCalculator({
 
           {/* CTA Buttons */}
           <div className="flex flex-col gap-3">
-            <Link href="/onboarding">
+            <Link href={signupHref('/onboarding')}>
               <Button size="lg" className="w-full">
-                התחילו עכשיו - רק ₪1,000/חודש
+                הצטרפות לגישה מוקדמת
                 <ArrowLeft className="mr-2 h-4 w-4" />
               </Button>
             </Link>
