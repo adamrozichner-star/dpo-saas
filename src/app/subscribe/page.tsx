@@ -191,7 +191,7 @@ function SubscribeContent() {
   const plans: Record<string, { name: string; price: number; desc: string; features: string[]; showPrice?: boolean }> = {
     basic: {
       name: 'בסיסית',
-      price: 500,
+      price: 1000,
       desc: 'ניהול פרטיות עצמאי — ללא ממונה',
       features: [
         'מערכת AI מלאה',
@@ -203,7 +203,7 @@ function SubscribeContent() {
     },
     recommended: {
       name: 'מומלצת',
-      price: 999,
+      price: 1499,
       desc: 'כולל DPO ממונה מוסמך — המומלצת לרוב העסקים',
       features: [
         'הכל בבסיסית, ובנוסף:',
@@ -216,7 +216,7 @@ function SubscribeContent() {
     },
     premium: {
       name: 'פרימיום',
-      price: 4500,
+      price: 7500,
       desc: 'לארגונים עם דרישות מורכבות',
       features: [
         'הכל במומלצת, ובנוסף:',

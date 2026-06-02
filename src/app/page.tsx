@@ -69,7 +69,7 @@ function MiniCalculator() {
           {required ? (
             <Link href="/register">
               <Button className="w-full py-5 rounded-xl font-bold text-base" style={{ backgroundColor: '#059669' }}>
-                התחל עכשיו — החל מ-₪500/חודש
+                התחל עכשיו — החל מ-₪1,000/חודש
                 <ArrowLeft className="h-4 w-4 mr-2" />
               </Button>
             </Link>
@@ -216,7 +216,7 @@ export default function HomePage() {
             {/* Stats row */}
             <div className="grid grid-cols-3 gap-4 mb-8">
               <div className="text-center">
-                <div className="text-2xl sm:text-3xl font-bold text-slate-900">₪500</div>
+                <div className="text-2xl sm:text-3xl font-bold text-slate-900">₪1,000</div>
                 <div className="text-xs text-slate-500 mt-1">החל מ- / לחודש</div>
               </div>
               <div className="text-center">
@@ -337,7 +337,7 @@ export default function HomePage() {
             <h3 className="text-lg font-bold text-slate-900 mb-1">בסיסית</h3>
             <p className="text-sm text-slate-500 mb-5">ניהול פרטיות עצמאי — ללא ממונה</p>
             <div className="mb-1">
-              <span className="text-5xl font-bold text-slate-900">₪500</span>
+              <span className="text-5xl font-bold text-slate-900">₪1,000</span>
               <span className="text-slate-500 text-lg"> / חודש</span>
             </div>
             <p className="text-xs text-slate-400 mb-6">במקום ₪8,000+ אצל עו"ד</p>
@@ -371,7 +371,7 @@ export default function HomePage() {
             <h3 className="text-lg font-bold text-slate-900 mb-1">מומלצת</h3>
             <p className="text-sm text-slate-500 mb-5">כולל DPO ממונה מוסמך — המומלצת לרוב העסקים</p>
             <div className="mb-1">
-              <span className="text-5xl font-bold text-slate-900">₪999</span>
+              <span className="text-5xl font-bold text-slate-900">₪1,499</span>
               <span className="text-slate-500 text-lg"> / חודש</span>
             </div>
             <p className="text-xs text-slate-400 mb-6">במקום ₪3,000-8,000 אצל יועץ</p>
@@ -403,7 +403,7 @@ export default function HomePage() {
             <h3 className="text-lg font-bold text-slate-900 mb-1">פרימיום</h3>
             <p className="text-sm text-slate-500 mb-5">לארגונים עם דרישות מורכבות</p>
             <div className="mb-1">
-              <span className="text-5xl font-bold text-slate-900">₪4,500</span>
+              <span className="text-5xl font-bold text-slate-900">₪7,500</span>
               <span className="text-slate-500 text-lg"> / חודש</span>
             </div>
             <p className="text-xs text-slate-400 mb-6">ליווי מקצועי צמוד</p>
@@ -504,7 +504,7 @@ export default function HomePage() {
       >
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            ממונה מוסמך. ₪500/חודש. 5 דקות.
+            ממונה מוסמך. ₪1,000/חודש. 5 דקות.
           </h2>
           <p className="text-blue-100/70 text-lg mb-8">
             האכיפה כבר כאן — אל תחכו לקנס.

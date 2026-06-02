@@ -16,9 +16,9 @@ function getSupabase() {
 }
 
 const PLAN_DETAILS: Record<string, { monthly_price: number; dpo_minutes_quota: number }> = {
-  basic: { monthly_price: 500, dpo_minutes_quota: 0 },
-  recommended: { monthly_price: 999, dpo_minutes_quota: 30 },
-  premium: { monthly_price: 4500, dpo_minutes_quota: 120 },
+  basic: { monthly_price: 1000, dpo_minutes_quota: 0 },
+  recommended: { monthly_price: 1499, dpo_minutes_quota: 30 },
+  premium: { monthly_price: 7500, dpo_minutes_quota: 120 },
   enterprise: { monthly_price: 0, dpo_minutes_quota: 240 },
 };
 

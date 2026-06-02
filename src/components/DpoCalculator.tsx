@@ -313,7 +313,7 @@ export default function DpoCalculator({
           <div className="flex flex-col gap-3">
             <Link href="/onboarding">
               <Button size="lg" className="w-full">
-                התחילו עכשיו - רק ₪500/חודש
+                התחילו עכשיו - רק ₪1,000/חודש
                 <ArrowLeft className="mr-2 h-4 w-4" />
               </Button>
             </Link>

@@ -241,7 +241,7 @@ const emailTemplates: Record<string, (data: any) => { subject: string; html: str
         </div>` : ''}
         <div style="background: #eff6ff; border-radius: 8px; padding: 20px; margin: 20px 0;">
           <h3 style="color: #1e40af; margin: 0 0 10px 0;">🎯 הפתרון</h3>
-          <p style="color: #1e3a8a; margin: 0;">ב-Deepo תקבלו ממונה מוסמך + מערכת AI מלאה — <strong>ב-₪500 בלבד לחודש</strong>.</p>
+          <p style="color: #1e3a8a; margin: 0;">ב-Deepo תקבלו ממונה מוסמך + מערכת AI מלאה — <strong>ב-₪1,000 בלבד לחודש</strong>.</p>
         </div>
         ${btn('התחילו עכשיו ←', BASE_URL + '/onboarding', '#059669')}
         <p style="color: #6b7280; font-size: 12px; text-align: center;">תאריך הדוח: ${new Date(data.timestamp).toLocaleDateString('he-IL')}</p>
@@ -274,7 +274,7 @@ const emailTemplates: Record<string, (data: any) => { subject: string; html: str
           <p style="color: #991b1b; font-weight: bold; margin: 0;">💰 חשיפה ללא ממונה:</p>
           <p style="color: #dc2626; font-size: 22px; font-weight: bold; margin: 8px 0 0 0;">עד ₪3,200,000 קנס + עד 3 שנות מאסר</p>
         </div>
-        ${btn('הפעלת המערכת — ₪500/חודש ←', BASE_URL + '/subscribe', '#059669')}
+        ${btn('הפעלת המערכת — ₪1,000/חודש ←', BASE_URL + '/subscribe', '#059669')}
       `)}
       ${footer()}
     `)
@@ -299,7 +299,7 @@ const emailTemplates: Record<string, (data: any) => { subject: string; html: str
         </div>
         <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 18px; margin: 20px 0;">
           <p style="margin: 0; color: #065f46; font-weight: bold;">✅ עם Deepo — הכל מסודר תוך דקות.</p>
-          <p style="margin: 6px 0 0 0; color: #064e3b; font-size: 14px;">ממונה מוסמכת + מסמכים + ניטור שוטף — ₪500/חודש.</p>
+          <p style="margin: 6px 0 0 0; color: #064e3b; font-size: 14px;">ממונה מוסמכת + מסמכים + ניטור שוטף — ₪1,000/חודש.</p>
         </div>
         ${btn('הפעלה עכשיו ←', BASE_URL + '/subscribe', '#059669')}
       `)}
@@ -323,7 +323,7 @@ const emailTemplates: Record<string, (data: any) => { subject: string; html: str
         </div>
         <div style="background: #eff6ff; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
           <p style="margin: 0; font-size: 14px; color: #64748b;">מחיר ההפעלה:</p>
-          <p style="margin: 8px 0 0 0; font-size: 42px; font-weight: bold; color: #1e40af;">₪500<span style="font-size: 16px; color: #64748b;">/חודש</span></p>
+          <p style="margin: 8px 0 0 0; font-size: 42px; font-weight: bold; color: #1e40af;">₪1,000<span style="font-size: 16px; color: #64748b;">/חודש</span></p>
           <p style="margin: 4px 0 0 0; color: #64748b; font-size: 13px;">DPO מוסמך + מערכת מלאה + מסמכים</p>
         </div>
         ${btn('הפעלת המערכת ←', BASE_URL + '/subscribe', '#dc2626')}

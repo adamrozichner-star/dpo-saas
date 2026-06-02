@@ -914,7 +914,7 @@ function PaywallBanner({ complianceScore, orgName }: { complianceScore: number, 
         </div>
         <Link href="/subscribe">
           <button className="px-6 py-3 bg-gradient-to-l from-indigo-600 to-indigo-500 text-white rounded-xl text-sm font-bold hover:from-indigo-700 hover:to-indigo-600 transition-all shadow-md whitespace-nowrap">
-            הפעלת המערכת — ₪500/חודש ←
+            הפעלת המערכת — ₪1,000/חודש ←
           </button>
         </Link>
       </div>
@@ -1532,7 +1532,7 @@ function DocumentsTab({ documents, organization, supabase, isPaid, orgProfile, o
           </div>
           <Link href="/subscribe">
             <button className="px-5 py-2.5 bg-indigo-500 text-white rounded-xl text-sm font-semibold hover:bg-indigo-600 transition shadow-sm">
-              הפעלה — ₪500/חודש →
+              הפעלה — ₪1,000/חודש →
             </button>
           </Link>
         </div>

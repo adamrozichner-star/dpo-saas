@@ -18,9 +18,9 @@ interface PaymentRequest {
 }
 
 const PLANS = {
-  basic: { monthly: 500, annual: 5000, name: 'חבילה בסיסית', tier: 'basic' as const },
-  recommended: { monthly: 999, annual: 9990, name: 'חבילה מומלצת', tier: 'recommended' as const },
-  premium: { monthly: 4500, annual: 45000, name: 'חבילה פרימיום', tier: 'premium' as const },
+  basic: { monthly: 1000, annual: 10000, name: 'חבילה בסיסית', tier: 'basic' as const },
+  recommended: { monthly: 1499, annual: 14990, name: 'חבילה מומלצת', tier: 'recommended' as const },
+  premium: { monthly: 7500, annual: 75000, name: 'חבילה פרימיום', tier: 'premium' as const },
   enterprise: { monthly: 0, annual: 0, name: 'חבילה ארגונית', tier: 'enterprise' as const },
 };
 

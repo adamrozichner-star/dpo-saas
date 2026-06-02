@@ -151,7 +151,7 @@ export function ExpiredOverlay({ onUpgrade }: { onUpgrade?: () => void }) {
 
         <div className="bg-slate-50 rounded-xl p-4 mb-6">
           <div className="flex items-baseline justify-center gap-1 mb-2">
-            <span className="text-4xl font-bold text-slate-900">₪500</span>
+            <span className="text-4xl font-bold text-slate-900">₪1,000</span>
             <span className="text-slate-500">/חודש</span>
           </div>
           <p className="text-sm text-slate-500">
@@ -224,7 +224,7 @@ export function UpgradeModal({ isOpen, onClose, daysLeft }: UpgradeModalProps) {
 
         <div className="bg-gradient-to-br from-blue-600 to-purple-700 rounded-xl p-6 text-white mb-6">
           <div className="flex items-baseline gap-2 mb-4">
-            <span className="text-5xl font-bold">₪500</span>
+            <span className="text-5xl font-bold">₪1,000</span>
             <span className="text-white/80">/חודש</span>
           </div>
 
