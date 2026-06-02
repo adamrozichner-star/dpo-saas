@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { signupHref } from '@/lib/signup-flag'
 import { 
   Shield, 
   ArrowLeft,
@@ -84,7 +85,7 @@ export default function CalculatorPage() {
               <Link href="/login">
                 <Button variant="ghost">התחברות</Button>
               </Link>
-              <Link href="/onboarding">
+              <Link href={signupHref('/onboarding')}>
                 <Button className="text-white" style={{backgroundColor: '#10b981'}}>התחל עכשיו</Button>
               </Link>
             </div>
@@ -259,7 +260,7 @@ export default function CalculatorPage() {
               <p className="text-gray-600">
                 רוצים לפתור את זה עכשיו?
               </p>
-              <Link href="/onboarding">
+              <Link href={signupHref('/onboarding')}>
                 <Button size="lg" className="text-lg px-8">
                   מינוי DPO + מערכת מלאה ב-₪1,000/חודש
                   <ArrowLeft className="mr-2 h-5 w-5" />

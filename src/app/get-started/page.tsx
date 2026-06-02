@@ -13,6 +13,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { signupHref } from '@/lib/signup-flag'
 import Image from 'next/image'
 
 // Quick assessment - just 2 questions to get to payment fast
@@ -47,7 +48,7 @@ export default function GetStartedPage() {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/register?redirect=/get-started')
+      router.push(signupHref('/register?redirect=/get-started'))
     }
   }, [loading, user, router])
 

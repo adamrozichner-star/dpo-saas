@@ -5,9 +5,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import Footer from '@/components/Footer'
+import { signupHref } from '@/lib/signup-flag'
 import {
   Shield,
-  CheckCircle2, 
+  CheckCircle2,
   ArrowLeft,
   AlertTriangle,
   FileText,
@@ -68,7 +69,7 @@ function MiniCalculator() {
         </div>
         <div className="flex flex-col gap-2">
           {required ? (
-            <Link href="/register">
+            <Link href={signupHref('/register')}>
               <Button className="w-full py-5 rounded-xl font-bold text-base" style={{ backgroundColor: '#059669' }}>
                 התחל עכשיו — החל מ-₪1,000/חודש
                 <ArrowLeft className="h-4 w-4 mr-2" />
@@ -177,7 +178,7 @@ export default function HomePage() {
             <Link href="/login">
               <Button variant="ghost" size="sm" className="text-slate-600">התחברות</Button>
             </Link>
-            <Link href="/register">
+            <Link href={signupHref('/register')}>
               <Button size="sm" className="rounded-lg font-semibold" style={{ backgroundColor: '#059669' }}>
                 התחל עכשיו
               </Button>
@@ -357,7 +358,7 @@ export default function HomePage() {
                 </li>
               ))}
             </ul>
-            <Link href="/register?plan=basic" className="block">
+            <Link href={signupHref('/register?plan=basic')} className="block">
               <Button variant="outline" className="w-full py-5 rounded-xl text-base font-semibold">
                 בחירת חבילה
               </Button>
@@ -392,7 +393,7 @@ export default function HomePage() {
                 </li>
               ))}
             </ul>
-            <Link href="/register?plan=recommended" className="block">
+            <Link href={signupHref('/register?plan=recommended')} className="block">
               <Button className="w-full py-5 rounded-xl text-base font-semibold" style={{ backgroundColor: '#059669' }}>
                 בחירת חבילה
               </Button>
@@ -424,7 +425,7 @@ export default function HomePage() {
                 </li>
               ))}
             </ul>
-            <Link href="/register?plan=premium" className="block">
+            <Link href={signupHref('/register?plan=premium')} className="block">
               <Button variant="outline" className="w-full py-5 rounded-xl text-base font-semibold">
                 בחירת חבילה
               </Button>
@@ -510,7 +511,7 @@ export default function HomePage() {
           <p className="text-blue-100/70 text-lg mb-8">
             האכיפה כבר כאן — אל תחכו לקנס.
           </p>
-          <Link href="/register">
+          <Link href={signupHref('/register')}>
             <Button
               size="lg"
               className="w-full sm:w-auto text-lg px-10 py-6 h-auto rounded-xl font-bold shadow-lg shadow-emerald-500/25"
