@@ -168,7 +168,17 @@ export default function LeadSignupPage() {
                 />
               </div>
 
-              <div className="flex items-start gap-3 pt-2">
+              {/* Single <Label htmlFor> wrapping BOTH the Checkbox and the text.
+                  - The square `<div>` inside Checkbox is sr-only-input + sibling-div;
+                    on its own it has no click target. Wrapping it in a label
+                    forwards the click to the input via htmlFor.
+                  - The inner <Link> is an interactive descendant — per HTML5,
+                    label activation is suppressed when clicked, so it navigates
+                    to /privacy without toggling the checkbox. */}
+              <Label
+                htmlFor="consent"
+                className="flex items-start gap-3 pt-2 text-sm font-normal leading-relaxed cursor-pointer"
+              >
                 <Checkbox
                   id="consent"
                   checked={consent}
@@ -176,15 +186,15 @@ export default function LeadSignupPage() {
                   required
                   disabled={status === 'submitting'}
                 />
-                <Label htmlFor="consent" className="text-sm font-normal leading-relaxed cursor-pointer">
+                <span>
                   אני מסכים/ה שדיפו תיצור איתי קשר בנושא השירות ולשמירת הפרטים שלי
                   בהתאם ל
                   <Link href="/privacy" target="_blank" rel="noopener" className="text-emerald-600 hover:underline mx-1">
                     מדיניות הפרטיות
                   </Link>
                   .
-                </Label>
-              </div>
+                </span>
+              </Label>
 
               <Button
                 type="submit"
