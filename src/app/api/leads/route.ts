@@ -29,9 +29,20 @@ const BODY_SCHEMA = z.object({
   first_name:  z.string().trim().min(1).max(120),
   phone:       z.string().trim().regex(PHONE_RE),
   association: z.string().trim().min(1).max(200),
-  // Client-side confirmation that the consent checkbox was ticked.
-  // The authoritative timestamp is set server-side below.
+  // Optional. Empty strings come through as undefined via the form's
+  // explicit `|| undefined` mapping; we also coerce empty/whitespace
+  // here so a stray empty string lands as NULL in the DB.
+  company_name: z.string().trim().max(200).optional()
+    .transform(v => (v && v.length > 0 ? v : undefined)),
+  // Client-side confirmation that the (required) privacy/contact
+  // consent checkbox was ticked. The authoritative timestamp for it
+  // is set server-side below. This is SEPARATE from marketing consent.
   consent:     z.literal(true),
+  // Marketing consent — optional, defaults to false. When true, the
+  // server captures marketing_consent_at = NOW() (mirroring how
+  // consent_at is handled). When false/absent, marketing_consent_at
+  // stays NULL.
+  marketing_consent: z.boolean().optional().default(false),
 });
 
 const NOTIFY_TO = 'adamrozichner@gmail.com';
@@ -51,16 +62,23 @@ export async function POST(request: NextRequest) {
       { status: 400 },
     );
   }
-  const { first_name, phone, association } = parsed.data;
+  const { first_name, phone, association, company_name, marketing_consent } = parsed.data;
 
   const sb = getServiceSupabase();
   const consentAt = new Date().toISOString();
+  // marketing_consent_at MUST be NULL when the marketing box is unchecked —
+  // it's the audit timestamp for marketing consent specifically, not a
+  // submission timestamp.
+  const marketingConsentAt = marketing_consent ? consentAt : null;
 
   const { error: insertErr } = await sb.from('leads').insert({
     first_name,
     phone,
     association,
+    company_name: company_name ?? null,
     consent_at: consentAt,
+    marketing_consent,
+    marketing_consent_at: marketingConsentAt,
   });
 
   if (insertErr) {
@@ -77,7 +95,12 @@ export async function POST(request: NextRequest) {
 
   // Fire-and-forget notification. Don't await; don't fail the request
   // if email is misconfigured.
-  notifyAdam({ first_name, phone, association, consentAt }).catch(err =>
+  notifyAdam({
+    first_name, phone, association,
+    company_name: company_name ?? null,
+    consentAt,
+    marketing_consent,
+  }).catch(err =>
     console.error('[leads] notify_failed:', err),
   );
 
@@ -88,11 +111,15 @@ async function notifyAdam(data: {
   first_name: string;
   phone: string;
   association: string;
+  company_name: string | null;
   consentAt: string;
+  marketing_consent: boolean;
 }): Promise<void> {
   const consentDateHe = new Date(data.consentAt).toLocaleString('he-IL', {
     timeZone: 'Asia/Jerusalem',
   });
+  const companyLabel = data.company_name ?? '(לא צוין)';
+  const marketingLabel = data.marketing_consent ? 'אישר/ה' : 'לא אישר/ה';
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;" dir="rtl">
@@ -101,7 +128,9 @@ async function notifyAdam(data: {
         <tr><td style="padding: 6px 12px; color: #64748b;">שם פרטי:</td><td style="padding: 6px 12px; font-weight: bold;">${escapeHtml(data.first_name)}</td></tr>
         <tr><td style="padding: 6px 12px; color: #64748b;">טלפון:</td><td style="padding: 6px 12px; font-weight: bold;">${escapeHtml(data.phone)}</td></tr>
         <tr><td style="padding: 6px 12px; color: #64748b;">איגוד מקצועי:</td><td style="padding: 6px 12px; font-weight: bold;">${escapeHtml(data.association)}</td></tr>
-        <tr><td style="padding: 6px 12px; color: #64748b;">תאריך הסכמה:</td><td style="padding: 6px 12px;">${escapeHtml(consentDateHe)}</td></tr>
+        <tr><td style="padding: 6px 12px; color: #64748b;">שם החברה / העסק:</td><td style="padding: 6px 12px; font-weight: bold;">${escapeHtml(companyLabel)}</td></tr>
+        <tr><td style="padding: 6px 12px; color: #64748b;">תאריך הסכמה (פרטיות):</td><td style="padding: 6px 12px;">${escapeHtml(consentDateHe)}</td></tr>
+        <tr><td style="padding: 6px 12px; color: #64748b;">תוכן שיווקי:</td><td style="padding: 6px 12px; font-weight: bold;">${escapeHtml(marketingLabel)}</td></tr>
       </table>
       <p style="color: #94a3b8; font-size: 12px;">נשלח אוטומטית מ-deepo.co.il</p>
     </div>
@@ -115,7 +144,9 @@ async function notifyAdam(data: {
       `שם פרטי: ${data.first_name}\n` +
       `טלפון: ${data.phone}\n` +
       `איגוד מקצועי: ${data.association}\n` +
-      `תאריך הסכמה: ${consentDateHe}\n`,
+      `שם החברה / העסק: ${companyLabel}\n` +
+      `תאריך הסכמה (פרטיות): ${consentDateHe}\n` +
+      `תוכן שיווקי: ${marketingLabel}\n`,
   });
 }
 

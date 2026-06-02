@@ -28,11 +28,16 @@ export default function LeadSignupPage() {
   const [firstName, setFirstName] = useState('')
   const [phone, setPhone] = useState('')
   const [association, setAssociation] = useState('')
+  const [companyName, setCompanyName] = useState('')
   const [consent, setConsent] = useState(false)
+  const [marketingConsent, setMarketingConsent] = useState(false)
   const [status, setStatus] = useState<Status>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const phoneValid = PHONE_RE.test(phone.trim())
+  // canSubmit intentionally does NOT include companyName (optional) or
+  // marketingConsent (optional). The required-gate is unchanged from
+  // PR #25: first_name + phone + association + privacy consent.
   const canSubmit =
     firstName.trim().length > 0 &&
     phoneValid &&
@@ -46,6 +51,7 @@ export default function LeadSignupPage() {
     setStatus('submitting')
     setErrorMsg(null)
     try {
+      const trimmedCompany = companyName.trim()
       const res = await fetch('/api/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -53,7 +59,11 @@ export default function LeadSignupPage() {
           first_name: firstName.trim(),
           phone: phone.trim(),
           association: association.trim(),
+          // Send company_name only when populated; the server treats
+          // missing/empty as NULL via Zod's optional + transform.
+          ...(trimmedCompany ? { company_name: trimmedCompany } : {}),
           consent: true,
+          marketing_consent: marketingConsent,
         }),
       })
       if (!res.ok) {
@@ -168,13 +178,25 @@ export default function LeadSignupPage() {
                 />
               </div>
 
-              {/* Single <Label htmlFor> wrapping BOTH the Checkbox and the text.
-                  - The square `<div>` inside Checkbox is sr-only-input + sibling-div;
-                    on its own it has no click target. Wrapping it in a label
-                    forwards the click to the input via htmlFor.
-                  - The inner <Link> is an interactive descendant — per HTML5,
-                    label activation is suppressed when clicked, so it navigates
-                    to /privacy without toggling the checkbox. */}
+              {/* Optional company / business name. NOT in the required-gate. */}
+              <div>
+                <Label htmlFor="companyName">שם החברה / העסק</Label>
+                <Input
+                  id="companyName"
+                  type="text"
+                  value={companyName}
+                  onChange={e => setCompanyName(e.target.value)}
+                  autoComplete="organization"
+                  placeholder="(אופציונלי)"
+                  disabled={status === 'submitting'}
+                />
+              </div>
+
+              {/* Required privacy/contact consent. Same <Label htmlFor> wrap
+                  pattern as PR #31 so the visible square is clickable. The
+                  inner <Link> is an interactive descendant — HTML5 suppresses
+                  label activation when it's clicked, so the link navigates
+                  to /privacy without toggling. This box GATES SUBMIT. */}
               <Label
                 htmlFor="consent"
                 className="flex items-start gap-3 pt-2 text-sm font-normal leading-relaxed cursor-pointer"
@@ -195,6 +217,30 @@ export default function LeadSignupPage() {
                   .
                 </span>
               </Label>
+
+              {/* Separate OPTIONAL marketing consent. Per privacy-by-design,
+                  marketing consent must not be bundled with the required
+                  processing consent above. Does NOT gate submit. */}
+              <div>
+                <Label
+                  htmlFor="marketingConsent"
+                  className="flex items-start gap-3 text-sm font-normal leading-relaxed cursor-pointer"
+                >
+                  <Checkbox
+                    id="marketingConsent"
+                    checked={marketingConsent}
+                    onChange={e => setMarketingConsent(e.target.checked)}
+                    disabled={status === 'submitting'}
+                  />
+                  <span>
+                    אני מאשר/ת קבלת תוכן שיווקי ועדכונים מ-Deepo בדוא&quot;ל ו/או ב-SMS.
+                    ניתן להסיר בכל עת.
+                  </span>
+                </Label>
+                <p className="text-xs text-amber-700 mt-1 mr-8">
+                  ניסוח טיוטה — ממתין לאישור משפטי
+                </p>
+              </div>
 
               <Button
                 type="submit"
