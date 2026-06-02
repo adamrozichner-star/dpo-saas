@@ -57,9 +57,9 @@ export default function AccessibilityPage() {
               נשמח לשמוע מכם:
             </p>
             <div className="mt-3 p-4 bg-stone-50 rounded-xl text-sm space-y-1">
-              <p><strong>רכז נגישות:</strong> צוות Deepo</p>
-              <p><strong>דוא״ל:</strong> accessibility@deepo.co.il</p>
-              <p><strong>טלפון:</strong> 03-0000000</p>
+              <p><strong>רכז נגישות:</strong> אדם רוזיצנר</p>
+              <p><strong>טלפון:</strong> <a href="tel:+972544242427" className="text-indigo-600 hover:underline">054-424-2427</a></p>
+              <p><strong>דוא״ל:</strong> <a href="mailto:adamrozichner@gmail.com" className="text-indigo-600 hover:underline">adamrozichner@gmail.com</a></p>
             </div>
           </section>
 
