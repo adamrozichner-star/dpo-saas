@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Shield, ArrowRight, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
+import { signupHref, isSignupEnabled } from '@/lib/signup-flag'
 
 // Google Icon Component
 const GoogleIcon = () => (
@@ -259,7 +260,9 @@ export default function LoginPage() {
           <div className="mt-6 pt-6 border-t text-center">
             <p className="text-sm text-gray-600">
               עדיין אין לכם חשבון?{' '}
-              <Link href="/register" className="hover:underline font-medium" style={{color: '#1e40af'}}>הרשמה</Link>
+              <Link href={signupHref('/register')} className="hover:underline font-medium" style={{color: '#1e40af'}}>
+                {isSignupEnabled() ? 'הרשמה' : 'הצטרפות לגישה מוקדמת'}
+              </Link>
             </p>
           </div>
             </>
