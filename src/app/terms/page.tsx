@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { AlertTriangle, ArrowRight } from 'lucide-react'
 import Image from 'next/image'
+import Footer from '@/components/Footer'
 
 // /terms — Deepo terms of service (Hebrew, RTL).
 // DRAFT pending legal review by Roy.
@@ -308,11 +309,8 @@ export default function TermsPage() {
             </p>
           </section>
         </div>
-
-        <div className="mt-12 pt-8 border-t text-center text-gray-500">
-          <p>© 2026 Deepo. כל הזכויות שמורות.</p>
-        </div>
       </main>
+      <Footer />
     </div>
   )
 }
