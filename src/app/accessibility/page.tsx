@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import Image from 'next/image'
+import Footer from '@/components/Footer'
 
 export default function AccessibilityPage() {
   return (
@@ -69,6 +70,7 @@ export default function AccessibilityPage() {
           </section>
         </div>
       </main>
+      <Footer />
     </div>
   )
 }

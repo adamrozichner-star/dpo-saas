@@ -19,6 +19,7 @@ import {
   Clock
 } from 'lucide-react'
 import DpoCalculator from '@/components/DpoCalculator'
+import Footer from '@/components/Footer'
 
 interface CalculatorResult {
   required: boolean
@@ -308,13 +309,7 @@ export default function CalculatorPage() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t py-8 text-center text-sm text-gray-500">
-        <p>© 2026 Deepo. כל הזכויות שמורות.</p>
-        <div className="flex justify-center gap-4 mt-2">
-          <Link href="/terms" className="hover:text-gray-700">תנאי שימוש</Link>
-          <Link href="/privacy" className="hover:text-gray-700">מדיניות פרטיות</Link>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

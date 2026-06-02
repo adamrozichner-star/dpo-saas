@@ -4,8 +4,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { 
-  Shield, 
+import Footer from '@/components/Footer'
+import {
+  Shield,
   CheckCircle2, 
   ArrowLeft,
   AlertTriangle,
@@ -524,40 +525,7 @@ export default function HomePage() {
       </section>
 
       {/* ===== FOOTER ===== */}
-      <footer className="bg-slate-900 py-12 px-5">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-10">
-            <div className="text-right">
-              <div className="flex items-center gap-2 justify-end mb-3">
-                <Image src="/logos/deepo-logo-white-512.png" alt="Deepo" width={100} height={31} />
-              </div>
-              <p className="text-slate-400 text-sm leading-relaxed">
-                שירות ממונה הגנת פרטיות חיצוני לעסקים. 
-                עמידה בתיקון 13 לחוק הגנת הפרטיות בביטחון ובמחיר הוגן.
-              </p>
-            </div>
-            <div className="text-right">
-              <h4 className="font-semibold text-white mb-3">קישורים</h4>
-              <div className="flex flex-col gap-2 text-sm text-slate-400">
-                <Link href="/calculator" className="hover:text-white transition-colors">בדיקת חובת DPO</Link>
-                <Link href="/login" className="hover:text-white transition-colors">התחברות</Link>
-                <Link href="/privacy" className="hover:text-white transition-colors">מדיניות פרטיות</Link>
-                <Link href="/terms" className="hover:text-white transition-colors">תנאי שימוש</Link>
-              </div>
-            </div>
-            <div className="text-right">
-              <h4 className="font-semibold text-white mb-3">צרו קשר</h4>
-              <div className="flex flex-col gap-2 text-sm text-slate-400">
-                <span>support@deepo.co.il</span>
-                <span>deepo.co.il</span>
-              </div>
-            </div>
-          </div>
-          <div className="border-t border-slate-800 pt-8 text-sm text-slate-500 text-center">
-            © 2026 Deepo. כל הזכויות שמורות.
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }
