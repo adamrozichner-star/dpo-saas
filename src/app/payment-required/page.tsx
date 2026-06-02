@@ -237,7 +237,7 @@ export default function PaymentRequiredPage() {
             ))}
           </div>
           <button onClick={() => router.push('/subscribe')} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3.5 px-6 rounded-xl transition-colors text-lg mb-3 shadow-sm">
-            המשך לתשלום — ₪500/חודש
+            המשך לתשלום — ₪1,000/חודש
           </button>
           <button onClick={() => router.push('/checkout')} className="w-full bg-stone-100 hover:bg-stone-200 text-stone-600 font-medium py-2.5 px-6 rounded-xl transition-colors text-sm">
             צפייה בחבילות נוספות

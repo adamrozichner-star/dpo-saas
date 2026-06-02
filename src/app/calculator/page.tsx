@@ -260,7 +260,7 @@ export default function CalculatorPage() {
               </p>
               <Link href="/onboarding">
                 <Button size="lg" className="text-lg px-8">
-                  מינוי DPO + מערכת מלאה ב-₪500/חודש
+                  מינוי DPO + מערכת מלאה ב-₪1,000/חודש
                   <ArrowLeft className="mr-2 h-5 w-5" />
                 </Button>
               </Link>
@@ -300,7 +300,7 @@ export default function CalculatorPage() {
               <div>זמן הקמה</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-primary mb-1">₪500</div>
+              <div className="text-2xl font-bold text-primary mb-1">₪1,000</div>
               <div>לחודש בלבד</div>
             </div>
           </div>

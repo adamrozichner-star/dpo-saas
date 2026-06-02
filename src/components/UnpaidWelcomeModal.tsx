@@ -159,7 +159,7 @@ export default function UnpaidWelcomeModal({
             צפייה בלוח הבקרה ←
           </button>
           <p className="text-center text-[12px] text-gray-400 mt-2.5">
-            ניתן להפעיל את המערכת המלאה בכל עת · ₪500/חודש
+            ניתן להפעיל את המערכת המלאה בכל עת · ₪1,000/חודש
           </p>
         </div>
       </div>

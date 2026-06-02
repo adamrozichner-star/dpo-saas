@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
   </div>
   <p style="color: #991b1b; font-weight: bold;">❌ אין ממונה הגנת פרטיות<br>❌ חסרה מדיניות פרטיות<br>❌ אין נהלי אבטחת מידע<br>❌ חסר כתב מינוי DPO</p>
   <div style="text-align: center; margin: 24px 0;">
-    <a href="${appUrl}/subscribe" style="background: #059669; color: white; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">הפעלת המערכת — ₪500/חודש ←</a>
+    <a href="${appUrl}/subscribe" style="background: #059669; color: white; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold;">הפעלת המערכת — ₪1,000/חודש ←</a>
   </div>
   <p style="color: #999; font-size: 12px; text-align: center;">🧪 TEST EMAIL — ${new Date().toISOString()}</p>
 </div>
