@@ -15,9 +15,14 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // Paths blocked when signup is disabled. Each entry matches the path
 // itself and any subpaths. /checkout is included because it's the
-// route that initiates the Cardcom payment flow.
+// route that initiates the Cardcom payment flow. /get-started is the
+// pre-onboarding quick assessment — funnel infrastructure that must
+// be closed end-to-end (its terminal /onboarding is gated below, but
+// gating /get-started too stops an authenticated user from being
+// dropped into the assessment UI by a direct URL).
 const GATED_PREFIXES = [
   '/register',
+  '/get-started',
   '/onboarding',
   '/subscribe',
   '/checkout',
@@ -56,6 +61,8 @@ export const config = {
   matcher: [
     '/register/:path*',
     '/register',
+    '/get-started/:path*',
+    '/get-started',
     '/onboarding/:path*',
     '/onboarding',
     '/subscribe/:path*',
