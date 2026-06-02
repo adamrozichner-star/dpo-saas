@@ -237,9 +237,6 @@ export default function LeadSignupPage() {
                     ניתן להסיר בכל עת.
                   </span>
                 </Label>
-                <p className="text-xs text-amber-700 mt-1 mr-8">
-                  ניסוח טיוטה — ממתין לאישור משפטי
-                </p>
               </div>
 
               <Button
