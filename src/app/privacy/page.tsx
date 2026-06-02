@@ -7,10 +7,13 @@ import Footer from '@/components/Footer'
 // /privacy — Deepo privacy policy (Hebrew, RTL).
 // DRAFT pending legal review by Roy. Banner at top makes this explicit.
 //
-// Controller identified by name + address + email only — no ID/business
-// number printed publicly (Adam's עוסק number overlaps with his ת.ז.).
-// See memory/feedback_controller_id_never_public.md. When Deepo
-// incorporates to a Ltd, the new ח.פ. can be added back here.
+// Controller is currently קרסטון יועצים בע"מ (ח.פ. 515898088) as the
+// interim corporate entity operating Deepo until the dedicated company
+// is incorporated. Corporate ח.פ. is safe to publish (no overlap with
+// personal ת.ז.), so we print it inline. When the dedicated Deepo Ltd
+// is incorporated, swap the entity here (name + ח.פ. + address) and
+// the matching block in /terms §1, plus contact blocks at the bottom
+// of both files.
 
 export default function PrivacyPage() {
   return (
@@ -63,16 +66,14 @@ export default function PrivacyPage() {
               בעל המאגר ומפעיל השירות (להלן: &quot;אנחנו&quot; / &quot;ההנהלה&quot;):
             </p>
             <div className="bg-white border border-gray-200 rounded-lg p-4 mt-3 not-prose">
-              <p className="text-gray-800">אדם רוזיצנר, עוסק מורשה</p>
-              <p className="text-gray-700 text-sm mt-1">כתובת: ההגנה 1, רמת השרון</p>
+              <p className="text-gray-800">קרסטון יועצים בע&quot;מ</p>
+              <p className="text-gray-700 text-sm mt-1">ח.פ. 515898088</p>
+              <p className="text-gray-700 text-sm">כתובת: דרך מנחם בגין 23, תל אביב-יפו</p>
               <p className="text-gray-700 text-sm">
                 דוא&quot;ל ליצירת קשר בנושאי פרטיות:{' '}
                 <a href="mailto:adamrozichner@gmail.com" className="text-emerald-600 hover:underline">
                   adamrozichner@gmail.com
                 </a>
-              </p>
-              <p className="text-gray-500 text-xs mt-2">
-                מספר עוסק מורשה יימסר על פי דרישה ולמטרות לגיטימיות בלבד.
               </p>
             </div>
             <p className="text-gray-700 leading-relaxed mt-3">
@@ -266,8 +267,9 @@ export default function PrivacyPage() {
           <section>
             <h2 className="text-xl font-bold mb-4">10. יצירת קשר</h2>
             <p className="text-gray-700 leading-relaxed">לפניות בנושא פרטיות:</p>
-            <p className="text-gray-700 mt-2">אדם רוזיצנר, עוסק מורשה</p>
-            <p className="text-gray-700">כתובת: ההגנה 1, רמת השרון</p>
+            <p className="text-gray-700 mt-2">קרסטון יועצים בע&quot;מ</p>
+            <p className="text-gray-700">ח.פ. 515898088</p>
+            <p className="text-gray-700">כתובת: דרך מנחם בגין 23, תל אביב-יפו</p>
             <p className="text-gray-700">
               דוא&quot;ל:{' '}
               <a href="mailto:adamrozichner@gmail.com" className="text-emerald-600 hover:underline">

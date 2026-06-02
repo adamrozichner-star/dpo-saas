@@ -7,9 +7,10 @@ import Footer from '@/components/Footer'
 // /terms — Deepo terms of service (Hebrew, RTL).
 // DRAFT pending legal review by Roy.
 //
-// Same controller-identity rules as /privacy: name + address + email
-// only, no ID/business number printed.
-// See memory/feedback_controller_id_never_public.md.
+// Operator is currently קרסטון יועצים בע"מ (ח.פ. 515898088) — the
+// interim corporate entity running Deepo until the dedicated company
+// is incorporated. Corporate ח.פ. is safe to publish. Keep §1 here
+// aligned with the controller block in /privacy §1.
 
 export default function TermsPage() {
   return (
@@ -62,16 +63,14 @@ export default function TermsPage() {
               מפעיל השירות (להלן: &quot;אנחנו&quot;):
             </p>
             <div className="bg-white border border-gray-200 rounded-lg p-4 mt-3 not-prose">
-              <p className="text-gray-800">אדם רוזיצנר, עוסק מורשה</p>
-              <p className="text-gray-700 text-sm mt-1">כתובת: ההגנה 1, רמת השרון</p>
+              <p className="text-gray-800">קרסטון יועצים בע&quot;מ</p>
+              <p className="text-gray-700 text-sm mt-1">ח.פ. 515898088</p>
+              <p className="text-gray-700 text-sm">כתובת: דרך מנחם בגין 23, תל אביב-יפו</p>
               <p className="text-gray-700 text-sm">
                 דוא&quot;ל:{' '}
                 <a href="mailto:adamrozichner@gmail.com" className="text-emerald-600 hover:underline">
                   adamrozichner@gmail.com
                 </a>
-              </p>
-              <p className="text-gray-500 text-xs mt-2">
-                מספר עוסק מורשה יימסר על פי דרישה ולמטרות לגיטימיות בלבד.
               </p>
             </div>
             <p className="text-gray-700 leading-relaxed mt-3">
@@ -290,8 +289,9 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-bold mb-4">12. יצירת קשר</h2>
             <p className="text-gray-700 leading-relaxed">לפניות בנוגע לתנאי השימוש:</p>
-            <p className="text-gray-700 mt-2">אדם רוזיצנר, עוסק מורשה</p>
-            <p className="text-gray-700">כתובת: ההגנה 1, רמת השרון</p>
+            <p className="text-gray-700 mt-2">קרסטון יועצים בע&quot;מ</p>
+            <p className="text-gray-700">ח.פ. 515898088</p>
+            <p className="text-gray-700">כתובת: דרך מנחם בגין 23, תל אביב-יפו</p>
             <p className="text-gray-700">
               דוא&quot;ל:{' '}
               <a href="mailto:adamrozichner@gmail.com" className="text-emerald-600 hover:underline">
