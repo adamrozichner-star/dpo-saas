@@ -1,11 +1,26 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { AlertTriangle, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import Footer from '@/components/Footer'
 
 // /privacy — Deepo privacy policy (Hebrew, RTL).
-// DRAFT pending legal review by Roy. Banner at top makes this explicit.
+// Roy-reviewed final version (sign-off 2026-06-04). The 'טיוטה לסקירה
+// משפטית' banner that used to live at the top of this page has been
+// removed since the content is now signed off. /terms still carries
+// its draft banner until Roy reviews it separately.
+//
+// Substantive changes from the prior draft (per Roy):
+//   - §2 'customer-data' bucket removed (only early-access form data +
+//     auto-collected data remain).
+//   - §3 trimmed to four purposes (account/billing/legal bullets cut).
+//   - Old §7 'rights' list with the 30/60-day window REMOVED.
+//   - Two new sections in its place: §7 'זכות לעיין במידע' and
+//     §8 'תיקון המידע שלך' — both direct the user to
+//     adamrozichner@gmail.com.
+//   - Numbering shifted: cookies → §9, changes → §10, contact → §11.
+//     (Roy's source numbered both 'changes' and 'contact' as 10; the
+//     contact section is corrected to §11 here.)
 //
 // Controller is currently קרסטון יועצים בע"מ (ח.פ. 515898088) as the
 // interim corporate entity operating Deepo until the dedicated company
@@ -34,21 +49,6 @@ export default function PrivacyPage() {
 
       <main className="container mx-auto px-4 py-12 max-w-4xl">
 
-        {/* DRAFT banner — must stay until Roy signs off */}
-        <div
-          role="status"
-          className="mb-8 rounded-lg border border-amber-300 bg-amber-50 p-4 flex items-start gap-3"
-        >
-          <AlertTriangle className="h-5 w-5 text-amber-700 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold text-amber-900">טיוטה לסקירה משפטית</p>
-            <p className="text-sm text-amber-800 mt-1">
-              מסמך זה הוא טיוטה ראשונית הממתינה לסקירה ואישור של יועץ משפטי.
-              עד לאישור הסופי אין להסתמך עליו כעל מדיניות פרטיות מחייבת.
-            </p>
-          </div>
-        </div>
-
         <h1 className="text-3xl font-bold mb-2">מדיניות פרטיות</h1>
         <p className="text-gray-600 mb-8">תאריך תחילה: 2 ביוני 2026</p>
 
@@ -59,8 +59,7 @@ export default function PrivacyPage() {
             <h2 className="text-xl font-bold mb-4">1. מבוא וזהות בעל המאגר</h2>
             <p className="text-gray-700 leading-relaxed">
               שירות Deepo (להלן: &quot;השירות&quot;) הוא פלטפורמה מקוונת בכתובת deepo.co.il
-              לתמיכה בעבודת ממונה הגנת פרטיות (DPO) חיצוני לעסקים, בהתאם לחוק
-              הגנת הפרטיות, התשמ&quot;א-1981, ותיקוניו (לרבות תיקון 13).
+              לתמיכה בעבודת ממונה הגנת פרטיות (DPO) חיצוני לעסקים.
             </p>
             <p className="text-gray-700 leading-relaxed mt-3">
               בעל המאגר ומפעיל השירות (להלן: &quot;אנחנו&quot; / &quot;ההנהלה&quot;):
@@ -82,7 +81,7 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          {/* 2. Data we collect */}
+          {/* 2. Data we collect — customer-data bucket removed per Roy */}
           <section>
             <h2 className="text-xl font-bold mb-4">2. הפרטים שאנו אוספים</h2>
 
@@ -101,18 +100,7 @@ export default function PrivacyPage() {
             </p>
 
             <p className="text-gray-700 leading-relaxed font-semibold mt-4">
-              ב. פרטים שייאספו אם וכאשר תהפכו ללקוחות בתשלום:
-            </p>
-            <ul className="list-disc list-inside text-gray-700 space-y-1 mt-2 mr-4">
-              <li>פרטי התקשרות מלאים: שם, דוא&quot;ל, טלפון</li>
-              <li>פרטי העסק: שם, מספר ח.פ. או עוסק מורשה, תחום פעילות, גודל</li>
-              <li>מאפיינים של פעילויות עיבוד המידע בארגון (לצורך הפקת מסמכי ציות)</li>
-              <li>תוכן פניות ומסמכים שאתם מעלים למערכת</li>
-              <li>פרטי תשלום — מעובדים על ידי ספק סליקה PCI-DSS; פרטי כרטיס אשראי אינם נשמרים אצלנו</li>
-            </ul>
-
-            <p className="text-gray-700 leading-relaxed font-semibold mt-4">
-              ג. פרטים הנאספים אוטומטית בעת השימוש באתר:
+              ב. פרטים הנאספים אוטומטית בעת השימוש באתר:
             </p>
             <ul className="list-disc list-inside text-gray-700 space-y-1 mt-2 mr-4">
               <li>כתובת IP, סוג הדפדפן, מערכת ההפעלה</li>
@@ -121,7 +109,7 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
-          {/* 3. Purposes */}
+          {/* 3. Purposes — trimmed per Roy; marketing line preserved */}
           <section>
             <h2 className="text-xl font-bold mb-4">3. מטרות העיבוד</h2>
             <ul className="list-disc list-inside text-gray-700 space-y-2 mr-4">
@@ -129,10 +117,7 @@ export default function PrivacyPage() {
                 ניהול רשימת המעוניינים בגישה מוקדמת ויידועם כשהשירות ייפתח לרישום
                 (טופס &quot;הצטרפות מוקדמת&quot;)
               </li>
-              <li>מתן השירותים שיוזמנו על ידי לקוחות בתשלום, לכשייפתח הרישום</li>
-              <li>ניהול חשבון, חיוב וגביית תשלומים</li>
               <li>שיפור השירות, איכות התוצרים והחוויה</li>
-              <li>עמידה בדרישות חוקיות (חוק הגנת הפרטיות, חוק החוזים, חוק הגנת הצרכן ועוד)</li>
               <li>הודעות שירות חיוניות (שאינן שיווקיות)</li>
               <li>פניות שיווקיות — אך ורק בהסכמה מפורשת ועם אפשרות הסרה בכל עת</li>
             </ul>
@@ -177,19 +162,13 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          {/* 6. Retention */}
+          {/* 6. Retention — customer-data bucket removed per Roy */}
           <section>
             <h2 className="text-xl font-bold mb-4">6. תקופות שמירה</h2>
             <ul className="list-disc list-inside text-gray-700 space-y-2 mr-4">
               <li>
                 <strong>פרטי טופס הצטרפות מוקדמת:</strong> עד 24 חודשים מיום ההרשמה,
-                או עד שתבקשו מחיקה — המוקדם מבין השניים. אם השירות ייפתח לרישום
-                ותהפכו ללקוחות, נעביר את הפרטים למסלול שמירת לקוחות.
-              </li>
-              <li>
-                <strong>נתוני לקוחות פעילים:</strong> כל עוד החשבון פעיל, ולתקופה
-                סבירה לאחר סיום ההתקשרות לעמידה בדרישות חוקיות (חשבונאות,
-                מס, מסמכי ציות).
+                או עד שתבקשו מחיקה — המוקדם מבין השניים.
               </li>
               <li>
                 <strong>יומני שרת ונתוני שימוש אוטומטיים:</strong> עד 12 חודשים.
@@ -201,50 +180,34 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
-          {/* 7. Rights under תיקון 13 */}
+          {/* 7. Right to access — NEW, replaces old §7 rights list */}
           <section>
-            <h2 className="text-xl font-bold mb-4">7. הזכויות שלכם</h2>
+            <h2 className="text-xl font-bold mb-4">7. זכות לעיין במידע</h2>
             <p className="text-gray-700 leading-relaxed">
-              בהתאם לחוק הגנת הפרטיות לרבות תיקון 13, עומדות לכם הזכויות הבאות:
-            </p>
-            <ul className="list-disc list-inside text-gray-700 space-y-2 mt-2 mr-4">
-              <li>
-                <strong>זכות עיון</strong> — לדעת אילו פרטים שמורים אצלנו אודותיכם
-                ולקבל עותק שלהם.
-              </li>
-              <li>
-                <strong>זכות תיקון</strong> — לדרוש תיקון מידע שגוי, לא מדויק או
-                לא מעודכן.
-              </li>
-              <li>
-                <strong>זכות מחיקה</strong> — לבקש מחיקת מידע שאינו נדרש עוד
-                למטרות שלשמן נאסף, או שעיבודו אינו חוקי.
-              </li>
-              <li>
-                <strong>זכות התנגדות</strong> — להתנגד לעיבוד פרטיכם, בעיקר לצרכים
-                שיווקיים.
-              </li>
-              <li>
-                <strong>זכות הגבלת עיבוד</strong> — לבקש שנגביל את אופן השימוש
-                בפרטים במקרים מסוימים.
-              </li>
-              <li>
-                <strong>זכות הגשת תלונה</strong> — לפנות לרשות להגנת הפרטיות במשרד
-                המשפטים אם אתם סבורים שזכויותיכם הופרו.
-              </li>
-            </ul>
-            <p className="text-gray-700 leading-relaxed mt-3">
-              למימוש זכויות — פנו אלינו בדוא&quot;ל:{' '}
+              במידה ותרצה לעיין במידע האישי שלך שנמצא ברשותנו וכן לצורך בירור פרטים
+              אחרים הקשורים למידע אודותיך שנמצא ברשותנו, אתה מוזמן ליצור קשר עמנו
+              בכתובת הדואר שלהלן:{' '}
               <a href="mailto:adamrozichner@gmail.com" className="text-emerald-600 hover:underline">
                 adamrozichner@gmail.com
               </a>
-              . אנו נשיב תוך 30 יום (וניתן להאריך עד 60 יום במקרים מורכבים, בהודעה).
             </p>
           </section>
 
-          {/* 8. Cookies */}
+          {/* 8. Correction — NEW */}
           <section>
-            <h2 className="text-xl font-bold mb-4">8. עוגיות (Cookies)</h2>
+            <h2 className="text-xl font-bold mb-4">8. תיקון המידע שלך</h2>
+            <p className="text-gray-700 leading-relaxed">
+              אם המידע האישי בעניינך לא נכון, שלם או מדויק, תוכל לבקש לתקן או למחוק
+              את הרישומים שלך במערכת שלנו, אנא צור עמנו קשר ב:{' '}
+              <a href="mailto:adamrozichner@gmail.com" className="text-emerald-600 hover:underline">
+                adamrozichner@gmail.com
+              </a>
+            </p>
+          </section>
+
+          {/* 9. Cookies — was §8, renumbered */}
+          <section>
+            <h2 className="text-xl font-bold mb-4">9. עוגיות (Cookies)</h2>
             <p className="text-gray-700 leading-relaxed">
               האתר משתמש בעוגיות הכרחיות לתפעול, לשמירת מצב התחברות ולמדידת
               שימוש בסיסית. אינכם נדרשים להיכנס לחשבון כדי לעיין במידע השיווקי
@@ -253,9 +216,9 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          {/* 9. Changes */}
+          {/* 10. Changes — was §9 */}
           <section>
-            <h2 className="text-xl font-bold mb-4">9. שינויים במדיניות</h2>
+            <h2 className="text-xl font-bold mb-4">10. שינויים במדיניות</h2>
             <p className="text-gray-700 leading-relaxed">
               אנו רשאים לעדכן מדיניות זו מעת לעת. שינויים מהותיים יפורסמו באתר.
               במידה ויש לנו פרטי קשר פעילים שלכם, נשלח גם הודעה ישירה. תאריך
@@ -263,9 +226,10 @@ export default function PrivacyPage() {
             </p>
           </section>
 
-          {/* 10. Contact */}
+          {/* 11. Contact — was §10. Roy's source numbered this 10 too;
+              corrected to 11. */}
           <section>
-            <h2 className="text-xl font-bold mb-4">10. יצירת קשר</h2>
+            <h2 className="text-xl font-bold mb-4">11. יצירת קשר</h2>
             <p className="text-gray-700 leading-relaxed">לפניות בנושא פרטיות:</p>
             <p className="text-gray-700 mt-2">קרסטון יועצים בע&quot;מ</p>
             <p className="text-gray-700">ח.פ. 515898088</p>
