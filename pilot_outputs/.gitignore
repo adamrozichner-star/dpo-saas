@@ -1,0 +1,4 @@
+# L2 extraction outputs — review artifacts, not source.
+# scripts/l2_extract.ts writes per-input .json and review.csv here.
+*
+!.gitignore
