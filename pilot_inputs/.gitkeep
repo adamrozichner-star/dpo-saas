@@ -1,0 +1,2 @@
+# Drop public Authority PDFs (or .txt/.md) here for the L2 extraction pilot.
+# scripts/l2_extract.ts reads from this directory.
