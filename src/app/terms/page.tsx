@@ -1,15 +1,18 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { AlertTriangle, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import Image from 'next/image'
 import Footer from '@/components/Footer'
 
-// /terms — Deepo terms of service (Hebrew, RTL).
-// DRAFT pending legal review by Roy.
+// /terms - Deepo terms of service (Hebrew, RTL).
+// Roy-reviewed final version (sign-off 2026-06-09). The 'טיוטה לסקירה
+// משפטית' banner that used to live at the top of this page has been
+// removed since the content is now signed off - mirroring what was
+// done on /privacy.
 //
-// Operator is currently קרסטון יועצים בע"מ (ח.פ. 515898088) — the
-// interim corporate entity running Deepo until the dedicated company
-// is incorporated. Corporate ח.פ. is safe to publish. Keep §1 here
+// Operator is קרסטון יועצים בע"מ (ח.פ. 515898088) - the interim
+// corporate entity running Deepo until the dedicated company is
+// incorporated. Corporate ח.פ. is safe to publish. Keep §1 here
 // aligned with the controller block in /privacy §1.
 
 export default function TermsPage() {
@@ -31,51 +34,34 @@ export default function TermsPage() {
 
       <main className="container mx-auto px-4 py-12 max-w-4xl">
 
-        {/* DRAFT banner */}
-        <div
-          role="status"
-          className="mb-8 rounded-lg border border-amber-300 bg-amber-50 p-4 flex items-start gap-3"
-        >
-          <AlertTriangle className="h-5 w-5 text-amber-700 flex-shrink-0 mt-0.5" />
-          <div>
-            <p className="font-semibold text-amber-900">טיוטה לסקירה משפטית</p>
-            <p className="text-sm text-amber-800 mt-1">
-              מסמך זה הוא טיוטה ראשונית הממתינה לסקירה ואישור של יועץ משפטי.
-              עד לאישור הסופי אין להסתמך עליו כעל תנאי שימוש מחייבים.
-            </p>
-          </div>
-        </div>
-
         <h1 className="text-3xl font-bold mb-2">תנאי שימוש</h1>
-        <p className="text-gray-600 mb-8">תאריך תחילה: 2 ביוני 2026</p>
+        <p className="text-gray-600 mb-8">תאריך תחילה: 9 ביוני 2026</p>
 
         <div className="prose prose-lg max-w-none space-y-8 text-right">
 
-          {/* 1. General + provider identity */}
+          {/* 1. General + operator identity */}
           <section>
             <h2 className="text-xl font-bold mb-4">1. כללי וזהות מפעיל השירות</h2>
             <p className="text-gray-700 leading-relaxed">
-              ברוכים הבאים לשירות Deepo. תנאי שימוש אלו מסדירים את השימוש באתר
-              deepo.co.il (להלן: &quot;האתר&quot;) ובשירותים הניתנים דרכו (להלן:
-              &quot;השירות&quot;).
+              ברוכים הבאים למסמך תנאי השימוש באתר deepo.co.il (&quot;האתר&quot;) של
+              קרסטון יועצים בע&quot;מ, ח.פ. 515898088 (להלן: &quot;המפעיל&quot;).
+              התנאים הבאים מסדירים את מערכת היחסים בין הגולשים באתר והמשתמשים
+              בשירות (&quot;המשתמש&quot;), לבין המפעיל, בכל הנוגע לשימוש באתר
+              ובשירות, כהגדרתו להלן.
             </p>
             <p className="text-gray-700 leading-relaxed mt-3">
-              מפעיל השירות (להלן: &quot;אנחנו&quot;):
+              כניסה לאתר ושימוש בשירות כפופים לתנאים המפורטים להלן. כניסת המשתמש
+              לאתר ו/או לשירות מהווה אישור מאת המשתמש כי קרא את כל תנאי השימוש
+              המפורטים להלן, וכי נתן את הסכמתו לתנאי שימוש אלו (כפי שעשויים
+              להשתנות מעת לעת), וכי הינו מחויב לפעול על פיהם. אנא עיין היטב
+              בתנאים אלו שלהלן. בכפוף להסכמתך לתנאים אלו ולכך שתפעל לפיהם,
+              מוענקת לך בזאת זכות אישית, מוגבלת, לא בלעדית ושאינה ניתנת
+              להעברה לגישה לשימוש באתר ובשירות, והכל בכפוף ובהתאם לתנאי
+              שימוש אלו.
             </p>
-            <div className="bg-white border border-gray-200 rounded-lg p-4 mt-3 not-prose">
-              <p className="text-gray-800">קרסטון יועצים בע&quot;מ</p>
-              <p className="text-gray-700 text-sm mt-1">ח.פ. 515898088</p>
-              <p className="text-gray-700 text-sm">כתובת: דרך מנחם בגין 23, תל אביב-יפו</p>
-              <p className="text-gray-700 text-sm">
-                דוא&quot;ל:{' '}
-                <a href="mailto:adamrozichner@gmail.com" className="text-emerald-600 hover:underline">
-                  adamrozichner@gmail.com
-                </a>
-              </p>
-            </div>
             <p className="text-gray-700 leading-relaxed mt-3">
-              השימוש באתר ובשירות מהווה הסכמה לתנאים אלו. אם אינכם מסכימים, אנא
-              הימנעו משימוש.
+              מסמך תנאי השימוש שלהלן נערך בלשון זכר לשם הנוחות בלבד, אך הינו
+              מיועד לגברים ולנשים כאחד.
             </p>
           </section>
 
@@ -83,201 +69,72 @@ export default function TermsPage() {
           <section>
             <h2 className="text-xl font-bold mb-4">2. תיאור השירות</h2>
             <p className="text-gray-700 leading-relaxed">
-              Deepo היא פלטפורמה מקוונת המספקת כלי תוכנה לתמיכה בעבודת ממונה הגנת
-              פרטיות (DPO) חיצוני לעסקים, בהתאם לחוק הגנת הפרטיות לרבות תיקון 13.
-              השירות נועד לסייע לעסקים לעמוד בדרישות החוק ולנהל פעילות עיבוד
-              מידע אישי.
+              Deepo היא פלטפורמה מקוונת המספקת כלי בינה מלאכותית שיסייע לגורם
+              פנימי, המופקד על הנושא בארגון או בעסק, או גורם חיצוני שימונה
+              (להלן, לטובת תנאי שימוש אלו - &quot;DPO&quot;), בקיום דרישות חוק
+              הגנת הפרטיות, התשמ&quot;א - 1981 (&quot;החוק&quot;), תקנות שהותקנו
+              מכוחו, והוראות נוספות בעלות פועל תחיקתי שפורסמו על ידי רשויות
+              מוסמכות ובכלל זה הרשות להגנת הפרטיות (להלן יחדיו - &quot;הוראות
+              דין&quot;).
             </p>
             <p className="text-gray-700 leading-relaxed mt-3">
-              <strong>מצב נוכחי:</strong> שירותי המנוי בתשלום מושהים בשלב זה. האתר
-              מאפשר הצטרפות לרשימת המתעניינים בגישה מוקדמת באמצעות טופס ייעודי.
-              עם פתיחת ההרשמה המלאה יישלח עדכון למצטרפים המוקדמים.
+              לעת הזאת, החברה לא תגבה שימוש עבור השירות. האתר מאפשר למשתמשים
+              להצטרף לרשימת המתנה לשירות באמצעות טופס ייעודי. עם פתיחת השירות
+              לשימוש, ישלח קישור לטובת המבקשים להצטרף לשירות
+              (&quot;המתעניינים&quot;).
             </p>
             <p className="text-gray-700 leading-relaxed mt-3">
-              כאשר הרישום ייפתח, השירות יכלול בין היתר:
+              שירות מלא, שיועמד לטובת המצטרפים, יציע את הפתרונות הבאים:
             </p>
             <ul className="list-disc list-inside text-gray-700 mt-2 space-y-1 mr-4">
-              <li>מינוי ממונה הגנת פרטיות חיצוני מוסמך</li>
-              <li>הפקת מסמכי מדיניות פרטיות, נהלי אבטחת מידע וכתבי מינוי</li>
-              <li>מערכת ניהול מאגרי מידע ותיעוד פעילויות עיבוד</li>
+              <li>מערכת לניהול מאגרי מידע ותיעוד פעולות</li>
+              <li>ניהול הכוונה בקיום הוראות הדין של דיני הגנת הפרטיות</li>
+              <li>סיוע בכתיבה והפקה של מסמכים תומכים</li>
               <li>מענה לשאלות בנושאי הגנת פרטיות</li>
-              <li>ליווי באירועי אבטחת מידע ותמיכה בדיווח לרשות</li>
-              <li>יומן ביקורת (Audit Trail) לתיעוד פעילויות ציות</li>
+              <li>מתן שירותי DPO כשירות על פי דרישה</li>
             </ul>
             <p className="text-gray-700 leading-relaxed mt-3">
-              היקף השירות בכל חבילה ייקבע במועד פתיחת הרישום, ויפורסם באתר.
+              לעיל ולהלן: &quot;השירות&quot;
             </p>
           </section>
 
-          {/* 3. Eligibility */}
+          {/* 3. Ownership and rights */}
           <section>
-            <h2 className="text-xl font-bold mb-4">3. כשירות לשימוש</h2>
+            <h2 className="text-xl font-bold mb-4">3. בעלות וזכויות</h2>
             <p className="text-gray-700 leading-relaxed">
-              3.1. השימוש בשירות פתוח לאנשים בני 18 ומעלה, ולגופים משפטיים רשומים
-              בישראל (חברות, עוסקים מורשים ופטורים, עמותות וכיוצא בזה).
+              3.1 כל זכויות הבעלות באתר, לרבות אך מבלי לגרוע מכלליות האמור,
+              זכויות קניין רוחני בין אם רשומות ובין אם לאו, הינם רכושו הבלעדי
+              של המפעיל, והם מוגנים, בין היתר, באמצעות דיני הקניין הרוחני,
+              ובכלל זה לעניין סימני מסחר וזכויות יוצרים של מדינת ישראל. למען
+              הסר ספק, מובהר כי למשתמש לא יהיו כל זכויות בעלות על המידע המצוי
+              באתר. אין לעשות באתר או באמצעותו כל שימוש למטרות בלתי חוקיות.
             </p>
             <p className="text-gray-700 leading-relaxed mt-2">
-              3.2. בעת הרשמה לכל שלב — לרבות טופס ההצטרפות המוקדמת — מתחייב המשתמש
-              לספק מידע מדויק, עדכני ומלא.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              3.3. אנו רשאים, לפי שיקול דעתנו, לסרב להעניק שירות, לבטל חשבון או
-              להסיר משתמש מרשימת המתעניינים.
+              3.2 אין להפיץ ו/או להעתיק ו/או לפרסם כל חלק מן המידע המוצג באתר,
+              בין בגבולות ישראל ובין מחוץ להן, בין אם באתר אינטרנט ו/או בדוא&quot;ל
+              ו/או במסרונים ו/או בכל אמצעי אחר, ללא היתר מפורש לכך מראש ובכתב
+              מאת המפעיל.
             </p>
           </section>
 
-          {/* 4. Payment (forward-looking) */}
+          {/* 4. Limitation of liability */}
           <section>
-            <h2 className="text-xl font-bold mb-4">4. תשלום ומנויים (בעת פתיחת הרישום)</h2>
+            <h2 className="text-xl font-bold mb-4">4. הגבלת אחריות</h2>
             <p className="text-gray-700 leading-relaxed">
-              4.1. עם פתיחת ההרשמה, השירות יוצע במסגרת מנוי חודשי בתשלום. מחירים
-              יפורסמו באתר ועשויים להתעדכן מעת לעת.
+              4.1 המשתמש מסכים שהשימוש באתר יהיה על אחריותו. המידע באתר מסופק
+              על בסיס &quot;כפי שהוא&quot; (AS IS).
             </p>
             <p className="text-gray-700 leading-relaxed mt-2">
-              4.2. התשלום יתבצע מראש בכל חודש באמצעות ספק סליקה מאובטח. הסליקה
-              עצמה אינה מתבצעת אצלנו ופרטי כרטיס אשראי אינם נשמרים במערכותינו.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              4.3. המחירים יכללו מע&quot;מ כחוק, אלא אם נאמר אחרת.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              4.4. ביטול מנוי יהיה אפשרי בכל עת. הביטול ייכנס לתוקף בסוף תקופת
-              החיוב הנוכחית; לא יינתן החזר עבור תקופה ששולמה אלא אם נקבע אחרת
-              בדין.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              4.5. אי-תשלום: ייעשו ניסיונות חיוב חוזרים. לאחר 14 יום ללא תשלום,
-              הגישה לשירות תושעה עד להסדרת התשלום.
+              4.2 מבלי לגרוע מהאמור לעיל, המפעיל לא יהיה אחראי כלפי המשתמש או
+              כלפי כל צד שלישי בגין נזקים מכל סוג שהוא, לרבות כל אובדן רווחים
+              או אובדן נתונים הנובעים משימוש באתר והכל למעט מקרים בהם יוכח כי
+              נזק ו/או הפסד כאמור נגרם בשל פעילות בזדון של המפעיל.
             </p>
           </section>
 
-          {/* 5. DPO appointment */}
+          {/* 5. Changes */}
           <section>
-            <h2 className="text-xl font-bold mb-4">5. מינוי ממונה הגנת פרטיות</h2>
-            <p className="text-gray-700 leading-relaxed">
-              5.1. כאשר השירות בתשלום ייפתח, ימונה ללקוח ממונה הגנת פרטיות חיצוני
-              מוסמך בהתאם לדרישות תיקון 13.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              5.2. הממונה פועל כגורם חיצוני בלתי-תלוי ואינו עובד של הלקוח.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              5.3. היקף הזמינות של הממונה ייקבע על פי החבילה הנבחרת.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              5.4. הממונה אינו נושא באחריות אישית כלפי הלקוח או כלפי צדדים שלישיים
-              בגין פעולות או מחדלים של הלקוח.
-            </p>
-          </section>
-
-          {/* 6. Technology use */}
-          <section>
-            <h2 className="text-xl font-bold mb-4">6. שימוש בטכנולוגיה ובבינה מלאכותית</h2>
-            <p className="text-gray-700 leading-relaxed">
-              6.1. המערכת משתמשת בכלי בינה מלאכותית ובאוטומציה לצורך הפקת מסמכים,
-              ניתוח מאפייני עיבוד ומענה לשאלות נפוצות.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              6.2. תוצרים אוטומטיים נועדו לתמוך בעבודת הממונה המוסמך ואינם מהווים
-              תחליף לשיקול דעת אנושי.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              6.3. המערכת אינה מהווה ייעוץ משפטי, חוות דעת משפטית או תחליף לעורך
-              דין.
-            </p>
-          </section>
-
-          {/* 7. Customer obligations */}
-          <section>
-            <h2 className="text-xl font-bold mb-4">7. אחריות המשתמש</h2>
-            <p className="text-gray-700 leading-relaxed">
-              7.1. המשתמש אחראי לדיוק ושלמות הפרטים שהוא מוסר.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              7.2. המשתמש אחראי ליישום ההמלצות, המדיניות והנהלים שהונפקו עבורו,
-              לרבות במישור הארגוני, התפעולי והטכנולוגי.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              7.3. המשתמש מתחייב לעדכן את המערכת בשינויים מהותיים בפעילות העסקית
-              שלו (תחומי עיסוק חדשים, מאגרי מידע נוספים, אירועי אבטחה).
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              7.4. המשתמש מתחייב לדווח על כל אירוע אבטחת מידע בתוך 24 שעות מרגע
-              גילויו.
-            </p>
-          </section>
-
-          {/* 8. Liability */}
-          <section>
-            <h2 className="text-xl font-bold mb-4">8. הגבלת אחריות וגבולות השירות</h2>
-            <p className="text-gray-700 leading-relaxed bg-gray-50 border-r-4 border-gray-400 p-3 rounded">
-              Deepo מספקת כלי תוכנה לתמיכה בעבודת DPO. האחריות המקצועית והמשפטית
-              חלה על ה-DPO האנושי הממונה ועל הלקוח. אין באמור באתר משום ייעוץ משפטי.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-3">
-              8.1. השירות מסופק &quot;כמות שהוא&quot; (AS IS). אנו עושים מאמצים סבירים
-              לאיכות ולדיוק אך אין התחייבות לזמינות מלאה, לאי-שגיאות או להתאמה
-              לצורך מסוים.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              8.2. איננו נושאים באחריות לנזקים ישירים, עקיפים, תוצאתיים או
-              מיוחדים הנובעים מהשימוש בשירות, לרבות אובדן רווחים, אובדן מוניטין,
-              קנסות רגולטוריים או תביעות צד שלישי, ככל המותר על פי דין.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              8.3. במידה ותוכר אחריות חרף סעיף זה, סך האחריות המצטברת לא יעלה על
-              סך התשלומים ששולמו על ידי הלקוח בשנים-עשר החודשים שקדמו לאירוע.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              8.4. אין באמור בסעיף זה כדי לגרוע מזכויות צרכן בלתי-ניתנות להתניה
-              לפי חוק הגנת הצרכן, התשמ&quot;א-1981.
-            </p>
-          </section>
-
-          {/* 9. IP */}
-          <section>
-            <h2 className="text-xl font-bold mb-4">9. קניין רוחני</h2>
-            <p className="text-gray-700 leading-relaxed">
-              9.1. כל הזכויות במערכת, בקוד, בעיצוב, בתוכן ובסימני המסחר שייכות
-              ל-Deepo / למפעיל השירות.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              9.2. מסמכים שנוצרים עבור הלקוח במסגרת השירות ניתנים לשימוש פנימי
-              של הארגון בלבד.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              9.3. אסור להעתיק, להפיץ, לבצע הנדסה לאחור או למכור את המערכת או
-              חלקים ממנה.
-            </p>
-          </section>
-
-          {/* 10. Termination */}
-          <section>
-            <h2 className="text-xl font-bold mb-4">10. סיום השירות</h2>
-            <p className="text-gray-700 leading-relaxed">
-              10.1. כל צד יוכל לסיים את ההתקשרות בהודעה של 30 יום מראש (כאשר השירות
-              בתשלום ייפעל).
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              10.2. עם סיום השירות, מינוי הממונה יבוטל. הלקוח יהיה אחראי למנות
-              ממונה חלופי בהתאם לחוק, אם נדרש לכך.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              10.3. ניתן יהיה לייצא את מסמכי הלקוח לפני הסיום.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              10.4. אנו רשאים לסיים את השירות לאלתר במקרה של הפרה מהותית, פעילות
-              לא חוקית או סיכון לשירות.
-            </p>
-            <p className="text-gray-700 leading-relaxed mt-2">
-              10.5. מצטרפים מוקדמים שאינם מעוניינים עוד בעדכונים — יוכלו לבקש
-              מחיקה בכל עת בדוא&quot;ל לכתובת המופיעה בסעיף 12.
-            </p>
-          </section>
-
-          {/* 11. Changes */}
-          <section>
-            <h2 className="text-xl font-bold mb-4">11. שינויים בתנאים</h2>
+            <h2 className="text-xl font-bold mb-4">5. שינויים בתנאים</h2>
             <p className="text-gray-700 leading-relaxed">
               אנו רשאים לעדכן תנאים אלו מעת לעת. שינויים מהותיים יפורסמו באתר;
               ללקוחות פעילים תישלח הודעה ישירה לפחות 14 יום מראש. המשך השימוש
@@ -285,9 +142,9 @@ export default function TermsPage() {
             </p>
           </section>
 
-          {/* 12. Contact */}
+          {/* 6. Contact */}
           <section>
-            <h2 className="text-xl font-bold mb-4">12. יצירת קשר</h2>
+            <h2 className="text-xl font-bold mb-4">6. יצירת קשר</h2>
             <p className="text-gray-700 leading-relaxed">לפניות בנוגע לתנאי השימוש:</p>
             <p className="text-gray-700 mt-2">קרסטון יועצים בע&quot;מ</p>
             <p className="text-gray-700">ח.פ. 515898088</p>
@@ -300,9 +157,9 @@ export default function TermsPage() {
             </p>
           </section>
 
-          {/* 13. Governing law */}
+          {/* 7. Governing law */}
           <section>
-            <h2 className="text-xl font-bold mb-4">13. דין וסמכות שיפוט</h2>
+            <h2 className="text-xl font-bold mb-4">7. דין וסמכות שיפוט</h2>
             <p className="text-gray-700 leading-relaxed">
               תנאים אלו כפופים לחוקי מדינת ישראל בלבד. סמכות השיפוט הבלעדית
               נתונה לבתי המשפט המוסמכים במחוז תל אביב-יפו.
