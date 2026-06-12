@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Deepo · Brand Foundations</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  body { background: var(--sand-100); color: var(--fg-1); }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 32px; }
+
+  /* ── Section scaffolding ── */
+  section { padding: 88px 0; border-top: 1px solid var(--sand-300); }
+  section:first-of-type { border-top: 0; }
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--crimson-500);
+    margin: 0 0 14px;
+  }
+  h2.sec { font-family: var(--font-display); font-weight: 600; font-size: 34px;
+    letter-spacing: -0.01em; margin: 0 0 8px; color: var(--stone-800); }
+  .sec-sub { font-family: var(--font-body); font-size: 17px; color: var(--stone-500);
+    margin: 0 0 40px; max-width: 60ch; line-height: 1.6; }
+
+  /* ── Hero ── */
+  .hero { background: #1A1108; color: var(--fg-on-dark-1);
+    border-top: 0; padding: 96px 0 104px; position: relative; overflow: hidden; }
+  .hero::before { content:""; position:absolute; inset:0;
+    background:
+      radial-gradient(ellipse 80% 95% at 6% 118%, rgba(209,3,49,0.58) 0%, rgba(244,39,31,0.32) 32%, rgba(255,157,33,0.20) 54%, transparent 80%),
+      radial-gradient(ellipse 45% 55% at 14% 106%, rgba(255,157,33,0.28) 0%, transparent 60%); }
+  .hero .wrap { position: relative; }
+  .hero-logo { display:flex; align-items:center; gap: 22px; margin-bottom: 40px; }
+  .hero-logo .mark { width: 84px; height: auto; }
+  .hero-word { font-family: var(--font-brand); font-weight: 600; font-size: 76px;
+    line-height: 1; letter-spacing: -0.02em;
+    background: linear-gradient(95deg,#FF8a6a,#FFB24D); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .hero h1 { font-family: var(--font-display); font-weight: 600; font-size: 52px;
+    line-height: 1.12; letter-spacing: -0.01em; margin: 0 0 20px; max-width: 18ch; }
+  .hero h1 em { font-style: normal; color: var(--amber-400); }
+  .hero p.lede { font-family: var(--font-body); font-size: 20px; line-height: 1.6;
+    color: var(--garnet-300); max-width: 52ch; margin: 0; }
+  .hero .badge { display:inline-block; font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--amber-400);
+    border: 1px solid rgba(255,255,255,0.18); border-radius: 999px; padding: 7px 14px; margin-bottom: 36px; }
+
+  /* ── Logo section ── */
+  .logo-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; }
+  .tile { border-radius: var(--radius-xl); padding: 40px; display:flex; align-items:center;
+    justify-content:center; position: relative; min-height: 200px; }
+  .tile .tag { position:absolute; top:16px; inset-inline-start:18px; font-family: var(--font-mono);
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--stone-400); }
+  .tile-light { background: #fff; border: 1px solid var(--sand-300); }
+  .tile-dark { background: var(--garnet-900); }
+  .tile-dark .tag { color: var(--garnet-300); }
+  .lockup { display:flex; align-items:center; gap: 16px; }
+  .lockup .mark { width: 64px; height:auto; }
+  .lockup .word { font-family: var(--font-brand); font-weight:600; font-size: 56px; line-height:1;
+    letter-spacing:-0.02em; background: var(--brand-gradient); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .lockup.lg .mark { width: 90px; }
+  .lockup.lg .word { font-size: 78px; }
+  .mono-row { display:flex; gap: 18px; margin-top: 18px; }
+  .mono-tile { flex:1; border-radius: var(--radius-lg); min-height: 120px; display:flex; align-items:center; justify-content:center; position:relative; }
+  .mono-tile .tag { position:absolute; top:14px; inset-inline-start:16px; font-family:var(--font-mono); font-size:10px; letter-spacing:0.14em; text-transform:uppercase; }
+
+  /* ── Color ── */
+  .ramp-block { margin-bottom: 22px; }
+  .ramp-head { display:flex; align-items:baseline; gap:12px; margin-bottom:10px; }
+  .ramp-head h3 { font-family: var(--font-display); font-weight:600; font-size:17px; margin:0; }
+  .ramp-head span { font-family: var(--font-mono); font-size:10px; letter-spacing:0.14em;
+    text-transform:uppercase; color: var(--stone-400); }
+  .ramp { display:flex; gap:8px; }
+  .sw { flex:1; height:76px; border-radius:12px; display:flex; flex-direction:column; justify-content:flex-end;
+    padding:9px 10px; box-shadow: inset 0 0 0 1px rgba(58,4,24,0.06); }
+  .sw b { font-family: var(--font-mono); font-size:9px; font-weight:500; letter-spacing:0.06em; }
+  .sw small { font-family: var(--font-mono); font-size:8.5px; opacity:0.7; }
+  .sw.on-dark b, .sw.on-dark small { color: rgba(255,255,255,0.92); }
+  .sw.on-light b, .sw.on-light small { color: rgba(58,4,24,0.7); }
+
+  /* ── Gradient ── */
+  .grad-strip { height: 140px; border-radius: var(--radius-xl); background: var(--brand-gradient);
+    display:flex; align-items:flex-end; padding: 18px 22px; }
+  .grad-strip code { font-family: var(--font-mono); font-size: 12px; color: #fff;
+    background: rgba(58,4,24,0.28); padding: 7px 12px; border-radius: 8px; direction: ltr; }
+  .grad-small { display:grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-top: 14px; }
+  .grad-small div { height: 80px; border-radius: var(--radius-lg); display:flex; align-items:flex-end; padding: 12px;
+    font-family: var(--font-mono); font-size: 10px; color:#fff; letter-spacing:0.08em; }
+
+  /* ── Type ── */
+  .type-row { display:grid; grid-template-columns: 130px 1fr; gap: 28px; padding: 26px 0;
+    border-bottom: 1px solid var(--sand-300); align-items: baseline; }
+  .type-row:last-child { border-bottom: 0; }
+  .type-meta { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--stone-400); line-height: 1.7; }
+  .type-meta b { display:block; color: var(--stone-700); font-size: 13px; letter-spacing: 0; text-transform:none; font-family: var(--font-display); font-weight:600; }
+  .samp-brand { font-family: var(--font-brand); font-weight: 600; font-size: 56px; line-height:1;
+    background: var(--brand-gradient); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .samp-display { font-family: var(--font-display); font-weight: 600; font-size: 38px; line-height:1.15; letter-spacing:-0.01em; color: var(--stone-800); }
+  .samp-body { font-family: var(--font-body); font-size: 18px; line-height: 1.7; color: var(--stone-700); max-width: 54ch; }
+  .samp-mono { font-family: var(--font-mono); font-size: 14px; color: var(--stone-600); letter-spacing: 0.04em; }
+
+  /* ── Values ── */
+  .vals { display:grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+  .val { background:#fff; border:1px solid var(--sand-300); border-radius: var(--radius-lg);
+    padding: 22px 18px; position: relative; }
+  .val .n { font-family: var(--font-brand); font-weight:600; font-size: 30px; line-height:1;
+    background: var(--brand-gradient); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .val h4 { font-family: var(--font-display); font-weight:600; font-size: 17px; margin: 14px 0 6px; color: var(--stone-800); }
+  .val p { font-size: 13.5px; line-height: 1.55; color: var(--stone-500); margin:0; }
+
+  /* ── Statements ── */
+  .stmts { display:grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .stmt { background:#fff; border:1px solid var(--sand-300); border-radius: var(--radius-xl); padding: 30px 32px; }
+  .stmt.wide { grid-column: 1 / -1; background: var(--garnet-900); color: var(--fg-on-dark-1); border:0; }
+  .stmt .k { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--crimson-500); margin: 0 0 12px; }
+  .stmt.wide .k { color: var(--amber-400); }
+  .stmt h3 { font-family: var(--font-display); font-weight:600; font-size: 22px; line-height:1.4; margin:0; color: var(--stone-800); }
+  .stmt.wide h3 { font-size: 30px; color: #fff; line-height: 1.35; }
+  .stmt p { font-size: 16px; line-height: 1.65; color: var(--stone-600); margin: 12px 0 0; }
+  .stmt.wide p { color: var(--garnet-300); }
+  .stmt .he { font-family: var(--font-body); font-size: 13.5px; color: var(--stone-400); direction: rtl; text-align: right; margin-top: 14px; }
+  .stmt.wide .he { color: rgba(255,255,255,0.55); }
+
+  footer { padding: 40px 0 64px; color: var(--stone-400); font-size: 13px; font-family: var(--font-mono);
+    letter-spacing: 0.04em; }
+</style>
+</head>
+<body>
+
+  <!-- HERO -->
+  <header class="hero" data-screen-label="Hero">
+    <div class="wrap">
+      <div class="hero-logo">
+        <img src="assets/logo-reverse.png" alt="Deepo" style="height:88px;width:auto"/>
+      </div>
+      <span class="badge">Brand Foundations · v2.0</span>
+      <h1>Privacy, made easy.</h1>
+      <p class="lede">The law looks at everyone equally. So everyone deserves the chance to meet its requirements - not only those with a legal department or a dedicated DPO.</p>
+    </div>
+  </header>
+
+  <!-- LOGO -->
+  <section data-screen-label="Logo">
+    <div class="wrap">
+      <p class="eyebrow">01 - Logo</p>
+      <h2 class="sec">The logo</h2>
+      <p class="sec-sub">A shield that is also the letter D, with an inner spark - active protection. Two layered shields (orange behind, red in front) with a spark and a magenta dot. The spark and the dot always stay; do not rotate, do not stretch, do not swap the gradient.</p>
+      <div class="logo-grid">
+        <div class="tile tile-light">
+          <span class="tag">Primary · light</span>
+          <img src="assets/logo-full.png" alt="Deepo" style="max-width:82%;max-height:100px;width:auto"/>
+        </div>
+        <div class="tile tile-dark">
+          <span class="tag">Reverse · dark</span>
+          <img src="assets/logo-reverse.png" alt="Deepo" style="max-width:82%;max-height:84px;width:auto"/>
+        </div>
+      </div>
+      <div class="mono-row">
+        <div class="mono-tile tile-light" style="border:1px solid var(--sand-300)">
+          <span class="tag" style="color:var(--stone-400)">Mark · light</span>
+          <img src="assets/logo-mark.png" style="height:96px;width:auto" alt="mark"/>
+        </div>
+        <div class="mono-tile" style="background:var(--garnet-900)">
+          <span class="tag" style="color:var(--garnet-300)">Mark · dark</span>
+          <img src="assets/logo-mark.png" style="height:96px;width:auto" alt="mark on dark"/>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COLOR -->
+  <section data-screen-label="Color">
+    <div class="wrap">
+      <p class="eyebrow">02 - Color</p>
+      <h2 class="sec">Color palette</h2>
+      <p class="sec-sub">Warm, human, safe - the opposite of clinical. The core is the gradient from the logo: wine to crimson to red to coral to orange, with a magenta spark as an accent.</p>
+
+      <div class="ramp-block">
+        <div class="ramp-head"><h3>Crimson</h3><span>Primary · the heart of the brand</span></div>
+        <div class="ramp">
+          <div class="sw on-dark" style="background:#9B0140"><b>700</b><small>#9B0140</small></div>
+          <div class="sw on-dark" style="background:#B8033B"><b>600</b><small>#B8033B</small></div>
+          <div class="sw on-dark" style="background:#D10331"><b>500</b><small>#D10331</small></div>
+          <div class="sw on-dark" style="background:#E5294C"><b>400</b><small>#E5294C</small></div>
+          <div class="sw on-light" style="background:#F06A82"><b>300</b><small>#F06A82</small></div>
+          <div class="sw on-light" style="background:#F8B8C4"><b>200</b><small>#F8B8C4</small></div>
+          <div class="sw on-light" style="background:#FCE4E9"><b>100</b><small>#FCE4E9</small></div>
+        </div>
+      </div>
+
+      <div class="ramp-block">
+        <div class="ramp-head"><h3>Ember</h3><span>Red · the gradient core</span></div>
+        <div class="ramp">
+          <div class="sw on-dark" style="background:#E5301F"><b>600</b><small>#E5301F</small></div>
+          <div class="sw on-dark" style="background:#F4271F"><b>500</b><small>#F4271F</small></div>
+          <div class="sw on-dark" style="background:#FE5E2C"><b>400</b><small>#FE5E2C</small></div>
+          <div class="sw on-light" style="background:#FDE5DF"><b>100</b><small>#FDE5DF</small></div>
+        </div>
+      </div>
+
+      <div class="ramp-block">
+        <div class="ramp-head"><h3>Coral → Amber</h3><span>The warmth and the orange</span></div>
+        <div class="ramp">
+          <div class="sw on-dark" style="background:#FF8154"><b>Coral</b><small>#FF8154</small></div>
+          <div class="sw on-light" style="background:#FF9A75"><b>400</b><small>#FF9A75</small></div>
+          <div class="sw on-dark" style="background:#F07816"><b>A600</b><small>#F07816</small></div>
+          <div class="sw on-dark" style="background:#FF9D21"><b>A500</b><small>#FF9D21</small></div>
+          <div class="sw on-light" style="background:#FFB24D"><b>A400</b><small>#FFB24D</small></div>
+          <div class="sw on-light" style="background:#FFF1DE"><b>A100</b><small>#FFF1DE</small></div>
+        </div>
+      </div>
+
+      <div class="ramp-block">
+        <div class="ramp-head"><h3>Spark</h3><span>Magenta · the spark accent</span></div>
+        <div class="ramp">
+          <div class="sw on-dark" style="background:#FE2EAF"><b>500</b><small>#FE2EAF</small></div>
+          <div class="sw on-light" style="background:#FF63C4"><b>400</b><small>#FF63C4</small></div>
+          <div class="sw on-light" style="background:#FFE0F4"><b>100</b><small>#FFE0F4</small></div>
+        </div>
+      </div>
+
+      <div class="ramp-block">
+        <div class="ramp-head"><h3>Onyx</h3><span>Dark surface · anchor (amber-black)</span></div>
+        <div class="ramp">
+          <div class="sw on-dark" style="background:#120B03"><b>1000</b><small>#120B03</small></div>
+          <div class="sw on-dark" style="background:#1B1308"><b>900</b><small>#1B1308</small></div>
+          <div class="sw on-dark" style="background:#29200F"><b>800</b><small>#29200F</small></div>
+          <div class="sw on-dark" style="background:#3C2E16"><b>700</b><small>#3C2E16</small></div>
+          <div class="sw on-dark" style="background:#7C6D52"><b>500</b><small>#7C6D52</small></div>
+          <div class="sw on-light" style="background:#BBAC93"><b>300</b><small>#BBAC93</small></div>
+        </div>
+      </div>
+
+      <div class="ramp-block">
+        <div class="ramp-head"><h3>Sand &amp; Status</h3><span>Warm neutral · status</span></div>
+        <div class="ramp">
+          <div class="sw on-light" style="background:#FBF4EE"><b>Sand100</b><small>#FBF4EE</small></div>
+          <div class="sw on-light" style="background:#F5EBE2"><b>Sand200</b><small>#F5EBE2</small></div>
+          <div class="sw on-light" style="background:#EBDED2"><b>Sand300</b><small>#EBDED2</small></div>
+          <div class="sw on-dark" style="background:#1F8A5B"><b>OK</b><small>#1F8A5B</small></div>
+          <div class="sw on-dark" style="background:#C2820F"><b>Warn</b><small>#C2820F</small></div>
+          <div class="sw on-dark" style="background:#B91C32"><b>Risk</b><small>#B91C32</small></div>
+          <div class="sw on-dark" style="background:#2A6FA8"><b>Info</b><small>#2A6FA8</small></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GRADIENT -->
+  <section data-screen-label="Gradient">
+    <div class="wrap">
+      <p class="eyebrow">03 - Gradient</p>
+      <h2 class="sec">The brand gradient</h2>
+      <p class="sec-sub">The defining visual element. Keep it precious: the logo, the hero glow, and one primary CTA per screen. No large gradient backgrounds behind body text.</p>
+      <div class="grad-strip">
+        <code>linear-gradient(105deg, #9B0140 → #D10331 → #F4271F → #FF7A3C → #FF9D21)</code>
+      </div>
+      <div class="grad-small">
+        <div style="background:var(--brand-gradient-vertical)">vertical</div>
+        <div style="background:var(--brand-gradient-radial)">radial</div>
+        <div style="background:var(--spark-gradient)">spark · magenta→amber</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TYPE -->
+  <section data-screen-label="Type">
+    <div class="wrap">
+      <p class="eyebrow">04 - Type</p>
+      <h2 class="sec">Typography</h2>
+      <p class="sec-sub">Hebrew-first. The wordmark stays as the original logo file. For the rest of the system: Rubik for headings and brand moments (supports Hebrew, professional and clean), Assistant for body text, and Heebo for labels.</p>
+
+      <div class="type-row">
+        <div class="type-meta"><b>Rubik</b>Display · 600/700<br>headings &amp; brand</div>
+        <div class="samp-brand">With you, in protection · Deepo</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><b>Assistant</b>Body · 400/500<br>paragraph text</div>
+        <div class="samp-body">Deepo brings professional data protection to every business - including the ones that would otherwise do nothing. Our AI agents work in the background, quiet and unnoticed, meeting the legal requirements on your behalf.</div>
+      </div>
+      <div class="type-row">
+        <div class="type-meta"><b>Heebo</b>Label · 500<br>eyebrows / IDs</div>
+        <div class="samp-mono">Amendment 13 · Privacy Protection Law 5741-1981 · DPO-AS-A-SERVICE</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VALUES -->
+  <section data-screen-label="Values">
+    <div class="wrap">
+      <p class="eyebrow">05 - Values</p>
+      <h2 class="sec">Core values</h2>
+      <p class="sec-sub">In order of importance. Protecting you comes before everything; the AI is the tool, not the hero.</p>
+      <div class="vals">
+        <div class="val"><div class="n">01</div><h4>We protect you</h4><p>Shielding you from exposure - before the Privacy Protection Authority and against claims.</p></div>
+        <div class="val"><div class="n">02</div><h4>Simplicity</h4><p>Human language, no jargon. Easy to start, easy to run.</p></div>
+        <div class="val"><div class="n">03</div><h4>Fair pricing</h4><p>Compliance is not reserved for those with a legal department.</p></div>
+        <div class="val"><div class="n">04</div><h4>Proactive</h4><p>Always a step ahead of the regulation - working in the background, handled before you notice.</p></div>
+        <div class="val"><div class="n">05</div><h4>Purpose-built AI</h4><p>Dedicated AI agents do the heavy lifting; you just decide.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATEMENTS -->
+  <section data-screen-label="Statements">
+    <div class="wrap">
+      <p class="eyebrow">06 - Voice</p>
+      <h2 class="sec">Brand statements</h2>
+      <p class="sec-sub">Short, warm, service-minded. The customer is the hero; Deepo is the quiet partner.</p>
+      <div class="stmts">
+        <div class="stmt wide">
+          <p class="k">Slogan</p>
+          <h3>With you, in protecting your privacy.</h3>
+          <p class="he">איתכם בהגנה על הפרטיות.</p>
+        </div>
+        <div class="stmt">
+          <p class="k">DNA</p>
+          <h3>A DPO service that shields you from exposure - at low cost, without you needing to understand the law.</h3>
+          <p class="he">שירות DPO שמגן עליכם מחשיפה - בעלות נמוכה, בלי שתצטרכו להבין בחוק.</p>
+        </div>
+        <div class="stmt">
+          <p class="k">Vision</p>
+          <h3>The law treats everyone equally - so the tools to meet it should reach everyone.</h3>
+          <p class="he">החוק שווה לכולם - אז הכלים לעמוד בו צריכים להיות נגישים לכולם.</p>
+        </div>
+        <div class="stmt">
+          <p class="k">Compliance, quietly handled</p>
+          <h3>Compliance, quietly handled.</h3>
+          <p>Working in the background, part of the everyday, without you having to deal with it.</p>
+        </div>
+        <div class="stmt">
+          <p class="k">Closing</p>
+          <h3>You run the business. We stand guard.</h3>
+          <p class="he">אתם בעסק. אנחנו על המשמר.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">Deepo - Brand Foundations v2.0 · Hebrew-first · Foundations only (logo · color · typography · voice).</div>
+  </footer>
+
+  <script src="brand-toggle.js" data-counterpart="brand-foundations.html"></script>
+</body>
+</html>

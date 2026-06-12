@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="robots" content="noindex, nofollow"/>
+<title>Deepo · ספר מותג v2</title>
+<link rel="stylesheet" href="colors_and_type.css"/>
+<style>
+  body { background: var(--sand-100); color: var(--fg-1); min-height: 100vh; margin: 0; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 72px 32px; }
+  .hub-logo { height: 64px; width: auto; margin-bottom: 36px; }
+  h1 { font-family: var(--font-display); font-weight: 600; font-size: 40px;
+    letter-spacing: -0.01em; margin: 0 0 10px; color: var(--stone-800); }
+  .sub { font-family: var(--font-body); font-size: 17px; color: var(--stone-500);
+    margin: 0 0 44px; line-height: 1.6; }
+  .cards { display: grid; gap: 16px; }
+  a.card { display: block; background: #fff; border: 1px solid var(--sand-300);
+    border-radius: var(--radius-xl, 16px); padding: 26px 28px; text-decoration: none;
+    transition: border-color .15s ease, transform .15s ease; }
+  a.card:hover { border-color: var(--crimson-500); transform: translateY(-1px); }
+  .card .k { font-family: var(--font-mono); font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--crimson-500); margin: 0 0 8px; }
+  .card h2 { font-family: var(--font-display); font-weight: 600; font-size: 21px;
+    margin: 0 0 6px; color: var(--stone-800); }
+  .card p { font-family: var(--font-body); font-size: 14.5px; color: var(--stone-500);
+    margin: 0; line-height: 1.55; }
+  footer { margin-top: 56px; font-family: var(--font-mono); font-size: 12px;
+    color: var(--stone-400); letter-spacing: .04em; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <img class="hub-logo" src="assets/logo-full.png" alt="Deepo"/>
+    <h1>ספר המותג</h1>
+    <p class="sub">גרסה 2.0 · עמוד פנימי לשותפים. הקישורים כאן אינם מפורסמים באתר.</p>
+    <div class="cards">
+      <a class="card" href="brand-foundations.html">
+        <p class="k">01 · Foundations</p>
+        <h2>יסודות המותג</h2>
+        <p>לוגו, פלטת צבעים, הגרדיאנט, טיפוגרפיה, ערכים ומשפטי מותג.</p>
+      </a>
+      <a class="card" href="slides/index.html">
+        <p class="k">02 · Deck</p>
+        <h2>מצגת לדוגמה</h2>
+        <p>שבעה שקפים שמדגימים את שפת המותג בפעולה - שער, ציטוט, נתון, השוואה ועוד.</p>
+      </a>
+      <a class="card" href="ui_kits/marketing/index-he.html">
+        <p class="k">03 · UI Kit</p>
+        <h2>אתר שיווקי (קונספט)</h2>
+        <p>דף נחיתה מלא בשפת המותג - hero, יתרונות, תמחור.</p>
+      </a>
+    </div>
+    <footer>Deepo · Brand Book v2.0 · unlisted</footer>
+  </div>
+  <script src="brand-toggle.js" data-counterpart="index-en.html"></script>
+</body>
+</html>
