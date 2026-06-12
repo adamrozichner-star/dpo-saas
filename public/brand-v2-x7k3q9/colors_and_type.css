@@ -1,0 +1,404 @@
+/* ============================================================
+   Deepo Design System - Colors & Type
+   v2.0 - Warm rebrand
+   ============================================================
+   Brand thesis (he): "הגנת פרטיות מקצועית - במחיר נגיש לכולם."
+   Brand thesis (en): "Professional privacy protection - within everyone's reach."
+   Personality: a warm champion who fights exposure FOR you.
+   Approachable, plain-spoken, confident. Service-led, not tech-led.
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Assistant:wght@400;500;600;700&family=Heebo:wght@400;500;600;700&display=swap");
+
+:root {
+  /* ─────────────────────────────────────────────
+     COLOR - Brand ramps
+     Lifted straight from the new logo: wine → crimson → red → coral → orange,
+     with a magenta "spark" accent.
+     ───────────────────────────────────────────── */
+
+  /* Crimson - PRIMARY brand. The heart of the mark. */
+  --crimson-700: #9B0140;  /* deepest wine */
+  --crimson-600: #B8033B;
+  --crimson-500: #D10331;  /* anchor crimson */
+  --crimson-400: #E5294C;
+  --crimson-300: #F06A82;
+  --crimson-200: #F8B8C4;
+  --crimson-100: #FCE4E9;
+  --crimson-50:  #FDF1F4;
+
+  /* Ember - the red core of the gradient. */
+  --ember-600: #E5301F;
+  --ember-500: #F4271F;  /* anchor red */
+  --ember-400: #FE5E2C;
+  --ember-100: #FDE5DF;
+
+  /* Coral - the warm bridge to orange. */
+  --coral-500: #FF8154;
+  --coral-400: #FF9A75;
+  --coral-100: #FFEAE0;
+
+  /* Amber - the bright end of the gradient. */
+  --amber-600: #F07816;
+  --amber-500: #FF9D21;  /* anchor orange */
+  --amber-400: #FFB24D;
+  --amber-200: #FFD9A3;
+  --amber-100: #FFF1DE;
+
+  /* Spark - magenta accent, the logo's floating dot + sparkle top.
+     Use as a tiny pop only: highlights, the "alive" detail. */
+  --spark-500: #FE2EAF;
+  --spark-400: #FF63C4;
+  --spark-100: #FFE0F4;
+
+  /* ─────────────────────────────────────────────
+     BRAND GRADIENT - the defining visual element
+     Wine → crimson → red → coral → orange, diagonal as in the logo.
+     Use sparingly: logo, hero accents, key CTAs.
+     ───────────────────────────────────────────── */
+  --brand-gradient: linear-gradient(105deg, #9B0140 0%, #D10331 26%, #F4271F 52%, #FF7A3C 79%, #FF9D21 100%); /* @kind color */
+  --brand-gradient-soft: linear-gradient(105deg, #FCE4E9 0%, #FDE5DF 45%, #FFEAE0 72%, #FFF1DE 100%); /* @kind color */
+  --brand-gradient-vertical: linear-gradient(170deg, #9B0140 0%, #D10331 26%, #F4271F 52%, #FF7A3C 79%, #FF9D21 100%); /* @kind color */
+  --brand-gradient-radial: radial-gradient(circle at 26% 18%, #9B0140 0%, #D10331 28%, #F4271F 56%, #FF8154 80%, #FF9D21 100%); /* @kind color */
+  /* Spark-tipped variant for special moments (matches the sparkle). */
+  --spark-gradient: linear-gradient(165deg, #FE2EAF 0%, #FF6E72 46%, #FFC23D 100%); /* @kind color */
+
+  /* ─────────────────────────────────────────────
+     ONYX - the dark anchor surface (replaces the old navy "Vault").
+     Near-black with a warm amber undertone (black-amber), not wine.
+     ───────────────────────────────────────────── */
+  --garnet-1000: #120B03;  /* deepest, warm near-black */
+  --garnet-900:  #1B1308;  /* PRIMARY dark surface */
+  --garnet-800:  #29200F;  /* elevated surface on dark */
+  --garnet-700:  #3C2E16;  /* hover/active on dark */
+  --garnet-500:  #7C6D52;  /* secondary text on dark */
+  --garnet-300:  #BBAC93;  /* muted text on dark */
+
+  /* ─────────────────────────────────────────────
+     SAND - warm neutral surface ramp (replaces "Parchment").
+     Cream with a faint blush, anti-clinical.
+     ───────────────────────────────────────────── */
+  --sand-50:  #FDF9F5;
+  --sand-100: #FBF4EE;  /* page background, warmest */
+  --sand-200: #F5EBE2;  /* card / sunken panel */
+  --sand-300: #EBDED2;  /* divider on warm bg */
+  --sand-400: #DBCABA;  /* border on warm bg */
+
+  /* ─────────────────────────────────────────────
+     STONE - warm-tinted gray ramp for type & UI on light surfaces.
+     ───────────────────────────────────────────── */
+  --stone-50:  #F6F3F0;
+  --stone-100: #ECE6E1;
+  --stone-200: #D8CEC6;
+  --stone-300: #B4A89E;
+  --stone-400: #897C72;
+  --stone-500: #635850;
+  --stone-600: #453D38;
+  --stone-700: #2E2825;
+  --stone-800: #1C1815;
+
+  /* ─────────────────────────────────────────────
+     STATUS - calm, and distinct from the (red) brand.
+     ───────────────────────────────────────────── */
+  --status-ok:     #128A55;  /* deep emerald, reads as "protected" */
+  --status-ok-bg:  #E3F3EA;
+  --status-warn:   #C77E0C;  /* rich ochre-amber */
+  --status-warn-bg:#FBEBD2;
+  --status-risk:   #B81B2F;  /* deep brick - darker/bluer than brand so it stays distinct */
+  --status-risk-bg:#FAE2E3;
+  --status-info:   #2766A6;  /* steady blue, the one cool note */
+  --status-info-bg:#E5EDF6;
+
+  /* ─────────────────────────────────────────────
+     COLOR - Semantic roles (use these in product code)
+     ───────────────────────────────────────────── */
+  --bg-page:      var(--sand-100);
+  --bg-surface:   #FFFFFF;
+  --bg-sunken:    var(--sand-200);
+  --bg-inverse:   var(--garnet-900);
+  --bg-inverse-2: var(--garnet-800);
+
+  --fg-1:         var(--stone-800);   /* primary text on light */
+  --fg-2:         var(--stone-600);   /* secondary text */
+  --fg-3:         var(--stone-400);   /* muted / captions */
+  --fg-on-dark-1: #FDF4EF;            /* primary text on dark */
+  --fg-on-dark-2: var(--garnet-300);  /* secondary on dark */
+  --fg-accent:    var(--crimson-500);
+  --fg-link:      var(--crimson-600);
+
+  --border-1:     var(--sand-300);
+  --border-2:     var(--sand-400);
+  --border-strong:var(--garnet-900);
+  --border-on-dark: rgba(255,255,255,0.10);
+
+  --focus-ring:   var(--crimson-500);
+
+  /* ─────────────────────────────────────────────
+     TYPE - Families
+     Hebrew-first, professional & standard. Rubik (headings + brand),
+     Assistant (body) - both carry Hebrew natively. Heebo for labels (clean in Hebrew).
+     ───────────────────────────────────────────── */
+  --font-brand:   "Rubik", ui-sans-serif, system-ui, sans-serif;               /* brand display moments */
+  --font-display: "Rubik", "Assistant", ui-sans-serif, system-ui, sans-serif;  /* headings (he+en) */
+  --font-body:    "Assistant", "Rubik", ui-sans-serif, system-ui, sans-serif;  /* body (he+en) */
+  --font-mono:    "Heebo", ui-sans-serif, system-ui, sans-serif;               /* eyebrows / labels (he+en) */
+
+  /* ─────────────────────────────────────────────
+     TYPE - Scale (rem-based; 1rem = 16px)
+     ───────────────────────────────────────────── */
+  --t-display-xl: 5.5rem;   /* 88px */
+  --t-display-l:  4rem;     /* 64px */
+  --t-display-m:  3rem;     /* 48px */
+  --t-h1:         2.25rem;  /* 36px */
+  --t-h2:         1.75rem;  /* 28px */
+  --t-h3:         1.375rem; /* 22px */
+  --t-h4:         1.125rem; /* 18px */
+  --t-body:       1rem;     /* 16px */
+  --t-body-sm:    0.875rem; /* 14px */
+  --t-caption:    0.75rem;  /* 12px */
+  --t-eyebrow:    0.6875rem;/* 11px tracked-out label */
+
+  /* Line heights */
+  --lh-tight:   1.06;  /* @kind other */
+  --lh-snug:    1.2;   /* @kind other */
+  --lh-normal:  1.5;   /* @kind other */
+  --lh-relaxed: 1.65;  /* @kind other */  /* Hebrew reads better with a touch more leading */
+
+  /* Letter spacing - Hebrew never gets negative tracking */
+  --tr-tight:   -0.02em; /* @kind other */
+  --tr-snug:    -0.01em; /* @kind other */
+  --tr-normal:  0;       /* @kind other */
+  --tr-wide:    0.06em;  /* @kind other */
+  --tr-wider:   0.12em;  /* @kind other */  /* eyebrow caps */
+
+  /* ─────────────────────────────────────────────
+     SPACING - 4px base
+     ───────────────────────────────────────────── */
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  --space-32: 128px;
+
+  /* ─────────────────────────────────────────────
+     RADII - soft, friendly (a touch rounder to echo the wordmark)
+     ───────────────────────────────────────────── */
+  --radius-xs: 5px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-2xl: 30px;
+  --radius-pill: 999px;
+
+  /* ─────────────────────────────────────────────
+     SHADOWS - restrained; warm-tinted so they sit on sand.
+     ───────────────────────────────────────────── */
+  --shadow-lift-1: 0 1px 2px rgba(58, 4, 24, 0.06), 0 1px 1px rgba(58, 4, 24, 0.05);
+  --shadow-lift-2: 0 4px 12px rgba(58, 4, 24, 0.07), 0 2px 4px rgba(58, 4, 24, 0.05);
+  --shadow-lift-3: 0 12px 32px rgba(58, 4, 24, 0.10), 0 4px 8px rgba(58, 4, 24, 0.05);
+  --shadow-lift-4: 0 24px 60px rgba(58, 4, 24, 0.14), 0 8px 16px rgba(58, 4, 24, 0.07);
+
+  --shadow-inset-1: inset 0 1px 0 rgba(255,255,255,0.6);
+  --shadow-inset-dark: inset 0 1px 0 rgba(255,255,255,0.05);
+
+  --shadow-halo:      0 0 0 4px rgba(209, 3, 49, 0.20);   /* focus + crimson */
+  --shadow-halo-amber:0 0 0 4px rgba(255, 157, 33, 0.28);
+  --shadow-glow:      0 0 60px rgba(209, 3, 49, 0.32);    /* dark-bg accent */
+  --shadow-glow-amber:0 0 60px rgba(255, 157, 33, 0.30);
+
+  /* ─────────────────────────────────────────────
+     MOTION
+     ───────────────────────────────────────────── */
+  --ease-out:  cubic-bezier(0.22, 1, 0.36, 1); /* @kind other */
+  --ease-in:   cubic-bezier(0.55, 0, 1, 0.45); /* @kind other */
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);   /* @kind other */
+  --dur-1: 120ms; /* @kind other */
+  --dur-2: 200ms; /* @kind other */
+  --dur-3: 320ms; /* @kind other */
+  --dur-4: 520ms; /* @kind other */
+
+  /* ============================================================
+     BACK-COMPAT ALIASES - map v0.1 (cool) token names onto v2 (warm)
+     so existing slides / ui_kits / preview keep rendering while we
+     migrate them. Prefer the new names above in all NEW work.
+     ============================================================ */
+  --vault-1000: var(--garnet-1000);
+  --vault-900:  var(--garnet-900);
+  --vault-800:  var(--garnet-800);
+  --vault-700:  var(--garnet-700);
+  --vault-500:  var(--garnet-500);
+  --vault-300:  var(--garnet-300);
+
+  --iris-600: var(--crimson-600);
+  --iris-500: var(--crimson-500);
+  --iris-400: var(--crimson-400);
+  --iris-200: var(--crimson-200);
+  --iris-100: var(--crimson-100);
+
+  --beam-600: var(--ember-600);
+  --beam-500: var(--ember-500);
+  --beam-400: var(--ember-400);
+  --beam-100: var(--ember-100);
+
+  --aqua-600: var(--coral-500);
+  --aqua-500: var(--coral-500);
+  --aqua-400: var(--coral-400);
+  --aqua-100: var(--coral-100);
+
+  --signal-600: var(--amber-600);
+  --signal-500: var(--amber-500);
+  --signal-400: var(--amber-400);
+  --signal-300: var(--amber-200);
+  --signal-200: var(--amber-100);
+  --signal-100: var(--amber-100);
+
+  --parchment-100: var(--sand-100);
+  --parchment-200: var(--sand-200);
+  --parchment-300: var(--sand-300);
+  --parchment-400: var(--sand-400);
+
+  --slate-50:  var(--stone-50);
+  --slate-100: var(--stone-100);
+  --slate-200: var(--stone-200);
+  --slate-300: var(--stone-300);
+  --slate-400: var(--stone-400);
+  --slate-500: var(--stone-500);
+  --slate-600: var(--stone-600);
+  --slate-700: var(--stone-700);
+  --slate-800: var(--stone-800);
+}
+
+/* ============================================================
+   SEMANTIC TYPE STYLES
+   ============================================================ */
+
+.t-eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--t-eyebrow);
+  font-weight: 500;
+  letter-spacing: var(--tr-wider);
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+
+.t-display-xl,
+.t-display-l,
+.t-display-m {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: var(--tr-tight);
+  line-height: var(--lh-tight);
+  color: var(--fg-1);
+  text-wrap: balance;
+}
+.t-display-xl { font-size: var(--t-display-xl); }
+.t-display-l  { font-size: var(--t-display-l); }
+.t-display-m  { font-size: var(--t-display-m); }
+
+/* Brand display - Rubik 600/700, for prominent brand moments (hero numerals, marketing). */
+.t-brand {
+  font-family: var(--font-brand);
+  font-weight: 600;
+  letter-spacing: var(--tr-snug);
+  line-height: var(--lh-tight);
+  color: var(--fg-1);
+}
+
+.t-h1 {
+  font-family: var(--font-display);
+  font-size: var(--t-h1);
+  font-weight: 600;
+  letter-spacing: var(--tr-snug);
+  line-height: var(--lh-snug);
+  color: var(--fg-1);
+  text-wrap: balance;
+}
+.t-h2 {
+  font-family: var(--font-display);
+  font-size: var(--t-h2);
+  font-weight: 600;
+  letter-spacing: var(--tr-snug);
+  line-height: var(--lh-snug);
+  color: var(--fg-1);
+  text-wrap: balance;
+}
+.t-h3 {
+  font-family: var(--font-display);
+  font-size: var(--t-h3);
+  font-weight: 600;
+  line-height: var(--lh-snug);
+  color: var(--fg-1);
+}
+.t-h4 {
+  font-family: var(--font-display);
+  font-size: var(--t-h4);
+  font-weight: 600;
+  line-height: var(--lh-snug);
+  color: var(--fg-1);
+}
+
+.t-body, p {
+  font-family: var(--font-body);
+  font-size: var(--t-body);
+  font-weight: 400;
+  line-height: var(--lh-relaxed);
+  color: var(--fg-1);
+  text-wrap: pretty;
+}
+.t-body-sm {
+  font-family: var(--font-body);
+  font-size: var(--t-body-sm);
+  font-weight: 400;
+  line-height: var(--lh-normal);
+  color: var(--fg-2);
+}
+.t-caption {
+  font-family: var(--font-body);
+  font-size: var(--t-caption);
+  font-weight: 400;
+  line-height: var(--lh-normal);
+  color: var(--fg-3);
+}
+.t-mono {
+  font-family: var(--font-mono);
+  font-size: var(--t-body-sm);
+  font-weight: 400;
+  letter-spacing: var(--tr-normal);
+  color: var(--fg-2);
+}
+
+/* Gradient text helper - paints any text in the brand gradient. */
+.t-gradient {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  background: var(--bg-page);
+  color: var(--fg-1);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* RTL helpers for Hebrew-first usage */
+[dir="rtl"] { text-align: right; }
+[dir="rtl"] .t-eyebrow { letter-spacing: var(--tr-wide); } /* tracked caps loosen less in he */
