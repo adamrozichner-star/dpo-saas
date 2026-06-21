@@ -1,0 +1,9 @@
+/* ============================================================
+   Deepo Design System — global entry
+   Consumers link THIS one file. It is a list of @imports only.
+   Everything reachable from here ships to consuming projects:
+   color + type + spacing tokens, semantic type classes, base
+   resets, and the webfont declarations (Rubik / Assistant / Heebo).
+   ============================================================ */
+
+@import url("colors_and_type.css");
