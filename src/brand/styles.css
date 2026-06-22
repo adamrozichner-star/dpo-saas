@@ -1,0 +1,10 @@
+/* ============================================================
+   Deepo Design System - global entry (ported into the app)
+   Import THIS one file to make the brand tokens, type classes,
+   and primitive styles available app-wide. Tokens and `.t-*` /
+   `.dp-*` classes are inert until used; the opinionated base is
+   scoped under `.deepo-scope` (see colors_and_type.css).
+   ============================================================ */
+
+@import "./colors_and_type.css";
+@import "./components.css";
