@@ -35,13 +35,25 @@ function isGated(pathname: string): boolean {
 }
 
 export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // Dev-only routes: never expose outside development. The page also guards
+  // itself with notFound(), but a top-level notFound() commits a 200 once the
+  // response shell streams, so this is the authoritative source of the real 404
+  // HTTP status for /brand-gallery on production deployments.
+  if (pathname === '/brand-gallery' || pathname.startsWith('/brand-gallery/')) {
+    if (process.env.NODE_ENV !== 'development') {
+      return new NextResponse('Not Found', { status: 404 })
+    }
+    return NextResponse.next()
+  }
+
   // Fail-safe: only the exact string 'true' enables signup.
   const signupEnabled = process.env.NEXT_PUBLIC_SIGNUP_ENABLED === 'true'
   if (signupEnabled) {
     return NextResponse.next()
   }
 
-  const { pathname } = request.nextUrl
   if (!isGated(pathname)) {
     return NextResponse.next()
   }
@@ -59,6 +71,8 @@ export function middleware(request: NextRequest) {
 // it entirely.
 export const config = {
   matcher: [
+    '/brand-gallery',
+    '/brand-gallery/:path*',
     '/register/:path*',
     '/register',
     '/get-started/:path*',
