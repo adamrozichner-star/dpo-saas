@@ -1,0 +1,9 @@
+# PDFs and other inputs aren't committed by default — they're often
+# large and may not be ours to redistribute. Drop them in locally; the
+# extractor reads them in place. If you want a specific input pinned
+# to the repo as a reproducibility anchor, override per-file.
+*.pdf
+*.txt
+*.md
+!.gitkeep
+!.gitignore
