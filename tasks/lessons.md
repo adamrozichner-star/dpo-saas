@@ -131,3 +131,41 @@ Porting `deepo-brand/` (tokens + 7 primitives) into the app on feature/brand-fou
   inside `colors_and_type.css` (faithful to the bundle, and the literal family names make
   the computed-font assertions clean). A later task should load Rubik/Assistant/Heebo via
   `next/font/google` to match the existing Heebo setup and drop the render-blocking @import.
+
+# Lessons / surprises — obligation ledger schema (task B1, 2026-06-23)
+
+Created the v3 Obligation Ledger (migration 037, additive: 7 tables + 1 enum), anchored to
+the verified baseline and docs/ARCHITECTURE.md section 5.2. Applied + verified via the
+Management API SQL endpoint (Docker/pg_dump still absent). No existing table altered (live
+public tables 58 -> 65).
+
+## Findings
+- **updated_at triggers are NOT a real convention here.** A live pg_trigger sweep found
+  updated_at triggers on only 5 of 58 tables (calculator_leads, data_subject_requests,
+  database_scenarios, message_threads) and on NONE of the close analogs (data_recipients,
+  dpo_queue, the entire hub_* set from migration 022). So the ledger tables get updated_at
+  columns but no triggers, matching the analogs. updated_at is app/service-set on write.
+- **Provenance via composite FKs is clean and enforceable.** Every hub_* table has
+  UNIQUE(template_id, version) (template_id is the stable logical id; id is the per-version
+  row). So obligations/controls/assets anchor provenance with composite FKs to
+  (template_id, version), pinning the exact catalog version that minted each row.
+- **docs/ARCHITECTURE.md section 5.2 fields that have no target yet were deferred, not faked:**
+  tasks.access_link_id omitted (access_links primitive does not exist; section 7 / later PR);
+  obligations.trigger_ref realized as the typed asset_id; evidence.answer_ref is plain text
+  (no answers table); contacts.linked_entity realized as data_recipient_id (the real vendor table).
+
+## Surprise: Supabase default privileges defeat naive grant intent
+- **New public tables inherit `GRANT ALL TO authenticated` (and service_role, postgres) via
+  Supabase default privileges.** An explicit `GRANT SELECT, INSERT` is ADDITIVE, not
+  restrictive: it does not shrink the inherited ALL. So `events` initially had full DML to
+  authenticated despite the intent to make it append-only, and all 7 had TRUNCATE granted to
+  authenticated.
+- TRUNCATE/MAINTAIN/TRIGGER/REFERENCES are not reachable via PostgREST (it only issues
+  SELECT/INSERT/UPDATE/DELETE and respects RLS), so this was defense-in-depth, not a live
+  hole. RLS already gated rows and anon already had zero (explicit REVOKE).
+- **Fix (least-privilege):** after the default grant, explicitly
+  `REVOKE UPDATE, DELETE, TRUNCATE, TRIGGER, REFERENCES ON events FROM authenticated` and
+  `REVOKE TRUNCATE ON <all 7> FROM authenticated`. Final state: anon nothing; authenticated
+  RLS-gated DML on the 6 and SELECT+INSERT only on events; no TRUNCATE anywhere; service_role
+  ALL. Lesson for future ledger migrations: to restrict a role you must REVOKE, never rely on
+  a narrower GRANT. [[project_supabase_disable_rls_gotcha]]
