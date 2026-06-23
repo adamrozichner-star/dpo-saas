@@ -169,3 +169,48 @@ public tables 58 -> 65).
   RLS-gated DML on the 6 and SELECT+INSERT only on events; no TRUNCATE anywhere; service_role
   ALL. Lesson for future ledger migrations: to restrict a role you must REVOKE, never rely on
   a narrower GRANT. [[project_supabase_disable_rls_gotcha]]
+
+# Lessons / surprises — the evaluator (task B2, 2026-06-23)
+
+Built the deterministic rule_dsl evaluator (dsl.ts grammar + zod, facts.ts, evaluator.ts,
+persist.ts), migration 038 (partial unique index for idempotent upsert), and a provisional
+seed of 8 gap rules. Dry-ran against the 3 live orgs, then applied: 8 rules seeded, 4
+obligations minted for org "דיפו", upsert proven idempotent (4 -> 4 on re-run), anon still
+zero on obligations.
+
+## rule_dsl did not exist as a contract
+- hub_gap_rules.rule_dsl is typed `z.unknown()` everywhere (src/lib/types/hub.ts, both expert
+  API routes) and the Expert Console is a raw JSON textarea. The live catalog was EMPTY
+  (0 gap_rules, 0 playbooks, 0 questions; org_facts empty too). So B2 had to DEFINE the DSL,
+  not just evaluate it. The grammar is all/any/not + {fact, op, value}; missing fact -> false.
+
+## SEED RULES ARE PROVISIONAL - pending Amir/Roy legal review
+- The 8 rules in src/lib/ledger/seed-rules.ts are engineering placeholders, hand-translated
+  from the legacy hardcoded engines (compliance-engine.ts / regulatory-engine.ts) ONLY to
+  exercise the evaluator. Wording, severities, thresholds, and legal mapping are NOT
+  authoritative. In-row markers: source_tier='expert_judgment', confidence=0.5, reviewed_by null.
+  Do not surface to customers or treat as compliance truth until legally reviewed.
+
+## Fact-vocabulary fixups for real rule authoring (found via the live dry-run)
+The evaluator is correct; these are catalog/data alignment items for Amir/Roy:
+- **accessControl** real live values are `all` / `partial` (NOT `restricted`, which the legacy
+  code implied). A rule keyed on `eq 'restricted'` would never fire. The broad-access seed rule
+  keys on `eq 'all'`; org "דיפו" is `partial`, so it (correctly, for the seed) did not fire.
+- **hasConsent** real value seen is `no_website` (NOT just `yes`/`no`). Rules keyed on `eq 'no'`
+  miss `no_website`. Decide whether `no_website` should count as "no consent mechanism".
+- **v3Answers.databases** keys (`customers`, `cvs`, `cameras`, `employees`, `suppliers_id`) are
+  a DIFFERENT vocabulary from hub_asset_templates slugs (`customer_database`, `mailing_list`,
+  `security_cameras`) and from some legacy keys. A canonical database-key <-> asset-slug map is
+  needed so rules and assets share one vocabulary.
+- **medical**: org "דיפו" has industry=health but no `medical` database key, so `hasMedical`
+  is false there. `isHealthOrFinance` (from industry) is the broader signal. Rule authors must
+  decide which signal drives medical-data obligations.
+
+## Notes
+- Deterministic, no LLM in the inference path (the DSL evaluation is pure). Confirmed.
+- Idempotency: upsert keyed on (org_id, source_rule_id) via the 038 partial unique index;
+  ON CONFLICT refreshes denormalized fields but preserves status/opened_at/triggered_by so a
+  re-run never clobbers an obligation's lifecycle progress.
+- The evaluator reads facts from v3Answers + processing_activities today (assets table is
+  empty); when the loop populates assets, add asset-derived facts in facts.ts without touching
+  the DSL or evaluator.
