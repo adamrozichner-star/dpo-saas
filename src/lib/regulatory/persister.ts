@@ -62,6 +62,12 @@ export async function persistDocument(
   doc: ParsedDocument,
   fetched: FetchResult,
   sections?: PersistSection[],
+  // SHA-256 of the original PDF bytes (Bug 2 byte-level dedup).
+  // Optional — when absent, the row is persisted with NULL hash and
+  // future re-uploads of these bytes won't short-circuit. The upload
+  // route always supplies this for PDF flows; scraper flows (if/when
+  // they return) may legitimately not have a single file to hash.
+  fileContentHash?: string,
 ): Promise<PersistResult> {
   // Lazy client construction inside the function — never stored
   // module-level, never exported, never returned to callers.
@@ -100,6 +106,7 @@ export async function persistDocument(
         ? vectorToPgText(s.embedding)
         : null,
     })),
+    p_file_content_hash: fileContentHash ?? null,
   });
 
   if (error) {
