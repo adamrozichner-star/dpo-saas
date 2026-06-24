@@ -5,10 +5,12 @@
 // =============================================================================
 import type { ObligationView } from '@/components/ledger/ObligationRow'
 import type { ControlScheduleItemProps } from '@/components/ledger/ControlScheduleItem'
-import type { ObligationStatus, Severity, Cadence, ControlStatus } from '@/components/ledger/status'
+import type { TimelineEvent } from '@/components/ledger/EventTimeline'
+import type { ObligationStatus, Severity, Cadence, ControlStatus, EntityType } from '@/components/ledger/status'
 
 // Shapes as read from the ledger tables (subset of columns the console displays).
 export interface ObligationDbRow {
+  id: string
   title: string
   status: ObligationStatus
   severity: Severity | null
@@ -59,4 +61,124 @@ export function mapControls(controls: ControlDbRow[], playbooks: PlaybookDbRow[]
     status: c.status,
     overdue: c.next_due_at ? new Date(c.next_due_at).getTime() < now : false,
   }))
+}
+
+// ---------------------------------------------------------------------------
+// C2 - obligation detail mappers (pure).
+// ---------------------------------------------------------------------------
+
+// Catalog-governance labels (hub_gap_rules.source_tier). Kept here, NOT in the
+// ledger status.ts, which is ledger-status only.
+export const SOURCE_TIER_LABEL: Record<string, string> = {
+  legal: 'הוראת חוק',
+  regulatory_guidance: 'הנחיית רגולטור',
+  industry_norm: 'נורמה בענף',
+  expert_judgment: 'שיפוט מומחה',
+}
+
+export interface ObligationDetailDbRow extends ObligationDbRow {
+  description: string | null
+  triggered_by: string | null
+  opened_at: string | null
+  status_changed_at: string | null
+  closed_at: string | null
+  fulfilled_by_control_id: string | null
+}
+
+export interface ObligationDetailView extends ObligationView {
+  id: string
+  description: string | null
+  triggeredBy: string | null
+  openedAt: string | null
+  statusChangedAt: string | null
+  closedAt: string | null
+  fulfilledByControlId: string | null
+}
+
+export function mapObligationDetail(r: ObligationDetailDbRow): ObligationDetailView {
+  return {
+    id: r.id,
+    title: r.title,
+    status: r.status,
+    severity: r.severity,
+    sourceRuleId: r.source_rule_id,
+    sourceVersion: r.source_version,
+    recursAt: r.recurs_at,
+    description: r.description,
+    triggeredBy: r.triggered_by,
+    openedAt: r.opened_at,
+    statusChangedAt: r.status_changed_at,
+    closedAt: r.closed_at,
+    fulfilledByControlId: r.fulfilled_by_control_id,
+  }
+}
+
+export interface EventDbRow {
+  entity_type: EntityType
+  event_type: string
+  actor: string | null
+  created_at: string
+  data: Record<string, unknown> | null
+}
+
+export function mapEvents(rows: EventDbRow[]): TimelineEvent[] {
+  return rows.map((e) => ({
+    entityType: e.entity_type,
+    eventType: e.event_type,
+    summary: typeof e.data?.summary === 'string' ? (e.data.summary as string) : undefined,
+    actor: e.actor,
+    at: e.created_at,
+  }))
+}
+
+export interface EvidenceDbRow {
+  kind: string
+  document_id: string | null
+  answer_ref: string | null
+  captured_at: string | null
+  captured_via: string | null
+}
+
+export interface EvidenceView {
+  kind: string
+  capturedAt: string | null
+  capturedVia: string | null
+  ref: string | null
+}
+
+export function mapEvidence(rows: EvidenceDbRow[]): EvidenceView[] {
+  return rows.map((e) => ({
+    kind: e.kind,
+    capturedAt: e.captured_at,
+    capturedVia: e.captured_via,
+    ref: e.document_id ?? e.answer_ref ?? null,
+  }))
+}
+
+export interface RuleDbRow {
+  name: string
+  severity: Severity | null
+  source_tier: string | null
+  confidence: number | null
+  remediation_text: string | null
+}
+
+export interface RuleProvenanceView {
+  name: string
+  severity: Severity | null
+  sourceTier: string | null
+  sourceTierLabel: string | null
+  confidence: number | null
+  remediation: string | null
+}
+
+export function mapRuleProvenance(r: RuleDbRow): RuleProvenanceView {
+  return {
+    name: r.name,
+    severity: r.severity,
+    sourceTier: r.source_tier,
+    sourceTierLabel: r.source_tier ? SOURCE_TIER_LABEL[r.source_tier] ?? r.source_tier : null,
+    confidence: r.confidence,
+    remediation: r.remediation_text,
+  }
 }
