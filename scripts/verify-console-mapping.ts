@@ -19,6 +19,10 @@ import {
   type EventDbRow,
   type EvidenceDbRow,
   type RuleDbRow,
+  buildLedgerSummary,
+  loadComplianceSummary,
+  isLedgerRead,
+  type LedgerSummaryObligation,
 } from '../src/lib/console-data'
 import { OBLIGATION_STATUS, SEVERITY } from '../src/components/ledger/status'
 
@@ -92,6 +96,33 @@ async function main() {
   )
   const prov = mapRuleProvenance(rule)
   check('detail: rule provenance resolved', !!prov.name && prov.sourceTier === 'expert_judgment' && prov.sourceTierLabel === 'שיפוט מומחה', `tier=${prov.sourceTier} label=${prov.sourceTierLabel} conf=${prov.confidence}`)
+
+  // ---- C4: LEDGER_READ flag bridge (pure switch + buildLedgerSummary) ----
+  console.log('\n-- C4 LEDGER_READ flag (buildLedgerSummary + switch) --')
+  check('isLedgerRead off for {} / on for {LEDGER_READ:true}', isLedgerRead({ feature_flags: {} }) === false && isLedgerRead({ feature_flags: { LEDGER_READ: true } }) === true)
+
+  const ledgerObs = (await sql<LedgerSummaryObligation>(
+    `select id, title, status, severity, description from obligations where org_id='${orgId}' order by severity`,
+  )) as LedgerSummaryObligation[]
+  const ledgerSummary = buildLedgerSummary(ledgerObs, 42)
+  check('buildLedgerSummary: 4 ledger tasks, titles match /console rows', ledgerSummary.tasks.length === 4 && ledgerSummary.tasks.every((t) => t.title.length > 0))
+  check('buildLedgerSummary: tasks are read-only (actionType doc_review)', ledgerSummary.tasks.every((t) => t.actionType === 'doc_review'))
+  check('buildLedgerSummary: checking obligation -> needs_action task', ledgerSummary.tasks.every((t) => t.status === 'needs_action' || t.status === 'completed'))
+  check('buildLedgerSummary: score 42, ancillaries neutral (not ledger-backed)', ledgerSummary.score === 42 && ledgerSummary.securityLevel === 'basic' && ledgerSummary.needsReporting === false && ledgerSummary.dbCount === 0)
+
+  const sentinel = buildLedgerSummary([], 99) // a distinct object to detect the legacy path
+  let fetchCalled = false
+  const off = await loadComplianceSummary({ ledgerRead: false, fetchObligations: async () => { fetchCalled = true; return [] }, score: 0, legacy: () => sentinel })
+  check('flag OFF: returns legacy() verbatim, ledger NOT fetched', off === sentinel && fetchCalled === false)
+
+  let legacyCalled = false
+  const on = await loadComplianceSummary({ ledgerRead: true, fetchObligations: async () => ledgerObs, score: 42, legacy: () => { legacyCalled = true; return sentinel } })
+  check('flag ON: builds from ledger (4 tasks, score 42), legacy NOT called', on.tasks.length === 4 && on.score === 42 && legacyCalled === false)
+
+  const flags = await sql<{ name: string; ledger: boolean }>(
+    `select name, coalesce((feature_flags->>'LEDGER_READ')::boolean, false) as ledger from organizations order by name`,
+  )
+  check('live flags: דיפו on, others off (legacy)', flags.find((f) => f.name === 'דיפו')?.ledger === true && flags.filter((f) => f.name !== 'דיפו').every((f) => f.ledger === false), JSON.stringify(flags))
 
   const failed = results.filter((r) => !r.pass).length
   console.log(`\n${results.length - failed}/${results.length} checks passed`)

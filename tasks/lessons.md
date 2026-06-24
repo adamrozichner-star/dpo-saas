@@ -387,3 +387,32 @@ INSERT), as the authed user under RLS. Migration 040. Verified 11/11 write-path 
   authed path; confirmed exactly ONE append-only events row + double-resolve guarded (status<>resolved).
 - Test residue: a resolved provisional dpo_queue item (4de83577..., metadata.provisional=true) + its
   one event are left in דיפו as evidence the path works. The real pending review item was untouched.
+
+# Lessons / surprises - LEDGER_READ feature flag (task C4, 2026-06-24)
+
+Per-org flag lets the legacy dashboard read obligation/control state from the ledger instead of
+compliance-engine.ts. Flag via organizations.feature_flags.LEDGER_READ (existing jsonb column, no
+migration). Set on for דיפו; others stay {} = legacy. Verified 23/23 pure + 8/8 auth-gate +
+13/13 shell-demo. tsc clean.
+
+## KNOWN GAP (must read before retiring the legacy engine in PR12): flag-on is a PARTIAL view
+- When LEDGER_READ is on, only the OBLIGATIONS (the task list) and the SCORE are ledger-backed.
+- The ancillary ComplianceSummary stats are NEUTRAL DEFAULTS, NOT ledger-derived:
+  securityLevel='basic', securityLevelHe='בסיסית', needsReporting=false, reportingReasons=[],
+  totalRecords=0, dbCount=0, needsCiso=false (also actions=[]/guidelines=[]).
+- So LEDGER_READ on is NOT yet a full replacement for the legacy engine. Those stats must be
+  ledger-derived (or otherwise sourced) BEFORE the legacy engine can be retired (PR12). This is a
+  known gap by design, not a bug. The dashboard sections that show security level / reporting will
+  read neutral for a flag-on org until then.
+
+## Design notes
+- The switch is a pure, dependency-injected function loadComplianceSummary({ledgerRead, fetchObligations,
+  score, legacy}): flag OFF returns legacy() verbatim and never touches the ledger; flag ON builds from
+  the ledger and never calls legacy(). This made the flag-off-byte-identical claim directly testable
+  (the dashboard diff is purely an additive if/else around the unchanged deriveComplianceActions call).
+- buildLedgerSummary maps each obligation to a ComplianceTask with actionType='doc_review' (passive:
+  expand-only; UnifiedTaskList shows no generate/wizard/mark-done for it), status compliant->completed
+  else needs_action, priority from severity. So the existing UnifiedTaskList renders ledger obligations
+  read-only with no destructive affordances and no UI change.
+- Legacy engines (compliance-engine.ts, regulatory-engine.ts) are NOT deleted (retire is PR12).
+- Enabling דיפו's flag was a one-row data write to organizations.feature_flags (LEDGER_READ=true).
