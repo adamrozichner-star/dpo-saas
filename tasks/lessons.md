@@ -1,4 +1,4 @@
-# Lessons / surprises — architecture-v3 audit (2026-06-21)
+# Lessons / surprises - architecture-v3 audit (2026-06-21)
 
 Recurring mistakes and surprises encountered while auditing the live DB + codebase.
 
@@ -11,36 +11,36 @@ Recurring mistakes and surprises encountered while auditing the live DB + codeba
   No generic `exec_sql`/`run_sql` RPC exists either. → Could **not** run the requested
   `information_schema` / `pg_class.relacl` queries against the live DB.
 - **Workaround used:** parsed the live PostgREST **OpenAPI spec** (`GET /rest/v1/`,
-  390 KB) — it encodes every `public` table, column, type, PK (`<pk/>`), FK
+  390 KB) - it encodes every `public` table, column, type, PK (`<pk/>`), FK
   (`<fk .../>`), and NOT-NULL (required[]). This is true live introspection of `public`.
   RLS status, grants (relacl), and SECURITY DEFINER functions are **not** in OpenAPI and
   were taken from migration SQL instead (see caveat below).
 
 ## Schema drift (biggest surprise)
-- **24 of 59 live tables have NO `CREATE TABLE` in the repo migrations** — they were
+- **24 of 59 live tables have NO `CREATE TABLE` in the repo migrations** - they were
   created out-of-band (Supabase SQL editor). The numbered migrations in
   `supabase/migrations/` are **not** a reliable picture of production.
 - **3 tables defined in repo SQL do not exist live:** `compliance_tasks`,
   `document_versions`, `onboarding_answers` (all HTTP 404 via service role).
 - Consequence: **RLS / grants / policies described in migration files cannot be trusted as
-  live state.** Several migrations are explicitly "apply manually after review" — unknown
+  live state.** Several migrations are explicitly "apply manually after review" - unknown
   whether applied. Section 6 of the report is migration-derived and flagged as unverified.
 
 ## Latent bug found
 - `src/app/api/dpo/route.ts:587` does `.from('onboarding_answers')` against a table that
   **does not exist live** (404). The Supabase error is not checked, so it silently returns
-  null — a hidden data-loss/no-op path, not a crash.
+  null - a hidden data-loss/no-op path, not a crash.
 
 ## v3-relevant
 - `compliance_tasks` (a recurring-task table with `is_recurring`/`recurring_interval`) was
   designed in `supabase/messaging_schema.sql` but **never deployed and never referenced in
-  app code** — the closest historical "ledger/tasks" design was abandoned.
+  app code** - the closest historical "ledger/tasks" design was abandoned.
 - Org-specific compliance state lives as **EAV** (`org_facts` = org_id/fact_key/fact_value
   jsonb) and **JSONB blobs** (`organization_profiles.compliance_gaps`,
   `processing_activities.*`, `work_plans.tasks`, `dpia_assessments.*`), never as discrete
   stateful obligation rows.
 
-# Lessons / surprises — live schema baseline (task G0, 2026-06-22)
+# Lessons / surprises - live schema baseline (task G0, 2026-06-22)
 
 Captured a live schema baseline (RLS/grants/functions) before v3. Outcome: SUCCESS via the
 Management API SQL endpoint after a valid token was supplied. Path to get there was bumpy.
@@ -59,7 +59,7 @@ Management API SQL endpoint after a valid token was supplied. Path to get there 
 - **Workaround used (the win):** the Management API SQL endpoint
   `POST https://api.supabase.com/v1/projects/<ref>/database/query` runs arbitrary SQL as role
   `postgres` (privileged) with no Docker and no DB password. It CAN read
-  `pg_catalog`/`information_schema` — unlike PostgREST (the v3 audit's only access, limited to
+  `pg_catalog`/`information_schema` - unlike PostgREST (the v3 audit's only access, limited to
   `public`+`graphql_public`). The baseline was reconstructed from the live catalog with
   `pg_get_functiondef` / `pg_get_constraintdef` / `pg_get_indexdef` + catalog reads. Real DDL,
   read-only, no row data. Saved to `supabase/baseline/baseline-20260622.sql`.
@@ -68,23 +68,23 @@ Management API SQL endpoint after a valid token was supplied. Path to get there 
 - All 3 known live-but-unmigrated tables present: `data_recipients`, `dpo_queue`,
   `org_compliance_scores`.
 
-## Audit section 6 — RESOLVED (was unverified, migration-derived)
+## Audit section 6 - RESOLVED (was unverified, migration-derived)
 - **regulatory_documents / regulatory_sections: RLS DISABLED**, so their 5 policies each are
   INERT. Real protection is the GRANT layer: `anon` has NO grant, `authenticated` = SELECT,
-  `service_role` = all. Not anon-exposed despite RLS off — the documented grants-as-firewall
+  `service_role` = all. Not anon-exposed despite RLS off - the documented grants-as-firewall
   pattern.
 - **hub_* (7 tables): RLS ENABLED**, one policy each = `FOR SELECT TO authenticated USING
   (true)`. No anon policy, no write policy → anon fully denied, writes blocked for all roles.
 - **LATENT SECURITY RISK on hub_*:** `anon` (and `authenticated`) still hold a broad table
   GRANT (`SELECT/INSERT/UPDATE/DELETE/REFERENCES/TRIGGER/TRUNCATE`). RLS is the ONLY thing
-  protecting these 7 tables; disabling RLS would instantly re-expose full DML to anon — the
+  protecting these 7 tables; disabling RLS would instantly re-expose full DML to anon - the
   exact "disable RLS -> anon exposed" gotcha. Hardening follow-up: `REVOKE` the anon grants
   on `hub_*` so the grant layer is also safe.
 - **SECURITY DEFINER functions (3):** `current_user_org_id` (owner `postgres`),
   `find_similar_section` + `regulatory_ingest_persist` (owner `regulatory_ingest_worker`, a
   dedicated low-privilege role).
 
-# Lessons / surprises — brand foundation port (task A1, 2026-06-22)
+# Lessons / surprises - brand foundation port (task A1, 2026-06-22)
 
 Porting `deepo-brand/` (tokens + 7 primitives) into the app on feature/brand-foundation.
 
@@ -117,7 +117,7 @@ Porting `deepo-brand/` (tokens + 7 primitives) into the app on feature/brand-fou
 - **Headless `:focus` does not paint.** Programmatic `.focus()` makes `el.matches(':focus')`
   true but Chrome will not paint focus styles without real OS focus, so the halo read as
   `none`. `Emulation.setFocusEmulationEnabled` did not help. CDP `CSS.forcePseudoState`
-  (force `:focus`) is what reliably resolves the rule — then wait out the 200ms box-shadow
+  (force `:focus`) is what reliably resolves the rule - then wait out the 200ms box-shadow
   transition before measuring, or you read a mid-interpolation value.
 - **`notFound()` in a page returns HTTP 200, not 404.** A top-level `notFound()` in the
   dev-only gallery page (both static and `force-dynamic`) served 200: the response shell /
@@ -132,7 +132,7 @@ Porting `deepo-brand/` (tokens + 7 primitives) into the app on feature/brand-fou
   the computed-font assertions clean). A later task should load Rubik/Assistant/Heebo via
   `next/font/google` to match the existing Heebo setup and drop the render-blocking @import.
 
-# Lessons / surprises — obligation ledger schema (task B1, 2026-06-23)
+# Lessons / surprises - obligation ledger schema (task B1, 2026-06-23)
 
 Created the v3 Obligation Ledger (migration 037, additive: 7 tables + 1 enum), anchored to
 the verified baseline and docs/ARCHITECTURE.md section 5.2. Applied + verified via the
@@ -170,7 +170,7 @@ public tables 58 -> 65).
   ALL. Lesson for future ledger migrations: to restrict a role you must REVOKE, never rely on
   a narrower GRANT. [[project_supabase_disable_rls_gotcha]]
 
-# Lessons / surprises — the evaluator (task B2, 2026-06-23)
+# Lessons / surprises - the evaluator (task B2, 2026-06-23)
 
 Built the deterministic rule_dsl evaluator (dsl.ts grammar + zod, facts.ts, evaluator.ts,
 persist.ts), migration 038 (partial unique index for idempotent upsert), and a provisional
@@ -214,3 +214,37 @@ The evaluator is correct; these are catalog/data alignment items for Amir/Roy:
 - The evaluator reads facts from v3Answers + processing_activities today (assets table is
   empty); when the loop populates assets, add asset-derived facts in facts.ts without touching
   the DSL or evaluator.
+
+# Lessons / surprises - controls + recurrence (task B3, 2026-06-24)
+
+Instantiated hub_control_playbooks into per-org controls, linked them to the obligations they
+satisfy (obligations.fulfilled_by_control_id), and set obligations.recurs_at. Migration 039
+(unique index on controls(org_id, source_playbook_id, source_playbook_version)) for idempotent
+instantiation. 3 provisional playbooks (annual). Applied to org "דיפו": 3 controls created,
+4 obligations linked, double-run idempotent (3 -> 3), anon zero on controls. Deterministic, no LLM.
+
+## TRACKED FOLLOW-UP (BLOCKER for the real regulatory controls): cadence enum is too coarse
+- hub_control_playbooks.cadence and controls.cadence use CHECK (daily|weekly|monthly|quarterly|
+  biannual|annual). This CANNOT express the real regulatory cadences from regulatory-engine.ts:
+  risk assessment every 18 months, pen-test every 18 months, periodic training every 2 years,
+  log retention 24 months.
+- Consequence: B3 only seeded ANNUAL review controls for the 4 existing obligations. The
+  security-level periodic controls (risk assessment / pen-test / training) CANNOT be authored
+  until the cadence model supports arbitrary intervals.
+- NEEDED before those controls: a migration adding `cadence_months smallint` to controls (and
+  hub_control_playbooks) as the canonical interval, with the text cadence kept as a coarse
+  label; compute next_due_at from cadence_months. Deferred from B3 (no obligations need it yet),
+  but it must land before security-level controls. Also resolve the `biannual` ambiguity then
+  (B3 treats it as 6 months / semi-annual).
+
+## Notes
+- No schema link exists between hub_control_playbooks and hub_gap_rules, so control->obligation
+  binding is a deterministic code-level map (ruleToPlaybook in seed-playbooks.ts). Provisional.
+- One control per (org, playbook): multiple obligations share one control (both PPA obligations
+  share the annual PPA review). recurs_at = the control's next_due_at.
+- Idempotency detail: on re-instantiation the control's next_due_at is PRESERVED (conflict
+  preserves it; only completion advances the schedule), and the obligation link uses the
+  control's RETURNING next_due_at, so recurs_at does not drift across runs even with a different
+  wall clock. Verified by the double-run.
+- Playbooks are PROVISIONAL, pending Amir/Roy legal review (in-row: source_tier expert_judgment,
+  confidence 0.5). Cadences, owner roles, checklists are placeholders.
