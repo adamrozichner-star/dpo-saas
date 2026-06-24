@@ -43,7 +43,8 @@ export function middleware(request: NextRequest) {
   // HTTP status for these routes on production deployments.
   if (
     pathname === '/brand-gallery' || pathname.startsWith('/brand-gallery/') ||
-    pathname === '/shell-demo' || pathname.startsWith('/shell-demo/')
+    pathname === '/shell-demo' || pathname.startsWith('/shell-demo/') ||
+    pathname === '/ledger-gallery' || pathname.startsWith('/ledger-gallery/')
   ) {
     if (process.env.NODE_ENV !== 'development') {
       return new NextResponse('Not Found', { status: 404 })
@@ -78,6 +79,8 @@ export const config = {
     '/brand-gallery/:path*',
     '/shell-demo',
     '/shell-demo/:path*',
+    '/ledger-gallery',
+    '/ledger-gallery/:path*',
     '/register/:path*',
     '/register',
     '/get-started/:path*',

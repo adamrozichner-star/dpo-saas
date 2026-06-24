@@ -283,3 +283,32 @@ owner (light). 13/13 headless assertions pass; /shell-demo 404s in prod; tsc cle
   /dashboard, which the legacy page owns).
 - Token-only: shell.css has zero hardcoded hex (verified); the only literal colors are the allowed
   ember-glow radial-gradient and rgba white/onyx overlays (consistent with components.css).
+
+# Lessons / surprises - v3 ledger components (task A4, 2026-06-24)
+
+Built the v3 ledger UI components (src/components/ledger/) on the brand tokens: status chips,
+severity/doc badges, obligation card/row, score dial, control item, task row, event timeline, and
+the tokenized form shell. Dev-only /ledger-gallery (middleware-guarded). 18/18 headless assertions
+pass (each obligation state + severity maps to the right --status token); tsc clean; /ledger-gallery
+404s in prod.
+
+## Single-source status mapping (for C and later surfaces)
+- src/components/ledger/status.ts is the ONE place that maps each ledger status/severity to a brand
+  Badge variant (-> --status token) and a Hebrew label. C and every later surface should import from
+  here, not re-map. The three chip components are thin Badge wrappers over this map.
+
+## document_status enum mismatch (mapping note for C)
+- The task framed the doc lifecycle as draft -> review -> approved -> published, but the LIVE
+  document_status enum is {draft, pending_review, pending_approval, active, archived}. There is no
+  literal 'published' or 'approved'. DocumentLifecycleBadge uses the real enum; 'active' is the
+  published/live state. When C renders real documents, map UI wording to these 5 values, not the
+  4-word lifecycle.
+
+## CC-2 seam
+- TokenizedFormShell renders zero org identity (no org name, no score, no nav) - only the Deepo
+  platform mark + the passed generic title. Verified headless (no sidebar, no dial, no org text).
+  This is the seam E builds the no-login sysadmin/vendor forms on.
+
+## Provisional
+- ComplianceScoreDial bands (<50 risk, 50-79 warn, >=80 ok) are a PROVISIONAL engineering default
+  (commented in the component). Real thresholds are a later product decision (Amir/Roy).
