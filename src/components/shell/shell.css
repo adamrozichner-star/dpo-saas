@@ -1,0 +1,202 @@
+/* ============================================================
+   Deepo authenticated app shell (chrome).
+   Token-driven, RTL-first. The shell renders inside .deepo-scope so the
+   brand base + tokens apply. Two actor themes: --dpo (Onyx dark sidebar)
+   and --owner (light sidebar). Breakpoint 1024px (matches the existing lg
+   chrome): desktop = static sidebar on the right; mobile = slide-in drawer
+   from the right + a top bar (logo right, menu/bell left).
+   No hardcoded hex (the only literal colors are the allowed ember-glow
+   gradient and rgba whites/onyx for on-dark overlays, as in components.css).
+   ============================================================ */
+
+.dp-shell {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg-page);
+}
+
+/* ---- Sidebar ---------------------------------------------------------- */
+.dp-shell__sidebar {
+  width: 264px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  border-inline-end: 1px solid var(--border-1); /* RTL: inline-end = physical left = the divider against main */
+  position: relative; /* positioning context for the dpo ember-glow ::before; mobile overrides to fixed */
+}
+.dp-shell--owner .dp-shell__sidebar {
+  background: var(--bg-surface);
+  color: var(--fg-1);
+}
+.dp-shell--dpo .dp-shell__sidebar {
+  background: var(--garnet-900);
+  color: var(--fg-on-dark-1);
+  border-color: var(--border-on-dark);
+  overflow: hidden;
+}
+/* ember glow rising from the top corner of the Onyx sidebar (allowed gradient) */
+.dp-shell--dpo .dp-shell__sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 70% 38% at 100% 0%,
+    rgba(209, 3, 49, 0.28) 0%, rgba(244, 39, 31, 0.12) 42%, rgba(255, 157, 33, 0.06) 64%, transparent 80%);
+}
+.dp-shell__sidebar > * { position: relative; } /* sit above the glow */
+
+.dp-shell__brand { padding: var(--space-5) var(--space-5) var(--space-4); }
+.dp-shell__brand img { height: 30px; width: auto; display: block; }
+
+.dp-shell__nav { flex: 1; padding: var(--space-2) var(--space-3); overflow-y: auto; }
+.dp-shell__sec {
+  font-family: var(--font-mono);
+  font-size: var(--t-eyebrow);
+  font-weight: 600;
+  letter-spacing: var(--tr-wider);
+  text-transform: uppercase;
+  padding: var(--space-4) var(--space-2) var(--space-2);
+  color: var(--fg-3);
+}
+.dp-shell--dpo .dp-shell__sec { color: var(--garnet-300); }
+
+.dp-navitem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  text-align: start;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: inherit;
+  font-family: var(--font-body);
+  font-size: var(--t-body-sm);
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+}
+.dp-navitem .dpi { font-size: 18px; flex: none; }
+.dp-navitem__label { flex: 1; }
+.dp-navitem__count {
+  margin-inline-start: auto;
+  font-family: var(--font-mono);
+  font-size: var(--t-caption);
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+}
+.dp-navitem:focus-visible { outline: none; box-shadow: var(--shadow-halo); }
+
+.dp-shell--owner .dp-navitem:hover { background: var(--sand-100); }
+.dp-shell--owner .dp-navitem--active { background: var(--crimson-50); color: var(--crimson-600); }
+.dp-shell--owner .dp-navitem__count { background: var(--crimson-100); color: var(--crimson-600); }
+.dp-shell--owner .dp-navitem--active .dp-navitem__count { background: var(--crimson-500); color: var(--fg-on-accent); }
+
+.dp-shell--dpo .dp-navitem:hover { background: rgba(255, 255, 255, 0.06); }
+.dp-shell--dpo .dp-navitem--active { background: rgba(255, 255, 255, 0.10); color: var(--amber-400); }
+.dp-shell--dpo .dp-navitem__count { background: rgba(255, 255, 255, 0.10); color: var(--amber-400); }
+
+.dp-shell__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-block-start: 1px solid var(--border-1);
+}
+.dp-shell--dpo .dp-shell__foot { border-color: var(--border-on-dark); }
+.dp-avatar {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--t-body-sm);
+  font-weight: 600;
+  background: var(--crimson-100);
+  color: var(--crimson-600);
+}
+.dp-shell--dpo .dp-avatar { background: var(--garnet-700); color: var(--amber-400); }
+.dp-shell__user b { display: block; font-family: var(--font-display); font-size: var(--t-body-sm); font-weight: 600; }
+.dp-shell__user span { font-size: var(--t-caption); color: var(--fg-3); }
+.dp-shell--dpo .dp-shell__user span { color: var(--garnet-300); }
+
+/* ---- Main column ------------------------------------------------------ */
+.dp-shell__main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.dp-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  background: var(--bg-surface);
+  border-block-end: 1px solid var(--border-1);
+}
+.dp-topbar__title { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: var(--t-h3); color: var(--fg-1); }
+.dp-topbar__actions { margin-inline-start: auto; display: flex; align-items: center; gap: var(--space-2); }
+
+.dp-iconbtn {
+  width: 38px;
+  height: 38px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--fg-2);
+  cursor: pointer;
+  transition: background var(--dur-1) var(--ease-out), border-color var(--dur-1) var(--ease-out);
+}
+.dp-iconbtn .dpi { font-size: 18px; }
+.dp-iconbtn:hover { background: var(--sand-100); border-color: var(--stone-400); }
+.dp-iconbtn:focus-visible { outline: none; box-shadow: var(--shadow-halo); }
+
+.dp-shell__content { flex: 1; padding: var(--space-8); }
+
+/* ---- Mobile bar + drawer (hidden on desktop) -------------------------- */
+.dp-mobilebar { display: none; }
+.dp-shell__backdrop { display: none; }
+
+@media (max-width: 1023px) {
+  /* Sidebar becomes a fixed drawer pinned to the right, off-screen until open. */
+  .dp-shell__sidebar {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0; /* RTL: inline-start = physical right, so the drawer pins to the right */
+    z-index: 50;
+    transform: translateX(100%); /* off-screen to the right (drawer closed) */
+    transition: transform var(--dur-2) var(--ease-out);
+  }
+  .dp-shell--open .dp-shell__sidebar { transform: translateX(0); }
+
+  .dp-shell__backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(18, 11, 3, 0.45);
+  }
+
+  .dp-topbar { display: none; } /* desktop topbar hidden on mobile */
+
+  .dp-mobilebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* RTL: first child (logo) at the right edge, actions at the left */
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-surface);
+    border-block-end: 1px solid var(--border-1);
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+  .dp-mobilebar__logo { height: 26px; width: auto; display: block; }
+  .dp-mobilebar__actions { display: flex; align-items: center; gap: var(--space-2); }
+
+  .dp-shell__content { padding: var(--space-5); }
+}

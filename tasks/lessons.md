@@ -248,3 +248,38 @@ instantiation. 3 provisional playbooks (annual). Applied to org "דיפו": 3 co
   wall clock. Verified by the double-run.
 - Playbooks are PROVISIONAL, pending Amir/Roy legal review (in-row: source_tier expert_judgment,
   confidence 0.5). Cadences, owner roles, checklists are placeholders.
+
+# Lessons / surprises - authenticated app shell (task A3, 2026-06-24)
+
+Built the RTL brand app shell (chrome) as an additive route group src/app/(deepo)/ with its own
+layout + src/components/shell/ (AppShell, Sidebar, Topbar, nav data, token-driven shell.css). Demo
+at /shell-demo (dev-only, guarded in middleware like /brand-gallery). Actor themes: dpo (Onyx) /
+owner (light). 13/13 headless assertions pass; /shell-demo 404s in prod; tsc clean.
+
+## TRACKED FOLLOW-UP for C: there is no shared "current org / session" context
+- useAuth() (src/lib/auth-context.tsx) exposes only the Supabase auth user/session. There is NO
+  shared "current org" context. Every surface fetches the org/profile ad hoc:
+  supabase.from('users').select(...).eq('auth_user_id', user.id) -> org_id -> organizations
+  (the (expert) layout does this for role; the dashboard does its own thing).
+- The A3 shell renders PLACEHOLDER org/user (no auth fetch) on purpose. C should build ONE shared
+  org/session context (current user + org + role) and have the shell + all v3 surfaces read it,
+  instead of each surface re-querying. The shell's AppShell `actor` prop + org props are the seam.
+
+## RTL logical-property gotchas (both cost a verify round)
+- `inset-inline-end: 0` in RTL maps to PHYSICAL LEFT, not right. To pin the mobile drawer to the
+  right, use `inset-inline-start: 0` (inline-start = physical right in RTL). Same for borders:
+  the divider between the right sidebar and main is `border-inline-end` (physical left), not start.
+- A specificity trap: `.dp-shell--dpo .dp-shell__sidebar { position: relative }` (0,2,0, needed as
+  the ember-glow positioning context) silently OVERRODE the mobile media query's
+  `.dp-shell__sidebar { position: fixed }` (0,1,0) - media queries add no specificity. The drawer
+  stayed in-flow. Fix: move `position: relative` to the base sidebar rule (all actors), let the
+  mobile rule override to fixed at equal specificity + later source order.
+- Dev gotcha: editing layout-imported global CSS did not reliably hot-reload in `next dev`; a
+  server restart was needed before the headless run saw the change.
+
+## Notes
+- Additive only: root layout, (expert), and the navy/stone screens (dashboard etc.) are untouched.
+  The (deepo) route group adds no URL segment, so its routes must use NEW path names (not
+  /dashboard, which the legacy page owns).
+- Token-only: shell.css has zero hardcoded hex (verified); the only literal colors are the allowed
+  ember-glow radial-gradient and rgba white/onyx overlays (consistent with components.css).
