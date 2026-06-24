@@ -416,3 +416,30 @@ migration). Set on for דיפו; others stay {} = legacy. Verified 23/23 pure + 
   read-only with no destructive affordances and no UI change.
 - Legacy engines (compliance-engine.ts, regulatory-engine.ts) are NOT deleted (retire is PR12).
 - Enabling דיפו's flag was a one-row data write to organizations.feature_flags (LEDGER_READ=true).
+
+# Lessons / surprises - backfill, the canonical all-org runner (task D1, 2026-06-24)
+
+scripts/backfill.ts runs the EXISTING evaluator (B2) + control instantiation (B3) over every org
+with v3Answers, idempotently, so the ledger is canonical. Reuses the pure functions verbatim
+(buildFacts, evaluateRules, buildObligationUpsertSql, planControls, buildControlUpsertSql,
+buildObligationLinkSql, ruleToPlaybook) - no new inference. Reads the live catalog (does not re-seed).
+Dry-run default + --apply. Operator batch via the Management API; runtime per-user reads stay RLS-scoped.
+
+## It is a NEAR-NO-OP today (this is expected, not a gap)
+- 3 real orgs, all have v3Answers. Only דיפו fires (4 obligations + 3 controls, already minted in
+  B2/B3). The two legal orgs (אמיר פסטרנק, קרסטון: basic security, one customers DB, no medical/
+  cameras/web-leads/processors and no PPA/DPIA-flagged processing activities) fire 0 rules -> 0
+  obligations, correctly. So dry-run is +0 everywhere; apply is a no-op; re-run identical.
+- The value of D1 is the MECHANISM: one idempotent all-org runner that mints for future orgs and
+  when the (provisional) rule catalog grows. Not the volume today.
+
+## Provisional exposure is nil today
+- Seed rules are still provisional. But the only org that fires is דיפו (internal/test, already
+  flag-on); the two real legal orgs mint nothing. And LEDGER_READ stays OFF for them. So no real
+  customer sees provisional obligations. Deliberate per-org flip happens later, after legal review.
+
+## Notes
+- Idempotency comes from the 038 (obligations) + 039 (controls) unique indexes; verified apply x2
+  identical. anon stays zero on obligations/controls. No LEDGER_READ flag was flipped (data only).
+- The existing evaluator-apply.ts / controls-apply.ts already looped all orgs + seeded the catalog;
+  backfill is the consolidated read-live-catalog, no-reseed, dry-run+apply version.
