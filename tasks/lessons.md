@@ -336,3 +336,21 @@ verified 8/8 against live rows; auth gate 2/2 (redirect + no leak); /shell-demo 
 - Control names live on hub_control_playbooks, not controls - the console joins by
   (template_id, version). The row->props mapping is a pure exported function (src/lib/console-data.ts)
   so the verify test runs the real mapping against live rows, not a mock.
+
+# Lessons / surprises - obligation detail view (task C2, 2026-06-24)
+
+Added /console/obligations/[id]: full record + linked control + evidence + event timeline,
+provenance from the joined gap rule. Detail mappers added to console-data.ts (pure). Verified
+15/15 mapping (incl detail) + 4/4 auth-gate (both routes) + /shell-demo 13/13. tsc clean.
+
+## Patterns
+- RLS-as-not-found: the detail fetch is .eq('id', id).eq('org_id', org.id).maybeSingle(); a
+  cross-org or unknown id returns null (RLS), which renders a clean "not found / no access" state.
+  No separate authorization check and no leak - RLS does the gate.
+- source_tier / confidence labels live in console-data.ts (SOURCE_TIER_LABEL, catalog-governance),
+  NOT in status.ts (ledger-status only) - per the agreed split.
+- The composite-key reads (hub_gap_rules by template_id+version; controls->playbook name) are done
+  as explicit separate queries rather than PostgREST embedding, since the composite FKs do not
+  embed cleanly.
+- Linking from a list: ObligationRow stays a pure display component; /console wraps each row in a
+  Next Link using the row id (the console keeps raw rows incl id; mapObligation maps display only).

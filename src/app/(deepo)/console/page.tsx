@@ -6,14 +6,14 @@
 // org_id = current_user_org_id() returns only this org's rows). No service-role,
 // no cross-org data. Renders via the A4 components + the single-source status map.
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { useOrg } from '@/lib/org-context'
 import { ComplianceScoreDial, ObligationRow, ControlScheduleItem } from '@/components/ledger'
-import type { ObligationView } from '@/components/ledger'
 import type { ControlScheduleItemProps } from '@/components/ledger'
 import {
-  mapObligations,
+  mapObligation,
   mapControls,
   type ObligationDbRow,
   type ControlDbRow,
@@ -24,7 +24,7 @@ export default function ConsolePage() {
   const { user, supabase, loading: authLoading } = useAuth()
   const { org, loading: orgLoading } = useOrg()
   const router = useRouter()
-  const [obligations, setObligations] = useState<ObligationView[] | null>(null)
+  const [obligations, setObligations] = useState<ObligationDbRow[] | null>(null)
   const [controls, setControls] = useState<ControlScheduleItemProps[] | null>(null)
 
   // Auth gate: redirect to /login once we know there is no user.
@@ -40,7 +40,7 @@ export default function ConsolePage() {
       const [obRes, ctRes, pbRes] = await Promise.all([
         supabase
           .from('obligations')
-          .select('title, status, severity, source_rule_id, source_version, recurs_at')
+          .select('id, title, status, severity, source_rule_id, source_version, recurs_at')
           .eq('org_id', org.id)
           .order('severity', { ascending: true }),
         supabase
@@ -50,7 +50,7 @@ export default function ConsolePage() {
         supabase.from('hub_control_playbooks').select('template_id, version, name'),
       ])
       if (cancelled) return
-      setObligations(mapObligations((obRes.data ?? []) as ObligationDbRow[]))
+      setObligations((obRes.data ?? []) as ObligationDbRow[])
       setControls(mapControls((ctRes.data ?? []) as ControlDbRow[], (pbRes.data ?? []) as PlaybookDbRow[], new Date().toISOString()))
     })()
     return () => {
@@ -81,8 +81,10 @@ export default function ConsolePage() {
       <section>
         <p className="t-eyebrow" style={{ marginBottom: 'var(--space-3)' }}>חובות ({obligations?.length ?? 0})</p>
         <div style={{ display: 'grid', gap: 'var(--space-3)', maxWidth: 760 }}>
-          {obligations?.map((o, i) => (
-            <ObligationRow key={`${o.sourceRuleId ?? 'x'}-${i}`} {...o} />
+          {obligations?.map((r) => (
+            <Link key={r.id} href={`/console/obligations/${r.id}`} style={{ textDecoration: 'none' }}>
+              <ObligationRow {...mapObligation(r)} />
+            </Link>
           ))}
         </div>
       </section>

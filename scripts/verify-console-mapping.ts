@@ -5,7 +5,21 @@
  * Run: set -a; source <(grep '^SUPABASE_ACCESS_TOKEN=' .env.local); set +a
  *      npx tsx scripts/verify-console-mapping.ts
  */
-import { mapObligations, mapControls, type ObligationDbRow, type ControlDbRow, type PlaybookDbRow } from '../src/lib/console-data'
+import {
+  mapObligations,
+  mapControls,
+  mapObligationDetail,
+  mapEvents,
+  mapEvidence,
+  mapRuleProvenance,
+  type ObligationDbRow,
+  type ControlDbRow,
+  type PlaybookDbRow,
+  type ObligationDetailDbRow,
+  type EventDbRow,
+  type EvidenceDbRow,
+  type RuleDbRow,
+} from '../src/lib/console-data'
 import { OBLIGATION_STATUS, SEVERITY } from '../src/components/ledger/status'
 
 const TOKEN = process.env.SUPABASE_ACCESS_TOKEN
@@ -55,6 +69,29 @@ async function main() {
   check('every control cadence annual', controls.every((c) => c.cadence === 'annual'))
   check('no control overdue (next_due 2027 > now 2026)', controls.every((c) => c.overdue === false))
   controls.forEach((c) => console.log(`   - "${c.name}" cadence=${c.cadence} due=${c.nextDueAt} owner=${c.ownerRole} status=${c.status}`))
+
+  // ---- C2: obligation detail mappers against the real CCTV obligation ----
+  console.log('\n-- C2 detail mappers (CCTV obligation) --')
+  const [ob] = await sql<ObligationDetailDbRow>(
+    `select id, title, status, severity, source_rule_id, source_version, recurs_at, description, triggered_by, opened_at, status_changed_at, closed_at, fulfilled_by_control_id
+     from obligations where org_id='${orgId}' and source_rule_id='b1000003-0000-4000-8000-000000000003'`,
+  )
+  const detail = mapObligationDetail(ob)
+  check('detail: mapped id + lifecycle', !!detail.id && detail.status === 'checking' && detail.severity === 'warning')
+  check('detail: triggered_by + opened_at present', detail.triggeredBy === 'gap_rule' && !!detail.openedAt)
+  check('detail: closed_at null (open obligation)', detail.closedAt === null)
+  check('detail: linked control id present', !!detail.fulfilledByControlId)
+
+  const evRows = await sql<EvidenceDbRow>(`select kind, document_id, answer_ref, captured_at, captured_via from evidence where obligation_id='${detail.id}'`)
+  const evtRows = await sql<EventDbRow>(`select entity_type, event_type, actor, created_at, data from events where entity_type='obligation' and entity_id='${detail.id}'`)
+  check('detail: evidence empty (none yet)', mapEvidence(evRows).length === 0, `${evRows.length}`)
+  check('detail: events empty (none yet)', mapEvents(evtRows).length === 0, `${evtRows.length}`)
+
+  const [rule] = await sql<RuleDbRow>(
+    `select name, severity, source_tier, confidence, remediation_text from hub_gap_rules where template_id='${detail.sourceRuleId}' and version=${detail.sourceVersion}`,
+  )
+  const prov = mapRuleProvenance(rule)
+  check('detail: rule provenance resolved', !!prov.name && prov.sourceTier === 'expert_judgment' && prov.sourceTierLabel === 'שיפוט מומחה', `tier=${prov.sourceTier} label=${prov.sourceTierLabel} conf=${prov.confidence}`)
 
   const failed = results.filter((r) => !r.pass).length
   console.log(`\n${results.length - failed}/${results.length} checks passed`)

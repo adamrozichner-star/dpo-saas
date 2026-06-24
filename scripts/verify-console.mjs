@@ -5,8 +5,9 @@
 import puppeteer from 'puppeteer-core'
 
 const BASE = process.env.BASE_URL || 'http://localhost:3000'
-const URL = `${BASE}/console`
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+// Both auth-gated surfaces: the console and an obligation detail route.
+const ROUTES = ['/console', '/console/obligations/ed996c7b-bba9-4c7c-84a1-c374d2767a5b']
 
 const results = []
 const check = (name, pass, detail) => { results.push(!!pass); console.log(`${pass ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`) }
@@ -14,22 +15,21 @@ const check = (name, pass, detail) => { results.push(!!pass); console.log(`${pas
 const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] })
 try {
   const page = await browser.newPage()
-  await page.goto(URL, { waitUntil: 'networkidle2', timeout: 60000 })
-  // The page gates client-side: wait for the redirect to /login.
-  let redirected = false
-  try {
-    await page.waitForFunction(() => location.pathname.startsWith('/login'), { timeout: 8000 })
-    redirected = true
-  } catch {
-    redirected = false
+  for (const route of ROUTES) {
+    await page.goto(`${BASE}${route}`, { waitUntil: 'networkidle2', timeout: 60000 })
+    let redirected = false
+    try {
+      await page.waitForFunction(() => location.pathname.startsWith('/login'), { timeout: 8000 })
+      redirected = true
+    } catch {
+      redirected = false
+    }
+    const finalPath = await page.evaluate(() => location.pathname)
+    check(`unauthenticated ${route} redirects to /login`, redirected && finalPath.startsWith('/login'), `path=${finalPath}`)
+    const body = await page.evaluate(() => document.body.innerText)
+    const leaked = /רישום מאגר|הסכמי עיבוד|מצלמות אבטחה|דיפו/.test(body)
+    check(`no ledger/org data leaked to anon on ${route}`, !leaked)
   }
-  const finalPath = await page.evaluate(() => location.pathname)
-  check('unauthenticated /console redirects to /login', redirected && finalPath.startsWith('/login'), `path=${finalPath}`)
-
-  // No ledger/org data leaked to anon (no obligation titles, no org name).
-  const body = await page.evaluate(() => document.body.innerText)
-  const leaked = /רישום מאגר|הסכמי עיבוד|מצלמות אבטחה|דיפו/.test(body)
-  check('no ledger/org data leaked to anon', !leaked)
 } finally {
   await browser.close()
 }
