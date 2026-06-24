@@ -62,6 +62,7 @@ import WebsiteScanner from '@/components/WebsiteScanner'
 import NotificationsBell from '@/components/NotificationsBell'
 import TrustPageSettings from '@/components/TrustPageSettings'
 import { deriveComplianceActions, ComplianceSummary, ActionOverride } from '@/lib/compliance-engine'
+import { isLedgerRead, loadComplianceSummary, type LedgerSummaryObligation } from '@/lib/console-data'
 import { isOnboardingDataComplete } from '@/lib/onboarding-validation'
 
 // ============================================
@@ -112,6 +113,18 @@ function DashboardContent() {
   const [messageThreads, setMessageThreads] = useState<any[]>([])
   const [orgProfile, setOrgProfile] = useState<any>(null)
   const [complianceSummary, setComplianceSummary] = useState<ComplianceSummary | null>(null)
+
+  // C4: when the per-org LEDGER_READ flag is on, the compliance view reads
+  // obligations from the live ledger (RLS-scoped) instead of the legacy engine.
+  const fetchLedgerObligations = async (orgId: string): Promise<LedgerSummaryObligation[]> => {
+    if (!supabase) return []
+    const { data } = await supabase
+      .from('obligations')
+      .select('id, title, status, severity, description')
+      .eq('org_id', orgId)
+      .order('severity', { ascending: true })
+    return (data ?? []) as LedgerSummaryObligation[]
+  }
   const [actionOverrides, setActionOverrides] = useState<Record<string, ActionOverride>>({})
 
   // Entitlement for recommended-tier features. `org.tier` alone is unreliable
@@ -296,7 +309,12 @@ function DashboardContent() {
         // Load persisted action overrides (user-completed actions)
         const overrides = profileData?.actionOverrides || {}
         setActionOverrides(overrides)
-        const summary = deriveComplianceActions(v3, docs || [], incidentData || [], overrides, org?.tier)
+        const summary = await loadComplianceSummary({
+          ledgerRead: isLedgerRead(org),
+          fetchObligations: () => fetchLedgerObligations(org.id),
+          score: org?.compliance_score ?? 0,
+          legacy: () => deriveComplianceActions(v3, docs || [], incidentData || [], overrides, org?.tier),
+        })
         setComplianceSummary(summary)
         // Use engine score if we have v3 data, otherwise fallback to doc-based score
         if (Object.keys(v3).length > 0) {
@@ -375,7 +393,12 @@ function DashboardContent() {
     if (Object.keys(v3).length === 0 && user) {
       try { v3 = JSON.parse(localStorage.getItem(`dpo_v3_answers_${user.id}`) || '{}') } catch {}
     }
-    const newSummary = deriveComplianceActions(v3, documents, incidents, newOverrides, organization?.tier)
+    const newSummary = await loadComplianceSummary({
+      ledgerRead: isLedgerRead(organization),
+      fetchObligations: () => fetchLedgerObligations(organization?.id ?? ''),
+      score: organization?.compliance_score ?? 0,
+      legacy: () => deriveComplianceActions(v3, documents, incidents, newOverrides, organization?.tier),
+    })
     setComplianceSummary(newSummary)
     setComplianceScore(newSummary.score)
 
@@ -427,7 +450,12 @@ function DashboardContent() {
     if (Object.keys(v3).length === 0 && user) {
       try { v3 = JSON.parse(localStorage.getItem(`dpo_v3_answers_${user.id}`) || '{}') } catch {}
     }
-    const newSummary = deriveComplianceActions(v3, documents, incidents, newOverrides, organization?.tier)
+    const newSummary = await loadComplianceSummary({
+      ledgerRead: isLedgerRead(organization),
+      fetchObligations: () => fetchLedgerObligations(organization?.id ?? ''),
+      score: organization?.compliance_score ?? 0,
+      legacy: () => deriveComplianceActions(v3, documents, incidents, newOverrides, organization?.tier),
+    })
     setComplianceSummary(newSummary)
     setComplianceScore(newSummary.score)
 

@@ -308,3 +308,81 @@ export function buildResolveWrite(p: ResolveInput): ResolveWrite {
     },
   }
 }
+
+// ---------------------------------------------------------------------------
+// C4 - LEDGER_READ flag bridge. When the per-org flag is on, the legacy
+// dashboard reads obligation/control state from the ledger instead of the
+// recomputed compliance-engine. buildLedgerSummary is PURE; the authed RLS read
+// + the legacy call are injected by the caller (so the switch is testable).
+//
+// PARTIAL view: obligations + score are ledger-backed; the ancillary stats
+// (securityLevel, needsReporting, totalRecords, dbCount, needsCiso) are NEUTRAL
+// defaults, NOT yet ledger-backed. Flag-on is therefore not yet a full
+// replacement for the legacy engine (see tasks/lessons.md / PR12).
+// ---------------------------------------------------------------------------
+import type { ComplianceSummary, ComplianceTask } from '@/lib/compliance-engine'
+
+export function isLedgerRead(org: { feature_flags?: Record<string, unknown> | null } | null | undefined): boolean {
+  return org?.feature_flags?.LEDGER_READ === true
+}
+
+export interface LedgerSummaryObligation {
+  id: string
+  title: string
+  status: ObligationStatus
+  severity: Severity | null
+  description?: string | null
+}
+
+const SEVERITY_TO_PRIORITY: Record<Severity, ComplianceTask['priority']> = {
+  critical: 'critical',
+  warning: 'high',
+  info: 'medium',
+}
+
+function obligationToTask(o: LedgerSummaryObligation, index: number): ComplianceTask {
+  return {
+    id: o.id,
+    title: o.title,
+    description: o.description ?? '',
+    legalBasis: '',
+    icon: '',
+    priority: o.severity ? SEVERITY_TO_PRIORITY[o.severity] : 'medium',
+    status: o.status === 'compliant' ? 'completed' : 'needs_action',
+    actionType: 'doc_review', // passive: expand-only, no generate/wizard/mark-done
+    sortOrder: index,
+  }
+}
+
+// Pure: ledger obligations + score -> a ComplianceSummary the existing dashboard
+// UI renders unchanged. Ancillary stats are neutral defaults (see header note).
+export function buildLedgerSummary(obligations: LedgerSummaryObligation[], score: number): ComplianceSummary {
+  return {
+    tasks: obligations.map(obligationToTask),
+    actions: [],
+    guidelines: [],
+    score,
+    securityLevel: 'basic',
+    securityLevelHe: 'בסיסית',
+    totalRecords: 0,
+    dbCount: 0,
+    needsReporting: false,
+    reportingReasons: [],
+    needsCiso: false,
+  }
+}
+
+// The data-source switch. Pure with injected deps so it is fully testable:
+// flag OFF returns legacy() verbatim and never touches the ledger; flag ON builds
+// from the ledger and never calls legacy().
+export async function loadComplianceSummary(opts: {
+  ledgerRead: boolean
+  fetchObligations: () => Promise<LedgerSummaryObligation[]>
+  score: number
+  legacy: () => ComplianceSummary
+}): Promise<ComplianceSummary> {
+  if (opts.ledgerRead) {
+    return buildLedgerSummary(await opts.fetchObligations(), opts.score)
+  }
+  return opts.legacy()
+}
