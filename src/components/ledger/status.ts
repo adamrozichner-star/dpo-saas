@@ -19,7 +19,7 @@ export type ControlStatus = 'active' | 'paused' | 'retired'
 export type DocumentStatus = 'draft' | 'pending_review' | 'pending_approval' | 'active' | 'archived'
 export type AssigneeActor = 'dpo' | 'owner' | 'sysadmin' | 'vendor'
 export type Cadence = 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'biannual' | 'annual'
-export type EntityType = 'obligation' | 'control' | 'task' | 'evidence' | 'asset'
+export type EntityType = 'obligation' | 'control' | 'task' | 'evidence' | 'asset' | 'dpo_queue'
 
 interface VariantLabel {
   variant: StatusVariant
@@ -85,4 +85,5 @@ export const ENTITY_ICON: Record<EntityType, DeepoIconId> = {
   task: 'dp-bell',
   evidence: 'dp-doc',
   asset: 'dp-database',
+  dpo_queue: 'dp-seal',
 }

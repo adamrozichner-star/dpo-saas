@@ -354,3 +354,36 @@ provenance from the joined gap rule. Detail mappers added to console-data.ts (pu
   embed cleanly.
 - Linking from a list: ObligationRow stays a pure display component; /console wraps each row in a
   Next Link using the row id (the console keeps raw rows incl id; mapObligation maps display only).
+
+# Lessons / surprises - DPO judgment queue, first WRITE surface (task C3, 2026-06-24)
+
+/console/queue lists dpo_queue items and resolves one (dpo_queue UPDATE + append-only events
+INSERT), as the authed user under RLS. Migration 040. Verified 11/11 write-path + 6/6 auth-gate +
+13/13 shell-demo. tsc clean.
+
+## RLS-enabled table with only a SELECT policy silently blocks all client writes
+- dpo_queue had RLS on + only dpo_queue_select_own_org (SELECT). With no UPDATE/INSERT policy, the
+  authed client could NOT write it (RLS deny), even though the grant existed. The legacy writers
+  (api/messages, api/dpo, ...) get around this with service-role server routes (bypass RLS).
+- C3 is the v3 pattern: client-authed write under RLS. Migration 040 added an org-scoped UPDATE
+  policy (USING + WITH CHECK org_id = current_user_org_id()). Lesson: enabling RLS without a write
+  policy is a silent write-block; each verb needs its own policy.
+
+## events.entity_type had to be widened
+- The append-only events CHECK was obligation/control/task/evidence/asset - no dpo_queue. Widened in
+  040 (DROP + re-ADD CHECK) so a queue resolution can append an event. Added dpo_queue to EntityType
+  + ENTITY_ICON in status.ts (timeline icon only).
+
+## Hardened a latent anon grant while making it a write surface
+- dpo_queue granted full DML to anon (RLS-blocked, but the hub_*-style latent risk). 040 REVOKEd ALL
+  from anon (+ PUBLIC). Verified relacl: anon zero on dpo_queue.
+
+## RLS verification without a real login (reusable technique)
+- Proved the write RLS via the Management API: `begin; set local role authenticated; select
+  set_config('request.jwt.claims','{"sub":"<auth_user_id>","role":"authenticated"}',true); <stmt>;
+  rollback;` - the endpoint returns the last SELECT before ROLLBACK. This simulated the דיפו user
+  (CAN update its item = 1 row), a cross-org user (0 rows), and anon (permission denied) without a
+  password. The actual resolve was then committed through the same role-sim to exercise the full
+  authed path; confirmed exactly ONE append-only events row + double-resolve guarded (status<>resolved).
+- Test residue: a resolved provisional dpo_queue item (4de83577..., metadata.provisional=true) + its
+  one event are left in דיפו as evidence the path works. The real pending review item was untouched.

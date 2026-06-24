@@ -6,7 +6,7 @@
 import type { ObligationView } from '@/components/ledger/ObligationRow'
 import type { ControlScheduleItemProps } from '@/components/ledger/ControlScheduleItem'
 import type { TimelineEvent } from '@/components/ledger/EventTimeline'
-import type { ObligationStatus, Severity, Cadence, ControlStatus, EntityType } from '@/components/ledger/status'
+import type { ObligationStatus, Severity, Cadence, ControlStatus, EntityType, StatusVariant } from '@/components/ledger/status'
 
 // Shapes as read from the ledger tables (subset of columns the console displays).
 export interface ObligationDbRow {
@@ -180,5 +180,131 @@ export function mapRuleProvenance(r: RuleDbRow): RuleProvenanceView {
     sourceTierLabel: r.source_tier ? SOURCE_TIER_LABEL[r.source_tier] ?? r.source_tier : null,
     confidence: r.confidence,
     remediation: r.remediation_text,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// C3 - DPO judgment queue (dpo_queue). Queue-governance maps + the pure resolve
+// write builder. Kept here (not the ledger status.ts) since dpo_queue is its own
+// governance surface, not a ledger status.
+// ---------------------------------------------------------------------------
+
+export type DpoQueuePriority = 'critical' | 'high' | 'medium' | 'low'
+export type DpoQueueStatus = 'pending' | 'in_progress' | 'resolved' | 'auto_resolved' | 'dismissed'
+export type DpoQueueType = 'escalation' | 'dsr' | 'incident' | 'review' | 'onboarding' | 'document_expiry' | 'regulator'
+export type ResolutionType = 'approved_ai' | 'edited' | 'manual' | 'rejected' | 'auto'
+
+interface VL {
+  variant: StatusVariant
+  label: string
+}
+
+export const DPO_QUEUE_PRIORITY: Record<DpoQueuePriority, VL> = {
+  critical: { variant: 'risk', label: 'קריטי' },
+  high: { variant: 'warn', label: 'גבוה' },
+  medium: { variant: 'info', label: 'בינוני' },
+  low: { variant: 'neutral', label: 'נמוך' },
+}
+
+export const DPO_QUEUE_STATUS: Record<DpoQueueStatus, VL> = {
+  pending: { variant: 'neutral', label: 'ממתין' },
+  in_progress: { variant: 'info', label: 'בתהליך' },
+  resolved: { variant: 'ok', label: 'טופל' },
+  auto_resolved: { variant: 'ok', label: 'טופל אוטומטית' },
+  dismissed: { variant: 'neutral', label: 'נדחה' },
+}
+
+export const DPO_QUEUE_TYPE_LABEL: Record<DpoQueueType, string> = {
+  escalation: 'הסלמה',
+  dsr: 'בקשת נושא מידע',
+  incident: 'אירוע',
+  review: 'סקירה',
+  onboarding: 'הצטרפות',
+  document_expiry: 'פקיעת מסמך',
+  regulator: 'רגולטור',
+}
+
+export interface QueueItemDbRow {
+  id: string
+  type: DpoQueueType
+  priority: DpoQueuePriority
+  status: DpoQueueStatus
+  title: string
+  description: string | null
+  deadline_at: string | null
+}
+
+export interface QueueItemView {
+  id: string
+  title: string
+  description: string | null
+  typeLabel: string
+  priority: DpoQueuePriority
+  status: DpoQueueStatus
+  deadlineAt: string | null
+  resolved: boolean
+}
+
+export function mapQueueItem(r: QueueItemDbRow): QueueItemView {
+  return {
+    id: r.id,
+    title: r.title,
+    description: r.description,
+    typeLabel: DPO_QUEUE_TYPE_LABEL[r.type] ?? r.type,
+    priority: r.priority,
+    status: r.status,
+    deadlineAt: r.deadline_at,
+    resolved: r.status === 'resolved' || r.status === 'auto_resolved',
+  }
+}
+
+export interface ResolveInput {
+  itemId: string
+  orgId: string
+  userId: string
+  resolutionType: ResolutionType
+  notes: string
+  actor: string
+  nowIso: string
+}
+
+export interface ResolveWrite {
+  update: {
+    status: 'resolved'
+    resolved_at: string
+    resolved_by: string
+    resolution_type: ResolutionType
+    resolution_notes: string
+  }
+  event: {
+    org_id: string
+    entity_type: 'dpo_queue'
+    entity_id: string
+    event_type: 'resolved'
+    actor: string
+    data: { resolution_type: ResolutionType; notes: string }
+  }
+}
+
+// Pure: the exact payloads the resolve action writes (dpo_queue UPDATE + the
+// append-only events INSERT). The page applies these via the authed client under
+// RLS; the verify test asserts them directly.
+export function buildResolveWrite(p: ResolveInput): ResolveWrite {
+  return {
+    update: {
+      status: 'resolved',
+      resolved_at: p.nowIso,
+      resolved_by: p.userId,
+      resolution_type: p.resolutionType,
+      resolution_notes: p.notes,
+    },
+    event: {
+      org_id: p.orgId,
+      entity_type: 'dpo_queue',
+      entity_id: p.itemId,
+      event_type: 'resolved',
+      actor: p.actor,
+      data: { resolution_type: p.resolutionType, notes: p.notes },
+    },
   }
 }
