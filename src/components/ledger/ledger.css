@@ -1,0 +1,103 @@
+/* ============================================================
+   v3 ledger components - layout CSS. Token-driven, RTL, no hardcoded hex.
+   The status chips reuse the brand Badge (.dp-badge); this file covers the
+   non-Badge components. Dark rendering: wrap in .dp-led-on-dark.
+   ============================================================ */
+
+/* shared bits */
+.dp-led-meta { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.dp-led-prov { font-family: var(--font-mono); font-size: var(--t-caption); color: var(--fg-3); }
+.dp-led-recurs { display: inline-flex; align-items: center; gap: var(--space-1); font-size: var(--t-caption); color: var(--fg-2); }
+.dp-led-recurs .dpi { font-size: 14px; }
+.dp-led-link {
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  background: transparent; border: 0; padding: 0; cursor: pointer;
+  font-family: var(--font-body); font-size: var(--t-body-sm); color: var(--fg-link);
+}
+.dp-led-link .dpi { font-size: 15px; }
+.dp-led-link:hover { text-decoration: underline; }
+.dp-led-due { font-size: var(--t-caption); color: var(--fg-3); white-space: nowrap; }
+.dp-led-due--over { color: var(--status-risk); font-weight: 600; }
+
+/* ObligationRow / TaskRow / ControlScheduleItem - one-line surfaces */
+.dp-oblig-row, .dp-task-row, .dp-control-item {
+  display: flex; align-items: center; gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+}
+.dp-oblig-row__title, .dp-task-row__title {
+  flex: 1; min-width: 0;
+  font-family: var(--font-display); font-weight: 600; font-size: var(--t-body-sm); color: var(--fg-1);
+}
+.dp-task-row__title { font-family: var(--font-body); font-weight: 400; }
+
+.dp-actor-chip {
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  font-family: var(--font-mono); font-size: var(--t-caption); color: var(--fg-2);
+  padding: 4px 8px; border-radius: var(--radius-pill); background: var(--sand-200);
+}
+.dp-actor-chip .dpi { font-size: 14px; }
+
+.dp-control-item .dp-control-item__icon { font-size: 22px; color: var(--fg-accent); flex: none; }
+.dp-control-item__body { flex: 1; min-width: 0; }
+.dp-control-item__name { font-family: var(--font-display); font-weight: 600; font-size: var(--t-body-sm); color: var(--fg-1); }
+.dp-control-item__meta { display: flex; flex-wrap: wrap; gap: var(--space-3); font-size: var(--t-caption); color: var(--fg-2); margin-block-start: 2px; }
+
+/* ObligationCard meta block (sits inside the brand Card) */
+.dp-oblig-card__meta { display: flex; flex-direction: column; gap: var(--space-3); margin-block-start: var(--space-2); }
+
+/* EventTimeline - append-only feed */
+.dp-timeline { display: flex; flex-direction: column; }
+.dp-timeline__item { display: flex; gap: var(--space-3); }
+.dp-timeline__rail { display: flex; flex-direction: column; align-items: center; flex: none; }
+.dp-timeline__dot { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--sand-200); color: var(--fg-accent); }
+.dp-timeline__dot .dpi { font-size: 16px; }
+.dp-timeline__line { flex: 1; width: 2px; background: var(--border-1); margin-block: var(--space-1); }
+.dp-timeline__item:last-child .dp-timeline__line { display: none; }
+.dp-timeline__body { padding-block: var(--space-1) var(--space-4); }
+.dp-timeline__head { font-family: var(--font-display); font-weight: 600; font-size: var(--t-body-sm); color: var(--fg-1); }
+.dp-timeline__sub { font-size: var(--t-caption); color: var(--fg-3); }
+
+/* ComplianceScoreDial */
+.dp-dial { display: inline-flex; flex-direction: column; align-items: center; gap: var(--space-2); }
+.dp-dial__wrap { position: relative; display: inline-grid; place-items: center; }
+.dp-dial__svg { transform: rotate(-90deg); } /* arc starts at top */
+.dp-dial__center { position: absolute; display: flex; flex-direction: column; align-items: center; }
+.dp-dial__num { font-family: var(--font-display); font-weight: 700; font-size: var(--t-h2); color: var(--fg-1); line-height: 1; }
+.dp-dial__label { font-size: var(--t-caption); color: var(--fg-3); }
+
+/* TokenizedFormShell - zero-chrome, no org identity (CC-2 seam) */
+.dp-tokenform { min-height: 100vh; display: grid; place-items: center; padding: var(--space-6); background: var(--bg-page); }
+.dp-tokenform__card {
+  width: 100%; max-width: 460px;
+  background: var(--bg-surface); border: 1px solid var(--border-1);
+  border-radius: var(--radius-xl); box-shadow: var(--shadow-lift-2); padding: var(--space-8);
+}
+.dp-tokenform__mark { height: 40px; width: auto; display: block; margin-block-end: var(--space-5); }
+.dp-tokenform__title { margin: 0 0 var(--space-4); font-family: var(--font-display); font-weight: 600; font-size: var(--t-h3); color: var(--fg-1); }
+.dp-tokenform__foot { margin-block-start: var(--space-6); font-size: var(--t-caption); color: var(--fg-3); }
+
+/* ---- Dark rendering (wrap in .dp-led-on-dark) ------------------------- */
+.dp-led-on-dark .dp-oblig-row,
+.dp-led-on-dark .dp-task-row,
+.dp-led-on-dark .dp-control-item {
+  background: var(--garnet-800);
+  border-color: var(--border-on-dark);
+}
+.dp-led-on-dark .dp-oblig-row__title,
+.dp-led-on-dark .dp-task-row__title,
+.dp-led-on-dark .dp-control-item__name,
+.dp-led-on-dark .dp-timeline__head,
+.dp-led-on-dark .dp-dial__num { color: var(--fg-on-dark-1); }
+.dp-led-on-dark .dp-control-item__meta,
+.dp-led-on-dark .dp-led-due,
+.dp-led-on-dark .dp-led-prov,
+.dp-led-on-dark .dp-led-recurs,
+.dp-led-on-dark .dp-timeline__sub,
+.dp-led-on-dark .dp-dial__label { color: var(--garnet-300); }
+.dp-led-on-dark .dp-actor-chip { background: var(--garnet-700); color: var(--garnet-300); }
+.dp-led-on-dark .dp-timeline__dot { background: var(--garnet-700); color: var(--amber-400); }
+.dp-led-on-dark .dp-timeline__line { background: var(--border-on-dark); }
+.dp-led-on-dark .dp-control-item .dp-control-item__icon { color: var(--amber-400); }
