@@ -312,3 +312,27 @@ pass (each obligation state + severity maps to the right --status token); tsc cl
 ## Provisional
 - ComplianceScoreDial bands (<50 risk, 50-79 warn, >=80 ok) are a PROVISIONAL engineering default
   (commented in the component). Real thresholds are a later product decision (Amir/Roy).
+
+# Lessons / surprises - DPO console, first live-ledger surface (task C1, 2026-06-24)
+
+Built the shared org/session context and /console - the first surface reading the LIVE ledger.
+Renders org דיפו's real data (score 42, 4 obligations, 3 controls) via the A4 components. Mapping
+verified 8/8 against live rows; auth gate 2/2 (redirect + no leak); /shell-demo still 13/13.
+
+## The shared org context now exists (closes the A1/A3 follow-up)
+- src/lib/org-context.tsx (OrgProvider/useOrg) resolves user + profile(role) + org ONCE via the
+  dashboard's exact authed query (users joined to organizations, RLS-scoped). Mounted in the
+  (deepo) layout; AppShell + v3 pages read it instead of re-querying per surface. actor is derived
+  from role here (expert_curator -> dpo, else owner). C and later surfaces consume useOrg().
+- Surprise worth noting: דיפו's only user is an expert_curator, so the console themes as dpo (Onyx).
+
+## Patterns confirmed
+- RLS-scoped CLIENT reads are the safe pattern: as the authenticated user, querying obligations/
+  controls returns only the user's org (policy org_id = current_user_org_id()); authenticated has
+  the SELECT grant, anon has none. No service-role, no API route, plus a defensive .eq('org_id').
+- Auth gating for a real surface = client redirect (loading -> spinner; !user -> router.replace
+  ('/login')), NOT a dev-only middleware 404. The (deepo) LAYOUT must not gate (it would break the
+  dev /shell-demo); pages that need auth gate themselves.
+- Control names live on hub_control_playbooks, not controls - the console joins by
+  (template_id, version). The row->props mapping is a pure exported function (src/lib/console-data.ts)
+  so the verify test runs the real mapping against live rows, not a mock.

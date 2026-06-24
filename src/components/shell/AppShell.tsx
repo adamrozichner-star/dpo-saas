@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import { DeepoIcon } from '@/brand/icons'
+import { useOrg } from '@/lib/org-context'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 import { SHELL_NAV, type Actor, type ShellOrg, type NavSection } from './nav'
@@ -9,34 +10,48 @@ import { SHELL_NAV, type Actor, type ShellOrg, type NavSection } from './nav'
 export interface AppShellProps {
   children: React.ReactNode
   title?: string
-  /** Initial actor theme. Defaults to dpo (Onyx). Real role wiring is deferred to C. */
+  /** Fallback actor when there is no resolved org (e.g. the dev demo). */
   initialActor?: Actor
+  /** Fallback org for surfaces with no session (e.g. /shell-demo). */
   org?: ShellOrg
   sections?: NavSection[]
 }
 
-// A3 placeholder identity. Replaced by a real org/session context in C.
+// Used only when there is no resolved org (the dev shell demo). Real surfaces
+// get the live org via OrgContext.
 const PLACEHOLDER_ORG: ShellOrg = { name: 'מרפאת לב הזהב', plan: 'חשבון מורחב', initials: 'לה' }
 
+const TIER_LABEL: Record<string, string> = { basic: 'בסיסי', recommended: 'מומלץ', premium: 'פרימיום' }
+
+function initialsOf(name: string): string {
+  const words = name.trim().split(/\s+/)
+  if (words.length >= 2) return (words[0][0] || '') + (words[1][0] || '')
+  return name.trim().slice(0, 2)
+}
+
 /**
- * The authenticated app shell: RTL, brand tokens, Duotone icons. Desktop renders
- * a static sidebar on the right; below 1024px it collapses to a top bar (logo
- * right, menu/bell left) with a slide-in drawer from the right. Themed per actor
- * (dpo = Onyx, owner = light). Rendered inside .deepo-scope so the brand base applies.
+ * The authenticated app shell. Reads OrgContext: when a live org is resolved it
+ * shows that org + the role-derived actor; otherwise it falls back to the
+ * placeholder (so the dev /shell-demo renders unauthenticated). RTL, brand
+ * tokens, Duotone icons. Desktop sidebar on the right; below 1024px a top bar +
+ * slide-in drawer from the right.
  */
-export function AppShell({ children, title = 'לוח בקרה', initialActor = 'dpo', org = PLACEHOLDER_ORG, sections = SHELL_NAV }: AppShellProps) {
-  const [actor, setActor] = React.useState<Actor>(initialActor)
+export function AppShell({ children, title = 'לוח בקרה', initialActor = 'dpo', org, sections = SHELL_NAV }: AppShellProps) {
+  const orgCtx = useOrg()
+  const [actorOverride, setActorOverride] = React.useState<Actor | null>(null)
   const [drawerOpen, setDrawerOpen] = React.useState(false)
   const [activeId, setActiveId] = React.useState('dashboard')
 
-  const logo = actor === 'dpo' ? '/brand/logos/logoreverse.png' : '/brand/logos/logofull.png'
+  const actor: Actor = actorOverride ?? (orgCtx.org ? orgCtx.actor : initialActor)
+  const shellOrg: ShellOrg = orgCtx.org
+    ? { name: orgCtx.org.name, plan: TIER_LABEL[orgCtx.org.tier ?? ''] ?? 'חשבון', initials: initialsOf(orgCtx.org.name) }
+    : org ?? PLACEHOLDER_ORG
 
   return (
     <div className={['deepo-scope', 'dp-shell', `dp-shell--${actor}`, drawerOpen ? 'dp-shell--open' : ''].filter(Boolean).join(' ')} dir="rtl">
-      {/* Mobile top bar: logo right, menu + bell left (visible below 1024px). */}
       <div className="dp-mobilebar">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="dp-mobilebar__logo" src={actor === 'dpo' ? '/brand/logos/logofull.png' : logo} alt="Deepo" />
+        <img className="dp-mobilebar__logo" src="/brand/logos/logofull.png" alt="Deepo" />
         <div className="dp-mobilebar__actions">
           <button type="button" className="dp-iconbtn" onClick={() => setDrawerOpen((o) => !o)} aria-label="תפריט" title="תפריט">
             <DeepoIcon id="dp-radar" />
@@ -53,7 +68,7 @@ export function AppShell({ children, title = 'לוח בקרה', initialActor = '
         actor={actor}
         sections={sections}
         activeId={activeId}
-        org={org}
+        org={shellOrg}
         onNavigate={(id) => {
           setActiveId(id)
           setDrawerOpen(false)
@@ -61,7 +76,7 @@ export function AppShell({ children, title = 'לוח בקרה', initialActor = '
       />
 
       <main className="dp-shell__main">
-        <Topbar title={title} actor={actor} onToggleActor={() => setActor((a) => (a === 'dpo' ? 'owner' : 'dpo'))} />
+        <Topbar title={title} actor={actor} onToggleActor={() => setActorOverride(actor === 'dpo' ? 'owner' : 'dpo')} />
         <div className="dp-shell__content">{children}</div>
       </main>
     </div>
