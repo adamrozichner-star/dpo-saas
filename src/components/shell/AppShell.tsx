@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { usePathname } from 'next/navigation'
 import { DeepoIcon } from '@/brand/icons'
 import { useOrg } from '@/lib/org-context'
 import { Sidebar } from './Sidebar'
@@ -38,11 +39,16 @@ function initialsOf(name: string): string {
  */
 export function AppShell({ children, title = 'לוח בקרה', initialActor = 'dpo', org, sections = SHELL_NAV }: AppShellProps) {
   const orgCtx = useOrg()
+  const pathname = usePathname()
   const [actorOverride, setActorOverride] = React.useState<Actor | null>(null)
   const [drawerOpen, setDrawerOpen] = React.useState(false)
   const [activeId, setActiveId] = React.useState('dashboard')
 
-  const actor: Actor = actorOverride ?? (orgCtx.org ? orgCtx.actor : initialActor)
+  // The owner home (/home) is the owner surface: always owner-themed (light),
+  // regardless of the viewer's role. Other (deepo) routes follow the role-derived
+  // actor. The demo toggle still overrides.
+  const routeActor: Actor | null = pathname?.startsWith('/home') ? 'owner' : null
+  const actor: Actor = actorOverride ?? routeActor ?? (orgCtx.org ? orgCtx.actor : initialActor)
   const shellOrg: ShellOrg = orgCtx.org
     ? { name: orgCtx.org.name, plan: TIER_LABEL[orgCtx.org.tier ?? ''] ?? 'חשבון', initials: initialsOf(orgCtx.org.name) }
     : org ?? PLACEHOLDER_ORG

@@ -386,3 +386,50 @@ export async function loadComplianceSummary(opts: {
   }
   return opts.legacy()
 }
+
+// ---------------------------------------------------------------------------
+// D2 - owner light app. Pure mapper from ledger state to a warm, plain-language
+// owner home. Owner-governance (kept here, not status.ts). It deliberately takes
+// ONLY obligation statuses (counts) + owner-assigned task titles - never the raw
+// obligation titles, severities, or provenance - so no jargon can leak to the owner.
+// ---------------------------------------------------------------------------
+
+export interface OwnerObligationStatusRow {
+  status: ObligationStatus
+}
+export interface OwnerTaskRow {
+  title: string
+}
+export interface OwnerActionItem {
+  title: string
+}
+export interface OwnerHomeView {
+  handlingCount: number
+  sortedCount: number
+  needsYou: OwnerActionItem[]
+  allClear: boolean
+  headline: string
+  reassurance: string
+  humanTouch: string
+}
+
+export function buildOwnerHome(obligations: OwnerObligationStatusRow[], ownerTasks: OwnerTaskRow[]): OwnerHomeView {
+  const handlingCount = obligations.length
+  const sortedCount = obligations.filter((o) => o.status === 'compliant').length
+  const needsYou: OwnerActionItem[] = ownerTasks.map((t) => ({ title: t.title }))
+  const allClear = needsYou.length === 0
+
+  // DRAFT COPY - Adam to tune for brand voice. The mechanism is what we verify;
+  // the exact wording is a brand-voice call. Rules: warm, first-person Hebrew,
+  // no emoji, sentence case, no מערכות/רשומות, Deepo capital-D, one human touch.
+  const headline = allClear ? 'הכל תחת שליטה' : 'יש כמה דברים שמחכים לך'
+  const reassurance =
+    handlingCount === 0
+      ? 'אין כרגע נושאי פרטיות פתוחים, הכל מעודכן.'
+      : sortedCount > 0
+        ? `Deepo מטפלת ב-${handlingCount} נושאי פרטיות עבורך, ${sortedCount} כבר מסודרים.`
+        : `Deepo מטפלת ב-${handlingCount} נושאי פרטיות עבורך.`
+  const humanTouch = 'קחו נשימה, אנחנו על זה.'
+
+  return { handlingCount, sortedCount, needsYou, allClear, headline, reassurance, humanTouch }
+}
