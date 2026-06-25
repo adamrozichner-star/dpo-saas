@@ -9,3 +9,7 @@ tsconfig.tsbuildinfo
 .next/
 node_modules/
 .env*.local
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/
