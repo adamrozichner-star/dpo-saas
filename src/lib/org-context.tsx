@@ -7,6 +7,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { User } from '@supabase/supabase-js'
 import { useAuth } from './auth-context'
+import { actorFromRole } from './actor'
 import type { Actor } from '@/components/shell/nav'
 
 export interface OrgProfile {
@@ -33,11 +34,6 @@ export interface OrgContextValue {
 
 const DEFAULT: OrgContextValue = { user: null, profile: null, org: null, actor: 'owner', loading: true }
 const OrgContext = createContext<OrgContextValue>(DEFAULT)
-
-// expert_curator (Roy / Amir / Adam) sees the DPO (Onyx) theme; others the owner theme.
-function actorFromRole(role: string | undefined): Actor {
-  return role === 'expert_curator' ? 'dpo' : 'owner'
-}
 
 export function OrgProvider({ children }: { children: ReactNode }) {
   const { user, supabase, loading: authLoading } = useAuth()

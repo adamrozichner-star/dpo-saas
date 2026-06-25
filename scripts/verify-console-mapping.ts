@@ -23,8 +23,12 @@ import {
   loadComplianceSummary,
   isLedgerRead,
   type LedgerSummaryObligation,
+  buildOwnerHome,
+  type OwnerObligationStatusRow,
+  type OwnerTaskRow,
 } from '../src/lib/console-data'
 import { OBLIGATION_STATUS, SEVERITY } from '../src/components/ledger/status'
+import { actorFromRole } from '../src/lib/actor'
 
 const TOKEN = process.env.SUPABASE_ACCESS_TOKEN
 const REF = 'nedkrxjwmyhabrsscyem'
@@ -123,6 +127,20 @@ async function main() {
     `select name, coalesce((feature_flags->>'LEDGER_READ')::boolean, false) as ledger from organizations order by name`,
   )
   check('live flags: דיפו on, others off (legacy)', flags.find((f) => f.name === 'דיפו')?.ledger === true && flags.filter((f) => f.name !== 'דיפו').every((f) => f.ledger === false), JSON.stringify(flags))
+
+  // ---- D2: owner home mapper (plain language, no jargon leak) ----
+  console.log('\n-- D2 owner home (buildOwnerHome) --')
+  check('actorFromRole: admin -> owner, expert_curator -> dpo', actorFromRole('admin') === 'owner' && actorFromRole('expert_curator') === 'dpo')
+
+  const ownerObs = (await sql<OwnerObligationStatusRow>(`select status from obligations where org_id='${orgId}'`)) as OwnerObligationStatusRow[]
+  const ownerTasks = (await sql<OwnerTaskRow>(`select title from tasks where org_id='${orgId}' and assignee_actor='owner' and status not in ('done','cancelled')`)) as OwnerTaskRow[]
+  const owner = buildOwnerHome(ownerObs, ownerTasks)
+  check('owner home: handlingCount 4, needsYou empty, allClear', owner.handlingCount === 4 && owner.needsYou.length === 0 && owner.allClear === true, `handling=${owner.handlingCount} needsYou=${owner.needsYou.length}`)
+
+  const ownerCopy = `${owner.headline} ${owner.reassurance} ${owner.humanTouch}`
+  const jargon = /רישום מאגר|מצלמות|הסכם עיבוד|קריטי|אזהרה|כלל |b1000|source_rule|severity|provenance|מערכות|רשומות/
+  check('owner copy leaks NO obligation title / severity / provenance / banned terms', !jargon.test(ownerCopy), ownerCopy)
+  check('owner copy uses Deepo (capital D), warm reassurance', /Deepo/.test(owner.reassurance) && owner.headline.length > 0 && owner.humanTouch.length > 0)
 
   const failed = results.filter((r) => !r.pass).length
   console.log(`\n${results.length - failed}/${results.length} checks passed`)

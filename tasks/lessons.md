@@ -443,3 +443,36 @@ Dry-run default + --apply. Operator batch via the Management API; runtime per-us
   identical. anon stays zero on obligations/controls. No LEDGER_READ flag was flipped (data only).
 - The existing evaluator-apply.ts / controls-apply.ts already looped all orgs + seeded the catalog;
   backfill is the consolidated read-live-catalog, no-reseed, dry-run+apply version.
+
+# Lessons / surprises - owner light app (task D2, 2026-06-24)
+
+Second actor surface: /home, the business owner's plain-language compliance home (not the DPO
+console). Auth-gated, RLS-scoped, owner-themed. Pure buildOwnerHome translates ledger state to warm
+Hebrew. Verified 27/27 pure (incl owner mapper) + 10/10 auth-gate (incl /home) + 13/13 shell-demo.
+
+## Owner theme: role-derived + route-forced
+- A real business owner self-signs up with role 'admin' (auth-context). actorFromRole('admin')='owner'
+  -> dp-shell--owner (light). Only expert_curator -> dpo (Onyx).
+- /home additionally FORCES actor='owner' in AppShell (pathname startsWith '/home'), so the owner
+  surface is owner-light for any viewer (even a DPO peeking), not just for admin users. Other (deepo)
+  routes stay role-derived; /shell-demo unaffected (13/13).
+- actorFromRole was extracted to src/lib/actor.ts (tiny, no React/supabase deps) so the verify can
+  assert it without pulling the client module graph.
+
+## No-jargon guarantee is structural
+- buildOwnerHome takes ONLY obligation statuses (for counts) + owner-assigned task titles - never the
+  raw obligation titles, severities, or provenance. So jargon cannot leak by construction. The verify
+  asserts the owner copy matches none of: obligation-title fragments, severity words (קריטי/אזהרה),
+  provenance (כלל/source_rule/b1000), or the banned terms מערכות/רשומות.
+- "Needs you" = tasks with assignee_actor='owner' (the rare owner-facing items), not obligations
+  (obligations carry no owner-action flag). דיפו has 0 -> reassuring empty state.
+
+## Copy is DRAFT (Adam to tune)
+- The Hebrew headline / reassurance / human-touch strings in buildOwnerHome are marked DRAFT COPY in
+  a comment. The mechanism is verified; the exact wording is a brand-voice call. Rules applied: warm
+  first-person, no emoji, sentence case, no מערכות/רשומות, Deepo capital-D, one human touch per screen.
+
+## Auth wall (same as C1-C4)
+- Could not render an authed /home in owner theme headlessly (the only live user is expert_curator,
+  and /home is auth-gated). Owner-light render is proven by actorFromRole('admin')='owner' + the
+  route-force + A3's owner-light shell (rgb(255,255,255)), plus the pure owner-mapper test.

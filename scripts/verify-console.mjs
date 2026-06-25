@@ -7,7 +7,7 @@ import puppeteer from 'puppeteer-core'
 const BASE = process.env.BASE_URL || 'http://localhost:3000'
 const CHROME = process.env.CHROME_PATH || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 // Both auth-gated surfaces: the console and an obligation detail route.
-const ROUTES = ['/console', '/console/obligations/ed996c7b-bba9-4c7c-84a1-c374d2767a5b', '/console/queue', '/dashboard']
+const ROUTES = ['/console', '/console/obligations/ed996c7b-bba9-4c7c-84a1-c374d2767a5b', '/console/queue', '/dashboard', '/home']
 
 const results = []
 const check = (name, pass, detail) => { results.push(!!pass); console.log(`${pass ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`) }
