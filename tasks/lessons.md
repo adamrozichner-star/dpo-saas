@@ -476,3 +476,59 @@ Hebrew. Verified 27/27 pure (incl owner mapper) + 10/10 auth-gate (incl /home) +
 - Could not render an authed /home in owner theme headlessly (the only live user is expert_curator,
   and /home is auth-gated). Owner-light render is proven by actorFromRole('admin')='owner' + the
   route-force + A3's owner-light shell (rgb(255,255,255)), plus the pure owner-mapper test.
+
+# E1 - access_links primitive (the CC-2 foundation)
+
+## The containment architecture (migration 041)
+- Public path = TWO SECURITY DEFINER fns (resolve_access_link, submit_access_link) owned by a
+  dedicated NOLOGIN role `access_link_fn` (the regulatory_ingest_worker pattern). anon has ZERO direct
+  grant on access_links; its ONLY capability is EXECUTE on those two fns. No service-role key anywhere
+  on the public path (stronger than the planned "one service-role exception" - the anon-key route is a
+  thin pass-through; the guarantee is entirely in the DB).
+- The CC-2 firewall is the access_link_fn GRANT set, not just fn bodies: it can SELECT only
+  access_links + hub_questions, INSERT evidence + events, UPDATE access_links + tasks (lifecycle cols
+  only), SELECT (id) on tasks. NO grant on organizations / contacts / obligations, so a logic bug
+  cannot leak them. Proven by role-sim (SET ROLE access_link_fn -> SELECT organizations = permission
+  denied). 36/36 DB assertions + 15/15 headless.
+- Tokens: crypto-random 256-bit, stored sha256-hashed (raw returned once by mint, never persisted).
+  Multi-view / single-submit (status active->used on first submit; idempotent resubmit returns the
+  same {ok:true}, no duplicate writes). Invalid/tampered/expired/revoked/used all return a
+  byte-identical {valid:false} / {ok:false} - no existence distinction.
+
+## Trust boundary (deliberate)
+- submit captures evidence (kind answer/attestation, captured_via='access_link') + an events row
+  (entity_type='task', actor='external:<purpose>', answers in data jsonb) + marks the TASK done. It
+  does NOT advance obligation_status - the DPO judges compliance (C3 queue/resolve). External parties
+  submit evidence; they cannot self-certify the org compliant.
+
+## Postgres / Supabase gotchas hit while building
+- A role that OWNS a function in `public` needs CREATE on public (not just USAGE). Matches
+  regulatory_ingest_worker. Does not widen CC-2 (role is NOLOGIN, issues no DDL).
+- Supabase ALTER DEFAULT PRIVILEGES grants EXECUTE on new public fns to anon/authenticated/service_role
+  EXPLICITLY (not via PUBLIC). `REVOKE ... FROM PUBLIC` does NOT remove anon - mint needed an explicit
+  `REVOKE ... FROM anon` to stay DPO-only.
+- A SECURITY DEFINER fn owned by a non-`authenticated` role is NOT covered by the `TO authenticated`
+  policies from 037. The fn role needs its own policies (*_fn_select / *_fn_insert / *_fn_update on
+  access_links, hub_questions, evidence, events, tasks).
+- BIGGEST SURPRISE: an RLS UPDATE filtering by a column needs a SELECT *policy* for the role, not just
+  the column GRANT - else the UPDATE silently matches 0 ROWS (no error). The access_links UPDATE worked
+  (had access_links_fn_select); the tasks UPDATE matched 0 rows until tasks_fn_select was added.
+  Symptom: a committed submit (evidence/event/link written) with the task untouched.
+- INSERT ... RETURNING id needs SELECT on the table. Avoided it: generate the event id with
+  gen_random_uuid() and insert explicitly, so the fn role stays INSERT-only on events.
+- hub_questions logical identity is UNIQUE(template_id, version); a question SET is grouped by
+  asset_template_id. The link keys its set by q_asset_template_id + active=true, NOT by a single
+  (template_id, version) (the first schema returned at most one question).
+- tasks.status CHECK = {open, in_progress, done, cancelled} (no 'submitted'). External submission -> 'done'.
+- pgcrypto (digest, gen_random_bytes) lives in schema `extensions` here; schema-qualify every call +
+  grant the fn role USAGE on extensions + EXECUTE on extensions.digest.
+
+## Carryover to E2
+- DPO management UI: create/list/revoke surface (E1 ships only the RLS-scoped mint fn + revoke = a
+  status UPDATE under the authenticated policy; no UI yet).
+- The question-set source (which asset_template_id maps to a purpose/task) is currently a mint param -
+  E2 decides how the DPO picks it end-to-end.
+- `dsar` purpose is in the enum but UNWIRED. sysadmin/vendor answers are technical config; a DSAR link
+  could carry subject PII into events.data - handle that before wiring it.
+- Verify teardown is in a finally, but a setup-phase failure bypasses it (one early run orphaned a
+  fixture; cleaned). Watch for setup-phase orphans.
