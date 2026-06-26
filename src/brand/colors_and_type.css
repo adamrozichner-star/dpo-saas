@@ -16,7 +16,6 @@
    Approachable, plain-spoken, confident. Service-led, not tech-led.
    ============================================================ */
 
-@import url("https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700&family=Assistant:wght@400;500;600;700&family=Heebo:wght@400;500;600;700&display=swap");
 
 :root {
   /* ─────────────────────────────────────────────
@@ -148,10 +147,12 @@
      Hebrew-first, professional & standard. Rubik (headings + brand),
      Assistant (body) - both carry Hebrew natively. Heebo for labels (clean in Hebrew).
      ───────────────────────────────────────────── */
-  --font-brand:   "Rubik", ui-sans-serif, system-ui, sans-serif;               /* brand display moments */
-  --font-display: "Rubik", "Assistant", ui-sans-serif, system-ui, sans-serif;  /* headings (he+en) */
-  --font-body:    "Assistant", "Rubik", ui-sans-serif, system-ui, sans-serif;  /* body (he+en) */
-  --font-mono:    "Heebo", ui-sans-serif, system-ui, sans-serif;               /* eyebrows / labels (he+en) */
+  /* Families resolve to self-hosted next/font faces (vars set on <html>),
+     keeping the original fallback stacks. See src/app/layout.tsx. */
+  --font-brand:   var(--font-rubik), ui-sans-serif, system-ui, sans-serif;                          /* brand display moments */
+  --font-display: var(--font-rubik), var(--font-assistant), ui-sans-serif, system-ui, sans-serif;   /* headings (he+en) */
+  --font-body:    var(--font-assistant), var(--font-rubik), ui-sans-serif, system-ui, sans-serif;    /* body (he+en) */
+  --font-mono:    var(--font-heebo), ui-sans-serif, system-ui, sans-serif;                           /* eyebrows / labels (he+en) */
 
   /* ─────────────────────────────────────────────
      TYPE - Scale (rem-based; 1rem = 16px)

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Heebo } from 'next/font/google'
+import { Heebo, Rubik, Assistant } from 'next/font/google'
 import * as Sentry from '@sentry/nextjs'
 import './globals.css'
 import '@/brand/styles.css'
@@ -11,6 +11,23 @@ import CookieBanner from '@/components/CookieBanner'
 const heebo = Heebo({
   subsets: ['hebrew', 'latin'],
   variable: '--font-heebo',
+})
+
+// Warm-brand fonts, self-hosted via next/font so they render without a
+// Google Fonts @import (which the CSP blocks). Mirrors the Heebo setup.
+// The brand tokens in src/brand/colors_and_type.css point at these vars.
+const rubik = Rubik({
+  subsets: ['hebrew', 'latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-rubik',
+})
+
+const assistant = Assistant({
+  subsets: ['hebrew', 'latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-assistant',
 })
 
 export function generateMetadata(): Metadata {
@@ -39,7 +56,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="he" dir="rtl" className={heebo.variable}>
+    <html lang="he" dir="rtl" className={`${heebo.variable} ${rubik.variable} ${assistant.variable}`}>
       <body className="min-h-screen bg-background font-sans antialiased overflow-x-hidden">
         <AuthProvider>
           <ToastProvider>
