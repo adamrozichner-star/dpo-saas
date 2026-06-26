@@ -532,3 +532,56 @@ Hebrew. Verified 27/27 pure (incl owner mapper) + 10/10 auth-gate (incl /home) +
   could carry subject PII into events.data - handle that before wiring it.
 - Verify teardown is in a finally, but a setup-phase failure bypasses it (one early run orphaned a
   fixture; cleaned). Watch for setup-phase orphans.
+
+# E2 - sysadmin questionnaire flow (first real collection purpose)
+
+## What shipped (all on E1, no change to the verified primitive)
+- Provisional sysadmin question-set: src/lib/ledger/seed-sysadmin-questions.ts (7 plain Hebrew
+  questions - backups, restore-tested, 2FA, permissions, logs, network folders, legacy systems),
+  seeded into hub_questions by an idempotent operator script (scripts/seed-sysadmin-questions.ts,
+  ON CONFLICT, mirrors evaluator-apply). Marked PROVISIONAL: source_tier='expert_judgment',
+  confidence=0.5, PENDING Amir/Roy. Grouped under a SYNTHETIC asset_template_id
+  (SYSADMIN_QSET_ID=c5a00000-...-0001) - a question-set key, NOT a hub_asset_templates data asset
+  (hub_questions.asset_template_id has no FK, so this is clean). The set is reusable: a DPO attaches
+  it to whichever obligation needs sysadmin input; it is not bound to one rule.
+- DPO mint action on the obligation detail (RequestSysadminInfo.tsx): creates an obligation-linked
+  sysadmin task (RLS), then mint_access_link RPC (SECURITY INVOKER, RLS-scoped), then shows the raw
+  link URL ONCE (the token is stored only hashed - it cannot be retrieved again).
+- /console/links management UI: lists the org's access_links (RLS-scoped), revoke = a status UPDATE
+  under the same policy. No raw tokens here (they exist only at mint time).
+
+## The task-vs-obligation timeline gap (the real design catch)
+- E1's submission event is entity_type='task' (entity_id=task_id), but the C2 obligation timeline
+  queries entity_type='obligation'. So the submission would NOT appear there. Evidence, however, IS
+  obligation-scoped (evidence.obligation_id) so it populated fine.
+- Fixed READ-SIDE ONLY (no fn/migration change): C2 collects evidence.answer_ref (each is the
+  submission event id), fetches those events by id (RLS events_org_select keeps it org-scoped), maps
+  them with mapSubmissions, renders the Q->A, and MERGES them into the timeline (sorted desc). E1's
+  submit fn stays byte-identical (verify-access-links still 37/37).
+
+## Self-describing answer payload (audit-correct)
+- The public page now submits answers as [{q: <question_text>, a: <value>}] instead of {qid: value}.
+  submit_access_link stores p_answers verbatim (opaque jsonb), so this needed NO fn change. Freezes
+  the question wording at answer-time and lets C2 render without a hub_questions join.
+
+## Untrusted external input -> escaped on render (first such surface)
+- Sysadmin free text (q6/q7) is untrusted. It is stored RAW (verbatim) and rendered as React text
+  children (<span>{qa.a}</span>) - React escapes text children, so no HTML injection. Never
+  dangerouslySetInnerHTML. Proven auth-free via renderToStaticMarkup(createElement('span',null,xss)):
+  a <script>/<img onerror> payload comes out as &lt;script&gt; entities, no live tag. The store-raw /
+  escape-on-render split is the pattern for every later external-input surface.
+
+## Verification (26 DB+RLS+escaping, 10 headless sysadmin page, 13/13 shell, E1 regressions intact)
+- Could not headlessly render the AUTH-GATED C2 detail (same wall as C1-C4: only live user is
+  expert_curator). C2's new rendering is proven by the pure mapper (mapSubmissions against the real
+  submission event) + the renderToStaticMarkup escaping proof + a no-dangerouslySetInnerHTML code path.
+- Links UI RLS proven by role-sim: DPO sees own org's link; a DIFFERENT org sees 0 rows and a cross-org
+  revoke affects 0 rows; DPO revoke of an own active link affects 1.
+- The seeded questions persist after teardown (they ARE the catalog); only per-run links/evidence/
+  events/tasks are removed.
+
+## Carryover
+- Question-set wording/coverage is PROVISIONAL pending Amir/Roy (same gate as the seed gap-rules).
+- vendor_dpa + dsar purposes still unwired (dsar needs subject-PII handling). E3/E4.
+- A DPO-facing "generic create link" entry on /console/links was deferred; today links are minted from
+  the obligation detail (where the obligation context lives). Add a standalone create flow if needed.

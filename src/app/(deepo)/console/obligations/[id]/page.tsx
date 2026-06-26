@@ -18,6 +18,7 @@ import {
   mapControls,
   mapEvents,
   mapEvidence,
+  mapSubmissions,
   mapRuleProvenance,
   type ObligationDetailDbRow,
   type ObligationDetailView,
@@ -26,10 +27,12 @@ import {
   type EventDbRow,
   type EvidenceDbRow,
   type EvidenceView,
+  type SubmissionView,
   type RuleDbRow,
   type RuleProvenanceView,
 } from '@/lib/console-data'
 import type { ControlScheduleItemProps } from '@/components/ledger'
+import { RequestSysadminInfo } from './RequestSysadminInfo'
 
 const TRIGGER_LABEL: Record<string, string> = { gap_rule: 'כלל פערים', manual: 'ידני' }
 const EVIDENCE_KIND_LABEL: Record<string, string> = {
@@ -44,6 +47,7 @@ interface DetailData {
   control: ControlScheduleItemProps | null
   events: TimelineEvent[]
   evidence: EvidenceView[]
+  submissions: SubmissionView[]
   provenance: RuleProvenanceView | null
 }
 
@@ -54,6 +58,7 @@ export default function ObligationDetailPage({ params }: { params: { id: string 
   const [data, setData] = useState<DetailData | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/login')
@@ -84,6 +89,20 @@ export default function ObligationDetailPage({ params }: { params: { id: string 
         supabase.from('events').select('entity_type, event_type, actor, created_at, data').eq('entity_type', 'obligation').eq('entity_id', params.id).order('created_at', { ascending: false }),
         supabase.from('evidence').select('kind, document_id, answer_ref, captured_at, captured_via').eq('obligation_id', params.id),
       ])
+      // Submission events live on the task (entity_type='task'); each answer
+      // evidence row's answer_ref is its event id. Fetch them by id (RLS-scoped:
+      // events_org_select limits to this org) to render the captured Q->A and to
+      // merge the submission into the obligation timeline.
+      const evidenceRows = (evRes.data ?? []) as EvidenceDbRow[]
+      const answerRefs = evidenceRows.map((e) => e.answer_ref).filter((r): r is string => !!r)
+      let submissionRows: EventDbRow[] = []
+      if (answerRefs.length) {
+        const { data: subData } = await supabase
+          .from('events')
+          .select('entity_type, event_type, actor, created_at, data')
+          .in('id', answerRefs)
+        submissionRows = (subData ?? []) as EventDbRow[]
+      }
       // rule provenance (separate query for the composite key template_id + version)
       let provenance: RuleProvenanceView | null = null
       if (obligation.sourceRuleId && obligation.sourceVersion != null) {
@@ -102,11 +121,15 @@ export default function ObligationDetailPage({ params }: { params: { id: string 
         control = mapControls([ctRes.data as ControlDbRow], (playbooks ?? []) as PlaybookDbRow[], new Date().toISOString())[0] ?? null
       }
       if (cancelled) return
+      // Merge obligation events + the task-scoped submission events, newest first.
+      const mergedEvents = mapEvents([...((evtRes.data ?? []) as EventDbRow[]), ...submissionRows])
+        .sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0))
       setData({
         obligation,
         control,
-        events: mapEvents((evtRes.data ?? []) as EventDbRow[]),
-        evidence: mapEvidence((evRes.data ?? []) as EvidenceDbRow[]),
+        events: mergedEvents,
+        evidence: mapEvidence(evidenceRows),
+        submissions: mapSubmissions(submissionRows),
         provenance,
       })
       setLoaded(true)
@@ -114,7 +137,7 @@ export default function ObligationDetailPage({ params }: { params: { id: string 
     return () => {
       cancelled = true
     }
-  }, [supabase, org, params.id])
+  }, [supabase, org, params.id, reloadKey])
 
   if (authLoading || orgLoading || (!loaded && !notFound)) return <p className="t-body">טוען…</p>
   if (!user) return null
@@ -159,10 +182,50 @@ export default function ObligationDetailPage({ params }: { params: { id: string 
         </div>
       </Card>
 
+      {supabase && org ? (
+        <section>
+          <p className="t-eyebrow" style={{ marginBottom: 'var(--space-3)' }}>איסוף מידע</p>
+          <RequestSysadminInfo
+            supabase={supabase}
+            orgId={org.id}
+            obligationId={params.id}
+            orgName={org.name}
+            onCreated={() => setReloadKey((k) => k + 1)}
+          />
+        </section>
+      ) : null}
+
       <section>
         <p className="t-eyebrow" style={{ marginBottom: 'var(--space-3)' }}>בקרה מקשרת</p>
         {data.control ? <ControlScheduleItem {...data.control} /> : <p className="t-body-sm">אין בקרה מקשרת.</p>}
       </section>
+
+      {data.submissions.length ? (
+        <section>
+          <p className="t-eyebrow" style={{ marginBottom: 'var(--space-3)' }}>תשובות שהתקבלו מהסיסטם</p>
+          <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
+            {data.submissions.map((sub, i) => (
+              <Card key={i}>
+                <p className="t-caption" style={{ color: 'var(--fg-3)', marginTop: 0 }}>
+                  התקבל: {formatShortDate(sub.at)}{sub.actor ? ` · ${sub.actor}` : ''}
+                </p>
+                <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+                  {sub.answers.map((qa, j) => (
+                    <div key={j} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {/* q and a are UNTRUSTED sysadmin free text - rendered as React
+                          text children, which escape automatically (no HTML injection). */}
+                      <span className="t-body-sm" style={{ fontWeight: 600 }}>{qa.q}</span>
+                      <span className="t-body-sm" style={{ color: 'var(--fg-2)', whiteSpace: 'pre-wrap' }}>
+                        {qa.a || '(ללא תשובה)'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section>
         <p className="t-eyebrow" style={{ marginBottom: 'var(--space-3)' }}>ראיות ({data.evidence.length})</p>
