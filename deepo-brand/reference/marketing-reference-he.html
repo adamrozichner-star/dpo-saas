@@ -1,0 +1,405 @@
+<!-- @dsCard group="Marketing" viewport="1440x880" name="Marketing site (Hebrew)" subtitle="Hero · features · comparison · pricing" -->
+<!-- @startingPoint section="Marketing" subtitle="Hebrew RTL marketing landing page" viewport="1440x880" -->
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Deepo · איתכם בהגנה על הפרטיות</title>
+<link rel="stylesheet" href="../../colors_and_type.css"/>
+<script src="../../assets/deepo-icons.js"></script>
+<style>
+  body{ background: var(--sand-100); color: var(--fg-1); }
+  .wrap{ max-width: 1200px; margin: 0 auto; padding: 0 32px; }
+  a{ color: inherit; text-decoration: none; }
+  section{ position: relative; }
+
+  /* ── Nav ── */
+  .nav{ position: sticky; top: 0; z-index: 50; background: rgba(251,244,238,0.82);
+    backdrop-filter: saturate(1.2) blur(12px); border-bottom: 1px solid transparent;
+    transition: border-color var(--dur-2) var(--ease-out), box-shadow var(--dur-2) var(--ease-out); }
+  .nav.scrolled{ border-color: var(--sand-300); box-shadow: var(--shadow-lift-1); }
+  .nav .row{ display: flex; align-items: center; gap: 28px; height: 72px; }
+  .nav img{ height: 34px; width: auto; }
+  .nav .links{ display: flex; gap: 26px; margin-inline-start: 18px; }
+  .nav .links a{ font-family: var(--font-body); font-size: 15px; font-weight: 500; color: var(--stone-600); }
+  .nav .links a:hover{ color: var(--crimson-600); }
+  .nav .spacer{ flex: 1; }
+  .btn{ font-family: var(--font-display); font-weight: 600; border-radius: var(--radius-pill);
+    display: inline-flex; align-items: center; gap: 8px; cursor: pointer; border: 1px solid transparent; white-space: nowrap;
+    transition: transform var(--dur-1) var(--ease-out), box-shadow var(--dur-2) var(--ease-out), background var(--dur-2) var(--ease-out); }
+  .btn-primary{ background: var(--crimson-500); color: #fff; font-size: 15px; padding: 10px 20px; box-shadow: var(--shadow-lift-1); }
+  .btn-primary:hover{ background: var(--crimson-600); box-shadow: var(--shadow-lift-2); transform: translateY(-1px); }
+  .btn-grad{ background: var(--brand-gradient); color: #fff; box-shadow: var(--shadow-lift-2); }
+  .btn-grad:hover{ box-shadow: var(--shadow-lift-3); transform: translateY(-1px); }
+  .btn-secondary{ background: #fff; color: var(--fg-1); border-color: var(--border-2); font-size: 15px; padding: 10px 20px; }
+  .btn-secondary:hover{ border-color: var(--stone-400); background: var(--sand-50); }
+  .btn-lg{ font-size: 17px; padding: 14px 28px; }
+  .btn-ghost-dark{ background: transparent; color: #fff; border-color: rgba(255,255,255,0.22); font-size: 17px; padding: 14px 28px; }
+  .btn-ghost-dark:hover{ background: rgba(255,255,255,0.08); }
+
+  /* ── Hero ── */
+  .hero{ padding: 76px 0 88px; position: relative; overflow: hidden; }
+  /* radar coverage mesh — dot grid + concentric "coverage radius" rings */
+  .hero::before{ content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+    background-image: radial-gradient(rgba(209,3,49,.08) 1.2px, transparent 1.3px); background-size: 22px 22px; }
+  .radar-rings{ position:absolute; z-index:0; pointer-events:none; border-radius:50%;
+    width: 820px; height: 820px; left: -300px; bottom: -320px;
+    background: radial-gradient(circle,
+      transparent 0 104px, rgba(209,3,49,.30) 104px 106px,
+      transparent 106px 204px, rgba(209,3,49,.22) 204px 206px,
+      transparent 206px 304px, rgba(209,3,49,.15) 304px 306px,
+      transparent 306px 404px, rgba(209,3,49,.09) 404px 406px,
+      transparent 406px); }
+  .radar-rings::after{ content:""; position:absolute; top:50%; left:50%;
+    width: 32px; height: 32px; transform: translate(-50%,-50%); border-radius:50%;
+    background: linear-gradient(135deg, #9B0140 0%, #D10331 22%, #F4271F 46%, #FF7A3C 74%, #FF9D21 100%); }
+  .radar-rings.no-node::after{ display: none; }
+  .hero .wrap{ position: relative; z-index: 1; }
+  .hero .grid{ display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center; }
+  .eyebrow .dpi{ --dpi-c: var(--crimson-600); }
+  .eyebrow{ display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; font-family: var(--font-mono);
+    font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: var(--crimson-600);
+    background: var(--crimson-50); border: 1px solid var(--crimson-100); border-radius: var(--radius-pill);
+    padding: 7px 14px; margin-bottom: 22px; }
+  .hero h1{ font-family: var(--font-display); font-weight: 600; font-size: 60px; line-height: 1.08;
+    letter-spacing: -0.02em; margin: 0 0 20px; color: var(--stone-800); }
+  .hero h1 .grad{ background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero .lede{ font-size: 20px; line-height: 1.6; color: var(--stone-500); max-width: 46ch; margin: 0 0 30px; }
+  .hero .ctas{ display: flex; gap: 14px; align-items: center; }
+  .hero .micro{ margin-top: 20px; font-family: var(--font-mono); font-size: 12px; color: var(--stone-400); letter-spacing: 0.02em; }
+
+  /* dashboard preview */
+  .preview{ position: relative; }
+  .dash{ background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-lift-4); padding: 22px; position: relative; z-index: 2; }
+  .preview::after{ content:""; position:absolute; inset: -40px -30px -20px -30px; z-index: 1;
+    background: radial-gradient(ellipse 60% 60% at 70% 30%, rgba(255,157,33,0.20), transparent 70%),
+                radial-gradient(ellipse 55% 55% at 20% 80%, rgba(209,3,49,0.16), transparent 70%); filter: blur(6px); }
+  .dash-head{ display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .dash-head .d-dot{ width: 34px; height: 34px; border-radius: 9px; background: var(--brand-gradient); display:grid; place-items:center; }
+  .dash-head .d-dot .dpi{ --dpi-c:#fff; font-size: 19px; }
+  .dash-head b{ font-family: var(--font-display); font-weight: 600; font-size: 15px; color: var(--stone-800); }
+  .dash-head .pill{ margin-inline-start: auto; font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+    letter-spacing: 0.08em; color: var(--status-ok); background: var(--status-ok-bg); padding: 5px 10px; border-radius: var(--radius-pill); }
+  .score{ display:flex; align-items:baseline; gap:10px; padding: 16px 18px; background: var(--sand-100);
+    border:1px solid var(--sand-300); border-radius: var(--radius-lg); margin-bottom: 14px; }
+  .score .n{ font-family: var(--font-brand); font-weight: 700; font-size: 40px; line-height:1;
+    background: var(--brand-gradient); -webkit-background-clip: text; background-clip:text; color:transparent; }
+  .score .lab{ font-size: 13px; color: var(--stone-500); }
+  .rows{ display:flex; flex-direction: column; gap: 9px; }
+  .drow{ display:flex; align-items:center; gap:12px; padding: 11px 14px; background:#fff; border:1px solid var(--sand-300); border-radius: var(--radius-md); }
+  .drow .dpi{ font-size: 20px; }
+  .drow .t{ font-size: 14px; font-weight: 500; color: var(--stone-700); }
+  .drow .chip{ margin-inline-start:auto; font-family: var(--font-mono); font-size:10px; font-weight:600; letter-spacing:.06em; padding:4px 9px; border-radius: var(--radius-pill); }
+  .ok{ color: var(--status-ok); background: var(--status-ok-bg); }
+  .warn{ color: var(--status-warn); background: var(--status-warn-bg); }
+
+  /* ── Trust strip ── */
+  .trust{ padding: 30px 0; border-top: 1px solid var(--sand-300); border-bottom: 1px solid var(--sand-300); }
+  .trust .row{ display:flex; align-items:center; gap: 30px; flex-wrap: wrap; justify-content: center; }
+  .trust .lab{ font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--stone-400); }
+  .trust .sector{ display:flex; align-items:center; gap:8px; font-family: var(--font-display); font-weight:600; font-size: 16px; color: var(--stone-500); }
+  .trust .sector .dpi{ --dpi-c: var(--crimson-400); font-size: 20px; }
+
+  /* ── Features ── */
+  .features{ padding: 88px 0; }
+  .sec-head{ text-align: center; max-width: 60ch; margin: 0 auto 50px; }
+  .sec-head .ey{ font-family: var(--font-mono); font-size: 12px; font-weight:600; letter-spacing:0.12em; text-transform: uppercase; color: var(--crimson-500); }
+  .sec-head h2{ font-family: var(--font-display); font-weight: 600; font-size: 40px; letter-spacing: -0.01em; margin: 10px 0 0; color: var(--stone-800); }
+  .sec-head p{ font-size: 18px; color: var(--stone-500); margin: 14px 0 0; }
+  .fcards{ display:grid; grid-template-columns: repeat(3,1fr); gap: 22px; }
+  .fcard{ background:#fff; border:1px solid var(--sand-300); border-radius: var(--radius-xl); padding: 30px 28px; box-shadow: var(--shadow-lift-1); }
+  .fcard .ic{ width: 54px; height: 54px; border-radius: var(--radius-lg); background: var(--crimson-50);
+    display:grid; place-items:center; margin-bottom: 18px; }
+  .fcard .ic .dpi{ font-size: 28px; --dpi-c: var(--crimson-500); }
+  .fcard h3{ font-family: var(--font-display); font-weight: 600; font-size: 21px; margin: 0 0 8px; color: var(--stone-800); }
+  .fcard p{ font-size: 15px; line-height: 1.6; color: var(--stone-500); margin: 0; }
+
+  /* ── Comparison band (dark) ── */
+  .compare{ background: #1A1108; color: var(--fg-on-dark-1); padding: 90px 0; overflow: hidden; }
+  .compare::before{ content:""; position:absolute; inset:0; pointer-events:none;
+    background: radial-gradient(ellipse 70% 90% at 92% 116%, rgba(209,3,49,0.5) 0%, rgba(244,39,31,0.28) 32%, rgba(255,157,33,0.16) 56%, transparent 80%); }
+  .compare .wrap{ position: relative; }
+  .compare .ey{ font-family: var(--font-mono); font-size:12px; font-weight:600; letter-spacing:0.12em; text-transform:uppercase; color: var(--amber-400); }
+  .compare h2{ font-family: var(--font-display); font-weight: 600; font-size: 40px; margin: 12px 0 36px; color:#fff; max-width: none; white-space: nowrap; }
+  .ctable{ display:grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .ccol{ border-radius: var(--radius-xl); padding: 30px 32px; }
+  .ccol.old{ background: var(--garnet-800); border: 1px solid var(--border-on-dark); }
+  .ccol.new{ position: relative;
+    background:
+      radial-gradient(ellipse 80% 90% at 16% 116%, rgba(209,3,49,0.45) 0%, rgba(244,39,31,0.27) 34%, rgba(255,157,33,0.17) 58%, transparent 82%),
+      radial-gradient(ellipse 46% 56% at 22% 106%, rgba(255,157,33,0.22) 0%, transparent 60%),
+      var(--garnet-800);
+    border: 1px solid rgba(255,157,33,0.35); box-shadow: var(--shadow-glow-amber); }
+  .ccol .name{ font-family: var(--font-display); font-weight: 600; font-size: 18px; margin: 0 0 4px; }
+  .ccol.old .name{ color: var(--garnet-300); }
+  .ccol.new .name{ color: var(--amber-400); }
+  .ccol .price{ font-family: var(--font-brand); font-weight: 700; font-size: 38px; margin: 8px 0 18px; color:#fff; line-height:1; }
+  .ccol .price small{ font-family: var(--font-body); font-weight:400; font-size: 15px; color: var(--garnet-300); }
+  .ccol ul{ list-style: none; margin: 0; padding: 0; display:flex; flex-direction:column; gap: 11px; }
+  .ccol li{ display:flex; align-items:center; gap: 10px; font-size: 15px; color: rgba(255,255,255,0.82); }
+  .ccol li .dpi{ font-size: 19px; flex:none; }
+  .ccol.old li .dpi{ --dpi-c: var(--garnet-500); } .ccol.new li .dpi{ --dpi-c: var(--status-ok); }
+  .save-tag{ display:inline-block; margin-top: 18px; font-family: var(--font-mono); font-size: 12px; font-weight:600;
+    letter-spacing:0.06em; color: #1A1108; background: var(--amber-500); padding: 7px 14px; border-radius: var(--radius-pill); }
+
+  /* ── Pricing ── */
+  .pricing{ padding: 90px 0; }
+  .pcards{ display:grid; grid-template-columns: repeat(3,1fr); gap: 22px; align-items: stretch; }
+  .pcard{ background:#fff; border:1px solid var(--sand-300); border-radius: var(--radius-xl); padding: 32px 30px; display:flex; flex-direction:column; }
+  .pcard.featured{ border-color: var(--crimson-300); box-shadow: var(--shadow-lift-3); position: relative; }
+  .pcard.featured::before{ content:"הכי פופולרי"; position:absolute; top:-12px; inset-inline-start: 30px;
+    font-family: var(--font-mono); font-size: 10px; font-weight:600; letter-spacing:0.08em; color:#fff;
+    background: var(--crimson-500); padding: 5px 12px; border-radius: var(--radius-pill); }
+  .pcard .tier{ font-family: var(--font-display); font-weight: 600; font-size: 19px; color: var(--stone-800); }
+  .pcard .desc{ font-size: 14px; color: var(--stone-500); margin: 6px 0 18px; min-height: 40px; }
+  .pcard .amt{ font-family: var(--font-brand); font-weight: 700; font-size: 44px; color: var(--stone-800); line-height:1; }
+  .pcard .amt small{ font-family: var(--font-body); font-weight: 400; font-size: 15px; color: var(--stone-400); }
+  .pcard ul{ list-style:none; margin: 22px 0; padding: 0; display:flex; flex-direction:column; gap: 11px; flex:1; }
+  .pcard li{ display:flex; align-items:center; gap: 10px; font-size: 14.5px; color: var(--stone-600); }
+  .pcard li .dpi{ --dpi-c: var(--status-ok); font-size: 18px; flex:none; }
+  .pcard .btn{ justify-content:center; width: 100%; }
+
+  /* ── Quote ── */
+  .quote{ padding: 80px 0 30px; position: relative; overflow: hidden; }
+  .quote::before{ content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+    background-image: radial-gradient(rgba(209,3,49,.06) 1.2px, transparent 1.3px); background-size: 22px 22px; }
+  .quote .wrap{ position: relative; z-index: 1; }
+  .quote blockquote{ max-width: 24ch; margin: 0 auto; text-align:center; font-family: var(--font-display);
+    font-weight: 600; font-size: 34px; line-height: 1.4; letter-spacing: -0.01em; color: var(--stone-800); }
+  .quote .grad{ background: var(--brand-gradient); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .quote .by{ text-align:center; margin-top: 22px; font-family: var(--font-mono); font-size: 13px; color: var(--stone-400); letter-spacing: 0.04em; }
+
+  /* ── Footer ── */
+  footer{ background: var(--garnet-900); color: var(--fg-on-dark-1); padding: 64px 0 40px; }
+  footer .top{ display:flex; justify-content: space-between; gap: 40px; flex-wrap: wrap; padding-bottom: 36px; border-bottom: 1px solid var(--border-on-dark); }
+  footer img{ height: 32px; margin-bottom: 16px; }
+  footer .tag{ font-size: 14px; color: var(--garnet-300); max-width: 34ch; line-height: 1.6; }
+  footer .cols{ display:flex; gap: 64px; }
+  footer .col b{ display:block; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--garnet-300); margin-bottom: 14px; }
+  footer .col a{ display:block; font-size: 14px; color: rgba(255,255,255,0.78); margin-bottom: 10px; }
+  footer .col a:hover{ color: var(--amber-400); }
+  footer .bottom{ display:flex; justify-content: space-between; align-items:center; flex-wrap:wrap; gap: 14px; padding-top: 26px; }
+  footer .bottom span{ font-family: var(--font-mono); font-size: 12px; color: var(--garnet-500); letter-spacing: 0.03em; }
+
+  @media (max-width: 940px){
+    .hero .grid, .ctable, .fcards, .pcards{ grid-template-columns: 1fr; }
+    .nav .links{ display:none; }
+    .hero h1{ font-size: 44px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="nav" id="nav">
+    <div class="wrap row">
+      <img src="../../assets/logo-full.png" alt="Deepo"/>
+      <div class="links">
+        <a href="#features">איך זה עובד</a>
+        <a href="#compare">למה דיפו</a>
+        <a href="#pricing">מחירים</a>
+        <a href="#">בלוג</a>
+      </div>
+      <div class="spacer"></div>
+      <a class="btn btn-secondary" href="#">כניסה</a>
+      <a class="btn btn-primary" href="#pricing">דברו איתנו</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero" data-screen-label="Hero">
+    <div class="radar-rings"></div>
+    <div class="wrap">
+      <div class="grid">
+        <div>
+          <span class="eyebrow"><svg class="dpi"><use href="#dp-shield"></use></svg> תיקון 13 כבר כאן</span>
+          <h1>הגנת פרטיות מקצועית, <span class="grad">במחיר נגיש לכולם.</span></h1>
+          <p class="lede">Deepo מגן על העסק שלכם מחשיפה לרשות להגנת הפרטיות ולתביעות. סוכני AI ייעודיים עובדים 24/7, ומאחוריהם צוות DPOs מנוסה. אנחנו שומרים עליכם, בלי שתצטרכו להבין בחוק.</p>
+          <div class="ctas">
+            <a class="btn btn-grad btn-lg" href="#pricing">התחילו עכשיו</a>
+            <a class="btn btn-secondary btn-lg" href="#features">איך זה עובד</a>
+          </div>
+          <p class="micro">החל מ-₪500 לחודש · בלי עלות הקמה · עומדים בדרישות תוך ימים</p>
+        </div>
+        <div class="preview">
+          <div class="dash">
+            <div class="dash-head">
+              <span class="d-dot"><svg class="dpi"><use href="#dp-shield"></use></svg></span>
+              <b>לוח הגנת הפרטיות</b>
+              <span class="pill">● מוגן</span>
+            </div>
+            <div class="score">
+              <span class="n">98%</span>
+              <span class="lab">ציון עמידה בדרישות<br/>עודכן לפני 4 דקות</span>
+            </div>
+            <div class="rows">
+              <div class="drow"><svg class="dpi" style="--dpi-c:var(--status-ok)"><use href="#dp-doc"></use></svg><span class="t">תקנון פרטיות</span><span class="chip ok">פעיל</span></div>
+              <div class="drow"><svg class="dpi" style="--dpi-c:var(--status-warn)"><use href="#dp-link"></use></svg><span class="t">2 ספקים חדשים</span><span class="chip warn">בטיפול</span></div>
+              <div class="drow"><svg class="dpi" style="--dpi-c:var(--status-ok)"><use href="#dp-radar"></use></svg><span class="t">בקרה רבעונית</span><span class="chip ok">מתוזמן</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- TRUST -->
+  <section class="trust">
+    <div class="wrap row">
+      <span class="lab">מגנים על עסקים ב:</span>
+      <span class="sector"><svg class="dpi"><use href="#dp-health"></use></svg> בריאות</span>
+      <span class="sector"><svg class="dpi"><use href="#dp-education"></use></svg> חינוך</span>
+      <span class="sector"><svg class="dpi"><use href="#dp-doc"></use></svg> ראיית חשבון</span>
+      <span class="sector"><svg class="dpi"><use href="#dp-finance"></use></svg> פיננסים</span>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features" id="features" data-screen-label="Features">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="ey">איך זה עובד</span>
+        <h2>אתם מתרכזים בעסק שלכם. אנחנו דואגים שתעמדו בחוקי הגנת הפרטיות.</h2>
+        <p>אתם בעסק, אנחנו על המשמר. הכל קורה ברקע, בשפה פשוטה ומובנת, בלי קבלנים חיצוניים ובלי הטמעה ארוכה.</p>
+      </div>
+      <div class="fcards">
+        <div class="fcard">
+          <span class="ic"><svg class="dpi"><use href="#dp-shield"></use></svg></span>
+          <h3>שומרים עליכם</h3>
+          <p>מגנים מפני חשיפה: מול הרשות להגנת הפרטיות ומול תביעות. כל מה שהחוק דורש מהעסק, כבר טיפלנו בו.</p>
+        </div>
+        <div class="fcard">
+          <span class="ic"><svg class="dpi"><use href="#dp-radar"></use></svg></span>
+          <h3>פרואקטיביים</h3>
+          <p>תמיד צעד לפני הרגולציה. עובדים ברקע ומטפלים בדברים לפני שאתם בכלל מרגישים בהם.</p>
+        </div>
+        <div class="fcard">
+          <span class="ic"><svg class="dpi"><use href="#dp-sparkle"></use></svg></span>
+          <h3>סוכני AI ייעודיים</h3>
+          <p>סוכני AI ייעודיים עובדים 24/7. אתם רק מחליטים, ומאשרים בלחיצה.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARE -->
+  <section class="compare" id="compare" data-screen-label="Comparison">
+    <div class="wrap">
+      <span class="ey">השוואת מחיר · שנה ראשונה</span>
+      <h2>אותה הגנה. בעלות נמוכה בכ-85%.</h2>
+      <div class="ctable">
+        <div class="ccol old">
+          <p class="name">DPO חיצוני קלאסי</p>
+          <p class="price">~₪66,000<small> / שנה ראשונה</small></p>
+          <ul>
+            <li><svg class="dpi"><use href="#dp-x"></use></svg> ~₪30,000 עלות הקמה</li>
+            <li><svg class="dpi"><use href="#dp-x"></use></svg> ₪3,000-6,000 לחודש</li>
+            <li><svg class="dpi"><use href="#dp-x"></use></svg> פגישות תקופתיות בלבד</li>
+            <li><svg class="dpi"><use href="#dp-x"></use></svg> תבניות גנריות</li>
+          </ul>
+        </div>
+        <div class="ccol new">
+          <p class="name">Deepo</p>
+          <p class="price">~₪6,000<small> / שנה ראשונה</small></p>
+          <ul>
+            <li><svg class="dpi"><use href="#dp-check"></use></svg> ₪0 עלות הקמה</li>
+            <li><svg class="dpi"><use href="#dp-check"></use></svg> ₪500-1,000 לחודש</li>
+            <li><svg class="dpi"><use href="#dp-check"></use></svg> ניטור רציף, 24/7</li>
+            <li><svg class="dpi"><use href="#dp-check"></use></svg> מותאם לעסק שלכם</li>
+          </ul>
+          <span class="save-tag">~85% פחות מ-DPO קלאסי</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="pricing" id="pricing" data-screen-label="Pricing">
+    <div class="wrap">
+      <div class="sec-head">
+        <span class="ey">מחירים</span>
+        <h2>תמחור הוגן, בלי הפתעות.</h2>
+        <p>עמידה בדרישות לא צריכה להיות שמורה רק למי שיש לו מחלקה משפטית ו-DPO פנימי בארגון.</p>
+      </div>
+      <div class="pcards">
+        <div class="pcard">
+          <span class="tier">בסיסי</span>
+          <p class="desc">לעסקים קטנים שרוצים להיות מכוסים.</p>
+          <span class="amt">₪500<small> / חודש</small></span>
+          <ul>
+            <li><svg class="dpi"><use href="#dp-check"></use></svg> תקנון ומדיניות פרטיות</li>
+            <li><svg class="dpi"><use href="#dp-check"></use></svg> ניטור בסיסי וניהול ספקים</li>
+            <li><svg class="dpi"><use href="#dp-check"></use></svg> בקרה רבעונית אוטומטית</li>
+          </ul>
+          <a class="btn btn-secondary" href="#">בחירה</a>
+        </div>
+        <div class="pcard featured">
+          <span class="tier">מורחב</span>
+          <p class="desc">למי שמחזיק מידע רגיש בהיקף משמעותי.</p>
+          <span class="amt">₪1,000<small> / חודש</small></span>
+          <ul>
+            <li><svg class="dpi"><use href="#dp-check"></use></svg> כל מה שבבסיסי, ועוד</li>
+            <li><svg class="dpi"><use href="#dp-check"></use></svg> DPO ייעודי וזמין</li>
+            <li><svg class="dpi"><use href="#dp-check"></use></svg> ניטור רציף 24/7</li>
+            <li><svg class="dpi"><use href="#dp-check"></use></svg> ליווי באירוע אבטחת מידע</li>
+          </ul>
+          <a class="btn btn-primary" href="#">בחירה</a>
+        </div>
+        <div class="pcard">
+          <span class="tier">ארגוני</span>
+          <p class="desc">למספר חברות או דרישות רגולציה מורכבות.</p>
+          <span class="amt">בהתאמה</span>
+          <ul>
+            <li><svg class="dpi"><use href="#dp-check"></use></svg> כיסוי רב-ישותי</li>
+            <li><svg class="dpi"><use href="#dp-check"></use></svg> אינטגרציות ייעודיות</li>
+            <li><svg class="dpi"><use href="#dp-check"></use></svg> SLA ותמיכה מועדפת</li>
+          </ul>
+          <a class="btn btn-secondary" href="#">דברו איתנו</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- QUOTE -->
+  <section class="quote">
+    <div class="radar-rings no-node" style="left:50%; top:50%; bottom:auto; transform:translate(-50%,-50%); width:620px; height:620px; opacity:.7;"></div>
+    <div class="wrap">
+      <blockquote>אתם בעסק. <span class="grad">אנחנו על המשמר.</span></blockquote>
+      <p class="by">איתכם בהגנה על הפרטיות</p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer data-screen-label="Footer">
+    <div class="wrap">
+      <div class="top">
+        <div>
+          <img src="../../assets/logo-reverse.png" alt="Deepo"/>
+          <p class="tag">הגנת פרטיות מקצועית לכל עסק, גם לאלה שלא היו עושים דבר בלעדינו. נבנה בישראל.</p>
+        </div>
+        <div class="cols">
+          <div class="col"><b>מוצר</b><a href="#features">איך זה עובד</a><a href="#pricing">מחירים</a><a href="#compare">השוואה</a></div>
+          <div class="col"><b>חברה</b><a href="#">אודות</a><a href="#">בלוג</a><a href="#">קריירה</a></div>
+          <div class="col"><b>משפטי</b><a href="#">תקנון</a><a href="#">פרטיות</a><a href="#">תיקון 13</a></div>
+        </div>
+      </div>
+      <div class="bottom">
+        <span>© 2026 Deepo · כל הזכויות שמורות</span>
+        <span>נבנה בישראל</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const nav = document.getElementById('nav');
+    const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
+    document.querySelectorAll('a[href^="#"]').forEach(a => a.addEventListener('click', e => {
+      const id = a.getAttribute('href'); if (id.length < 2) return;
+      const t = document.querySelector(id); if (t) { e.preventDefault(); window.scrollTo({ top: t.offsetTop - 80, behavior: 'smooth' }); }
+    }));
+  </script>
+</body>
+</html>

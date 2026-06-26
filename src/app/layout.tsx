@@ -18,8 +18,8 @@ export function generateMetadata(): Metadata {
     title: 'DPO-as-a-Service | שירות ממונה הגנת פרטיות',
     description: 'פתרון AI מקיף לעמידה ברגולציית הגנת הפרטיות - תיקון 13',
     icons: {
-      icon: '/logos/deepo-icon-navy-32.png',
-      apple: '/logos/deepo-icon-navy-192.png',
+      icon: '/brand/logos/favicon-32.png',
+      apple: '/brand/logos/apple-touch-icon.png',
     },
     other: {
       ...Sentry.getTraceData(),

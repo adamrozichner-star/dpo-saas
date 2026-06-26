@@ -1,0 +1,201 @@
+/* ============================================================
+   Marketing chrome - shared header + footer for the (marketing)
+   route group. Styled entirely from the warm brand tokens in
+   src/brand/colors_and_type.css. No hardcoded hex (the one
+   translucent nav fill uses color-mix over --sand-100).
+   ============================================================ */
+
+/* ── Header / nav ──────────────────────────────────────────── */
+.mkt-nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: color-mix(in srgb, var(--sand-100) 82%, transparent);
+  backdrop-filter: saturate(1.2) blur(12px);
+  -webkit-backdrop-filter: saturate(1.2) blur(12px);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur-2, 180ms) ease, box-shadow var(--dur-2, 180ms) ease;
+}
+.mkt-nav.is-scrolled {
+  border-color: var(--sand-300);
+  box-shadow: var(--shadow-lift-1);
+}
+.mkt-nav__row {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 var(--space-5);
+  height: 72px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+.mkt-nav__logo { display: inline-flex; align-items: center; }
+.mkt-nav__logo img { height: 34px; width: auto; display: block; }
+.mkt-nav__links {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  margin-inline-start: var(--space-4);
+}
+.mkt-nav__links a {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--fg-2);
+  transition: color var(--dur-1, 120ms) ease;
+}
+.mkt-nav__links a:hover { color: var(--crimson-600); }
+.mkt-nav__spacer { flex: 1; }
+.mkt-nav__actions { display: flex; align-items: center; gap: var(--space-3); }
+.mkt-nav__login {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg-2);
+  transition: color var(--dur-1, 120ms) ease;
+}
+.mkt-nav__login:hover { color: var(--crimson-600); }
+
+/* hamburger - control affordance, not a brand content icon */
+.mkt-nav__burger {
+  display: none;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-md, 10px);
+  background: #fff;
+  color: var(--fg-1);
+  cursor: pointer;
+}
+.mkt-nav__burger svg { width: 20px; height: 20px; }
+
+/* mobile drawer */
+.mkt-drawer {
+  display: none;
+  border-top: 1px solid var(--sand-300);
+  background: var(--sand-50);
+  padding: var(--space-4) var(--space-5) var(--space-6);
+}
+.mkt-drawer.is-open { display: block; }
+.mkt-drawer a {
+  display: block;
+  padding: var(--space-3) 0;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--fg-1);
+  border-bottom: 1px solid var(--border-1);
+}
+.mkt-drawer a:last-child { border-bottom: 0; }
+.mkt-drawer__cta { margin-top: var(--space-4); }
+
+@media (max-width: 860px) {
+  .mkt-nav__links { display: none; }
+  .mkt-nav__actions .mkt-nav__desktop-only { display: none; }
+  .mkt-nav__burger { display: inline-flex; }
+}
+
+/* ── Footer (dark, ember-glow) ─────────────────────────────── */
+.mkt-footer {
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-inverse);
+  color: var(--fg-on-accent);
+  padding: var(--space-20) var(--space-5) var(--space-10);
+}
+/* ember glow rising from the start corner (RTL: right) */
+.mkt-footer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 90% at 92% 8%,
+    rgba(241, 39, 22, 0.16) 0%,
+    rgba(255, 122, 60, 0.08) 34%,
+    transparent 62%);
+}
+.mkt-footer__wrap { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; }
+.mkt-footer__top {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: var(--space-10);
+  margin-bottom: var(--space-12);
+}
+.mkt-footer__brand img { height: 32px; width: auto; display: block; margin-bottom: var(--space-4); }
+.mkt-footer__tag {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--garnet-300);
+  max-width: 34ch;
+}
+.mkt-footer__col b {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #fff;
+  margin-bottom: var(--space-3);
+}
+.mkt-footer__col a {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--garnet-300);
+  padding: var(--space-1) 0;
+  transition: color var(--dur-1, 120ms) ease;
+}
+.mkt-footer__col a:hover { color: #fff; }
+.mkt-footer__disclaimer {
+  border-top: 1px solid var(--garnet-700);
+  padding-top: var(--space-6);
+  margin-bottom: var(--space-5);
+}
+.mkt-footer__disclaimer p {
+  font-family: var(--font-body);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--garnet-300);
+  max-width: 70ch;
+  margin: 0 auto;
+  text-align: center;
+}
+.mkt-footer__bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  font-family: var(--font-body);
+  font-size: 13px;
+  /* garnet-300 (8.3:1), not garnet-500 (3.6:1) - AA at this small size */
+  color: var(--garnet-300);
+}
+
+@media (max-width: 860px) {
+  .mkt-footer__top { grid-template-columns: 1fr 1fr; gap: var(--space-8); }
+  .mkt-footer__brand { grid-column: 1 / -1; }
+  .mkt-footer__bottom { flex-direction: column; align-items: center; text-align: center; }
+}
+
+/* ── Accessibility: visible keyboard focus + reduced motion ── */
+.mkt-nav a:focus-visible,
+.mkt-nav button:focus-visible,
+.mkt-drawer a:focus-visible,
+.mkt-footer a:focus-visible {
+  outline: 2px solid var(--crimson-500);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+.mkt-footer a:focus-visible { outline-color: var(--amber-400); }
+
+@media (prefers-reduced-motion: reduce) {
+  .mkt-nav,
+  .mkt-nav__links a,
+  .mkt-nav__login,
+  .mkt-footer__col a {
+    transition: none;
+  }
+}

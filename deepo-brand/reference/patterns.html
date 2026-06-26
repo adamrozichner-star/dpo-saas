@@ -1,0 +1,32 @@
+<!-- @dsCard group="Brand" viewport="700x230" subtitle="Coverage mesh (light) · ember glow (dark)" name="Brand patterns" -->
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  html,body{margin:0;background:var(--bg-page);}
+  .card{padding:24px 26px;font-family:var(--font-body);}
+  .lbl{font-family:var(--font-mono);font-size:10px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--stone-400);}
+  
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .tile{height:170px;border-radius:var(--radius-xl);position:relative;overflow:hidden;}
+  .tag{position:absolute;bottom:12px;inset-inline-start:14px;z-index:2;font-family:var(--font-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;}
+  /* coverage mesh */
+  .mesh{background:var(--sand-100);border:1px solid var(--border-1);}
+  .mesh::before{content:"";position:absolute;inset:0;background-image:radial-gradient(rgba(209,3,49,.16) 1.3px,transparent 1.4px);background-size:20px 20px;}
+  .mesh::after{content:"";position:absolute;width:230px;height:230px;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;
+    background:radial-gradient(circle, transparent 0 22px, rgba(209,3,49,.55) 22px 23px, transparent 23px 56px, rgba(209,3,49,.32) 56px 57px, transparent 57px 96px, rgba(209,3,49,.18) 96px 97px, transparent 97px);}
+  .core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:32px;height:32px;border-radius:50%;z-index:1;
+    background:linear-gradient(135deg, #9B0140 0%, #D10331 22%, #F4271F 46%, #FF7A3C 74%, #FF9D21 100%);}
+  .mesh .tag{color:var(--stone-500);}
+  /* ember glow */
+  .glow{background:#1A1108;}
+  .glow::before{content:"";position:absolute;inset:0;background:
+    radial-gradient(ellipse 85% 95% at 8% 116%, rgba(209,3,49,.62) 0%, rgba(244,39,31,.34) 32%, rgba(255,157,33,.2) 56%, transparent 80%),
+    repeating-linear-gradient(0deg, transparent 0 6px, rgba(255,255,255,.025) 6px 7px);}
+  .glow .tag{color:var(--amber-400);}
+</style></head><body><div class="card">
+  <div class="grid">
+    <div class="tile mesh"><div class="core"></div><span class="tag">Coverage mesh</span></div>
+    <div class="tile glow"><span class="tag">Ember glow</span></div>
+  </div>
+</div></body></html>

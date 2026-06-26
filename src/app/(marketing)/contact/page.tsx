@@ -7,17 +7,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { 
-  Shield, 
-  ArrowRight, 
-  Mail, 
-  Phone, 
+import {
+  Shield,
+  Mail,
+  Phone,
   MapPin,
   Loader2,
   CheckCircle2,
   MessageSquare
 } from 'lucide-react'
-import Image from 'next/image'
 
 export default function ContactPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -42,13 +40,6 @@ export default function ContactPage() {
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-gray-50" dir="rtl">
-        <header className="bg-white border-b">
-          <div className="container mx-auto px-4 py-4">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
-          </Link>
-          </div>
-        </header>
         <main className="container mx-auto px-4 py-20">
           <Card className="max-w-md mx-auto text-center">
             <CardContent className="p-8">
@@ -65,15 +56,6 @@ export default function ContactPage() {
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
-      <header className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
-          </Link>
-          <Link href="/"><Button variant="ghost" className="gap-2"><ArrowRight className="h-4 w-4" />חזרה</Button></Link>
-        </div>
-      </header>
-
       <main className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <h1 className="text-3xl font-bold mb-4">צרו קשר</h1>

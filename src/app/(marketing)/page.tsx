@@ -2,9 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import Footer from '@/components/Footer'
 import { signupHref } from '@/lib/signup-flag'
 import {
   Shield,
@@ -169,23 +167,6 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-slate-50" dir="rtl">
-
-      {/* ===== NAV ===== */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-5 flex justify-between items-center h-16">
-          <Link href="/"><Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} priority /></Link>
-          <div className="flex items-center gap-2">
-            <Link href="/login">
-              <Button variant="ghost" size="sm" className="text-slate-600">התחברות</Button>
-            </Link>
-            <Link href={signupHref('/register')}>
-              <Button size="sm" className="rounded-lg font-semibold" style={{ backgroundColor: '#059669' }}>
-                התחל עכשיו
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </nav>
 
       {/* ===== URGENCY BAR ===== */}
       <div className="bg-red-50 border-b border-red-200 py-3 px-5">
@@ -525,8 +506,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ===== FOOTER ===== */}
-      <Footer />
     </div>
   )
 }

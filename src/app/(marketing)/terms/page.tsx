@@ -1,9 +1,3 @@
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { ArrowRight } from 'lucide-react'
-import Image from 'next/image'
-import Footer from '@/components/Footer'
-
 // /terms - Deepo terms of service (Hebrew, RTL).
 // Roy-reviewed final version (sign-off 2026-06-09). The 'טיוטה לסקירה
 // משפטית' banner that used to live at the top of this page has been
@@ -18,20 +12,6 @@ import Footer from '@/components/Footer'
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
-      <header className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
-          </Link>
-          <Link href="/">
-            <Button variant="ghost" className="gap-2">
-              <ArrowRight className="h-4 w-4" />
-              חזרה לדף הבית
-            </Button>
-          </Link>
-        </div>
-      </header>
-
       <main className="container mx-auto px-4 py-12 max-w-4xl">
 
         <h1 className="text-3xl font-bold mb-2">תנאי שימוש</h1>
@@ -167,7 +147,6 @@ export default function TermsPage() {
           </section>
         </div>
       </main>
-      <Footer />
     </div>
   )
 }
