@@ -585,3 +585,66 @@ Hebrew. Verified 27/27 pure (incl owner mapper) + 10/10 auth-gate (incl /home) +
 - vendor_dpa + dsar purposes still unwired (dsar needs subject-PII handling). E3/E4.
 - A DPO-facing "generic create link" entry on /console/links was deferred; today links are minted from
   the obligation detail (where the obligation context lives). Add a standalone create flow if needed.
+
+# E3 - vendor DPA chase flow (second collection purpose, with write-back + recurrence)
+
+## What shipped (migration 042, on the E1 primitive)
+- Provisional vendor-DPA attestation set (src/lib/ledger/seed-vendor-dpa-questions.ts): 4 questions
+  (has DPA? / signed date / expiry date / notes), seeded idempotently. PROVISIONAL
+  (expert_judgment/0.5) pending Amir/Roy. Synthetic VENDOR_DPA_QSET_ID (...0002).
+- DPO action RequestVendorDpa on the obligation detail: lists data_recipients, creates an
+  obligation-linked vendor task, mints vendor_dpa with p_target_recipient_id, shows the raw link once.
+  The existing /console/links UI lists vendor links (ACCESS_LINK_PURPOSE.vendor_dpa shipped in E2).
+- Write-back (the new wrinkle): on vendor submit, submit_access_link (2-arg signature UNCHANGED) now
+  branches on purpose='vendor_dpa' + target_recipient_id to UPDATE data_recipients (has_dpa,
+  dpa_signed_date, dpa_expiry_date) and UPSERT the annual control (playbook c1000003) - arming the
+  re-chase. compliance_verified / status / obligation_status are NEVER touched (DPO judges).
+
+## Design decisions that held up
+- access_links gained target_recipient_id (nullable, FK ON DELETE SET NULL); mint gained
+  p_target_recipient_id DEFAULT NULL so E2's 5-arg calls still resolve (proven). mint org-ownership
+  check: SECURITY INVOKER means the recipient SELECT runs under the DPO's RLS, so a cross-org
+  recipient is simply not found -> raises. Verified.
+- submit's 2-arg signature stayed -> E1/E2 callers unchanged; the vendor branch is purpose-gated, so
+  sysadmin submit touches NEITHER data_recipients NOR controls (asserted).
+- Semantic binding: question_type is CHECK-constrained (text/number/boolean/single_choice/
+  multi_choice/list/date) - can't carry a custom key. So the machine key lives in depends_on.key
+  (jsonb, already returned by resolve). The page copies depends_on.key into each answer item as `k`;
+  submit reads k in ('dpa_has','dpa_signed_date','dpa_expiry_date'). Display mappers ignore k.
+- Recurrence = idempotent UPSERT of the pre-existing c1000003 annual playbook control
+  (uq_controls_org_source_playbook from 039). next_due_at = expiry (or signed+1yr). Idempotent
+  resubmit does NOT re-arm (submit returns early on status='used', before the write-back).
+
+## Firewall (042) gotchas
+- The access_link_fn UPDATE on data_recipients is COLUMN-SCOPED to has_dpa/dpa_signed_date/
+  dpa_expiry_date/updated_at. Proven it CANNOT update compliance_verified or status (column-level
+  permission denial via role-sim). Still no SELECT on organizations/contacts/obligations.
+- INSERT ... ON CONFLICT DO UPDATE requires TABLE-level SELECT on the target (controls), not just the
+  arbiter columns - column-scoped SELECT gave "permission denied for table controls". Granted full
+  SELECT on controls (per-org operational data, never returned to the public path, so not a CC-2
+  concern) + a controls_fn_select policy (the E1 RLS-needs-SELECT-policy lesson again).
+- Malformed dates: the fn regex-validates (^\d{4}-\d{2}-\d{2}$) and stores NULL on a bad value, never
+  a bad date - robust against a malicious anon calling submit directly. Verified.
+
+## Verification (29 DB+RLS+robustness, 12 vendor page headless; regressions intact)
+- E1: verify-access-links 37/37, verify-link-page 15/15. E2: verify-sysadmin-questionnaire 26/26,
+  verify-sysadmin-page 10/10. /shell-demo 13/13. tsc clean.
+- 042 reproducible: clean drop of the whole stack + reapply 041 then 042; 042 is idempotent (re-run
+  clean). The shared c1000003 control's next_due_at is captured + RESTORED by the verify (it is real
+  backfill data, not a fixture).
+
+## Test-harness notes (cost me two iterations)
+- An UPDATE test that referenced a column in the SET *value* (set has_dpa=has_dpa) needs SELECT on
+  that column - use a literal (set has_dpa=true) to test only the UPDATE privilege.
+- A back-compat "no write-back" assertion must snapshot the SPECIFIC row's updated_at, not a
+  "rows updated in last 5s" count - an earlier grant-layer test had already bumped updated_at.
+- The sysadmin task in the back-compat step writes evidence on the SAME Reg15 obligation, so the
+  vendor evidence query must filter kind='attestation' to isolate the vendor row.
+- `next dev` started with `(cmd &)` across separate Bash calls left a stale/wrong-mode server (all
+  routes 404, shell-demo blocked by the NODE_ENV middleware guard). Start it with run_in_background
+  and poll until shell-demo returns 200 before running headless suites.
+
+## Carryover
+- Vendor-DPA wording PROVISIONAL pending Amir/Roy. dsar purpose still unwired (subject-PII) - E4.
+- No v3 vendor home surface yet; the DPA write-back is visible via the obligation detail evidence +
+  wherever data_recipients is read (legacy). A v3 vendor list showing DPA status is a later add.

@@ -76,8 +76,14 @@ export default function TokenizedLinkPage() {
     // ordered as asked. This freezes the wording at answer-time (audit-correct:
     // the captured evidence stays meaningful even if the catalog later changes)
     // and lets the DPO surface read it without a hub_questions join.
+    // `k` carries the optional semantic key (depends_on.key) so a typed write-back
+    // (e.g. vendor_dpa) can bind an answer to a field; display mappers ignore it.
     const ordered = (resolved?.questions ?? []).slice().sort((a, b) => a.order_index - b.order_index)
-    const payload = ordered.map((q) => ({ q: q.question_text, a: answers[q.id] ?? '' }))
+    const payload = ordered.map((q) => {
+      const dep = q.depends_on as { key?: unknown } | null
+      const k = dep && typeof dep.key === 'string' ? dep.key : undefined
+      return k ? { q: q.question_text, a: answers[q.id] ?? '', k } : { q: q.question_text, a: answers[q.id] ?? '' }
+    })
     try {
       const res = await fetch(`/api/link/${encodeURIComponent(token)}`, {
         method: 'POST',
@@ -153,6 +159,13 @@ export default function TokenizedLinkPage() {
                       return <option key={i} value={val}>{val}</option>
                     })}
                   </select>
+                ) : q.question_type === 'date' ? (
+                  <input
+                    type="date"
+                    required={q.required}
+                    value={answers[q.id] ?? ''}
+                    onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
+                  />
                 ) : (
                   <textarea
                     rows={2}
