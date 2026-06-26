@@ -33,6 +33,7 @@ import {
 } from '@/lib/console-data'
 import type { ControlScheduleItemProps } from '@/components/ledger'
 import { RequestSysadminInfo } from './RequestSysadminInfo'
+import { RequestVendorDpa } from './RequestVendorDpa'
 
 const TRIGGER_LABEL: Record<string, string> = { gap_rule: 'כלל פערים', manual: 'ידני' }
 const EVIDENCE_KIND_LABEL: Record<string, string> = {
@@ -185,13 +186,22 @@ export default function ObligationDetailPage({ params }: { params: { id: string 
       {supabase && org ? (
         <section>
           <p className="t-eyebrow" style={{ marginBottom: 'var(--space-3)' }}>איסוף מידע</p>
-          <RequestSysadminInfo
-            supabase={supabase}
-            orgId={org.id}
-            obligationId={params.id}
-            orgName={org.name}
-            onCreated={() => setReloadKey((k) => k + 1)}
-          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+            <RequestSysadminInfo
+              supabase={supabase}
+              orgId={org.id}
+              obligationId={params.id}
+              orgName={org.name}
+              onCreated={() => setReloadKey((k) => k + 1)}
+            />
+            <RequestVendorDpa
+              supabase={supabase}
+              orgId={org.id}
+              obligationId={params.id}
+              orgName={org.name}
+              onCreated={() => setReloadKey((k) => k + 1)}
+            />
+          </div>
         </section>
       ) : null}
 
