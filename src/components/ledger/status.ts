@@ -87,3 +87,28 @@ export const ENTITY_ICON: Record<EntityType, DeepoIconId> = {
   asset: 'dp-database',
   dpo_queue: 'dp-seal',
 }
+
+// Event-type -> Hebrew label for the timeline head (falls back to the raw type).
+export const EVENT_TYPE_LABEL: Record<string, string> = {
+  access_link_submitted: 'התקבל שאלון מהסיסטם',
+  opened: 'נפתח',
+  status_changed: 'שינוי סטטוס',
+  resolved: 'טופל',
+}
+
+// access_links (E1/E2). Purpose label + lifecycle status -> Badge variant + label.
+export type AccessLinkPurpose = 'sysadmin_questionnaire' | 'vendor_dpa' | 'dsar'
+export type AccessLinkStatus = 'active' | 'used' | 'expired' | 'revoked'
+
+export const ACCESS_LINK_PURPOSE: Record<AccessLinkPurpose, string> = {
+  sysadmin_questionnaire: 'שאלון אבטחה לסיסטם',
+  vendor_dpa: 'הצהרת ספק',
+  dsar: 'בקשת נושא מידע',
+}
+
+export const ACCESS_LINK_STATUS: Record<AccessLinkStatus, VariantLabel> = {
+  active: { variant: 'info', label: 'פעיל' },
+  used: { variant: 'ok', label: 'הוגש' },
+  expired: { variant: 'neutral', label: 'פג תוקף' },
+  revoked: { variant: 'risk', label: 'בוטל' },
+}

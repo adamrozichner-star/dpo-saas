@@ -72,11 +72,17 @@ export default function TokenizedLinkPage() {
     e.preventDefault()
     if (!token) return
     setPhase('submitting')
+    // Self-describing payload: store each question's text alongside the answer,
+    // ordered as asked. This freezes the wording at answer-time (audit-correct:
+    // the captured evidence stays meaningful even if the catalog later changes)
+    // and lets the DPO surface read it without a hub_questions join.
+    const ordered = (resolved?.questions ?? []).slice().sort((a, b) => a.order_index - b.order_index)
+    const payload = ordered.map((q) => ({ q: q.question_text, a: answers[q.id] ?? '' }))
     try {
       const res = await fetch(`/api/link/${encodeURIComponent(token)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers }),
+        body: JSON.stringify({ answers: payload }),
       })
       const data = await res.json()
       setPhase(data?.ok ? 'done' : 'error')

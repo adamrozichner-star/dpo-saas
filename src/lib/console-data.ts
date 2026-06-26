@@ -7,6 +7,7 @@ import type { ObligationView } from '@/components/ledger/ObligationRow'
 import type { ControlScheduleItemProps } from '@/components/ledger/ControlScheduleItem'
 import type { TimelineEvent } from '@/components/ledger/EventTimeline'
 import type { ObligationStatus, Severity, Cadence, ControlStatus, EntityType, StatusVariant } from '@/components/ledger/status'
+import { EVENT_TYPE_LABEL, ACCESS_LINK_PURPOSE, ACCESS_LINK_STATUS, type AccessLinkPurpose, type AccessLinkStatus } from '@/components/ledger/status'
 
 // Shapes as read from the ledger tables (subset of columns the console displays).
 export interface ObligationDbRow {
@@ -125,10 +126,41 @@ export function mapEvents(rows: EventDbRow[]): TimelineEvent[] {
   return rows.map((e) => ({
     entityType: e.entity_type,
     eventType: e.event_type,
-    summary: typeof e.data?.summary === 'string' ? (e.data.summary as string) : undefined,
+    summary: typeof e.data?.summary === 'string' ? (e.data.summary as string) : EVENT_TYPE_LABEL[e.event_type],
     actor: e.actor,
     at: e.created_at,
   }))
+}
+
+// A captured access_link submission, extracted from an events row's data jsonb.
+// IMPORTANT: q/a are UNTRUSTED external input (a sysadmin types free text into
+// the open questions). The renderer MUST escape them - render as plain React
+// text children, NEVER dangerouslySetInnerHTML.
+export interface SubmittedAnswer {
+  q: string
+  a: string
+}
+export interface SubmissionView {
+  at: string
+  actor: string | null
+  answers: SubmittedAnswer[]
+}
+
+export function mapSubmissions(rows: EventDbRow[]): SubmissionView[] {
+  return rows
+    .filter((e) => e.event_type === 'access_link_submitted')
+    .map((e) => {
+      const raw = e.data?.answers
+      const answers: SubmittedAnswer[] = Array.isArray(raw)
+        ? (raw as unknown[])
+            .map((x) => {
+              const o = (x ?? {}) as Record<string, unknown>
+              return { q: typeof o.q === 'string' ? o.q : '', a: typeof o.a === 'string' ? o.a : '' }
+            })
+            .filter((x) => x.q !== '' || x.a !== '')
+        : []
+      return { at: e.created_at, actor: e.actor, answers }
+    })
 }
 
 export interface EvidenceDbRow {
@@ -153,6 +185,58 @@ export function mapEvidence(rows: EvidenceDbRow[]): EvidenceView[] {
     capturedVia: e.captured_via,
     ref: e.document_id ?? e.answer_ref ?? null,
   }))
+}
+
+// access_links list row (E2 links management UI). org-scoped by RLS upstream.
+export interface AccessLinkDbRow {
+  id: string
+  purpose: AccessLinkPurpose
+  status: AccessLinkStatus
+  obligation_id: string
+  org_display_name: string
+  created_at: string
+  expires_at: string
+  used_at: string | null
+}
+
+export interface AccessLinkView {
+  id: string
+  purpose: AccessLinkPurpose
+  purposeLabel: string
+  status: AccessLinkStatus
+  statusVariant: StatusVariant
+  statusLabel: string
+  obligationId: string
+  obligationTitle: string | null
+  orgDisplayName: string
+  createdAt: string
+  expiresAt: string
+  usedAt: string | null
+  isActive: boolean
+}
+
+// Maps a link row + the resolved obligation title. Surfaces time-expiry: a row
+// still stored 'active' but past expires_at renders as 'expired' (matching what
+// resolve_access_link would do), and only a truly active link can be revoked.
+export function mapAccessLink(row: AccessLinkDbRow, obligationTitle: string | null, nowIso: string): AccessLinkView {
+  const timeExpired = row.status === 'active' && row.expires_at <= nowIso
+  const effective: AccessLinkStatus = timeExpired ? 'expired' : row.status
+  const st = ACCESS_LINK_STATUS[effective]
+  return {
+    id: row.id,
+    purpose: row.purpose,
+    purposeLabel: ACCESS_LINK_PURPOSE[row.purpose] ?? row.purpose,
+    status: effective,
+    statusVariant: st.variant,
+    statusLabel: st.label,
+    obligationId: row.obligation_id,
+    obligationTitle,
+    orgDisplayName: row.org_display_name,
+    createdAt: row.created_at,
+    expiresAt: row.expires_at,
+    usedAt: row.used_at,
+    isActive: effective === 'active',
+  }
 }
 
 export interface RuleDbRow {

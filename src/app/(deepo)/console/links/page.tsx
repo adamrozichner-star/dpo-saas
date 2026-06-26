@@ -1,0 +1,102 @@
+'use client'
+
+// DPO links management (E2). Lists the current org's access_links and lets the
+// DPO revoke an active one. Everything is the authed user under RLS: the SELECT
+// returns only this org's links (access_links_org_scope), and revoke is a status
+// UPDATE under the same policy. No service-role, no cross-org data. Raw tokens
+// are never shown here - they exist only once, at mint time (the obligation
+// detail action). This surface shows status, not secrets.
+import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/lib/auth-context'
+import { useOrg } from '@/lib/org-context'
+import { Badge } from '@/components/brand/Badge'
+import { Button } from '@/components/brand/Button'
+import { formatShortDate } from '@/components/ledger/format'
+import { mapAccessLink, type AccessLinkDbRow, type AccessLinkView } from '@/lib/console-data'
+
+export default function LinksPage() {
+  const { user, supabase, loading: authLoading } = useAuth()
+  const { org, loading: orgLoading } = useOrg()
+  const router = useRouter()
+  const [links, setLinks] = useState<AccessLinkView[] | null>(null)
+  const [busyId, setBusyId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!authLoading && !user) router.replace('/login')
+  }, [authLoading, user, router])
+
+  const load = useCallback(async () => {
+    if (!supabase || !org) return
+    const { data: rows } = await supabase
+      .from('access_links')
+      .select('id, purpose, status, obligation_id, org_display_name, created_at, expires_at, used_at')
+      .eq('org_id', org.id)
+      .order('created_at', { ascending: false })
+    const linkRows = (rows ?? []) as AccessLinkDbRow[]
+    // resolve obligation titles (RLS-scoped) for the links we have
+    const obIds = Array.from(new Set(linkRows.map((r) => r.obligation_id)))
+    const titles = new Map<string, string>()
+    if (obIds.length) {
+      const { data: obs } = await supabase.from('obligations').select('id, title').in('id', obIds)
+      for (const o of (obs ?? []) as { id: string; title: string }[]) titles.set(o.id, o.title)
+    }
+    const now = new Date().toISOString()
+    setLinks(linkRows.map((r) => mapAccessLink(r, titles.get(r.obligation_id) ?? null, now)))
+  }, [supabase, org])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  async function revoke(id: string) {
+    if (!supabase || !org) return
+    setBusyId(id)
+    await supabase.from('access_links').update({ status: 'revoked' }).eq('id', id).eq('org_id', org.id)
+    await load()
+    setBusyId(null)
+  }
+
+  if (authLoading || orgLoading || links === null) return <p className="t-body">טוען…</p>
+  if (!user) return null
+  if (!org) return <p className="t-body">לא נמצא ארגון משויך לחשבון.</p>
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', maxWidth: 860 }}>
+      <Link href="/console" className="dp-led-link">חזרה לקונסולה</Link>
+      <header>
+        <h1 className="t-h2" style={{ margin: 0 }}>קישורי איסוף</h1>
+        <p className="t-body-sm" style={{ color: 'var(--fg-3)' }}>
+          קישורים מאובטחים שנשלחו לסיסטם או לספקים לאיסוף מידע. כדי ליצור קישור חדש, פתחו את החובה הרלוונטית.
+        </p>
+      </header>
+
+      {links.length === 0 ? (
+        <p className="t-body-sm">עדיין לא נוצרו קישורי איסוף.</p>
+      ) : (
+        <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+          {links.map((l) => (
+            <div key={l.id} className="dp-oblig-row" style={{ flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+              <span className="dp-oblig-row__title">{l.purposeLabel}</span>
+              <Badge variant={l.statusVariant} data-link-status={l.status}>{l.statusLabel}</Badge>
+              {l.obligationTitle ? (
+                <Link href={`/console/obligations/${l.obligationId}`} className="dp-led-link" style={{ fontSize: 'var(--t-body-sm)' }}>
+                  {l.obligationTitle}
+                </Link>
+              ) : null}
+              <span className="dp-led-due">נוצר: {formatShortDate(l.createdAt)}</span>
+              <span className="dp-led-due">תוקף: {formatShortDate(l.expiresAt)}</span>
+              {l.usedAt ? <span className="dp-led-due">הוגש: {formatShortDate(l.usedAt)}</span> : null}
+              {l.isActive ? (
+                <Button variant="ghost" size="sm" disabled={busyId === l.id} onClick={() => revoke(l.id)}>
+                  {busyId === l.id ? 'מבטל…' : 'ביטול קישור'}
+                </Button>
+              ) : null}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
