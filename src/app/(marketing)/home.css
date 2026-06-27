@@ -11,14 +11,13 @@
 
 .hp { background: var(--bg-page); }
 
-/* ── Hero ───────────────────────────────────────────────────── */
-.hp-hero { position: relative; overflow: hidden; padding-block: var(--space-20) var(--space-24); }
-.hp-hero::before {
-  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background-image: radial-gradient(rgba(209,3,49,.07) 1.2px, transparent 1.3px);
-  background-size: 22px 22px;
-}
+/* ── Hero (coverage-mesh backdrop via .mk-mesh dot-grid + RadarMotif) ── */
+.hp-hero { padding-block: var(--space-20) var(--space-24); }
 .hp-hero__radar { inset-inline-start: -300px; bottom: -320px; }
+.hp-hero__slogan {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
+  color: var(--crimson-600); margin: 0 0 var(--space-4);
+}
 .hp-hero__grid {
   position: relative; z-index: 1;
   display: grid; grid-template-columns: 1.05fr 0.95fr; gap: var(--space-16); align-items: center;
@@ -131,9 +130,13 @@
 
 /* ── Comparison band (dark, ember-glow) ─────────────────────── */
 .hp-compare { position: relative; overflow: hidden; background: var(--bg-inverse); color: var(--fg-on-dark-1); padding-block: var(--space-24); }
+/* Ember glow: exact patterns.html .glow recipe (corner ellipse + .025
+   scanlines), mirrored to the RTL start corner (bottom-right). */
 .hp-compare::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(ellipse 70% 90% at 92% 116%, rgba(209,3,49,0.5) 0%, rgba(244,39,31,0.28) 32%, rgba(255,157,33,0.16) 56%, transparent 80%);
+  background:
+    radial-gradient(ellipse 85% 95% at 92% 116%, rgba(209,3,49,.62) 0%, rgba(244,39,31,.34) 32%, rgba(255,157,33,.2) 56%, transparent 80%),
+    repeating-linear-gradient(0deg, transparent 0 6px, rgba(255,255,255,.025) 6px 7px);
 }
 .hp-compare__wrap { position: relative; z-index: 1; }
 .hp-compare .mk-eyebrow { color: var(--amber-400); }

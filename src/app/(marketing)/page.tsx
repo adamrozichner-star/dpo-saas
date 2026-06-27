@@ -101,19 +101,19 @@ function MiniCalculator() {
 }
 
 const FEATURES: FeatureItem[] = [
-  { id: 'dp-seal', title: 'ממונה אנושי שאחראי עליכם', desc: 'ממונה הגנת פרטיות מוסמך מתמנה רשמית על העסק (מחבילה מומלצת ומעלה). הוא נושא באחריות, אתם ישנים בשקט.' },
-  { id: 'dp-doc', title: 'המסמכים, מוכנים', desc: 'מדיניות פרטיות, נוהלי אבטחה וכתב מינוי - נכתבים ומתעדכנים מעצמם, מותאמים לעסק שלכם.' },
-  { id: 'dp-sparkle', title: 'עוזר חכם, מסביב לשעון', desc: 'שואלים בשפה רגילה, מקבלים תשובה ומסמך. מה שצריך אדם, עובר לממונה בלחיצה.' },
-  { id: 'dp-bell', title: 'תזכורות לפני שצריך', desc: 'Deepo שם לב למה שמתקרב - חידושים, ספקים חדשים, בקרות - ומזכיר לכם בזמן.' },
-  { id: 'dp-radar', title: 'ציון עמידה, בזמן אמת', desc: 'רואים בדיוק מה כבר מסודר ומה נשאר, עם קישור ישיר לכל פעולה.' },
-  { id: 'dp-database', title: 'יומן מסודר לכל פעולה', desc: 'כל שינוי מתועד מעצמו. אם הרשות שואלת, התשובה כבר מוכנה.' },
+  { id: 'dp-seal', title: 'ממונה אנושי שאחראי עליכם', desc: 'אנחנו ממנים עליכם ממונה הגנת פרטיות מוסמך (מחבילה מומלצת ומעלה). הוא נושא באחריות, אתם ישנים בשקט.' },
+  { id: 'dp-doc', title: 'המסמכים, מוכנים', desc: 'אנחנו מכינים לכם מדיניות פרטיות, נוהלי אבטחה וכתב מינוי, ומעדכנים אותם כשמשהו משתנה. אתם רק מאשרים.' },
+  { id: 'dp-sparkle', title: 'עוזר חכם, מסביב לשעון', desc: 'שואלים אותי בשפה רגילה, ואני עונה ומכין את המסמך. מה שצריך אדם, אני מעביר לממונה בלחיצה.' },
+  { id: 'dp-bell', title: 'תזכורות לפני שצריך', desc: 'אנחנו שמים לב למה שמתקרב - חידושים, ספקים חדשים, בקרות - ומזכירים לכם בזמן.' },
+  { id: 'dp-radar', title: 'ציון עמידה, בזמן אמת', desc: 'אנחנו מראים לכם בדיוק מה כבר מסודר ומה נשאר, עם קישור ישיר לכל פעולה.' },
+  { id: 'dp-database', title: 'יומן מסודר לכל פעולה', desc: 'אנחנו מתעדים כל שינוי אוטומטית. אם הרשות שואלת, התשובה כבר מוכנה.' },
 ]
 
 const STEPS: StepItem[] = [
-  { n: '1', title: 'נרשמים', desc: 'כמה שאלות על העסק.' },
-  { n: '2', title: 'המסמכים נבנים', desc: 'מעצמם, מותאמים לכם.' },
-  { n: '3', title: 'הממונה נכנס', desc: 'אדם מוסמך, אחראי רשמית.' },
-  { n: '4', title: 'וזהו, מנהלים', desc: 'לוח, עוזר וניטור שוטף.' },
+  { n: '1', title: 'נרשמים', desc: 'אתם עונים על כמה שאלות. זה כל מה שצריך מכם.' },
+  { n: '2', title: 'אנחנו בונים', desc: 'את כל המסמכים, מותאמים לעסק שלכם.' },
+  { n: '3', title: 'ממנים ממונה', desc: 'אדם מוסמך שנושא באחריות.' },
+  { n: '4', title: 'אנחנו שומרים', desc: 'מנטרים, מזכירים ומעדכנים. אתם רגועים.' },
 ]
 
 const EXPERTS: Array<{ id: 'dp-seal' | 'dp-shield' | 'dp-sparkle'; title: string; desc: string }> = [
@@ -152,16 +152,17 @@ export default function HomePage() {
   return (
     <div className="hp">
 
-      {/* 1 - RADAR HERO */}
-      <section className="hp-hero">
+      {/* 1 - RADAR HERO (coverage mesh: .mk-mesh dot-grid + RadarMotif rings/core) */}
+      <section className="hp-hero mk-mesh">
         <RadarMotif className="hp-hero__radar" size={820} />
         <div className="mk-wrap hp-hero__grid">
           <div>
             <Eyebrow icon="dp-shield">תיקון 13 כבר כאן</Eyebrow>
             <h1>הגנת פרטיות מקצועית, <span className="mk-grad">במחיר נגיש לכולם.</span></h1>
+            <p className="hp-hero__slogan">איתכם בהגנה על הפרטיות</p>
             <p className="hp-hero__lede">
-              Deepo שומר על העסק שלכם מחשיפה לרשות להגנת הפרטיות ומתביעות. סוכני AI ייעודיים עובדים מסביב לשעון,
-              ומאחוריהם צוות ממונים מנוסה. אתם בעסק, אנחנו על המשמר.
+              Deepo הוא שירות DPO שמגן עליכם מחשיפה, בעלות נמוכה ובלי שתצטרכו להבין בחוק. סוכני AI ייעודיים
+              עושים את העבודה הקשה, ומאחוריהם צוות DPOs מנוסה.
             </p>
             <div className="mk-ctas">
               <Link href={signupHref('/register')} className="dp-btn dp-btn--gradient dp-btn--lg">התחילו</Link>
@@ -219,7 +220,7 @@ export default function HomePage() {
       {/* 4 - WHAT YOU GET */}
       <section className="mk-section">
         <div className="mk-wrap">
-          <SecHead eyebrow="מה מקבלים" title="כל מה שתיקון 13 דורש, במקום אחד." sub="בלי קבלנים חיצוניים ובלי הטמעה ארוכה. הכול קורה ברקע, בשפה שמבינים." />
+          <SecHead eyebrow="מה מקבלים" title="כל מה שתיקון 13 דורש, במקום אחד." sub="אנחנו עושים הכול ברקע, בלי קבלנים חיצוניים ובלי הטמעה ארוכה, ובשפה שמבינים." />
           <FeatureGrid items={FEATURES} />
         </div>
       </section>
@@ -305,7 +306,7 @@ export default function HomePage() {
       {/* 9b - PRICING (live tiers, spec 11) */}
       <section className="mk-section">
         <div className="mk-wrap">
-          <SecHead eyebrow="מחירים" title="תמחור הוגן, בלי הפתעות." sub="עמידה בדרישות לא צריכה להיות שמורה רק לארגונים עם מחלקה משפטית." />
+          <SecHead eyebrow="מחירים" title="תמחור הוגן, בלי הפתעות." sub="החוק שווה לכולם, אז הכלים לעמוד בו צריכים להיות נגישים לכולם." />
           <div className="hp-pcards">
             {PLANS.map((p) => (
               <div className={`hp-pcard${p.featured ? ' hp-pcard--featured' : ''}`} key={p.tier}>
@@ -377,7 +378,7 @@ export default function HomePage() {
       {/* 13 - FINAL CTA (shared, dark ember-glow) */}
       <FinalCta
         title={<>אתם בעסק. <span className="mk-grad">אנחנו על המשמר.</span></>}
-        sub="עומדים בתיקון 13 בלי כאב ראש, במחיר שכל עסק יכול. נתחיל?"
+        sub="אנחנו דואגים שתעמדו בתיקון 13, בלי כאב ראש ובמחיר שכל עסק יכול. נתחיל?"
         cta="התחילו"
         href={signupHref('/register')}
         micro="ביטול בכל עת · בלי התחייבות · הקמה בחמש דקות"
