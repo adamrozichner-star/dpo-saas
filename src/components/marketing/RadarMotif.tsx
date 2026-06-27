@@ -21,7 +21,7 @@ export function RadarMotif({ size = 820, node = true, className = '', style }: R
   return (
     <div
       aria-hidden="true"
-      className={`hp-radar${node ? '' : ' hp-radar--no-node'} ${className}`.trim()}
+      className={`mk-radar${node ? '' : ' mk-radar--no-node'} ${className}`.trim()}
       style={{ width: size, height: size, ...style }}
     />
   )

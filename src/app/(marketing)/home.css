@@ -1,48 +1,15 @@
 /* ============================================================
-   Homepage body styles (PR3). Scoped to .deepo-scope, styled only
-   from src/brand tokens. Prefix hp- to avoid collisions. Bespoke
-   visuals (radar motif, dashboard preview, dark comparison/CTA bands)
-   live here; buttons/cards/badges/icons come from the brand layer.
-   Raw rgba appears only inside ember-glow / coverage multi-stop
-   gradients (allowed per spec 2.1).
+   Homepage-specific body styles (hp-). Page-agnostic primitives
+   (sections, eyebrow, cards, steps, radar, responsibility, final CTA,
+   FAQ, slots) now live in the shared marketing module
+   (src/components/marketing/marketing-sections.css, mk-). This file
+   keeps only homepage-bespoke visuals: the split hero, the dashboard
+   preview card, the inline calculator, the trust strip, the experts
+   grid, the security teaser and the price-comparison/pricing tables.
+   Raw rgba appears only inside ember-glow / coverage gradients (2.1).
    ============================================================ */
 
 .hp { background: var(--bg-page); }
-.hp-wrap { max-width: 1120px; margin-inline: auto; padding-inline: var(--space-5); }
-.hp-section { padding-block: var(--space-24); position: relative; }
-.hp-section--tight { padding-block: var(--space-16); }
-
-/* section heading block */
-.hp-sechead { max-width: 60ch; margin: 0 auto var(--space-12); text-align: center; }
-.hp-eyebrow {
-  display: inline-flex; align-items: center; gap: var(--space-2);
-  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
-  letter-spacing: 0.12em; text-transform: uppercase; color: var(--crimson-500);
-}
-.hp-eyebrow .dpi { --dpi-c: var(--crimson-500); font-size: 15px; }
-.hp-sechead h2 {
-  font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 4vw, 40px);
-  letter-spacing: -0.01em; color: var(--fg-1); margin: var(--space-3) 0 0; text-wrap: balance;
-}
-.hp-sechead p { font-size: 18px; line-height: 1.6; color: var(--fg-2); margin: var(--space-4) 0 0; }
-.hp-grad { background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
-
-/* ── Radar motif (coverage rings) ───────────────────────────── */
-.hp-radar {
-  position: absolute; z-index: 0; pointer-events: none; border-radius: 50%;
-  background: radial-gradient(circle,
-    transparent 0 104px, rgba(209,3,49,.28) 104px 106px,
-    transparent 106px 204px, rgba(209,3,49,.20) 204px 206px,
-    transparent 206px 304px, rgba(209,3,49,.14) 304px 306px,
-    transparent 306px 404px, rgba(209,3,49,.08) 404px 406px,
-    transparent 406px);
-}
-.hp-radar::after {
-  content: ""; position: absolute; top: 50%; left: 50%;
-  width: 30px; height: 30px; transform: translate(-50%, -50%); border-radius: 50%;
-  background: var(--brand-gradient-radial);
-}
-.hp-radar--no-node::after { display: none; }
 
 /* ── Hero ───────────────────────────────────────────────────── */
 .hp-hero { position: relative; overflow: hidden; padding-block: var(--space-20) var(--space-24); }
@@ -62,7 +29,6 @@
   text-wrap: balance;
 }
 .hp-hero__lede { font-size: 20px; line-height: 1.6; color: var(--fg-2); max-width: 48ch; margin: 0 0 var(--space-8); }
-.hp-ctas { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
 .hp-hero__micro {
   margin-top: var(--space-5); font-family: var(--font-mono); font-size: 12px;
   color: var(--fg-3); letter-spacing: 0.02em;
@@ -109,7 +75,6 @@
 .hp-drow .dp-badge { margin-inline-start: auto; }
 
 /* ── Calculator band ────────────────────────────────────────── */
-.hp-calc { background: var(--sand-50); border-block: 1px solid var(--sand-300); }
 .hp-calc__grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: var(--space-12); align-items: center; }
 .hp-calc__copy h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(26px, 3.4vw, 34px); color: var(--fg-1); margin: var(--space-3) 0 var(--space-4); }
 .hp-calc__copy p { font-size: 17px; line-height: 1.6; color: var(--fg-2); margin: 0; }
@@ -149,29 +114,6 @@
 .hp-sector { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-display); font-weight: 600; font-size: 16px; color: var(--fg-2); }
 .hp-sector .dpi { --dpi-c: var(--crimson-400); font-size: 20px; }
 
-/* dashed placeholder for future partner names / logos */
-.hp-trustslot {
-  display: inline-flex; align-items: center; gap: var(--space-2); border: 1px dashed var(--sand-400);
-  border-radius: var(--radius-pill); padding: 6px var(--space-4); color: var(--fg-3);
-  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em;
-}
-
-/* ── Feature cards ──────────────────────────────────────────── */
-.hp-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5); }
-.hp-fcard { background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-xl); padding: var(--space-8); box-shadow: var(--shadow-lift-1); }
-.hp-fcard__ic { width: 54px; height: 54px; border-radius: var(--radius-lg); background: var(--crimson-50); display: grid; place-items: center; margin-bottom: var(--space-4); }
-.hp-fcard__ic .dpi { font-size: 28px; --dpi-c: var(--crimson-500); }
-.hp-fcard h3 { font-family: var(--font-display); font-weight: 600; font-size: 20px; color: var(--fg-1); margin: 0 0 var(--space-2); }
-.hp-fcard p { font-size: 15px; line-height: 1.6; color: var(--fg-2); margin: 0; }
-
-/* ── How it works (steps) ───────────────────────────────────── */
-.hp-steps { background: var(--sand-50); border-block: 1px solid var(--sand-300); }
-.hp-steps__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-8); }
-.hp-step { text-align: center; }
-.hp-step__n { width: 48px; height: 48px; border-radius: 50%; background: var(--crimson-50); color: var(--crimson-600); font-family: var(--font-brand); font-weight: 700; font-size: 20px; display: grid; place-items: center; margin: 0 auto var(--space-3); }
-.hp-step h3 { font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--fg-1); margin: 0 0 4px; }
-.hp-step p { font-size: 14px; line-height: 1.5; color: var(--fg-2); margin: 0; }
-
 /* ── Experts ────────────────────────────────────────────────── */
 .hp-experts__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5); }
 .hp-expert { background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-xl); padding: var(--space-6); }
@@ -179,12 +121,6 @@
 .hp-expert__ic .dpi { font-size: 24px; --dpi-c: var(--crimson-500); }
 .hp-expert h3 { font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--fg-1); margin: 0 0 var(--space-1); }
 .hp-expert p { font-size: 14px; line-height: 1.55; color: var(--fg-2); margin: 0; }
-
-/* ── Responsibility band ────────────────────────────────────── */
-.hp-resp { background: var(--sand-100); border-block: 1px solid var(--sand-300); }
-.hp-resp__inner { max-width: 52ch; margin: 0 auto; text-align: center; }
-.hp-resp h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(24px, 3.2vw, 32px); line-height: 1.35; color: var(--fg-1); margin: var(--space-3) 0 var(--space-4); }
-.hp-resp p { font-size: 17px; line-height: 1.65; color: var(--fg-2); margin: 0; }
 
 /* ── Security teaser ────────────────────────────────────────── */
 .hp-security { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-2xl); padding: var(--space-10); box-shadow: var(--shadow-lift-1); }
@@ -200,8 +136,8 @@
   background: radial-gradient(ellipse 70% 90% at 92% 116%, rgba(209,3,49,0.5) 0%, rgba(244,39,31,0.28) 32%, rgba(255,157,33,0.16) 56%, transparent 80%);
 }
 .hp-compare__wrap { position: relative; z-index: 1; }
-.hp-compare .hp-eyebrow { color: var(--amber-400); }
-.hp-compare .hp-eyebrow .dpi { --dpi-c: var(--amber-400); }
+.hp-compare .mk-eyebrow { color: var(--amber-400); }
+.hp-compare .mk-eyebrow .dpi { --dpi-c: var(--amber-400); }
 .hp-compare h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(26px, 3.6vw, 38px); color: #fff; margin: var(--space-3) 0 var(--space-8); text-wrap: balance; }
 .hp-ctable { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
 .hp-ccol { border-radius: var(--radius-xl); padding: var(--space-8); }
@@ -243,46 +179,18 @@
 .hp-addons p { font-size: 14px; color: var(--fg-3); margin: 0 0 var(--space-3); }
 .hp-addons__row { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); }
 
-/* ── FAQ ────────────────────────────────────────────────────── */
-.hp-faq { max-width: 52rem; margin-inline: auto; }
-.hp-faqitem { border-bottom: 1px solid var(--sand-300); }
-.hp-faqitem:last-child { border-bottom: 0; }
-.hp-faqitem__q { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding-block: var(--space-5); background: none; border: 0; cursor: pointer; text-align: start; font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--fg-1); }
-.hp-faqitem__sign { flex: none; color: var(--crimson-500); font-size: 22px; line-height: 1; }
-.hp-faqitem__a { padding-bottom: var(--space-5); font-size: 15px; line-height: 1.65; color: var(--fg-2); }
-.hp-faqitem__a a { color: var(--fg-link); text-decoration: underline; }
-
-/* ── Testimonials / press slots ─────────────────────────────── */
-.hp-slot { border: 1px dashed var(--sand-400); border-radius: var(--radius-xl); padding: var(--space-10); text-align: center; color: var(--fg-2); }
-.hp-slot__lab { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-3); display: block; margin-bottom: var(--space-3); }
-
-/* ── Final CTA (dark, ember-glow) ───────────────────────────── */
-.hp-finalcta { position: relative; overflow: hidden; background: var(--bg-inverse); color: var(--fg-on-dark-1); padding-block: var(--space-24); text-align: center; }
-.hp-finalcta::before {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(ellipse 80% 100% at 50% 120%, rgba(209,3,49,0.40) 0%, rgba(244,39,31,0.24) 34%, rgba(255,157,33,0.14) 60%, transparent 82%);
-}
-.hp-finalcta__wrap { position: relative; z-index: 1; max-width: 44ch; margin-inline: auto; }
-.hp-finalcta h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 4vw, 40px); line-height: 1.2; color: #fff; margin: 0 0 var(--space-4); }
-.hp-finalcta h2 .hp-grad { background: var(--spark-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.hp-finalcta p { font-size: 18px; color: var(--garnet-300); margin: 0 0 var(--space-8); }
-/* garnet-300 (8.3:1), not garnet-500 (3.6:1) - AA at this small size */
-.hp-finalcta__micro { margin-top: var(--space-5); font-family: var(--font-mono); font-size: 12px; color: var(--garnet-300); }
-
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .hp-hero__grid, .hp-calc__grid, .hp-cards, .hp-steps__grid, .hp-experts__grid, .hp-ctable, .hp-pcards { grid-template-columns: 1fr; }
-  .hp-steps__grid { grid-template-columns: 1fr 1fr; }
+  .hp-hero__grid, .hp-calc__grid, .hp-experts__grid, .hp-ctable, .hp-pcards { grid-template-columns: 1fr; }
   .hp-pcards { grid-template-columns: 1fr 1fr; }
   .hp-hero__radar { inset-inline-start: -420px; bottom: -440px; }
   .hp-security { flex-direction: column; text-align: center; }
   .hp-security__ic { margin-inline: auto; }
 }
 @media (max-width: 560px) {
-  .hp-cards, .hp-steps__grid, .hp-pcards, .hp-chips--3 { grid-template-columns: 1fr; }
+  .hp-pcards, .hp-chips--3 { grid-template-columns: 1fr; }
   .hp-chips--3 { grid-template-columns: 1fr 1fr 1fr; }
 }
-
 @media (prefers-reduced-motion: reduce) {
   .hp-chip { transition: none; }
 }

@@ -1,0 +1,113 @@
+/* ============================================================
+   Shared marketing section primitives (mk-). Page-agnostic pieces
+   reused across every marketing page (home, product, ...). Styled
+   only from src/brand tokens, scoped under .deepo-scope. Page-specific
+   visuals stay in each page's own stylesheet (e.g. home.css, hp-).
+   Raw rgba appears only inside ember-glow / coverage multi-stop
+   gradients (allowed per spec 2.1).
+   ============================================================ */
+
+/* ── Layout ─────────────────────────────────────────────────── */
+.mk-wrap { max-width: 1120px; margin-inline: auto; padding-inline: var(--space-5); }
+.mk-section { padding-block: var(--space-24); position: relative; }
+.mk-section--tight { padding-block: var(--space-16); }
+.mk-band--sand { background: var(--sand-50); border-block: 1px solid var(--sand-300); }
+.mk-band--sand-2 { background: var(--sand-100); border-block: 1px solid var(--sand-300); }
+
+/* ── Section heading ────────────────────────────────────────── */
+.mk-sechead { max-width: 60ch; margin: 0 auto var(--space-12); text-align: center; }
+.mk-eyebrow {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--crimson-500);
+}
+.mk-eyebrow .dpi { --dpi-c: var(--crimson-500); font-size: 15px; }
+.mk-sechead h2 {
+  font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 4vw, 40px);
+  letter-spacing: -0.01em; color: var(--fg-1); margin: var(--space-3) 0 0; text-wrap: balance;
+}
+.mk-sechead p { font-size: 18px; line-height: 1.6; color: var(--fg-2); margin: var(--space-4) 0 0; }
+.mk-grad { background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+/* ── CTA row ────────────────────────────────────────────────── */
+.mk-ctas { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
+
+/* ── Radar motif (coverage rings) ───────────────────────────── */
+.mk-radar {
+  position: absolute; z-index: 0; pointer-events: none; border-radius: 50%;
+  background: radial-gradient(circle,
+    transparent 0 104px, rgba(209,3,49,.28) 104px 106px,
+    transparent 106px 204px, rgba(209,3,49,.20) 204px 206px,
+    transparent 206px 304px, rgba(209,3,49,.14) 304px 306px,
+    transparent 306px 404px, rgba(209,3,49,.08) 404px 406px,
+    transparent 406px);
+}
+.mk-radar::after {
+  content: ""; position: absolute; top: 50%; left: 50%;
+  width: 30px; height: 30px; transform: translate(-50%, -50%); border-radius: 50%;
+  background: var(--brand-gradient-radial);
+}
+.mk-radar--no-node::after { display: none; }
+
+/* ── Feature cards ──────────────────────────────────────────── */
+.mk-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5); }
+.mk-fcard { background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-xl); padding: var(--space-8); box-shadow: var(--shadow-lift-1); }
+.mk-fcard__ic { width: 54px; height: 54px; border-radius: var(--radius-lg); background: var(--crimson-50); display: grid; place-items: center; margin-bottom: var(--space-4); }
+.mk-fcard__ic .dpi { font-size: 28px; --dpi-c: var(--crimson-500); }
+.mk-fcard h3 { font-family: var(--font-display); font-weight: 600; font-size: 20px; color: var(--fg-1); margin: 0 0 var(--space-2); }
+.mk-fcard p { font-size: 15px; line-height: 1.6; color: var(--fg-2); margin: 0; }
+
+/* ── Steps ──────────────────────────────────────────────────── */
+.mk-steps__grid { display: grid; grid-template-columns: repeat(var(--mk-steps, 4), 1fr); gap: var(--space-8); }
+.mk-step { text-align: center; }
+.mk-step__n { width: 48px; height: 48px; border-radius: 50%; background: var(--crimson-50); color: var(--crimson-600); font-family: var(--font-brand); font-weight: 700; font-size: 20px; display: grid; place-items: center; margin: 0 auto var(--space-3); }
+.mk-step h3 { font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--fg-1); margin: 0 0 4px; }
+.mk-step p { font-size: 14px; line-height: 1.5; color: var(--fg-2); margin: 0; }
+
+/* ── Responsibility band ────────────────────────────────────── */
+.mk-resp { background: var(--sand-100); border-block: 1px solid var(--sand-300); padding-block: var(--space-16); }
+.mk-resp__inner { max-width: 52ch; margin: 0 auto; text-align: center; }
+.mk-resp h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(24px, 3.2vw, 32px); line-height: 1.35; color: var(--fg-1); margin: var(--space-3) 0 var(--space-4); }
+.mk-resp p { font-size: 17px; line-height: 1.65; color: var(--fg-2); margin: 0; }
+
+/* ── TrustSlot (dashed placeholder for future partner names/logos) ── */
+.mk-trustslot {
+  display: inline-flex; align-items: center; gap: var(--space-2); border: 1px dashed var(--sand-400);
+  border-radius: var(--radius-pill); padding: 6px var(--space-4); color: var(--fg-3);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em;
+}
+
+/* ── Marked / hideable slot (testimonials, press, ...) ──────── */
+.mk-slot { border: 1px dashed var(--sand-400); border-radius: var(--radius-xl); padding: var(--space-10); text-align: center; color: var(--fg-2); }
+.mk-slot__lab { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-3); display: block; margin-bottom: var(--space-3); }
+
+/* ── FAQ accordion ──────────────────────────────────────────── */
+.mk-faq { max-width: 52rem; margin-inline: auto; }
+.mk-faqitem { border-bottom: 1px solid var(--sand-300); }
+.mk-faqitem:last-child { border-bottom: 0; }
+.mk-faqitem__q { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding-block: var(--space-5); background: none; border: 0; cursor: pointer; text-align: start; font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--fg-1); }
+.mk-faqitem__sign { flex: none; color: var(--crimson-500); font-size: 22px; line-height: 1; }
+.mk-faqitem__a { padding-bottom: var(--space-5); font-size: 15px; line-height: 1.65; color: var(--fg-2); }
+.mk-faqitem__a a { color: var(--fg-link); text-decoration: underline; }
+
+/* ── Final CTA (dark, ember-glow) ───────────────────────────── */
+.mk-finalcta { position: relative; overflow: hidden; background: var(--bg-inverse); color: var(--fg-on-dark-1); padding-block: var(--space-24); text-align: center; }
+.mk-finalcta::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 80% 100% at 50% 120%, rgba(209,3,49,0.40) 0%, rgba(244,39,31,0.24) 34%, rgba(255,157,33,0.14) 60%, transparent 82%);
+}
+.mk-finalcta__wrap { position: relative; z-index: 1; max-width: 44ch; margin-inline: auto; }
+.mk-finalcta h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 4vw, 40px); line-height: 1.2; color: #fff; margin: 0 0 var(--space-4); }
+.mk-finalcta h2 .mk-grad { background: var(--spark-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.mk-finalcta p { font-size: 18px; color: var(--garnet-300); margin: 0 0 var(--space-8); }
+/* garnet-300 (8.3:1), not garnet-500 (3.6:1) - AA at this small size */
+.mk-finalcta__micro { margin-top: var(--space-5); font-family: var(--font-mono); font-size: 12px; color: var(--garnet-300); }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .mk-cards, .mk-steps__grid { grid-template-columns: 1fr; }
+  .mk-steps__grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .mk-cards, .mk-steps__grid { grid-template-columns: 1fr; }
+}

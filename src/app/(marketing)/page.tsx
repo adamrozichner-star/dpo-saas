@@ -1,21 +1,25 @@
 'use client'
 
-// Homepage body (PR3). Warm-brand rebuild on the v3 voice. Chrome, scope,
-// fonts and the brand layer come from PR1/PR2 and are not touched here.
-// Section order follows spec section 9 (home outline). All copy is the
-// calm/warm voice (spec section 5), banned words avoided (section 6).
+// Homepage body. Warm-brand v3 voice. Chrome, scope, fonts and the brand
+// layer come from PR1/PR2 and are not touched here. Page-agnostic section
+// primitives come from the shared marketing module (PR4 refactor); only the
+// homepage-bespoke pieces (split hero, dashboard preview, inline calculator,
+// trust strip, experts, security teaser, comparison + pricing tables) live
+// in this file + home.css. Section order follows spec section 9.
 
 import { useState } from 'react'
 import Link from 'next/link'
 import { DeepoIcon } from '@/brand/icons'
 import { Button } from '@/components/brand/Button'
 import { Badge } from '@/components/brand/Badge'
-import { RadarMotif } from '@/components/marketing/RadarMotif'
+import {
+  RadarMotif, SecHead, Eyebrow, FeatureGrid, Steps, ResponsibilityBand, FinalCta, FaqItem, TrustSlot,
+  type FeatureItem, type StepItem,
+} from '@/components/marketing/sections'
 import { signupHref } from '@/lib/signup-flag'
 import './home.css'
 
 // Slots that ship empty until real content is cleared (spec 2.11 / 12).
-// Press strip stays hidden while empty; testimonials show a marked slot.
 const PRESS_ITEMS: Array<{ outlet: string; headline: string; href: string }> = []
 const SHOW_TESTIMONIAL_SLOT = true
 
@@ -76,13 +80,7 @@ function MiniCalculator() {
       <span className="hp-q__label">{label}</span>
       <div className={`hp-chips hp-chips--${cols}`}>
         {opts.map(([val, text]) => (
-          <button
-            key={val}
-            type="button"
-            className="hp-chip"
-            aria-pressed={answers[q] === val}
-            onClick={() => select(q, val)}
-          >
+          <button key={val} type="button" className="hp-chip" aria-pressed={answers[q] === val} onClick={() => select(q, val)}>
             {text}
           </button>
         ))}
@@ -102,36 +100,7 @@ function MiniCalculator() {
   )
 }
 
-// ============================================================
-// FAQ accordion item
-// ============================================================
-function FaqItem({ question, answer }: { question: string; answer: React.ReactNode }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="hp-faqitem">
-      <button type="button" className="hp-faqitem__q" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span>{question}</span>
-        <span className="hp-faqitem__sign" aria-hidden="true">{open ? '−' : '+'}</span>
-      </button>
-      {open && <div className="hp-faqitem__a">{answer}</div>}
-    </div>
-  )
-}
-
-// ============================================================
-// Reusable section heading
-// ============================================================
-function SecHead({ eyebrow, title, sub }: { eyebrow: string; title: React.ReactNode; sub?: React.ReactNode }) {
-  return (
-    <div className="hp-sechead">
-      <span className="hp-eyebrow">{eyebrow}</span>
-      <h2>{title}</h2>
-      {sub && <p>{sub}</p>}
-    </div>
-  )
-}
-
-const FEATURES: Array<{ id: 'dp-seal' | 'dp-doc' | 'dp-sparkle' | 'dp-bell' | 'dp-radar' | 'dp-database'; title: string; desc: string }> = [
+const FEATURES: FeatureItem[] = [
   { id: 'dp-seal', title: 'ממונה אנושי שאחראי עליכם', desc: 'ממונה הגנת פרטיות מוסמך מתמנה רשמית על העסק (מחבילה מומלצת ומעלה). הוא נושא באחריות, אתם ישנים בשקט.' },
   { id: 'dp-doc', title: 'המסמכים, מוכנים', desc: 'מדיניות פרטיות, נוהלי אבטחה וכתב מינוי - נכתבים ומתעדכנים מעצמם, מותאמים לעסק שלכם.' },
   { id: 'dp-sparkle', title: 'עוזר חכם, מסביב לשעון', desc: 'שואלים בשפה רגילה, מקבלים תשובה ומסמך. מה שצריך אדם, עובר לממונה בלחיצה.' },
@@ -140,7 +109,7 @@ const FEATURES: Array<{ id: 'dp-seal' | 'dp-doc' | 'dp-sparkle' | 'dp-bell' | 'd
   { id: 'dp-database', title: 'יומן מסודר לכל פעולה', desc: 'כל שינוי מתועד מעצמו. אם הרשות שואלת, התשובה כבר מוכנה.' },
 ]
 
-const STEPS = [
+const STEPS: StepItem[] = [
   { n: '1', title: 'נרשמים', desc: 'כמה שאלות על העסק.' },
   { n: '2', title: 'המסמכים נבנים', desc: 'מעצמם, מותאמים לכם.' },
   { n: '3', title: 'הממונה נכנס', desc: 'אדם מוסמך, אחראי רשמית.' },
@@ -186,15 +155,15 @@ export default function HomePage() {
       {/* 1 - RADAR HERO */}
       <section className="hp-hero">
         <RadarMotif className="hp-hero__radar" size={820} />
-        <div className="hp-wrap hp-hero__grid">
+        <div className="mk-wrap hp-hero__grid">
           <div>
-            <span className="hp-eyebrow"><DeepoIcon id="dp-shield" /> תיקון 13 כבר כאן</span>
-            <h1>הגנת פרטיות מקצועית, <span className="hp-grad">במחיר נגיש לכולם.</span></h1>
+            <Eyebrow icon="dp-shield">תיקון 13 כבר כאן</Eyebrow>
+            <h1>הגנת פרטיות מקצועית, <span className="mk-grad">במחיר נגיש לכולם.</span></h1>
             <p className="hp-hero__lede">
               Deepo שומר על העסק שלכם מחשיפה לרשות להגנת הפרטיות ומתביעות. סוכני AI ייעודיים עובדים מסביב לשעון,
               ומאחוריהם צוות ממונים מנוסה. אתם בעסק, אנחנו על המשמר.
             </p>
-            <div className="hp-ctas">
+            <div className="mk-ctas">
               <Link href={signupHref('/register')} className="dp-btn dp-btn--gradient dp-btn--lg">התחילו</Link>
               <a href="#calculator" className="dp-btn dp-btn--secondary dp-btn--lg">בדיקה תוך 30 שניות</a>
             </div>
@@ -224,10 +193,10 @@ export default function HomePage() {
       </section>
 
       {/* 2 - CALCULATOR */}
-      <section className="hp-section hp-calc" id="calculator">
-        <div className="hp-wrap hp-calc__grid">
+      <section className="mk-section mk-band--sand" id="calculator">
+        <div className="mk-wrap hp-calc__grid">
           <div className="hp-calc__copy">
-            <span className="hp-eyebrow"><DeepoIcon id="dp-radar" /> בדיקה מהירה</span>
+            <Eyebrow icon="dp-radar">בדיקה מהירה</Eyebrow>
             <h2>צריך בכלל DPO? בואו נגלה.</h2>
             <p>שלוש שאלות, שלושים שניות. בלי להשאיר אימייל ובלי התחייבות. אם מסתבר שאתם חייבים, אנחנו כבר כאן.</p>
           </div>
@@ -237,51 +206,35 @@ export default function HomePage() {
 
       {/* 3 - TRUST STRIP */}
       <section className="hp-trust">
-        <div className="hp-wrap hp-trust__row">
+        <div className="mk-wrap hp-trust__row">
           <span className="hp-trust__lab">מגנים על עסקים ב:</span>
           <span className="hp-sector"><DeepoIcon id="dp-health" /> בריאות</span>
           <span className="hp-sector"><DeepoIcon id="dp-education" /> חינוך</span>
           <span className="hp-sector"><DeepoIcon id="dp-doc" /> ראיית חשבון</span>
           <span className="hp-sector"><DeepoIcon id="dp-finance" /> פיננסים</span>
-          <span className="hp-trustslot">מקום לשותפים · בקרוב</span>
+          <TrustSlot>מקום לשותפים · בקרוב</TrustSlot>
         </div>
       </section>
 
       {/* 4 - WHAT YOU GET */}
-      <section className="hp-section">
-        <div className="hp-wrap">
+      <section className="mk-section">
+        <div className="mk-wrap">
           <SecHead eyebrow="מה מקבלים" title="כל מה שתיקון 13 דורש, במקום אחד." sub="בלי קבלנים חיצוניים ובלי הטמעה ארוכה. הכול קורה ברקע, בשפה שמבינים." />
-          <div className="hp-cards">
-            {FEATURES.map((f) => (
-              <div className="hp-fcard" key={f.id}>
-                <span className="hp-fcard__ic"><DeepoIcon id={f.id} /></span>
-                <h3>{f.title}</h3>
-                <p>{f.desc}</p>
-              </div>
-            ))}
-          </div>
+          <FeatureGrid items={FEATURES} />
         </div>
       </section>
 
       {/* 5 - HOW IT WORKS */}
-      <section className="hp-section hp-steps">
-        <div className="hp-wrap">
+      <section className="mk-section mk-band--sand">
+        <div className="mk-wrap">
           <SecHead eyebrow="איך מתחילים" title="ארבעה צעדים. חמש דקות." sub="חמש דקות. פחות זמן ממה שלוקח להסביר לאמא מה זה DPO." />
-          <div className="hp-steps__grid">
-            {STEPS.map((s) => (
-              <div className="hp-step" key={s.n}>
-                <div className="hp-step__n">{s.n}</div>
-                <h3>{s.title}</h3>
-                <p>{s.desc}</p>
-              </div>
-            ))}
-          </div>
+          <Steps items={STEPS} />
         </div>
       </section>
 
       {/* 6 - EXPERTS */}
-      <section className="hp-section">
-        <div className="hp-wrap">
+      <section className="mk-section">
+        <div className="mk-wrap">
           <SecHead eyebrow="מי על המשמר" title="אנשים אמיתיים מאחורי הטכנולוגיה." sub="צוות של עורכי דין ויועצי פרטיות מנוסים, וממונים מוסמכים שנכנסים לתפקיד אצלכם." />
           <div className="hp-experts__grid">
             {EXPERTS.map((e) => (
@@ -294,25 +247,17 @@ export default function HomePage() {
           </div>
           <div style={{ textAlign: 'center', marginTop: 'var(--space-8)' }}>
             {/* NOTE(review): partner/expert names + logos pending Adam's clearance (spec 2.11). */}
-            <span className="hp-trustslot">שמות ולוגואים של שותפים · בקרוב</span>
+            <TrustSlot>שמות ולוגואים של שותפים · בקרוב</TrustSlot>
           </div>
         </div>
       </section>
 
-      {/* 7 - RESPONSIBILITY BAND */}
-      <section className="hp-section--tight hp-resp">
-        <div className="hp-wrap">
-          <div className="hp-resp__inner">
-            <span className="hp-eyebrow"><DeepoIcon id="dp-seal" /> באחריות</span>
-            <h2>התוכנה לא מחליפה אדם. היא מאיצה אותו.</h2>
-            <p>האחריות המקצועית והמשפטית נשארת אצל הממונה האנושי. Deepo נותן לו לעבוד מהר, מדויק ובלי לפספס. אנחנו לא הסמכות המשפטית, אנחנו הכלי שמייעל אותה.</p>
-          </div>
-        </div>
-      </section>
+      {/* 7 - RESPONSIBILITY BAND (shared) */}
+      <ResponsibilityBand />
 
       {/* 8 - SECURITY TEASER */}
-      <section className="hp-section--tight">
-        <div className="hp-wrap">
+      <section className="mk-section--tight">
+        <div className="mk-wrap">
           <div className="hp-security">
             <span className="hp-security__ic"><DeepoIcon id="dp-lock" /></span>
             <div style={{ flex: 1 }}>
@@ -326,8 +271,8 @@ export default function HomePage() {
 
       {/* 9a - COMPARISON (dark, ember-glow) */}
       <section className="hp-compare">
-        <div className="hp-wrap hp-compare__wrap">
-          <span className="hp-eyebrow"><DeepoIcon id="dp-bolt" /> השוואת עלות · שנה ראשונה</span>
+        <div className="mk-wrap hp-compare__wrap">
+          <Eyebrow icon="dp-bolt">השוואת עלות · שנה ראשונה</Eyebrow>
           <h2>אותה הגנה. בעלות נמוכה בעשרות אחוזים.</h2>
           <div className="hp-ctable">
             <div className="hp-ccol hp-ccol--old">
@@ -358,8 +303,8 @@ export default function HomePage() {
       </section>
 
       {/* 9b - PRICING (live tiers, spec 11) */}
-      <section className="hp-section">
-        <div className="hp-wrap">
+      <section className="mk-section">
+        <div className="mk-wrap">
           <SecHead eyebrow="מחירים" title="תמחור הוגן, בלי הפתעות." sub="עמידה בדרישות לא צריכה להיות שמורה רק לארגונים עם מחלקה משפטית." />
           <div className="hp-pcards">
             {PLANS.map((p) => (
@@ -391,12 +336,12 @@ export default function HomePage() {
 
       {/* 10 - TESTIMONIALS SLOT (clearly marked, hideable) */}
       {SHOW_TESTIMONIAL_SLOT && (
-        <section className="hp-section--tight">
-          <div className="hp-wrap">
+        <section className="mk-section--tight">
+          <div className="mk-wrap">
             {/* NOTE(review): real testimonials pending (spec 12). Flip SHOW_TESTIMONIAL_SLOT
                 to hide, or replace this slot with a testimonials grid when content lands. */}
-            <div className="hp-slot">
-              <span className="hp-slot__lab">ממליצים</span>
+            <div className="mk-slot">
+              <span className="mk-slot__lab">ממליצים</span>
               עוד רגע יהיו פה לקוחות מרוצים. בינתיים, אתם מוזמנים להיות הראשונים.
             </div>
           </div>
@@ -404,65 +349,39 @@ export default function HomePage() {
       )}
 
       {/* 11 - FAQ */}
-      <section className="hp-section hp-steps">
-        <div className="hp-wrap">
+      <section className="mk-section mk-band--sand">
+        <div className="mk-wrap">
           <SecHead eyebrow="שאלות ותשובות" title="מה שכולם שואלים." />
-          <div className="hp-faq">
-            <FaqItem
-              question="מה זה DPO, ולמה שיהיה לי אחד?"
-              answer="DPO הוא ממונה הגנת הפרטיות - האדם שאחראי על שמירת המידע בעסק. תיקון 13 מחייב מינוי ממונה לעסקים שמחזיקים מידע על הרבה אנשים, מטפלים במידע רגיש, או עוקבים אחרי משתמשים. נשמע מסובך, זו בעצם רשימת דברים מסודרת שצריך לעשות - ואנחנו עושים אותם."
-            />
-            <FaqItem
-              question="הממונה הוא באמת בן אדם?"
-              answer="כן, לגמרי. אדם מוסמך שמתמנה רשמית על העסק שלכם. Deepo עושה את רוב העבודה השוטפת, והממונה זמין לשאלות המורכבות ונושא באחריות המקצועית."
-            />
-            <FaqItem
-              question="ומה אם פשוט לא ממנים ממונה?"
-              answer="יש אכיפה ויש קנסות, לא נפרט אותם פה כדי להלחיץ. נפרט דווקא מה צריך לעשות כדי להיות בצד הנכון - וזה לוקח חמש דקות להתחיל."
-            />
-            <FaqItem
-              question="המסמכים באמת מספיקים לרשות?"
-              answer="הם נכתבים לפי דרישות תיקון 13 ונבדקים על ידי הממונה המוסמך: מדיניות פרטיות, נוהלי אבטחה, כתב מינוי וכל מה שצריך להציג בבדיקה."
-            />
-            <FaqItem
-              question="אפשר לבטל?"
-              answer="בכל רגע, בלי דמי ביטול ובלי התחייבות. (כן, באמת.)"
-            />
-            <FaqItem
-              question="זה מחליף עורך דין?"
-              answer="לא. Deepo מסדר את העמידה השוטפת בתיקון 13, ולצדו ממונה מוסמך. לסוגיות משפטיות נקודתיות תמיד אפשר להיעזר בעורך דין, ואנחנו גם מציעים חוות דעת משפטית כתוספת."
-            />
-            <FaqItem
-              question="מה אתם עושים עם המידע שלי?"
-              answer={<>כמה שפחות. אנחנו לא שומרים את פרטי הלקוחות שלכם, ניגשים רק למה שנדרש, ומתעדים הכול. <Link href="/security">כך אנחנו שומרים על המידע</Link>.</>}
-            />
-            <FaqItem
-              question="אני רואה חשבון. איך זה עובד מול הלקוחות שלי?"
-              answer={<>אפשר להציע את Deepo ללקוחות שלכם וליהנות מקו הכנסה חוזר, בזמן שהם נשארים מסודרים. <Link href="/partners">לרואי חשבון ושותפים</Link>.</>}
-            />
+          <div className="mk-faq">
+            <FaqItem question="מה זה DPO, ולמה שיהיה לי אחד?" answer="DPO הוא ממונה הגנת הפרטיות - האדם שאחראי על שמירת המידע בעסק. תיקון 13 מחייב מינוי ממונה לעסקים שמחזיקים מידע על הרבה אנשים, מטפלים במידע רגיש, או עוקבים אחרי משתמשים. נשמע מסובך, זו בעצם רשימת דברים מסודרת שצריך לעשות - ואנחנו עושים אותם." />
+            <FaqItem question="הממונה הוא באמת בן אדם?" answer="כן, לגמרי. אדם מוסמך שמתמנה רשמית על העסק שלכם. Deepo עושה את רוב העבודה השוטפת, והממונה זמין לשאלות המורכבות ונושא באחריות המקצועית." />
+            <FaqItem question="ומה אם פשוט לא ממנים ממונה?" answer="יש אכיפה ויש קנסות, לא נפרט אותם פה כדי להלחיץ. נפרט דווקא מה צריך לעשות כדי להיות בצד הנכון - וזה לוקח חמש דקות להתחיל." />
+            <FaqItem question="המסמכים באמת מספיקים לרשות?" answer="הם נכתבים לפי דרישות תיקון 13 ונבדקים על ידי הממונה המוסמך: מדיניות פרטיות, נוהלי אבטחה, כתב מינוי וכל מה שצריך להציג בבדיקה." />
+            <FaqItem question="אפשר לבטל?" answer="בכל רגע, בלי דמי ביטול ובלי התחייבות. (כן, באמת.)" />
+            <FaqItem question="זה מחליף עורך דין?" answer="לא. Deepo מסדר את העמידה השוטפת בתיקון 13, ולצדו ממונה מוסמך. לסוגיות משפטיות נקודתיות תמיד אפשר להיעזר בעורך דין, ואנחנו גם מציעים חוות דעת משפטית כתוספת." />
+            <FaqItem question="מה אתם עושים עם המידע שלי?" answer={<>כמה שפחות. אנחנו לא שומרים את פרטי הלקוחות שלכם, ניגשים רק למה שנדרש, ומתעדים הכול. <Link href="/security">כך אנחנו שומרים על המידע</Link>.</>} />
+            <FaqItem question="אני רואה חשבון. איך זה עובד מול הלקוחות שלי?" answer={<>אפשר להציע את Deepo ללקוחות שלכם וליהנות מקו הכנסה חוזר, בזמן שהם נשארים מסודרים. <Link href="/partners">לרואי חשבון ושותפים</Link>.</>} />
           </div>
         </div>
       </section>
 
       {/* 12 - PRESS STRIP (hidden while empty) */}
       {PRESS_ITEMS.length > 0 && (
-        <section className="hp-section--tight">
-          <div className="hp-wrap">
+        <section className="mk-section--tight">
+          <div className="mk-wrap">
             <SecHead eyebrow="בתקשורת" title="מדברים עלינו." />
-            {/* press items render here when content lands */}
           </div>
         </section>
       )}
 
-      {/* 13 - FINAL CTA (dark, ember-glow) */}
-      <section className="hp-finalcta">
-        <div className="hp-finalcta__wrap">
-          <h2>אתם בעסק. <span className="hp-grad">אנחנו על המשמר.</span></h2>
-          <p>עומדים בתיקון 13 בלי כאב ראש, במחיר שכל עסק יכול. נתחיל?</p>
-          <Link href={signupHref('/register')} className="dp-btn dp-btn--gradient dp-btn--lg">התחילו</Link>
-          <p className="hp-finalcta__micro">ביטול בכל עת · בלי התחייבות · הקמה בחמש דקות</p>
-        </div>
-      </section>
+      {/* 13 - FINAL CTA (shared, dark ember-glow) */}
+      <FinalCta
+        title={<>אתם בעסק. <span className="mk-grad">אנחנו על המשמר.</span></>}
+        sub="עומדים בתיקון 13 בלי כאב ראש, במחיר שכל עסק יכול. נתחיל?"
+        cta="התחילו"
+        href={signupHref('/register')}
+        micro="ביטול בכל עת · בלי התחייבות · הקמה בחמש דקות"
+      />
 
     </div>
   )
