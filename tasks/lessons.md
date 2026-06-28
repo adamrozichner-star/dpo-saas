@@ -768,3 +768,41 @@ Hebrew. Verified 27/27 pure (incl owner mapper) + 10/10 auth-gate (incl /home) +
 - Adam committed migration 044 himself mid-build as `wip: documents ledger render migration`
   (6a9b3f37, byte-identical to the on-disk 044). So 044 is already on feature/documents; the rest of
   the F1 files are staged separately. No divergence.
+
+# F2a - Certify / audit pack (migration 045)
+
+## The capstone: ledger rendered as regulator-ready proof
+- buildAuditPack (src/lib/ledger/audit-pack.ts) is a PURE assembler (console-data pattern) over the
+  ledger: every obligation + state + provenance, its evidence chain (E1-E4 rows, each tracing to its
+  source event via answer_ref), its control schedule, and the F1 active docs (version + approved_at +
+  fingerprint). Produces { content (markdown snapshot), fingerprint, summary counts }. No new
+  collection, no new render engine - assembly only.
+- Pack fingerprint = cyrb53(canonical(assembled inputs MINUS generated-at)). Volatile-free, so the
+  same ledger state -> same fingerprint (proven: identical fp across two different generated-at
+  values; flips when an obligation state changes). Hash copied locally (not imported from the merged
+  F1 doc-render) to avoid touching F1 - ~15 lines, same algorithm.
+
+## audit_packs = a certificate, not an export (record-with-snapshot)
+- Generating a pack RECORDS an immutable row (id, org_id, generated_at, generated_by, pack_fingerprint,
+  content snapshot, summary jsonb). "Certify-ready as of date X, here is exactly what we certified."
+- IMMUTABILITY is doubly enforced: authenticated has NO UPDATE grant AND no UPDATE policy -> a recorded
+  pack cannot be rewritten (grant-level denial fires first; proven). The snapshot holds even after the
+  ledger moves (proven: mutate ledger -> live fp drifts, recorded content/fp unchanged). This is the
+  drift signal: latest recorded fp vs live assembly fp -> "posture changed since last certified pack".
+- RLS org-scoped (DPO own org; cross-org INSERT denied, proven). anon ZERO grant. PII-FREE (no
+  PII-capable column; the content assembles obligations/evidence/controls/docs - E2/E3 evidence is
+  technical, DSAR subject PII never entered the ledger). Controller-identity-in-header stays Roy-gated
+  in the assembler (same as F1).
+
+## UI + export
+- /console/audit (RLS-scoped): live assembly + summary + drift badge, "Certify" (record), past-packs
+  list, export via the reused /api/generate-pdf (the pack is one long markdown -> RTL HTML print;
+  multi-section fits generate-pdf, no new export path needed for F2a).
+
+## Verify (20 F2a; legacy byte-identical; regressions intact)
+- Purity + fingerprint sensitivity; full coverage (every obligation, evidence chain w/ event trace,
+  controls, F1 docs); reproducible; RLS + cross-org denied; snapshot immutability (content stable +
+  no-update); PII-free; anon zero. Legacy 19 docs + organization_profiles byte-identical before/after.
+  F1 19/19, E 37/26/29/27, /shell-demo 13/13, tsc clean, no em-dashes. 045 reproducible.
+- Transient note: a back-to-back tsx regression batch occasionally throws on one script (Management
+  API hiccup); re-run the single script to confirm (E2 threw in-batch, passed 26/26 alone).
