@@ -648,3 +648,66 @@ Hebrew. Verified 27/27 pure (incl owner mapper) + 10/10 auth-gate (incl /home) +
 - Vendor-DPA wording PROVISIONAL pending Amir/Roy. dsar purpose still unwired (subject-PII) - E4.
 - No v3 vendor home surface yet; the DPA write-back is visible via the obligation detail evidence +
   wherever data_recipients is read (legacy). A v3 vendor list showing DPA status is a later add.
+
+# E4 - DSAR pass-through (migration 043, flag-gated)
+
+## The pass-through (G1 closed for the new path)
+- Subject PII (name/ת"ז/email/phone/details) is NEVER persisted. The submit route
+  /api/dsar/[token] forwards it to the org's DPO via Resend ONLY (PII lives in the
+  request body -> Resend), then calls dsar_record(p_token, p_request_type) - whose
+  SIGNATURE HAS NO PII SLOT - as the only DB write. The DB keeps a structurally
+  PII-free tracking row (dsar_requests): request_type, status, correlation_ref
+  (crypto DSR-xxxx), created_at, deadline=created_at+30d, identity_verified bool +
+  verified_at (the BOOL only, never the ת"ז), responded_at. No column can hold PII.
+- Grant-layer firewall: dsar_record/dsar_resolve owned by a new NOLOGIN role
+  dsar_fn granted ONLY SELECT/UPDATE(status,used_at) on access_links + INSERT/SELECT
+  on dsar_requests. ZERO grant on events/evidence/obligations/data_recipients/
+  controls/contacts/organizations/messages/data_subject_requests (proven by
+  role-sim: dsar_fn cannot SELECT events/obligations or INSERT evidence).
+- submit_access_link gained a dsar early-reject guard (returns {ok:false} before
+  any write) so a dsar token POSTed to /api/link writes nothing - defense in depth
+  on top of the separate route + role.
+
+## access_links reuse (the one touch to the verified primitive)
+- 043 relaxed obligation_id/task_id/q_asset_template_id to nullable behind
+  CHECK(purpose='dsar' OR (all three NOT NULL)) - preserves the E1/E2/E3 invariant
+  for non-dsar rows (verified: 37/37, 26/26, 29/29 regressions intact). mint gained
+  a dsar branch (no task/obligation/recipient; inserts nulls). resolve_access_link
+  is UNCHANGED (null q_asset_template_id -> empty questions; the page renders the
+  fixed DSAR form on purpose='dsar').
+- The DPO notify email is denormalized onto access_links.dpo_notify_email AT MINT
+  (resolved once by the authed DPO under RLS: contacts.role=dpo -> organizations.
+  contact_email -> admin user) so the anon submit path reads no contacts/org PII.
+  Refinement vs the 1.5 plan (which had the route resolve it at submit) - keeps the
+  public path off contacts/organizations entirely.
+
+## Route ordering refinement
+- Record-then-notify (dsar_record first -> get correlation_ref -> Resend) instead
+  of notify-then-record. A Resend failure then leaves a tracked request the DPO can
+  re-notify, not a lost one. PII-isolation invariant identical (PII -> Resend only,
+  never a DB call).
+
+## Flag + legacy
+- DSAR_PASSTHROUGH per-org flag (organizations.feature_flags, mirrors LEDGER_READ,
+  isDsarPassthrough()). OFF by default -> the DPO mint action on /console/links is
+  hidden; legacy /rights + /api/rights + data_subject_requests stay fully UNCHANGED
+  and the default (verified: 4 PII columns + "Public can insert requests" policy +
+  files all intact; flag absent on דיפו). Legacy-retirement migration is DESIGNED
+  but DEFERRED to Adam's global flip (table still 0-rows; re-confirm before retiring).
+- feature_flags added to OrgContext's OrgRecord + select so the console reads it.
+
+## Verify (27 DB+grant+containment, 9 dsar page headless; regressions intact)
+- E1 37/37, E2 26/26, E3 29/29 (DB); link/sysadmin/vendor pages 15/10/12; shell 13/13.
+  tsc clean; no em-dashes. 043 reproducible (clean drop+reapply 041->042->043; idempotent).
+- DSAR public page headless: CC-2 holds (zero org chrome, real org name + org_id
+  absent, generic display name shown), fixed PII form renders.
+
+## Carryover
+- Cold-intake (subject self-serve DSAR minting) is a follow-up (DPO-minted only now).
+- Roy legal sign-off still pending on the 6 flags from STEP 1 (out-of-band posture,
+  PII-free-row sufficiency, identity-verification standard, etc.) - defaults baked in,
+  flag-gated, Adam/Roy correctable before any flip.
+- Headless flake lesson: running 5 puppeteer suites back-to-back against one `next dev`
+  overwhelms its on-demand compiler (pages capture the טוען… loading state, /shell-demo
+  serves <100 CSS rules). Warm routes via curl, then run suites SEQUENTIALLY, one per
+  invocation. Restart dev clean if it degrades.

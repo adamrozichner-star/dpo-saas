@@ -44,6 +44,10 @@ export default function TokenizedLinkPage() {
   const [phase, setPhase] = useState<Phase>('loading')
   const [resolved, setResolved] = useState<ResolveResult | null>(null)
   const [answers, setAnswers] = useState<Record<string, string>>({})
+  // DSAR (purpose=dsar) uses a fixed PII intake form that posts to the dedicated
+  // pass-through route - NOT the generic answers path (the subject's data is PII).
+  const [dsar, setDsar] = useState({ requestType: 'access', fullName: '', idNumber: '', email: '', phone: '', details: '' })
+  const [correlationRef, setCorrelationRef] = useState('')
 
   useEffect(() => {
     if (!token) return
@@ -97,6 +101,30 @@ export default function TokenizedLinkPage() {
     }
   }
 
+  async function handleDsarSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!token) return
+    setPhase('submitting')
+    // Subject PII goes to the dedicated dsar route -> Resend (out-of-band to the
+    // DPO); it is never persisted. Only a PII-free tracking row is written.
+    try {
+      const res = await fetch(`/api/dsar/${encodeURIComponent(token)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dsar),
+      })
+      const data = await res.json()
+      if (data?.ok) {
+        setCorrelationRef(data.correlation_ref ?? '')
+        setPhase('done')
+      } else {
+        setPhase('error')
+      }
+    } catch {
+      setPhase('error')
+    }
+  }
+
   if (phase === 'loading') {
     return (
       <TokenizedFormShell title="טוען…">
@@ -117,7 +145,8 @@ export default function TokenizedLinkPage() {
   if (phase === 'done') {
     return (
       <TokenizedFormShell title="התקבל. תודה" footerNote="ניתן לסגור את החלון.">
-        <p className="t-body-sm">התשובות נשלחו בהצלחה.</p>
+        <p className="t-body-sm">{correlationRef ? 'בקשתך התקבלה והועברה לטיפול הממונה.' : 'התשובות נשלחו בהצלחה.'}</p>
+        {correlationRef ? <p className="t-body-sm" style={{ fontWeight: 600 }}>מספר מעקב: {correlationRef}</p> : null}
       </TokenizedFormShell>
     )
   }
@@ -125,6 +154,58 @@ export default function TokenizedLinkPage() {
   const purpose = resolved?.purpose ?? ''
   const title = PURPOSE_TITLE[purpose] ?? 'טופס'
   const questions = (resolved?.questions ?? []).slice().sort((a, b) => a.order_index - b.order_index)
+
+  // DSAR: fixed PII intake form (the subject is not a sysadmin/vendor; the data
+  // is PII and posts to the pass-through route, never the generic answers path).
+  if (purpose === 'dsar') {
+    const DSAR_TYPES: { v: string; label: string }[] = [
+      { v: 'access', label: 'עיון במידע' },
+      { v: 'rectification', label: 'תיקון מידע' },
+      { v: 'erasure', label: 'מחיקת מידע' },
+      { v: 'objection', label: 'התנגדות לעיבוד' },
+    ]
+    const set = (k: keyof typeof dsar) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+      setDsar((d) => ({ ...d, [k]: e.target.value }))
+    return (
+      <TokenizedFormShell title={title} footerNote="טופס מאובטח. הפרטים מועברים ישירות לממונה ואינם נשמרים במערכת.">
+        {resolved?.org_display_name ? (
+          <p className="t-body-sm" style={{ marginBlockEnd: 'var(--space-4)', color: 'var(--fg-3)' }}>עבור: {resolved.org_display_name}</p>
+        ) : null}
+        <form onSubmit={handleDsarSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+            <span className="t-body-sm" style={{ fontWeight: 600 }}>סוג הבקשה <span style={{ color: 'var(--status-risk)' }}>*</span></span>
+            <select required value={dsar.requestType} onChange={set('requestType')}>
+              {DSAR_TYPES.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
+            </select>
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+            <span className="t-body-sm" style={{ fontWeight: 600 }}>שם מלא <span style={{ color: 'var(--status-risk)' }}>*</span></span>
+            <input required value={dsar.fullName} onChange={set('fullName')} placeholder="ישראל ישראלי" />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+            <span className="t-body-sm" style={{ fontWeight: 600 }}>תעודת זהות <span style={{ color: 'var(--status-risk)' }}>*</span></span>
+            <input required value={dsar.idNumber} onChange={set('idNumber')} placeholder="9 ספרות" />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+            <span className="t-body-sm" style={{ fontWeight: 600 }}>אימייל <span style={{ color: 'var(--status-risk)' }}>*</span></span>
+            <input required type="email" value={dsar.email} onChange={set('email')} placeholder="your@email.com" />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+            <span className="t-body-sm" style={{ fontWeight: 600 }}>טלפון</span>
+            <input value={dsar.phone} onChange={set('phone')} placeholder="050-1234567" />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-1)' }}>
+            <span className="t-body-sm" style={{ fontWeight: 600 }}>פרטים נוספים</span>
+            <textarea rows={3} value={dsar.details} onChange={set('details')} />
+          </label>
+          {phase === 'error' ? <p className="t-body-sm" style={{ color: 'var(--status-risk)' }}>השליחה נכשלה. נסו שוב.</p> : null}
+          <button type="submit" className="dp-btn dp-btn--primary" disabled={phase === 'submitting'}>
+            {phase === 'submitting' ? 'שולח…' : 'שליחת בקשה'}
+          </button>
+        </form>
+      </TokenizedFormShell>
+    )
+  }
 
   return (
     <TokenizedFormShell title={title} footerNote="טופס מאובטח. הקישור אישי ואינו חושף מידע על הארגון.">

@@ -192,7 +192,7 @@ export interface AccessLinkDbRow {
   id: string
   purpose: AccessLinkPurpose
   status: AccessLinkStatus
-  obligation_id: string
+  obligation_id: string | null
   org_display_name: string
   created_at: string
   expires_at: string
@@ -206,7 +206,7 @@ export interface AccessLinkView {
   status: AccessLinkStatus
   statusVariant: StatusVariant
   statusLabel: string
-  obligationId: string
+  obligationId: string | null
   obligationTitle: string | null
   orgDisplayName: string
   createdAt: string
@@ -408,6 +408,14 @@ import type { ComplianceSummary, ComplianceTask } from '@/lib/compliance-engine'
 
 export function isLedgerRead(org: { feature_flags?: Record<string, unknown> | null } | null | undefined): boolean {
   return org?.feature_flags?.LEDGER_READ === true
+}
+
+// E4 - DSAR_PASSTHROUGH per-org flag (mirrors LEDGER_READ). When ON, the DPO can
+// mint tokenized DSAR intake links (the PII-free pass-through). When OFF (the
+// default - flag absent), the legacy /rights + /api/rights path stays the only
+// DSAR surface, fully unchanged.
+export function isDsarPassthrough(org: { feature_flags?: Record<string, unknown> | null } | null | undefined): boolean {
+  return org?.feature_flags?.DSAR_PASSTHROUGH === true
 }
 
 export interface LedgerSummaryObligation {

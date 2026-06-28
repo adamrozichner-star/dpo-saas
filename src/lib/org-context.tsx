@@ -22,6 +22,7 @@ export interface OrgRecord {
   compliance_score: number | null
   tier: string | null
   status: string | null
+  feature_flags: Record<string, unknown> | null
 }
 
 export interface OrgContextValue {
@@ -53,7 +54,7 @@ export function OrgProvider({ children }: { children: ReactNode }) {
     ;(async () => {
       const { data } = await supabase
         .from('users')
-        .select('id, name, role, organizations(id, name, compliance_score, tier, status)')
+        .select('id, name, role, organizations(id, name, compliance_score, tier, status, feature_flags)')
         .eq('auth_user_id', user.id)
         .single()
       if (cancelled) return
