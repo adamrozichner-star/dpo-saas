@@ -1,0 +1,59 @@
+/* ============================================================
+   /lead-signup page brand pass (lead-). The page keeps its tailwind
+   layout utilities; this sheet remaps every accent off the legacy
+   shadcn periwinkle (--primary/--ring) and emerald defaults onto the
+   warm brand tokens (crimson, brand focus halo, status colors). Active
+   under .deepo-scope (marketing layout). No field/copy/logic changes.
+   ============================================================ */
+
+/* Surfaces */
+.lead-page { background: var(--bg-page); }
+.lead-card { background: var(--bg-surface); border-color: var(--border-1); }
+
+/* Text hierarchy on brand fg tokens (was text-gray-*) */
+.lead-title { color: var(--fg-1); }
+.lead-sub { color: var(--fg-2); }
+.lead-fine { color: var(--fg-3); }
+
+/* Required-field asterisk (was text-red-500) */
+.lead-req { color: var(--crimson-500); }
+
+/* Privacy / marketing links (was text-emerald-600) */
+.lead-link { color: var(--fg-link); }
+.lead-link:hover { text-decoration: underline; }
+
+/* Phone validity hint - warning (was text-amber-700) */
+.lead-hint { color: var(--status-warn); }
+
+/* Brand checkbox: a native <input> styled to the crimson .dp-check box,
+   WITHOUT a wrapping <label>, so it still nests inside the existing
+   consent <Label htmlFor>. Checkmark drawn in pure CSS; brand halo focus. */
+.lead-check {
+  appearance: none; -webkit-appearance: none; margin: 0; flex: none;
+  width: 20px; height: 20px; box-sizing: border-box;
+  border: 1.5px solid var(--border-2); border-radius: var(--radius-xs);
+  background: var(--bg-surface); cursor: pointer; display: grid; place-items: center;
+  transition: background var(--dur-2) var(--ease-out), border-color var(--dur-2) var(--ease-out);
+}
+.lead-check::after {
+  content: ""; width: 5px; height: 9px; margin-top: -1px;
+  border: solid var(--fg-on-accent); border-width: 0 2px 2px 0;
+  transform: rotate(45deg); opacity: 0; transition: opacity var(--dur-1) var(--ease-out);
+}
+.lead-check:checked { background: var(--crimson-500); border-color: var(--crimson-500); }
+.lead-check:checked::after { opacity: 1; }
+.lead-check:focus-visible { outline: none; box-shadow: var(--shadow-halo); }
+.lead-check:disabled { opacity: 0.45; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) {
+  .lead-check, .lead-check::after { transition: none; }
+}
+
+/* Error alert -> brand risk tokens (was border-red-300/bg-red-50/text-red-*) */
+.lead-alert { border-color: var(--status-risk); background: var(--status-risk-bg); }
+.lead-alert__icon, .lead-alert__title, .lead-alert__text { color: var(--status-risk); }
+.lead-alert__text a { text-decoration: underline; }
+
+/* Success state -> brand status-ok tokens (was emerald-*) */
+.lead-success { background: var(--bg-surface); border-color: var(--status-ok); }
+.lead-success__badge { background: var(--status-ok-bg); }
+.lead-success__icon { color: var(--status-ok); }
