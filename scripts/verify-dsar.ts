@@ -8,6 +8,7 @@
  * Run:  set -a; source <(grep '^SUPABASE_ACCESS_TOKEN=' .env.local); set +a
  *       npx tsx scripts/verify-dsar.ts
  */
+export {} // module scope (avoids global-script collisions with other no-import scripts)
 const REF = 'nedkrxjwmyhabrsscyem'
 const ORG = '2c1f096b-2cc0-406a-9381-b993c2dde9ab'       // דיפו
 const DPO_SUB = 'ef4f98f3-11fe-43c1-83aa-dc2d6bb73dd5'   // expert_curator in דיפו
