@@ -100,16 +100,40 @@
 .mk-faqitem__a { padding-bottom: var(--space-5); font-size: 15px; line-height: 1.65; color: var(--fg-2); }
 .mk-faqitem__a a { color: var(--fg-link); text-decoration: underline; }
 
-/* ── Final CTA (dark, ember-glow) ───────────────────────────── */
-.mk-finalcta { position: relative; overflow: hidden; background: var(--bg-inverse); color: var(--fg-on-dark-1); padding-block: var(--space-24); text-align: center; }
-/* Ember glow: exact patterns.html .glow recipe (bottom-corner ellipse +
-   .025 scanlines). Centred under the CTA for this band. */
-.mk-finalcta::before {
+/* ── Shared dark ember-glow band (mk-band--dark) ────────────── */
+/* ONE dark treatment for every dark marketing section (calculator, steps,
+   comparison, final CTA) so the page reads intentional and the dark
+   sections cannot drift. garnet/onyx surface + corner ember radial +
+   .025 scanlines — the exact patterns.html .glow recipe. The glow's
+   horizontal anchor is configurable via --mk-glow-x (default 92%, the RTL
+   start corner, matching the comparison band); --mk-glow-x:50% centres it.
+   AA-safe pairings on this surface: primary text #fff / --fg-on-dark-1,
+   secondary --garnet-300 (never --garnet-500 at body size). Raw rgba is
+   the ember/scanline gradient (allowed per spec 2.1). */
+.mk-band--dark { position: relative; overflow: hidden; background: var(--bg-inverse); color: var(--fg-on-dark-1); }
+.mk-band--dark::before {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background:
-    radial-gradient(ellipse 85% 95% at 50% 116%, rgba(209,3,49,.62) 0%, rgba(244,39,31,.34) 32%, rgba(255,157,33,.2) 56%, transparent 80%),
+    radial-gradient(ellipse 85% 95% at var(--mk-glow-x, 92%) 116%, rgba(209,3,49,.62) 0%, rgba(244,39,31,.34) 32%, rgba(255,157,33,.2) 56%, transparent 80%),
     repeating-linear-gradient(0deg, transparent 0 6px, rgba(255,255,255,.025) 6px 7px);
 }
+.mk-band--dark--center { --mk-glow-x: 50%; }
+/* Keep section content above the glow layer. */
+.mk-band--dark > .mk-wrap { position: relative; z-index: 1; }
+/* Shared on-dark primitives, so SecHead/Eyebrow/Steps read coherently on
+   every dark band (amber accent, white headings, garnet-300 secondary). */
+.mk-band--dark .mk-eyebrow,
+.mk-band--dark .mk-eyebrow .dpi { color: var(--amber-400); --dpi-c: var(--amber-400); }
+.mk-band--dark .mk-sechead h2 { color: #fff; }
+.mk-band--dark .mk-sechead p { color: var(--garnet-300); }
+.mk-band--dark .mk-step__n { background: var(--garnet-800); color: var(--amber-400); border: 1px solid rgba(255,178,77,0.40); }
+.mk-band--dark .mk-step h3 { color: #fff; }
+.mk-band--dark .mk-step p { color: var(--garnet-300); }
+
+/* ── Final CTA (dark, ember-glow) ───────────────────────────── */
+/* Surface + glow now come from .mk-band--dark .mk-band--dark--center (set on
+   the section in <FinalCta>); this rule keeps only the CTA-specific layout. */
+.mk-finalcta { padding-block: var(--space-24); text-align: center; }
 .mk-finalcta__wrap { position: relative; z-index: 1; max-width: 44ch; margin-inline: auto; }
 .mk-finalcta h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 4vw, 40px); line-height: 1.2; color: #fff; margin: 0 0 var(--space-4); }
 .mk-finalcta h2 .mk-grad { background: var(--spark-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }

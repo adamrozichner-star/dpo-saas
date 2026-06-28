@@ -13,7 +13,7 @@ import { DeepoIcon } from '@/brand/icons'
 import { Button } from '@/components/brand/Button'
 import { Badge } from '@/components/brand/Badge'
 import {
-  RadarMotif, SecHead, Eyebrow, FeatureGrid, Steps, ResponsibilityBand, FinalCta, FaqItem, TrustSlot,
+  RadarMotif, SecHead, Eyebrow, FeatureGrid, Steps, FinalCta, FaqItem, TrustSlot,
   type FeatureItem, type StepItem,
 } from '@/components/marketing/sections'
 import { signupHref } from '@/lib/signup-flag'
@@ -99,6 +99,15 @@ function MiniCalculator() {
     </div>
   )
 }
+
+// Vision pillar cards - copy lifted verbatim from the reference FEATURES
+// block (deepo-brand/reference/marketing-reference-he.html). DOM order
+// matches the reference exactly (shield -> radar -> sparkle).
+const PILLARS: FeatureItem[] = [
+  { id: 'dp-shield', title: 'שומרים עליכם', desc: 'מגנים מפני חשיפה: מול הרשות להגנת הפרטיות ומול תביעות. כל מה שהחוק דורש מהעסק, כבר טיפלנו בו.' },
+  { id: 'dp-radar', title: 'פרואקטיביים', desc: 'תמיד צעד לפני הרגולציה. עובדים ברקע ומטפלים בדברים לפני שאתם בכלל מרגישים בהם.' },
+  { id: 'dp-sparkle', title: 'סוכני AI ייעודיים', desc: 'סוכני AI ייעודיים עובדים 24/7. אתם רק מחליטים, ומאשרים בלחיצה.' },
+]
 
 const FEATURES: FeatureItem[] = [
   { id: 'dp-seal', title: 'ממונה אנושי שאחראי עליכם', desc: 'אנחנו ממנים עליכם ממונה הגנת פרטיות מוסמך (מחבילה מומלצת ומעלה). הוא נושא באחריות, אתם ישנים בשקט.' },
@@ -204,8 +213,24 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3 - CALCULATOR */}
-      <section className="mk-section mk-band--sand" id="calculator">
+      {/* 2b - PILLARS (vision FEATURES block, copy verbatim from the
+          reference). Placed right after the hero/trust strip and above the
+          existing 6-card "מה מקבלים" section, per the redesign brief.
+          FLAG(review): confirm this order (trust -> pillars -> calculator
+          -> 6-card features). */}
+      <section className="mk-section">
+        <div className="mk-wrap">
+          <SecHead
+            eyebrow="איך זה עובד"
+            title="אתם מתרכזים בעסק שלכם. אנחנו דואגים שתעמדו בחוקי הגנת הפרטיות."
+            sub="אתם בעסק, אנחנו על המשמר. הכל קורה ברקע, בשפה פשוטה ומובנת, בלי קבלנים חיצוניים ובלי הטמעה ארוכה."
+          />
+          <FeatureGrid items={PILLARS} />
+        </div>
+      </section>
+
+      {/* 3 - CALCULATOR (shared dark ember-glow band) */}
+      <section className="mk-section mk-band--dark" id="calculator">
         <div className="mk-wrap hp-calc__grid">
           <div className="hp-calc__copy">
             <Eyebrow icon="dp-radar">בדיקה מהירה</Eyebrow>
@@ -216,16 +241,18 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 4 - WHAT YOU GET */}
-      <section className="mk-section">
+      {/* 4 - WHAT YOU GET (light, on the hero backdrop: .mk-mesh dot-grid +
+          a corner RadarMotif at low opacity behind the white cards) */}
+      <section className="mk-section mk-mesh hp-feat">
+        <RadarMotif className="hp-feat__radar" size={720} />
         <div className="mk-wrap">
           <SecHead eyebrow="מה מקבלים" title="כל מה שתיקון 13 דורש, במקום אחד." sub="אנחנו עושים הכול ברקע, בלי קבלנים חיצוניים ובלי הטמעה ארוכה, ובשפה שמבינים." />
           <FeatureGrid items={FEATURES} />
         </div>
       </section>
 
-      {/* 5 - HOW IT WORKS (hero "איך זה עובד" CTA anchors here) */}
-      <section className="mk-section mk-band--sand" id="how">
+      {/* 5 - HOW IT WORKS (shared dark band; hero "איך זה עובד" CTA anchors here) */}
+      <section className="mk-section mk-band--dark" id="how">
         <div className="mk-wrap">
           <SecHead eyebrow="איך מתחילים" title="ארבעה צעדים. חמש דקות." sub="חמש דקות. פחות זמן ממה שלוקח להסביר לאמא מה זה DPO." />
           <Steps items={STEPS} />
@@ -252,25 +279,13 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 7 - RESPONSIBILITY BAND (shared) */}
-      <ResponsibilityBand />
+      {/* NOTE(review): the shared ResponsibilityBand and the security teaser
+          (hp-security) were removed from the homepage per the redesign brief.
+          ResponsibilityBand stays available in the shared module for reuse
+          (e.g. /about). */}
 
-      {/* 8 - SECURITY TEASER */}
-      <section className="mk-section--tight">
-        <div className="mk-wrap">
-          <div className="hp-security">
-            <span className="hp-security__ic"><DeepoIcon id="dp-lock" /></span>
-            <div style={{ flex: 1 }}>
-              <h2>המידע שלכם, שמור.</h2>
-              <p>אנחנו לא שומרים את פרטי הלקוחות שלכם, ניגשים רק למה שצריך, ומתעדים הכול. כך בנינו את Deepo מהיסוד.</p>
-            </div>
-            <Link href="/security" className="dp-btn dp-btn--secondary dp-btn--md">איך שומרים על המידע</Link>
-          </div>
-        </div>
-      </section>
-
-      {/* 9a - COMPARISON (dark, ember-glow) */}
-      <section className="hp-compare">
+      {/* 9a - COMPARISON (shared dark ember-glow band) */}
+      <section className="hp-compare mk-band--dark">
         <div className="mk-wrap hp-compare__wrap">
           <Eyebrow icon="dp-bolt">השוואת עלות · שנה ראשונה</Eyebrow>
           <h2>אותה הגנה. בעלות נמוכה בעשרות אחוזים.</h2>

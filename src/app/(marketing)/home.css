@@ -103,12 +103,46 @@
 .hp-mini__reset { background: none; border: 0; color: var(--fg-3); font-family: var(--font-body); font-size: 14px; cursor: pointer; padding: var(--space-2); }
 .hp-mini__reset:hover { color: var(--fg-1); }
 
+/* ── Calculator on the shared dark band (#calculator) ───────────
+   Copy + card + chips + result states restyled for the garnet/onyx
+   surface. AA-safe: white / fg-on-dark headings, garnet-300 body, amber
+   + green accents. Eyebrow inherits amber-400 from .mk-band--dark. The
+   selection logic (TODO(roy-gate)) is untouched. */
+.mk-band--dark .hp-calc__copy h2 { color: #fff; }
+.mk-band--dark .hp-calc__copy p { color: var(--garnet-300); }
+.mk-band--dark .hp-mini { background: var(--garnet-800); border-color: var(--border-on-dark); box-shadow: none; }
+.mk-band--dark .hp-mini__title { color: #fff; }
+.mk-band--dark .hp-mini__sub { color: var(--garnet-300); }
+.mk-band--dark .hp-q__label { color: var(--fg-on-dark-1); }
+.mk-band--dark .hp-chip { background: var(--garnet-900); border-color: var(--border-on-dark); color: var(--fg-on-dark-1); }
+.mk-band--dark .hp-chip:hover { border-color: var(--crimson-400); background: var(--garnet-700); }
+.mk-band--dark .hp-chip[aria-pressed="true"] { border-color: var(--crimson-500); background: var(--crimson-500); color: var(--fg-on-accent); }
+.mk-band--dark .hp-mini__result h3 { color: #fff; }
+.mk-band--dark .hp-mini__result p { color: var(--garnet-300); }
+.mk-band--dark .hp-mini__result--yes { background: var(--garnet-900); border-color: rgba(255,178,77,0.45); }
+.mk-band--dark .hp-mini__result--yes .dpi { --dpi-c: var(--amber-400); }
+.mk-band--dark .hp-mini__result--no { background: var(--garnet-900); border-color: rgba(78,211,138,0.45); }
+.mk-band--dark .hp-mini__result--no .dpi { --dpi-c: #4ED38A; }
+.mk-band--dark .hp-mini__reset { color: var(--garnet-300); }
+.mk-band--dark .hp-mini__reset:hover { color: #fff; }
+
 /* ── Trust strip ────────────────────────────────────────────── */
 .hp-trust { border-block: 1px solid var(--sand-300); padding-block: var(--space-8); }
 .hp-trust__row { display: flex; align-items: center; gap: var(--space-8); flex-wrap: wrap; justify-content: center; }
 .hp-trust__lab { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-3); }
 .hp-sector { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-display); font-weight: 600; font-size: 16px; color: var(--fg-2); }
 .hp-sector .dpi { --dpi-c: var(--crimson-400); font-size: 20px; }
+
+/* ── Features section backdrop (hero treatment) ─────────────────
+   The 6-card "מה מקבלים" section reuses the hero backdrop: .mk-mesh
+   dot-grid (from the section class) + a corner RadarMotif at low opacity,
+   behind the cards. .mk-mesh already sets position:relative + overflow:
+   hidden, so the radar is clipped to the section. The white cards sit
+   above via the content z-index. */
+.hp-feat > .mk-wrap { position: relative; z-index: 1; }
+/* Physical `left` (not inset-inline-start) so the rings sit lower-LEFT in
+   RTL, mirroring the hero radar. Low opacity keeps it a faint backdrop. */
+.hp-feat__radar { left: -320px; bottom: -340px; opacity: 0.5; }
 
 /* ── Experts ────────────────────────────────────────────────── */
 .hp-experts__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5); }
@@ -118,26 +152,13 @@
 .hp-expert h3 { font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--fg-1); margin: 0 0 var(--space-1); }
 .hp-expert p { font-size: 14px; line-height: 1.55; color: var(--fg-2); margin: 0; }
 
-/* ── Security teaser ────────────────────────────────────────── */
-.hp-security { display: flex; align-items: center; justify-content: space-between; gap: var(--space-8); background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-2xl); padding: var(--space-10); box-shadow: var(--shadow-lift-1); }
-.hp-security__ic { width: 56px; height: 56px; border-radius: var(--radius-lg); background: var(--crimson-50); display: grid; place-items: center; flex: none; }
-.hp-security__ic .dpi { font-size: 30px; --dpi-c: var(--crimson-500); }
-.hp-security h2 { font-family: var(--font-display); font-weight: 600; font-size: 24px; color: var(--fg-1); margin: 0 0 6px; }
-.hp-security p { font-size: 15px; line-height: 1.6; color: var(--fg-2); margin: 0; max-width: 52ch; }
-
 /* ── Comparison band (dark, ember-glow) ─────────────────────── */
-.hp-compare { position: relative; overflow: hidden; background: var(--bg-inverse); color: var(--fg-on-dark-1); padding-block: var(--space-24); }
-/* Ember glow: exact patterns.html .glow recipe (corner ellipse + .025
-   scanlines), mirrored to the RTL start corner (bottom-right). */
-.hp-compare::before {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background:
-    radial-gradient(ellipse 85% 95% at 92% 116%, rgba(209,3,49,.62) 0%, rgba(244,39,31,.34) 32%, rgba(255,157,33,.2) 56%, transparent 80%),
-    repeating-linear-gradient(0deg, transparent 0 6px, rgba(255,255,255,.025) 6px 7px);
-}
+/* Surface + corner ember glow + scanlines now come from the shared
+   .mk-band--dark (default --mk-glow-x:92%, the RTL start corner), set on
+   the section in page.tsx. This block keeps only comparison-specific bits.
+   Eyebrow already inherits amber-400 from .mk-band--dark .mk-eyebrow. */
+.hp-compare { padding-block: var(--space-24); }
 .hp-compare__wrap { position: relative; z-index: 1; }
-.hp-compare .mk-eyebrow { color: var(--amber-400); }
-.hp-compare .mk-eyebrow .dpi { --dpi-c: var(--amber-400); }
 .hp-compare h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(26px, 3.6vw, 38px); color: #fff; margin: var(--space-3) 0 var(--space-8); text-wrap: balance; }
 .hp-ctable { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
 .hp-ccol { border-radius: var(--radius-xl); padding: var(--space-8); }
@@ -186,8 +207,6 @@
   .hp-pcards { grid-template-columns: 1fr 1fr; }
   .hp-hero h1 { font-size: 44px; }
   .hp-hero__radar { left: -380px; bottom: -380px; }
-  .hp-security { flex-direction: column; text-align: center; }
-  .hp-security__ic { margin-inline: auto; }
 }
 @media (max-width: 560px) {
   .hp-pcards, .hp-chips--3 { grid-template-columns: 1fr; }

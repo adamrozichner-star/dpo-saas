@@ -93,7 +93,7 @@ export function FinalCta({
   title, sub, cta, href, micro,
 }: { title: React.ReactNode; sub: React.ReactNode; cta: string; href: string; micro?: React.ReactNode }) {
   return (
-    <section className="mk-finalcta">
+    <section className="mk-finalcta mk-band--dark mk-band--dark--center">
       <div className="mk-finalcta__wrap">
         <h2>{title}</h2>
         <p>{sub}</p>
