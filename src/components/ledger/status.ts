@@ -96,6 +96,14 @@ export const EVENT_TYPE_LABEL: Record<string, string> = {
   resolved: 'טופל',
 }
 
+// F1 documents-as-ledger-renders: doc type -> Hebrew label.
+export const DOC_TYPE_LABEL: Record<string, string> = {
+  ropa: 'רשומת פעילויות עיבוד (ROPA)',
+  processor_agreement: 'הסכמי עיבוד מול ספקים (DPA)',
+  dpo_appointment: 'כתב מינוי ממונה',
+  asset_db_definition: 'הגדרת מאגרי מידע',
+}
+
 // access_links (E1/E2). Purpose label + lifecycle status -> Badge variant + label.
 export type AccessLinkPurpose = 'sysadmin_questionnaire' | 'vendor_dpa' | 'dsar'
 export type AccessLinkStatus = 'active' | 'used' | 'expired' | 'revoked'
