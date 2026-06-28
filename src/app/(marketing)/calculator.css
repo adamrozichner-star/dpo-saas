@@ -1,0 +1,22 @@
+/* ============================================================
+   /calculator page brand pass (calc-). Pairs with _brand-shadcn.css
+   (which re-points the shadcn --primary/--ring to crimson under
+   .deepo-scope). This sheet maps the page's own surfaces and the
+   alert/success states onto brand tokens. Active under .deepo-scope.
+   No calc logic / field / copy changes.
+   ============================================================ */
+
+/* Page background (was bg-gradient from-blue-50 to-white) */
+.calc-page { background: var(--bg-page); }
+
+/* Required-field asterisk parity with the rest of the brand */
+.calc-req { color: var(--crimson-500); }
+
+/* Alert blocks (urgency banner, penalty exposure) -> brand risk tokens
+   instead of raw tailwind reds. */
+.calc-alert { background: var(--status-risk-bg); border-color: var(--status-risk); }
+.calc-alert__icon, .calc-alert__title, .calc-alert__amount { color: var(--status-risk); }
+.calc-alert__sub { color: var(--status-risk); opacity: 0.85; }
+
+/* Email-report "sent" success -> brand status-ok tokens (was green-*) */
+.calc-success__icon, .calc-success__title { color: var(--status-ok); }

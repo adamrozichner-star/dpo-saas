@@ -1,0 +1,25 @@
+/* ============================================================
+   Marketing-scoped shadcn token remap.
+
+   A few marketing pages (/calculator, /contact) and the shared
+   DpoCalculator they render are still built on shadcn primitives. Their
+   component tokens (--primary, --ring, --primary-foreground) default to
+   the legacy periwinkle (HSL 224) defined in globals.css, which clashes
+   with the warm Deepo brand.
+
+   This sheet re-points those tokens to the brand crimson ONLY under
+   .deepo-scope (the marketing route-group wrapper). globals.css is left
+   untouched, and the product app lives outside .deepo-scope, so its
+   shadcn styling is unaffected. Loaded by importing this file from the
+   marketing pages that use shadcn.
+
+   This kills the periwinkle on every residual utility that reads these
+   tokens: bg-primary, text-primary, bg-primary/10, border-primary,
+   ring-ring, the Progress indicator, etc. Actual primary action buttons
+   are additionally swapped to the brand gradient/solid in the JSX.
+   ============================================================ */
+.deepo-scope {
+  --primary: 347 97% 42%;            /* crimson-500 #D10331 */
+  --primary-foreground: 21 78% 96%;  /* warm near-white #FDF4EF */
+  --ring: 347 97% 42%;               /* crimson focus ring */
+}

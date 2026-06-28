@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/brand/Button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -311,13 +311,11 @@ export default function DpoCalculator({
 
           {/* CTA Buttons */}
           <div className="flex flex-col gap-3">
-            <Link href="/onboarding">
-              <Button size="lg" className="w-full">
-                התחילו עכשיו - רק ₪1,000/חודש
-                <ArrowLeft className="mr-2 h-4 w-4" />
-              </Button>
+            <Link href="/onboarding" className="dp-btn dp-btn--gradient dp-btn--lg w-full">
+              התחילו עכשיו - רק ₪1,000/חודש
+              <ArrowLeft className="mr-2 h-4 w-4" />
             </Link>
-            <Button variant="outline" size="lg" className="w-full" onClick={handleReset}>
+            <Button variant="secondary" size="lg" className="w-full" onClick={handleReset}>
               בדיקה מחדש
             </Button>
           </div>
@@ -349,17 +347,18 @@ export default function DpoCalculator({
 
         {/* Answer Buttons */}
         <div className="flex gap-4 mb-4">
-          <Button 
-            size="lg" 
-            className="flex-1 h-14 text-lg"
+          <Button
+            variant="primary"
+            size="lg"
+            className="flex-1 h-14"
             onClick={() => handleAnswer(true)}
           >
             כן
           </Button>
-          <Button 
-            size="lg" 
-            variant="outline"
-            className="flex-1 h-14 text-lg"
+          <Button
+            size="lg"
+            variant="secondary"
+            className="flex-1 h-14"
             onClick={() => handleAnswer(false)}
           >
             לא
@@ -368,8 +367,8 @@ export default function DpoCalculator({
 
         {/* Back Button */}
         {currentQuestion > 0 && (
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="w-full"
             onClick={handleBack}
           >
