@@ -14,7 +14,8 @@ import { useOrg } from '@/lib/org-context'
 import { Badge } from '@/components/brand/Badge'
 import { Button } from '@/components/brand/Button'
 import { formatShortDate } from '@/components/ledger/format'
-import { mapAccessLink, type AccessLinkDbRow, type AccessLinkView } from '@/lib/console-data'
+import { mapAccessLink, isDsarPassthrough, type AccessLinkDbRow, type AccessLinkView } from '@/lib/console-data'
+import { RequestDsarLink } from './RequestDsarLink'
 
 export default function LinksPage() {
   const { user, supabase, loading: authLoading } = useAuth()
@@ -35,15 +36,15 @@ export default function LinksPage() {
       .eq('org_id', org.id)
       .order('created_at', { ascending: false })
     const linkRows = (rows ?? []) as AccessLinkDbRow[]
-    // resolve obligation titles (RLS-scoped) for the links we have
-    const obIds = Array.from(new Set(linkRows.map((r) => r.obligation_id)))
+    // resolve obligation titles (RLS-scoped) for the links that have one (dsar links do not)
+    const obIds = Array.from(new Set(linkRows.map((r) => r.obligation_id).filter((id): id is string => !!id)))
     const titles = new Map<string, string>()
     if (obIds.length) {
       const { data: obs } = await supabase.from('obligations').select('id, title').in('id', obIds)
       for (const o of (obs ?? []) as { id: string; title: string }[]) titles.set(o.id, o.title)
     }
     const now = new Date().toISOString()
-    setLinks(linkRows.map((r) => mapAccessLink(r, titles.get(r.obligation_id) ?? null, now)))
+    setLinks(linkRows.map((r) => mapAccessLink(r, r.obligation_id ? titles.get(r.obligation_id) ?? null : null, now)))
   }, [supabase, org])
 
   useEffect(() => {
@@ -68,8 +69,13 @@ export default function LinksPage() {
       <header>
         <h1 className="t-h2" style={{ margin: 0 }}>קישורי איסוף</h1>
         <p className="t-body-sm" style={{ color: 'var(--fg-3)' }}>
-          קישורים מאובטחים שנשלחו לסיסטם או לספקים לאיסוף מידע. כדי ליצור קישור חדש, פתחו את החובה הרלוונטית.
+          קישורים מאובטחים שנשלחו לסיסטם או לספקים לאיסוף מידע. כדי ליצור קישור לסיסטם או לספק, פתחו את החובה הרלוונטית.
         </p>
+        {isDsarPassthrough(org) ? (
+          <div style={{ marginTop: 'var(--space-3)' }}>
+            <RequestDsarLink supabase={supabase!} orgName={org.name} />
+          </div>
+        ) : null}
       </header>
 
       {links.length === 0 ? (
