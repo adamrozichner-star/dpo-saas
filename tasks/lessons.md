@@ -806,3 +806,31 @@ Hebrew. Verified 27/27 pure (incl owner mapper) + 10/10 auth-gate (incl /home) +
   F1 19/19, E 37/26/29/27, /shell-demo 13/13, tsc clean, no em-dashes. 045 reproducible.
 - Transient note: a back-to-back tsx regression batch occasionally throws on one script (Management
   API hiccup); re-run the single script to confirm (E2 threw in-batch, passed 26/26 alone).
+
+# F2b - proactive document freshness (Inngest, no migration)
+
+## Makes the F1 divergence flag proactive
+- F1's flag is compute-on-open. F2b adds a scheduled scan that recomputes active
+  ledger-render docs' fingerprints vs their pinned approval and raises a
+  'document_stale' notification when one drifts - so the DPO is told WITHOUT opening
+  the doc. Reuses F1's renderDocument + fingerprint; a doc is stale iff its bound
+  inputs changed, so a ledger change NOT touching a doc's inputs never flags it (no
+  separate dependency graph; proven no-false-positive).
+- WHY scheduled, not event-on-write: the divergence-causing writes (E1-E4 evidence)
+  happen in anon->SECURITY DEFINER fns with no app/Inngest hook, so there is no
+  single app chokepoint to emit an event from. A cron fan-out scan (mirroring
+  check-notifications: dispatchDocFreshness cron -> per-org checkOrgDocFreshness)
+  is the reliable trigger. src/lib/doc-freshness.ts holds the logic; the Inngest fn
+  is thin glue (registered in the serve route).
+- NO new migration: reuses the legacy notifications table (org_id, type, title,
+  body, link). One ROLLING unread 'document_stale' notification per org (dedup:
+  skip while an unread one exists) -> idempotent, no double-flag on re-run. The
+  NotificationsBell + the F1 per-doc on-open flag are the surface; a global badge /
+  Resend email is a follow-up (plan said don't over-build).
+
+## Verify (10; no legacy touched)
+- Pure selectStaleDocIds (drift selected, fresh not, missing-current not). Orchestrator
+  end-to-end via a service-role client: drift -> notified; re-run -> no duplicate
+  (idempotent); re-approve (pin current fp) -> not flagged (no false positive). The
+  no-false-positive case also validates that the verify's ctx replication matches the
+  orchestrator's render exactly (determinism). /shell-demo 13/13, tsc clean, no em-dashes.
