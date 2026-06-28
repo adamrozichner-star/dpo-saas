@@ -711,3 +711,60 @@ Hebrew. Verified 27/27 pure (incl owner mapper) + 10/10 auth-gate (incl /home) +
   overwhelms its on-demand compiler (pages capture the טוען… loading state, /shell-demo
   serves <100 CSS rules). Warm routes via curl, then run suites SEQUENTIALLY, one per
   invocation. Restart dev clean if it degrades.
+
+# F1 - documents as ledger renders (migration 044)
+
+## The render model
+- A v3 document = renderDocument(docType, approvedTemplateBody, RenderContext) -> {content, fingerprint}.
+  PURE (no IO/clock): the caller fetches ledger + descriptive rows and passes them in (console-data
+  pattern; runs in tsx verify). src/lib/ledger/doc-render.ts. 4 docs: ropa, processor_agreement,
+  dpo_appointment, asset_db_definition. AI is OUT of the render path (deterministic = legally gateable
+  + reproducible; the divergence flag needs determinism).
+- fingerprint = cyrb53(canonical(bound-INPUT-subset) + templateId + templateVersion). Browser+node
+  safe (no node-crypto), non-crypto (change-detection only). Volatile-free: NO now()/dates in the
+  inputs, so the same ledger state always yields the same fingerprint. A changed used-input OR a
+  changed template version flips it (both proven).
+- Template bodies live in hub_document_templates (Roy-approvable legal text) with {{tokens}}; the
+  per-doc binder in doc-render produces the token map + the input subset. Seeded PROVISIONAL
+  (expert_judgment/0.5, reviewed_by=null) via scripts/seed-document-templates.ts. asset_template_id is
+  NOT NULL on that table -> used a synthetic org-level marker id (DOC_ORG_LEVEL_ASSET_ID).
+
+## Live mechanism + approval pin
+- Approved doc is PINNED: documents.content + render_fingerprint + template_id/version + approved_at/by
+  at status='active'. On console open, recompute the live render; if live fingerprint != pinned ->
+  "ממתין לרענון" + show the new render + re-approve (which re-pins + archives the prior active, version++).
+  The pinned content NEVER silently changes (proven: mutate a ledger input -> pinned row unchanged
+  until re-approve). Compute-on-open + compare; no background job / dependency graph (that is F2).
+
+## documents coexistence + RLS (migration 044, additive)
+- v3 rows marked source='ledger_render'; the 19 LEGACY rows are untouched (full-column md5 byte-
+  identical before/after the whole build + a render/approve cycle - the hard gate, proven). Legacy
+  /api/generate-documents, ai-doc-generator, document_reviews all untouched.
+- Added nullable pin columns (render_fingerprint, template_id, template_version, approved_at,
+  approved_by). Added documents_insert_own RLS policy (org-scoped) so v3 writes are authed-DPO under
+  RLS (no service-role; today documents only had SELECT+UPDATE policies). REVOKE'd anon
+  INSERT/UPDATE/DELETE (the latent grant; documents is now an active v3 write surface). Reproducible
+  (revert+reapply, idempotent).
+
+## PDF route reality (STEP-2 design correction)
+- /api/documents/export does NOT take {doc:{title,content}} - it takes {documentId, format, orgId},
+  fetches the doc by id (service-role), and returns a pdfmake DEFINITION for client rendering, with NO
+  client consumer wired. /api/generate-pdf is the right reuse: auth-gated, takes {title, content,
+  orgName}, returns styled RTL HTML -> open in a new window for browser print-to-PDF. My STEP-2 design
+  mis-stated the export contract (read the generatePDFContent helper, not the POST handler); the page
+  now calls generate-pdf with the session bearer token. Both PDF routes left UNCHANGED.
+
+## Gaps (F2) + Roy/Amir gates
+- Render reads ledger (assets/data_recipients/contacts) + descriptive (organization_profiles); DPO
+  identity from contacts(role=dpo) (name/email) - license_number deferred (dpos RLS is keyed to the
+  DPO's own auth_user_id; '-' shown for now). Migrating descriptive data into the ledger = F2; audit
+  pack / Certify + event-driven auto-regen + AI-assisted bespoke docs (privacy_policy,
+  security_procedures) = F2.
+- ALL 4 template bodies are PROVISIONAL legal content pending Amir/Roy (reviewed_by=null). Open legal
+  calls flagged: controller identity in the header, what "approved" legally requires, trustworthiness
+  of organization_profiles (may be onboarding-era/stale), and how the DPA renders a has_dpa=false vendor.
+
+## Branch note
+- Adam committed migration 044 himself mid-build as `wip: documents ledger render migration`
+  (6a9b3f37, byte-identical to the on-disk 044). So 044 is already on feature/documents; the rest of
+  the F1 files are staged separately. No divergence.

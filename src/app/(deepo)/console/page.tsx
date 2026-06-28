@@ -76,9 +76,10 @@ export default function ConsolePage() {
           <p className="t-eyebrow">קונסולת ממונה</p>
           <h2 className="t-h2" style={{ margin: 0 }}>{org.name}</h2>
         </div>
-        <Link href="/console/links" className="dp-led-link" style={{ marginInlineStart: 'auto' }}>
-          קישורי איסוף
-        </Link>
+        <div style={{ marginInlineStart: 'auto', display: 'flex', gap: 'var(--space-4)' }}>
+          <Link href="/console/documents" className="dp-led-link">מסמכים</Link>
+          <Link href="/console/links" className="dp-led-link">קישורי איסוף</Link>
+        </div>
       </header>
 
       <section>
