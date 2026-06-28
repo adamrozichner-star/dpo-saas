@@ -834,3 +834,37 @@ Hebrew. Verified 27/27 pure (incl owner mapper) + 10/10 auth-gate (incl /home) +
   (idempotent); re-approve (pin current fp) -> not flagged (no false positive). The
   no-false-positive case also validates that the verify's ctx replication matches the
   orchestrator's render exactly (determinism). /shell-demo 13/13, tsc clean, no em-dashes.
+
+# F2d - descriptive-data migration into the ledger (migration 046)
+
+## Strangler advances: descriptive data gets a v3 home
+- Renders need org-level descriptive data (data categories, purposes, security
+  measures, DPO license) that lived only in legacy organization_profiles/dpos.
+  046 adds org_descriptors (org-level, RLS org-scoped, anon ZERO) + contacts.
+  license_number (the DPO's license on the DPO contact). third_parties is NOT
+  duplicated - the ledger already holds vendors in data_recipients (E3).
+- src/lib/ledger/descriptive.ts: resolveRenderProfile (PURE: prefer the ledger
+  descriptor row when present, else legacy; row-level preference) + resolveDpoLicense
+  (ledger contacts.license_number, fallback dpos via organizations.dpo_id) +
+  fetchOrgDescriptive (ledger-first-fallback-legacy IO; works with authed RLS or
+  service client). The doc-render binders are UNCHANGED - only the context SOURCE
+  changed (documents page + doc-freshness now fetch via fetchOrgDescriptive).
+- scripts/migrate-org-descriptors.ts: idempotent copy organization_profiles ->
+  org_descriptors (ON CONFLICT). Ran it: 3 descriptors from 3 profiles, legacy
+  byte-identical. דiפו's legacy descriptive is empty so its descriptor is empty
+  (no render change - empty ledger == empty legacy).
+
+## Verify (12; legacy byte-identical; regressions intact)
+- Pure resolver (ledger wins / legacy fallback / license precedence). Ledger-first:
+  set org_descriptors -> the ROPA render reflects the LEDGER categories (was reading
+  empty legacy); change it -> render changes; delete it -> falls back to legacy.
+  DPO license from contacts.license_number with dpos fallback. organization_profiles
+  + dpos byte-identical. F1 19, F2a 20, F2b 10 (now reads fetchOrgDescriptive), E
+  37/26/29/27, /shell-demo 13/13, tsc clean.
+
+## tsc gotcha
+- A scripts/*.ts with NO top-level import/export is a GLOBAL script in tsc's view;
+  two such files sharing top-level const names (REF/TOKEN) / a `sql` fn collide
+  ("Cannot redeclare" / "Duplicate function implementation"). Adding a no-import
+  script (migrate-org-descriptors) collided with the pre-existing global verify-dsar.
+  Fix: add `export {}` to make each a module (isolated scope). Both needed it.

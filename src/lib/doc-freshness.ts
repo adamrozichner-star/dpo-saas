@@ -9,6 +9,7 @@
 // with no app hook, so a scheduled scan is the reliable trigger).
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { renderDocument, type DocType, type RenderContext } from '@/lib/ledger/doc-render'
+import { fetchOrgDescriptive } from '@/lib/ledger/descriptive'
 
 const STALE_TYPE = 'document_stale'
 
@@ -27,18 +28,18 @@ export function selectStaleDocIds(
 interface ActiveDocRow { id: string; type: string; template_id: string | null; template_version: number | null; render_fingerprint: string | null }
 
 async function fetchRenderContext(orgId: string, supabase: SupabaseClient): Promise<RenderContext> {
-  const [orgRes, dpoRes, profRes, assetRes, recipRes] = await Promise.all([
+  const [orgRes, dpoRes, assetRes, recipRes, descriptive] = await Promise.all([
     supabase.from('organizations').select('name').eq('id', orgId).single(),
     supabase.from('contacts').select('name, email').eq('org_id', orgId).eq('role', 'dpo').limit(1),
-    supabase.from('organization_profiles').select('data_types, processing_purposes, security_measures, third_parties').eq('org_id', orgId).maybeSingle(),
     supabase.from('assets').select('name, details').eq('org_id', orgId),
     supabase.from('data_recipients').select('name, has_dpa, dpa_signed_date, dpa_expiry_date').eq('org_id', orgId),
+    fetchOrgDescriptive(orgId, supabase), // F2d: ledger-first descriptive (profile + DPO license), legacy fallback
   ])
   const dpo = (dpoRes.data?.[0] as { name: string | null; email: string | null } | undefined) ?? null
   return {
     org: { name: (orgRes.data as { name: string } | null)?.name ?? '' },
-    dpo: dpo ? { name: dpo.name, email: dpo.email, license_number: null } : null,
-    profile: (profRes.data as RenderContext['profile']) ?? null,
+    dpo: dpo ? { name: dpo.name, email: dpo.email, license_number: descriptive.dpoLicense } : null,
+    profile: descriptive.profile,
     assets: (assetRes.data ?? []) as RenderContext['assets'],
     recipients: (recipRes.data ?? []) as RenderContext['recipients'],
   }

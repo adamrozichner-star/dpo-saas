@@ -21,6 +21,7 @@ import {
   renderDocument, DOC_TYPES,
   type DocType, type RenderContext, type DocTemplate,
 } from '@/lib/ledger/doc-render'
+import { fetchOrgDescriptive } from '@/lib/ledger/descriptive'
 
 interface TemplateRow { template_id: string; version: number; name: string; body: string; variables: { doc_type?: string } | null }
 interface DocRow {
@@ -51,19 +52,19 @@ export default function DocumentsPage() {
 
   const load = useCallback(async () => {
     if (!supabase || !org) return
-    const [dpoRes, profRes, assetRes, recipRes, tplRes, docRes] = await Promise.all([
+    const [dpoRes, assetRes, recipRes, tplRes, docRes, descriptive] = await Promise.all([
       supabase.from('contacts').select('name, email').eq('org_id', org.id).eq('role', 'dpo').limit(1),
-      supabase.from('organization_profiles').select('data_types, processing_purposes, security_measures, third_parties').eq('org_id', org.id).maybeSingle(),
       supabase.from('assets').select('name, details').eq('org_id', org.id),
       supabase.from('data_recipients').select('name, has_dpa, dpa_signed_date, dpa_expiry_date').eq('org_id', org.id),
       supabase.from('hub_document_templates').select('template_id, version, name, body, variables').eq('active', true),
       supabase.from('documents').select('id, type, title, content, status, version, render_fingerprint, template_id, template_version').eq('org_id', org.id).eq('source', 'ledger_render').order('updated_at', { ascending: false }),
+      fetchOrgDescriptive(org.id, supabase), // F2d: ledger-first descriptive (profile + DPO license), legacy fallback
     ])
     const dpo = (dpoRes.data?.[0] as { name: string | null; email: string | null } | undefined) ?? null
     setCtx({
       org: { name: org.name },
-      dpo: dpo ? { name: dpo.name, email: dpo.email, license_number: null } : null,
-      profile: (profRes.data as RenderContext['profile']) ?? null,
+      dpo: dpo ? { name: dpo.name, email: dpo.email, license_number: descriptive.dpoLicense } : null,
+      profile: descriptive.profile,
       assets: (assetRes.data ?? []) as RenderContext['assets'],
       recipients: (recipRes.data ?? []) as RenderContext['recipients'],
     })
