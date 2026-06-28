@@ -89,7 +89,7 @@ export default function LeadSignupPage() {
           <>
             <h1 className="lead-title text-3xl font-bold mb-2">הצטרפות לגישה מוקדמת</h1>
             <p className="lead-sub mb-8">
-              ההרשמה לשירות תיפתח בקרוב. השאירו פרטים ונעדכן אתכם ראשונים — כולל
+              ההרשמה לשירות תיפתח בקרוב. השאירו פרטים ונעדכן אתכם ראשונים, כולל
               מחיר מיוחד למצטרפים מוקדמים.
             </p>
 
