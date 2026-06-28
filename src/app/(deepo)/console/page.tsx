@@ -77,6 +77,7 @@ export default function ConsolePage() {
           <h2 className="t-h2" style={{ margin: 0 }}>{org.name}</h2>
         </div>
         <div style={{ marginInlineStart: 'auto', display: 'flex', gap: 'var(--space-4)' }}>
+          <Link href="/console/audit" className="dp-led-link">תיק היערכות</Link>
           <Link href="/console/documents" className="dp-led-link">מסמכים</Link>
           <Link href="/console/links" className="dp-led-link">קישורי איסוף</Link>
         </div>
