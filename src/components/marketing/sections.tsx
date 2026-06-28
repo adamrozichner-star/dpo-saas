@@ -29,8 +29,13 @@ export function SecHead({
 }
 
 // Inline mono eyebrow (for hero / band intros that are not centred SecHeads).
-export function Eyebrow({ icon, children }: { icon?: DeepoIconId; children: React.ReactNode }) {
-  return <span className="mk-eyebrow">{icon && <DeepoIcon id={icon} />}{children}</span>
+// `pill` renders the bordered hero chip (vision .eyebrow); plain otherwise.
+export function Eyebrow({ icon, pill, children }: { icon?: DeepoIconId; pill?: boolean; children: React.ReactNode }) {
+  return (
+    <span className={`mk-eyebrow${pill ? ' mk-eyebrow--pill' : ''}`}>
+      {icon && <DeepoIcon id={icon} />}{children}
+    </span>
+  )
 }
 
 export type FeatureItem = { id: DeepoIconId; title: string; desc: string }

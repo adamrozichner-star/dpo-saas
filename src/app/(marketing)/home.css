@@ -11,23 +11,20 @@
 
 .hp { background: var(--bg-page); }
 
-/* ── Hero (coverage-mesh backdrop via .mk-mesh dot-grid + RadarMotif) ── */
-.hp-hero { padding-block: var(--space-20) var(--space-24); }
-.hp-hero__radar { inset-inline-start: -300px; bottom: -320px; }
-.hp-hero__slogan {
-  font-family: var(--font-mono); font-size: 13px; font-weight: 600; letter-spacing: 0.06em;
-  color: var(--crimson-600); margin: 0 0 var(--space-4);
-}
+/* ── Hero (vision index-he.html: dot-grid + lower-LEFT radar + 2-line head) ── */
+.hp-hero { padding-block: 76px 88px; }
+/* physical `left` (not inset-inline-start) so the rings sit lower-LEFT in
+   RTL, behind the dashboard card - matching the vision .radar-rings. */
+.hp-hero__radar { left: -300px; bottom: -320px; }
 .hp-hero__grid {
   position: relative; z-index: 1;
-  display: grid; grid-template-columns: 1.05fr 0.95fr; gap: var(--space-16); align-items: center;
+  display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px; align-items: center;
 }
 .hp-hero h1 {
-  font-family: var(--font-display); font-weight: 600; font-size: clamp(36px, 6vw, 58px);
-  line-height: 1.08; letter-spacing: -0.02em; color: var(--fg-1); margin: var(--space-5) 0 var(--space-5);
-  text-wrap: balance;
+  font-family: var(--font-display); font-weight: 600; font-size: 60px;
+  line-height: 1.08; letter-spacing: -0.02em; color: var(--fg-1); margin: 0 0 20px;
 }
-.hp-hero__lede { font-size: 20px; line-height: 1.6; color: var(--fg-2); max-width: 48ch; margin: 0 0 var(--space-8); }
+.hp-hero__lede { font-size: 20px; line-height: 1.6; color: var(--fg-2); max-width: 46ch; margin: 0 0 30px; }
 .hp-hero__micro {
   margin-top: var(--space-5); font-family: var(--font-mono); font-size: 12px;
   color: var(--fg-3); letter-spacing: 0.02em;
@@ -40,7 +37,7 @@
   background:
     radial-gradient(ellipse 60% 60% at 70% 30%, rgba(255,157,33,0.20), transparent 70%),
     radial-gradient(ellipse 55% 55% at 20% 80%, rgba(209,3,49,0.16), transparent 70%);
-  filter: blur(8px);
+  filter: blur(6px);
 }
 .hp-dash {
   position: relative; z-index: 1; background: #fff; border: 1px solid var(--sand-300);
@@ -183,10 +180,12 @@
 .hp-addons__row { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); }
 
 /* ── Responsive ─────────────────────────────────────────────── */
-@media (max-width: 900px) {
+@media (max-width: 940px) {
+  /* vision: single-column hero + 44px headline below 940 */
   .hp-hero__grid, .hp-calc__grid, .hp-experts__grid, .hp-ctable, .hp-pcards { grid-template-columns: 1fr; }
   .hp-pcards { grid-template-columns: 1fr 1fr; }
-  .hp-hero__radar { inset-inline-start: -420px; bottom: -440px; }
+  .hp-hero h1 { font-size: 44px; }
+  .hp-hero__radar { left: -380px; bottom: -380px; }
   .hp-security { flex-direction: column; text-align: center; }
   .hp-security__ic { margin-inline: auto; }
 }

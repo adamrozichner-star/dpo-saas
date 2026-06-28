@@ -8,7 +8,8 @@
    ============================================================ */
 
 /* ── Layout ─────────────────────────────────────────────────── */
-.mk-wrap { max-width: 1120px; margin-inline: auto; padding-inline: var(--space-5); }
+/* Container matches the vision (.wrap): 1200 max, 32px gutters. */
+.mk-wrap { max-width: 1200px; margin-inline: auto; padding-inline: 32px; }
 .mk-section { padding-block: var(--space-24); position: relative; }
 .mk-section--tight { padding-block: var(--space-16); }
 .mk-band--sand { background: var(--sand-50); border-block: 1px solid var(--sand-300); }
@@ -22,6 +23,12 @@
   letter-spacing: 0.12em; text-transform: uppercase; color: var(--crimson-500);
 }
 .mk-eyebrow .dpi { --dpi-c: var(--crimson-500); font-size: 15px; }
+/* Hero eyebrow pill (vision .eyebrow): bordered crimson-50 chip. */
+.mk-eyebrow--pill {
+  color: var(--crimson-600); background: var(--crimson-50); border: 1px solid var(--crimson-100);
+  border-radius: var(--radius-pill); padding: 7px 14px; letter-spacing: 0.08em; white-space: nowrap;
+}
+.mk-eyebrow--pill .dpi { --dpi-c: var(--crimson-600); }
 .mk-sechead h2 {
   font-family: var(--font-display); font-weight: 600; font-size: clamp(28px, 4vw, 40px);
   letter-spacing: -0.01em; color: var(--fg-1); margin: var(--space-3) 0 0; text-wrap: balance;
@@ -30,16 +37,16 @@
 .mk-grad { background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
 /* ── CTA row ────────────────────────────────────────────────── */
-.mk-ctas { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
+.mk-ctas { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 
 /* ── Coverage mesh ──────────────────────────────────────────── */
 /* Layer 1: the crimson dot-grid, applied to a hero section as a backdrop.
-   Exact patterns.html .mesh::before recipe (.16 alpha, 1.3/1.4px, 20px). */
+   Vision recipe (index-he.html .hero::before): .08 alpha, 1.2/1.3px, 22px. */
 .mk-mesh { position: relative; overflow: hidden; }
 .mk-mesh::before {
   content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background-image: radial-gradient(rgba(209,3,49,.16) 1.3px, transparent 1.4px);
-  background-size: 20px 20px;
+  background-image: radial-gradient(rgba(209,3,49,.08) 1.2px, transparent 1.3px);
+  background-size: 22px 22px;
 }
 
 /* Layers 2+3: coverage rings (drawn inline by RadarMotif) + the 135deg

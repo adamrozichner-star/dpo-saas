@@ -55,7 +55,7 @@ export default function ProductPage() {
       <section className="pp-hero mk-mesh">
         <RadarMotif className="pp-hero__radar" size={720} />
         <div className="mk-wrap pp-hero__inner">
-          <Eyebrow icon="dp-radar">המוצר</Eyebrow>
+          <Eyebrow icon="dp-radar" pill>המוצר</Eyebrow>
           <h1>כל מה שתיקון 13 דורש, <span className="mk-grad">קורה מעצמו.</span></h1>
           <p className="pp-hero__lede">
             אנחנו מוצאים מה צריך, אוספים את החומר, סוגרים את הפערים ושומרים שהכול יישאר מעודכן. אתם רק מאשרים.

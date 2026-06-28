@@ -21,18 +21,19 @@ export interface RadarMotifProps {
 }
 
 export function RadarMotif({ size = 820, node = true, className = '', style }: RadarMotifProps) {
+  // Vision recipe (index-he.html .radar-rings): 4 coverage rings at radii
+  // 104/204/304/404 on an 820px circle (radius 410), 2px lines, alphas
+  // .30/.22/.15/.09. Scaled to `size` so it stays exact at 820 and matches
+  // the proportions at any size.
   const R = size / 2
-  // patterns.html ring radii (22/56/96 over a 115px radius), 2px hairlines.
-  const r1 = +(0.1913 * R).toFixed(1)
-  const r2 = +(0.4870 * R).toFixed(1)
-  const r3 = +(0.8348 * R).toFixed(1)
-  const w = 2
+  const f = (px: number) => +((px / 410) * R).toFixed(1)
   const rings =
     `radial-gradient(circle,` +
-    ` transparent 0 ${r1}px, rgba(209,3,49,.55) ${r1}px ${r1 + w}px,` +
-    ` transparent ${r1 + w}px ${r2}px, rgba(209,3,49,.32) ${r2}px ${r2 + w}px,` +
-    ` transparent ${r2 + w}px ${r3}px, rgba(209,3,49,.18) ${r3}px ${r3 + w}px,` +
-    ` transparent ${r3 + w}px)`
+    ` transparent 0 ${f(104)}px, rgba(209,3,49,.30) ${f(104)}px ${f(106)}px,` +
+    ` transparent ${f(106)}px ${f(204)}px, rgba(209,3,49,.22) ${f(204)}px ${f(206)}px,` +
+    ` transparent ${f(206)}px ${f(304)}px, rgba(209,3,49,.15) ${f(304)}px ${f(306)}px,` +
+    ` transparent ${f(306)}px ${f(404)}px, rgba(209,3,49,.09) ${f(404)}px ${f(406)}px,` +
+    ` transparent ${f(406)}px)`
   return (
     <div
       aria-hidden="true"

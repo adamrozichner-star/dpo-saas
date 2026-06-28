@@ -152,25 +152,23 @@ export default function HomePage() {
   return (
     <div className="hp">
 
-      {/* 1 - RADAR HERO (coverage mesh: .mk-mesh dot-grid + RadarMotif rings).
-          Node hidden here: the rings sit in the corner, so a centred node reads
-          as a detached dot; the rings sweep up on their own (product centres it). */}
+      {/* 1 - RADAR HERO (vision index-he.html): .mk-mesh dot-grid + lower-LEFT
+          RadarMotif (rings + visible 135deg core node, behind the dashboard). */}
       <section className="hp-hero mk-mesh">
-        <RadarMotif className="hp-hero__radar" size={820} node={false} />
+        <RadarMotif className="hp-hero__radar" size={820} />
         <div className="mk-wrap hp-hero__grid">
           <div>
-            <Eyebrow icon="dp-shield">תיקון 13 כבר כאן</Eyebrow>
+            <Eyebrow icon="dp-shield" pill>תיקון 13 כבר כאן</Eyebrow>
             <h1>הגנת פרטיות מקצועית, <span className="mk-grad">במחיר נגיש לכולם.</span></h1>
-            <p className="hp-hero__slogan">איתכם בהגנה על הפרטיות</p>
             <p className="hp-hero__lede">
-              Deepo הוא שירות DPO שמגן עליכם מחשיפה, בעלות נמוכה ובלי שתצטרכו להבין בחוק. סוכני AI ייעודיים
-              עושים את העבודה הקשה, ומאחוריהם צוות DPOs מנוסה.
+              Deepo מגן על העסק שלכם מחשיפה לרשות להגנת הפרטיות ולתביעות. סוכני AI ייעודיים עובדים 24/7,
+              ומאחוריהם צוות DPOs מנוסה. אנחנו שומרים עליכם, בלי שתצטרכו להבין בחוק.
             </p>
             <div className="mk-ctas">
-              <Link href={signupHref('/register')} className="dp-btn dp-btn--gradient dp-btn--lg">התחילו</Link>
-              <a href="#calculator" className="dp-btn dp-btn--secondary dp-btn--lg">בדיקה תוך 30 שניות</a>
+              <Link href={signupHref('/register')} className="dp-btn dp-btn--gradient dp-btn--lg">התחילו עכשיו</Link>
+              <a href="#how" className="dp-btn dp-btn--secondary dp-btn--lg">איך זה עובד</a>
             </div>
-            <p className="hp-hero__micro">החל מ-₪1,000 לחודש · בלי עלות הקמה · עומדים בדרישות תוך ימים</p>
+            <p className="hp-hero__micro">החל מ-1,000₪ לחודש · בלי עלות הקמה · עומדים בדרישות תוך ימים</p>
           </div>
 
           {/* dashboard preview (illustrative, not a screenshot) */}
@@ -195,7 +193,18 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2 - CALCULATOR */}
+      {/* 2 - TRUST / SECTOR STRIP (vision places it directly under the hero) */}
+      <section className="hp-trust">
+        <div className="mk-wrap hp-trust__row">
+          <span className="hp-trust__lab">מגנים על עסקים ב:</span>
+          <span className="hp-sector"><DeepoIcon id="dp-health" /> בריאות</span>
+          <span className="hp-sector"><DeepoIcon id="dp-education" /> חינוך</span>
+          <span className="hp-sector"><DeepoIcon id="dp-doc" /> ראיית חשבון</span>
+          <span className="hp-sector"><DeepoIcon id="dp-finance" /> פיננסים</span>
+        </div>
+      </section>
+
+      {/* 3 - CALCULATOR */}
       <section className="mk-section mk-band--sand" id="calculator">
         <div className="mk-wrap hp-calc__grid">
           <div className="hp-calc__copy">
@@ -207,18 +216,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3 - TRUST STRIP */}
-      <section className="hp-trust">
-        <div className="mk-wrap hp-trust__row">
-          <span className="hp-trust__lab">מגנים על עסקים ב:</span>
-          <span className="hp-sector"><DeepoIcon id="dp-health" /> בריאות</span>
-          <span className="hp-sector"><DeepoIcon id="dp-education" /> חינוך</span>
-          <span className="hp-sector"><DeepoIcon id="dp-doc" /> ראיית חשבון</span>
-          <span className="hp-sector"><DeepoIcon id="dp-finance" /> פיננסים</span>
-          <TrustSlot>מקום לשותפים · בקרוב</TrustSlot>
-        </div>
-      </section>
-
       {/* 4 - WHAT YOU GET */}
       <section className="mk-section">
         <div className="mk-wrap">
@@ -227,8 +224,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 5 - HOW IT WORKS */}
-      <section className="mk-section mk-band--sand">
+      {/* 5 - HOW IT WORKS (hero "איך זה עובד" CTA anchors here) */}
+      <section className="mk-section mk-band--sand" id="how">
         <div className="mk-wrap">
           <SecHead eyebrow="איך מתחילים" title="ארבעה צעדים. חמש דקות." sub="חמש דקות. פחות זמן ממה שלוקח להסביר לאמא מה זה DPO." />
           <Steps items={STEPS} />
