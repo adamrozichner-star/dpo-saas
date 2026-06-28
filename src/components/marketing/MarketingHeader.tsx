@@ -16,14 +16,30 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { signupHref } from '@/lib/signup-flag'
 
-// Primary nav, spec section 4 (RTL order). Targets resolve in later PRs;
-// unbuilt routes are expected during the marketing rebuild.
+// Primary nav, spec section 4 (RTL order).
 const NAV: Array<{ href: string; label: string }> = [
   { href: '/product', label: 'המוצר' },
   { href: '/pricing', label: 'מחירים' },
   { href: '/partners', label: 'לרואי חשבון' },
   { href: '/about', label: 'מי אנחנו' },
 ]
+
+// Routes not built yet: shown but non-navigating (quiet "בקרוב") so a
+// preview reviewer never hits a 404. Remove an entry once its page ships.
+const COMING_SOON = new Set<string>(['/pricing', '/partners', '/about', '/security', '/press', '/faq'])
+
+// Render a nav item: a real Link if its page exists, else an inert
+// "בקרוב" label that does not navigate.
+function NavItem({ href, label, className }: { href: string; label: string; className?: string }) {
+  if (COMING_SOON.has(href)) {
+    return (
+      <span className={`mkt-nav__soon${className ? ' ' + className : ''}`} aria-disabled="true">
+        {label}<small>בקרוב</small>
+      </span>
+    )
+  }
+  return <Link href={href} className={className}>{label}</Link>
+}
 
 // Pages that get the stripped-down header (logo + quiet login only).
 const MINIMAL_PATHS = new Set<string>(['/lead-signup'])
@@ -72,9 +88,7 @@ export function MarketingHeader() {
         {logo}
         <div className="mkt-nav__links">
           {NAV.map((item) => (
-            <Link key={item.href} href={item.href}>
-              {item.label}
-            </Link>
+            <NavItem key={item.href} href={item.href} label={item.label} />
           ))}
         </div>
         <div className="mkt-nav__spacer" />
@@ -112,9 +126,7 @@ export function MarketingHeader() {
 
       <div className={`mkt-drawer${open ? ' is-open' : ''}`}>
         {NAV.map((item) => (
-          <Link key={item.href} href={item.href}>
-            {item.label}
-          </Link>
+          <NavItem key={item.href} href={item.href} label={item.label} />
         ))}
         <Link href="/login">התחברות</Link>
         <Link href={signupHref('/register')} className="dp-btn dp-btn--primary dp-btn--md mkt-drawer__cta">

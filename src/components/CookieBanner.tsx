@@ -31,12 +31,12 @@ export default function CookieBanner() {
     >
       <div className="container mx-auto flex items-center justify-between gap-4 max-w-5xl">
         <p className="text-sm text-stone-600 flex-1">
-          🍪 אתר זה משתמש בעוגיות לשיפור חוויית השימוש ולצורכי ניתוח.{' '}
-          <a href="/cookie-policy" className="text-indigo-600 hover:underline">מדיניות עוגיות</a>
+          אתר זה משתמש בעוגיות לשיפור חוויית השימוש ולצורכי ניתוח.{' '}
+          <a href="/cookie-policy" className="text-stone-700 underline hover:text-stone-900">מדיניות עוגיות</a>
         </p>
         <button
           onClick={accept}
-          className="px-5 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex-shrink-0"
+          className="px-5 py-2 bg-stone-800 text-white rounded-lg text-sm font-medium hover:bg-stone-900 transition-colors flex-shrink-0"
         >
           אישור
         </button>

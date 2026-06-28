@@ -3,14 +3,16 @@
 // Three link groups per spec section 4 + the fixed liability disclaimer
 // (spec section 2.9). Logo is logoondark on the dark surface.
 //
-// Replaces the old @/components/Footer for marketing pages. Some unbuilt
-// routes (security, press, faq, product, pricing, partners, about) are
-// linked ahead of their pages, which is expected during the rebuild.
+// Replaces the old @/components/Footer for marketing pages. Routes that are
+// not built yet are shown but non-navigating (quiet "בקרוב") so a preview
+// reviewer never hits a 404; remove an entry from COMING_SOON once it ships.
 
 import Link from 'next/link'
 import Image from 'next/image'
 
 type FooterLink = { href: string; label: string }
+
+const COMING_SOON = new Set<string>(['/pricing', '/partners', '/about', '/security', '/press', '/faq'])
 
 const GROUPS: Array<{ title: string; links: FooterLink[] }> = [
   {
@@ -57,11 +59,17 @@ export function MarketingFooter() {
           {GROUPS.map((group) => (
             <nav key={group.title} className="mkt-footer__col" aria-label={group.title}>
               <b>{group.title}</b>
-              {group.links.map((link) => (
-                <Link key={link.href} href={link.href}>
-                  {link.label}
-                </Link>
-              ))}
+              {group.links.map((link) =>
+                COMING_SOON.has(link.href) ? (
+                  <span key={link.href} className="mkt-footer__soon" aria-disabled="true">
+                    {link.label}<small>בקרוב</small>
+                  </span>
+                ) : (
+                  <Link key={link.href} href={link.href}>
+                    {link.label}
+                  </Link>
+                ),
+              )}
             </nav>
           ))}
         </div>

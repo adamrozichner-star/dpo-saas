@@ -152,9 +152,11 @@ export default function HomePage() {
   return (
     <div className="hp">
 
-      {/* 1 - RADAR HERO (coverage mesh: .mk-mesh dot-grid + RadarMotif rings/core) */}
+      {/* 1 - RADAR HERO (coverage mesh: .mk-mesh dot-grid + RadarMotif rings).
+          Node hidden here: the rings sit in the corner, so a centred node reads
+          as a detached dot; the rings sweep up on their own (product centres it). */}
       <section className="hp-hero mk-mesh">
-        <RadarMotif className="hp-hero__radar" size={820} />
+        <RadarMotif className="hp-hero__radar" size={820} node={false} />
         <div className="mk-wrap hp-hero__grid">
           <div>
             <Eyebrow icon="dp-shield">תיקון 13 כבר כאן</Eyebrow>

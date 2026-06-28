@@ -45,6 +45,15 @@
   transition: color var(--dur-1, 120ms) ease;
 }
 .mkt-nav__links a:hover { color: var(--crimson-600); }
+/* not-yet-built nav item: visible but inert, with a quiet "בקרוב" tag */
+.mkt-nav__links .mkt-nav__soon {
+  display: inline-flex; align-items: center; gap: 6px; cursor: default;
+  font-family: var(--font-body); font-size: 15px; font-weight: 500; color: var(--fg-3);
+}
+.mkt-nav__soon small {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
+  color: var(--fg-3); border: 1px solid var(--sand-300); border-radius: var(--radius-pill); padding: 1px 6px;
+}
 .mkt-nav__spacer { flex: 1; }
 .mkt-nav__actions { display: flex; align-items: center; gap: var(--space-3); }
 .mkt-nav__login {
@@ -150,6 +159,15 @@
   transition: color var(--dur-1, 120ms) ease;
 }
 .mkt-footer__col a:hover { color: #fff; }
+/* not-yet-built footer item: inert, dimmer than live links, with a "בקרוב" tag */
+.mkt-footer__col .mkt-footer__soon {
+  display: flex; align-items: center; gap: 8px; cursor: default;
+  font-family: var(--font-body); font-size: 14px; color: var(--garnet-500); padding: var(--space-1) 0;
+}
+.mkt-footer__soon small {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
+  color: var(--garnet-300); border: 1px solid var(--garnet-700); border-radius: var(--radius-pill); padding: 1px 6px;
+}
 .mkt-footer__disclaimer {
   border-top: 1px solid var(--garnet-700);
   padding-top: var(--space-6);
