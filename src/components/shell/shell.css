@@ -45,8 +45,16 @@
 }
 .dp-shell__sidebar > * { position: relative; } /* sit above the glow */
 
-.dp-shell__brand { padding: var(--space-5) var(--space-5) var(--space-4); }
-.dp-shell__brand img { height: 30px; width: auto; display: block; }
+/* brand block: more top breathing room so the wordmark clears the ember glow that
+   blooms from the top corner of the Onyx sidebar, and a slightly larger, balanced
+   logo. A hairline divider separates it from the nav. */
+.dp-shell__brand {
+  padding: var(--space-6) var(--space-5) var(--space-5);
+  border-block-end: 1px solid var(--border-1);
+  margin-block-end: var(--space-2);
+}
+.dp-shell--dpo .dp-shell__brand { border-block-end-color: var(--border-on-dark); }
+.dp-shell__logo { height: 34px; width: auto; display: block; }
 
 .dp-shell__nav { flex: 1; padding: var(--space-2) var(--space-3); overflow-y: auto; }
 .dp-shell__sec {

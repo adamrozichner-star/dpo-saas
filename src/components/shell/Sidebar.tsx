@@ -16,12 +16,12 @@ export interface SidebarProps {
  * logofull on the light (owner) sidebar. RTL: this aside is the right-hand column.
  */
 export function Sidebar({ actor, sections, activeId, onNavigate, org }: SidebarProps) {
-  const logo = actor === 'dpo' ? '/brand/logos/logoreverse.png' : '/brand/logos/logofull.png'
+  const logo = actor === 'dpo' ? '/brand/logos/logoondark.png' : '/brand/logos/logofull.png'
   return (
     <aside className="dp-shell__sidebar">
       <div className="dp-shell__brand">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={logo} alt="Deepo" />
+        <img src={logo} alt="Deepo" className="dp-shell__logo" />
       </div>
       <nav className="dp-shell__nav">
         {sections.map((section) => (

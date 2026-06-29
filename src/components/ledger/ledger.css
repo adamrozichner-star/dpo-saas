@@ -64,8 +64,10 @@
 .dp-dial { display: inline-flex; flex-direction: column; align-items: center; gap: var(--space-2); }
 .dp-dial__wrap { position: relative; display: inline-grid; place-items: center; }
 .dp-dial__svg { transform: rotate(-90deg); } /* arc starts at top */
-.dp-dial__center { position: absolute; display: flex; flex-direction: column; align-items: center; }
-.dp-dial__num { font-family: var(--font-display); font-weight: 700; font-size: var(--t-h2); color: var(--fg-1); line-height: 1; }
+/* inset:0 + grid centering pins the readout to the MIDDLE of the ring (it was
+   absolutely positioned with no offsets -> sat at the top: the "floating" number) */
+.dp-dial__center { position: absolute; inset: 0; display: grid; place-items: center; gap: 2px; }
+.dp-dial__num { font-family: var(--font-display); font-weight: 700; font-size: var(--t-display-m); color: var(--fg-1); line-height: 1; }
 .dp-dial__label { font-size: var(--t-caption); color: var(--fg-3); }
 
 /* TokenizedFormShell - zero-chrome, no org identity (CC-2 seam) */
@@ -101,3 +103,70 @@
 .dp-led-on-dark .dp-timeline__dot { background: var(--garnet-700); color: var(--amber-400); }
 .dp-led-on-dark .dp-timeline__line { background: var(--border-on-dark); }
 .dp-led-on-dark .dp-control-item .dp-control-item__icon { color: var(--amber-400); }
+
+/* ============================================================
+   Console page layout (redesign). Consistent width + rhythm, a shared
+   page header, titled card sections, a stat cluster, and a flush row list
+   so rows read as one grouped surface inside a card (not free strips).
+   ============================================================ */
+
+/* page shell: one content width + vertical rhythm across all console pages */
+.dp-page { display: flex; flex-direction: column; gap: var(--space-6); max-width: 960px; margin-inline: auto; }
+
+/* back link above the header */
+.dp-page__back { align-self: flex-start; }
+
+/* shared page header (eyebrow + title + description + actions) */
+.dp-pagehead { display: flex; align-items: flex-end; gap: var(--space-4); flex-wrap: wrap; }
+.dp-pagehead__text { flex: 1; min-width: 0; }
+.dp-pagehead__title { margin: var(--space-1) 0 0; font-family: var(--font-display); font-weight: 600; font-size: var(--t-h2); color: var(--fg-1); }
+.dp-pagehead__desc { margin: var(--space-2) 0 0; font-size: var(--t-body-sm); color: var(--fg-3); max-width: 64ch; }
+.dp-pagehead__actions { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+
+/* a titled section header inside a card */
+.dp-section__head { display: flex; align-items: baseline; gap: var(--space-2); margin-block-end: var(--space-3); }
+.dp-section__title { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: var(--t-h4); color: var(--fg-1); }
+.dp-section__count { font-family: var(--font-mono); font-size: var(--t-caption); color: var(--fg-3); }
+.dp-section__empty { font-size: var(--t-body-sm); color: var(--fg-3); margin: 0; }
+
+/* stat cluster */
+.dp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); gap: var(--space-4); }
+.dp-stat { display: flex; flex-direction: column; gap: 2px; }
+.dp-stat__num { font-family: var(--font-display); font-weight: 700; font-size: var(--t-h1); color: var(--fg-1); line-height: 1; }
+.dp-stat__num--accent { color: var(--fg-accent); }
+.dp-stat__label { font-size: var(--t-caption); color: var(--fg-3); }
+
+/* flush row list: rows inside a card share one surface (divider-separated),
+   so they don't each carry a competing border (brand rule: status via chips).
+   Each row's own frame is stripped; the divider lives on the direct list child
+   (a wrapping <a> or the row itself), with the last child borderless. */
+.dp-list { display: flex; flex-direction: column; }
+.dp-list .dp-oblig-row,
+.dp-list .dp-task-row,
+.dp-list .dp-control-item {
+  border: 0; border-radius: 0; background: transparent; padding-inline: 0;
+}
+.dp-list > * { border-block-end: 1px solid var(--border-1); }
+.dp-list > :last-child { border-block-end: 0; }
+.dp-list > a { text-decoration: none; display: block; transition: background var(--dur-1) var(--ease-out); }
+.dp-list > a:hover { background: var(--sand-100); }
+
+/* compliance score card: framed dial + band label + caption + count */
+.dp-scorecard { display: flex; align-items: center; gap: var(--space-6); flex-wrap: wrap; }
+.dp-scorecard__body { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.dp-scorecard__band { font-family: var(--font-display); font-weight: 600; font-size: var(--t-h3); line-height: 1.1; }
+.dp-scorecard__caption { font-size: var(--t-body-sm); color: var(--fg-2); max-width: 44ch; }
+.dp-scorecard__count { font-size: var(--t-caption); color: var(--fg-3); }
+
+/* on-dark overrides for the new layout pieces */
+.dp-led-on-dark .dp-pagehead__title,
+.dp-led-on-dark .dp-section__title,
+.dp-led-on-dark .dp-stat__num { color: var(--fg-on-dark-1); }
+.dp-led-on-dark .dp-pagehead__desc,
+.dp-led-on-dark .dp-section__count,
+.dp-led-on-dark .dp-section__empty,
+.dp-led-on-dark .dp-stat__label,
+.dp-led-on-dark .dp-scorecard__count { color: var(--garnet-300); }
+.dp-led-on-dark .dp-scorecard__caption { color: var(--fg-on-dark-2); }
+.dp-led-on-dark .dp-list > * { border-block-end-color: var(--border-on-dark); }
+.dp-led-on-dark .dp-list > a:hover { background: rgba(255, 255, 255, 0.06); }

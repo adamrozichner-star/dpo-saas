@@ -10,7 +10,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { useOrg } from '@/lib/org-context'
-import { ComplianceScoreDial, ObligationRow, ControlScheduleItem } from '@/components/ledger'
+import { Card } from '@/components/brand/Card'
+import { ComplianceScoreCard, ObligationRow, ControlScheduleItem, PageHeader } from '@/components/ledger'
 import type { ControlScheduleItemProps } from '@/components/ledger'
 import {
   mapObligation,
@@ -68,40 +69,81 @@ export default function ConsolePage() {
     return <p className="t-body">לא נמצא ארגון משויך לחשבון.</p>
   }
 
+  const obs = obligations ?? []
+  const total = obs.length
+  const compliant = obs.filter((o) => o.status === 'compliant').length
+  const needsAttention = total - compliant
+  const controlCount = controls?.length ?? 0
+  const actionLink = 'dp-btn dp-btn--secondary dp-btn--sm'
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8)' }} data-console-org={org.id}>
-      <header style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-6)', flexWrap: 'wrap' }}>
-        <ComplianceScoreDial score={org.compliance_score ?? 0} />
-        <div>
-          <p className="t-eyebrow">קונסולת ממונה</p>
-          <h2 className="t-h2" style={{ margin: 0 }}>{org.name}</h2>
-        </div>
-        <div style={{ marginInlineStart: 'auto', display: 'flex', gap: 'var(--space-4)' }}>
-          <Link href="/console/audit" className="dp-led-link">תיק היערכות</Link>
-          <Link href="/console/documents" className="dp-led-link">מסמכים</Link>
-          <Link href="/console/links" className="dp-led-link">קישורי איסוף</Link>
-        </div>
-      </header>
+    <div className="dp-page" data-console-org={org.id}>
+      <PageHeader
+        eyebrow="קונסולת ממונה"
+        title={org.name}
+        description="מצב הציות החי של הארגון: החובות, הראיות שנאספו, והבקרות המתוזמנות."
+        actions={
+          <>
+            <Link href="/console/audit" className={actionLink}>תיק היערכות</Link>
+            <Link href="/console/documents" className={actionLink}>מסמכים</Link>
+            <Link href="/console/links" className={actionLink}>קישורי איסוף</Link>
+          </>
+        }
+      />
 
-      <section>
-        <p className="t-eyebrow" style={{ marginBottom: 'var(--space-3)' }}>חובות ({obligations?.length ?? 0})</p>
-        <div style={{ display: 'grid', gap: 'var(--space-3)', maxWidth: 760 }}>
-          {obligations?.map((r) => (
-            <Link key={r.id} href={`/console/obligations/${r.id}`} style={{ textDecoration: 'none' }}>
-              <ObligationRow {...mapObligation(r)} />
-            </Link>
-          ))}
+      <Card>
+        <div style={{ display: 'flex', gap: 'var(--space-8)', flexWrap: 'wrap', alignItems: 'center' }}>
+          <ComplianceScoreCard score={org.compliance_score ?? 0} total={total} compliant={compliant} />
+          <div className="dp-stats" style={{ flex: 1, minWidth: 240 }}>
+            <div className="dp-stat">
+              <span className="dp-stat__num">{total}</span>
+              <span className="dp-stat__label">חובות</span>
+            </div>
+            <div className="dp-stat">
+              <span className="dp-stat__num dp-stat__num--accent">{needsAttention}</span>
+              <span className="dp-stat__label">טעונות טיפול</span>
+            </div>
+            <div className="dp-stat">
+              <span className="dp-stat__num">{controlCount}</span>
+              <span className="dp-stat__label">בקרות מתוזמנות</span>
+            </div>
+          </div>
         </div>
-      </section>
+      </Card>
 
-      <section>
-        <p className="t-eyebrow" style={{ marginBottom: 'var(--space-3)' }}>בקרות ({controls?.length ?? 0})</p>
-        <div style={{ display: 'grid', gap: 'var(--space-3)', maxWidth: 760 }}>
-          {controls?.map((c, i) => (
-            <ControlScheduleItem key={`${c.name}-${i}`} {...c} />
-          ))}
+      <Card>
+        <div className="dp-section__head">
+          <h2 className="dp-section__title">חובות</h2>
+          <span className="dp-section__count">{total}</span>
         </div>
-      </section>
+        {total ? (
+          <div className="dp-list">
+            {obs.map((r) => (
+              <Link key={r.id} href={`/console/obligations/${r.id}`}>
+                <ObligationRow {...mapObligation(r)} />
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <p className="dp-section__empty">אין חובות פתוחות כרגע.</p>
+        )}
+      </Card>
+
+      <Card>
+        <div className="dp-section__head">
+          <h2 className="dp-section__title">בקרות מתוזמנות</h2>
+          <span className="dp-section__count">{controlCount}</span>
+        </div>
+        {controlCount ? (
+          <div className="dp-list">
+            {controls?.map((c, i) => (
+              <ControlScheduleItem key={`${c.name}-${i}`} {...c} />
+            ))}
+          </div>
+        ) : (
+          <p className="dp-section__empty">אין בקרות מתוזמנות.</p>
+        )}
+      </Card>
     </div>
   )
 }
