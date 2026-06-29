@@ -15,6 +15,7 @@ import { useAuth } from '@/lib/auth-context'
 import { useSubscriptionGate } from '@/lib/use-subscription-gate'
 import { DPO_CONFIG } from '@/lib/dpo-config'
 import { detectPIITypes, piiTypeLabel } from '@/lib/pii-guard'
+import './chat-reskin.css'
 
 interface Message {
   id: string
@@ -1171,7 +1172,7 @@ ${summaryText}
   // Show loading screen while auth is loading
   if (authLoading || isChecking || !isAuthorized) {
     return (
-      <div className="h-screen bg-stone-50 flex items-center justify-center" dir="rtl">
+      <div className="h-screen deepo-scope reskin-chat flex items-center justify-center" dir="rtl">
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-indigo-700 animate-spin mx-auto mb-4" />
           <p className="text-stone-600">טוען...</p>
@@ -1181,7 +1182,7 @@ ${summaryText}
   }
 
   return (
-    <div className="h-screen bg-stone-50 flex" dir="rtl">
+    <div className="h-screen deepo-scope reskin-chat flex" dir="rtl">
       {/* Sidebar */}
       {/* Mobile overlay */}
       {sidebarOpen && (
@@ -1282,7 +1283,7 @@ ${summaryText}
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="text-white flex-shrink-0" style={{background: 'linear-gradient(135deg, #312e81, #4f46e5)'}}>
+        <header className="text-white flex-shrink-0" style={{background: 'linear-gradient(135deg, var(--crimson-700), var(--crimson-500))'}}>
           <div className="px-4 py-3 flex items-center gap-3">
             {!sidebarOpen && (
               <button 
@@ -1302,7 +1303,7 @@ ${summaryText}
                 )}
               </div>
               {!orgLoading && organization && (
-                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2" style={{backgroundColor: '#10b981', borderColor: '#1e40af'}}></div>
+                <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full border-2" style={{backgroundColor: '#10b981', borderColor: 'var(--crimson-700)'}}></div>
               )}
             </div>
             
@@ -1358,7 +1359,7 @@ ${summaryText}
       <div 
         className={`flex-1 overflow-y-auto transition-all ${dragOver ? 'bg-indigo-100 scale-[0.99]' : ''}`}
         style={{ 
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%236366f1' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23D10331' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
         }}
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
@@ -1396,7 +1397,7 @@ ${summaryText}
                     ? 'bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl'
                     : 'bg-white text-stone-800 rounded-2xl rounded-bl-md shadow-sm border border-stone-100'
                 }`}
-                style={msg.role === 'user' ? {backgroundColor: '#4f46e5'} : {}}
+                style={msg.role === 'user' ? {backgroundColor: 'var(--crimson-500)'} : {}}
               >
                 {/* Source Label: AI vs DPO */}
                 {msg.role === 'assistant' && msg.id !== 'initial-welcome' && msg.id !== 'welcome-1' && msg.id !== 'welcome-error' && (
@@ -1547,7 +1548,7 @@ ${summaryText}
 
       {/* Upsell Banner */}
       {showUpsellBanner && (
-        <div className="mx-4 mb-2 text-white rounded-2xl p-4 shadow-lg relative" style={{background: 'linear-gradient(to left, #1e3a5f, #1e40af)'}}>
+        <div className="mx-4 mb-2 text-white rounded-2xl p-4 shadow-lg relative" style={{background: 'linear-gradient(to left, var(--crimson-700), var(--crimson-500))'}}>
           <button 
             onClick={() => setShowUpsellBanner(false)}
             className="absolute top-2 left-2 p-1 hover:bg-white/20 rounded-full"
@@ -1559,7 +1560,7 @@ ${summaryText}
           <button 
             onClick={() => requestReview()}
             className="w-full bg-white py-2 rounded-xl font-medium text-sm hover:bg-indigo-50 transition"
-            style={{color: '#1e40af'}}
+            style={{color: 'var(--crimson-600)'}}
           >
             בקש סקירה
           </button>

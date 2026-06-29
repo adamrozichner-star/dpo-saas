@@ -1,0 +1,46 @@
+/* ============================================================
+   /chat warm-brand reskin (visual only).
+
+   Full-page surface, so the root carries .deepo-scope (warm sand bg +
+   Rubik/Assistant fonts + brand base, the /console opt-in) plus
+   .reskin-chat below, which re-points the legacy indigo accent to brand
+   crimson for this surface only. Higher specificity than the Tailwind
+   utilities, so no !important.
+
+   Five inline-style hex spots can't be reached by CSS and are edited in
+   the JSX to brand values (header gradient, avatar-dot ring, the faint
+   SVG texture fill, the user-message bubble, the upsell banner gradient +
+   its button text).
+
+   Left as-is (semantic): the green online dot (#10b981), amber system
+   messages, stone neutrals. No shared-file edits; global brand tokens only.
+   ============================================================ */
+
+/* fills (bg) */
+.reskin-chat .bg-indigo-600 { background-color: var(--crimson-500); }
+.reskin-chat .bg-indigo-500 { background-color: var(--crimson-500); }
+.reskin-chat .bg-indigo-400 { background-color: var(--crimson-400); }
+.reskin-chat .bg-indigo-300 { background-color: var(--crimson-300); }
+.reskin-chat .bg-indigo-100 { background-color: var(--crimson-100); }
+.reskin-chat .bg-indigo-50  { background-color: var(--crimson-50); }
+.reskin-chat .hover\:bg-indigo-700:hover { background-color: var(--crimson-600); }
+.reskin-chat .hover\:bg-indigo-600:hover { background-color: var(--crimson-600); }
+.reskin-chat .hover\:bg-indigo-50:hover  { background-color: var(--crimson-50); }
+
+/* text */
+.reskin-chat .text-indigo-700 { color: var(--crimson-700); }
+.reskin-chat .text-indigo-600 { color: var(--crimson-600); }
+.reskin-chat .text-indigo-500 { color: var(--crimson-500); }
+.reskin-chat .hover\:text-indigo-700:hover { color: var(--crimson-700); }
+/* light subtitle on the dark gradient header/banner -> warm near-white */
+.reskin-chat .text-indigo-200 { color: var(--fg-on-dark-1); }
+
+/* borders */
+.reskin-chat .border-indigo-400 { border-color: var(--crimson-400); }
+.reskin-chat .border-indigo-300 { border-color: var(--crimson-300); }
+.reskin-chat .border-indigo-200 { border-color: var(--crimson-200); }
+.reskin-chat .border-indigo-100 { border-color: var(--crimson-100); }
+
+/* focus ring + gradient-from */
+.reskin-chat .focus\:ring-indigo-500:focus { --tw-ring-color: var(--crimson-500); }
+.reskin-chat .from-indigo-50 { --tw-gradient-from: var(--crimson-50) var(--tw-gradient-from-position, ); }
