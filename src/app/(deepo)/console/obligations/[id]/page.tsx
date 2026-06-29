@@ -144,17 +144,17 @@ export default function ObligationDetailPage({ params }: { params: { id: string 
   if (!user) return null
   if (notFound || !data) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-        <Link href="/console" className="dp-led-link">חזרה לקונסולה</Link>
-        <p className="t-body">החובה לא נמצאה או שאין לך הרשאה לצפות בה.</p>
+      <div className="dp-page">
+        <Link href="/console" className="dp-led-link dp-page__back">חזרה לקונסולה</Link>
+        <Card><p className="t-body" style={{ margin: 0 }}>החובה לא נמצאה או שאין לך הרשאה לצפות בה.</p></Card>
       </div>
     )
   }
 
   const o = data.obligation
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', maxWidth: 760 }}>
-      <Link href="/console" className="dp-led-link">חזרה לקונסולה</Link>
+    <div className="dp-page">
+      <Link href="/console" className="dp-led-link dp-page__back">חזרה לקונסולה</Link>
 
       <ObligationCard
         title={o.title}
@@ -177,15 +177,18 @@ export default function ObligationDetailPage({ params }: { params: { id: string 
             </span>
           ) : null}
           {data.provenance?.remediation ? <p style={{ margin: 0 }}>{data.provenance.remediation}</p> : null}
-          <span className="dp-led-recurs"><DeepoIcon id="dp-radar" />נפתח: {formatShortDate(o.openedAt)}</span>
-          {o.statusChangedAt ? <span className="dp-led-recurs"><DeepoIcon id="dp-bolt" />שינוי סטטוס: {formatShortDate(o.statusChangedAt)}</span> : null}
-          {o.closedAt ? <span className="dp-led-recurs"><DeepoIcon id="dp-check" />נסגר: {formatShortDate(o.closedAt)}</span> : null}
+          <span className="dp-led-recurs"><DeepoIcon id="dp-radar" />נפתחה החובה: {formatShortDate(o.openedAt)}</span>
+          {o.statusChangedAt ? <span className="dp-led-recurs"><DeepoIcon id="dp-bolt" />שינוי סטטוס אחרון: {formatShortDate(o.statusChangedAt)}</span> : null}
+          {o.closedAt ? <span className="dp-led-recurs"><DeepoIcon id="dp-check" />נסגרה: {formatShortDate(o.closedAt)}</span> : null}
         </div>
       </Card>
 
       {supabase && org ? (
-        <section>
-          <p className="t-eyebrow" style={{ marginBottom: 'var(--space-3)' }}>איסוף מידע</p>
+        <Card>
+          <div className="dp-section__head">
+            <h2 className="dp-section__title">איסוף מידע</h2>
+          </div>
+          <p className="dp-section__empty" style={{ marginBlockEnd: 'var(--space-3)' }}>שלחו קישור מאובטח לאיסוף ראיות מהסיסטם או מהספק.</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
             <RequestSysadminInfo
               supabase={supabase}
@@ -202,20 +205,25 @@ export default function ObligationDetailPage({ params }: { params: { id: string 
               onCreated={() => setReloadKey((k) => k + 1)}
             />
           </div>
-        </section>
+        </Card>
       ) : null}
 
-      <section>
-        <p className="t-eyebrow" style={{ marginBottom: 'var(--space-3)' }}>בקרה מקשרת</p>
-        {data.control ? <ControlScheduleItem {...data.control} /> : <p className="t-body-sm">אין בקרה מקשרת.</p>}
-      </section>
+      <Card>
+        <div className="dp-section__head">
+          <h2 className="dp-section__title">בקרה מקשרת</h2>
+        </div>
+        {data.control ? <div className="dp-list"><ControlScheduleItem {...data.control} /></div> : <p className="dp-section__empty">אין בקרה מקשרת.</p>}
+      </Card>
 
       {data.submissions.length ? (
-        <section>
-          <p className="t-eyebrow" style={{ marginBottom: 'var(--space-3)' }}>תשובות שהתקבלו מהסיסטם</p>
+        <Card>
+          <div className="dp-section__head">
+            <h2 className="dp-section__title">תשובות שהתקבלו מהסיסטם</h2>
+            <span className="dp-section__count">{data.submissions.length}</span>
+          </div>
           <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
             {data.submissions.map((sub, i) => (
-              <Card key={i}>
+              <Card key={i} variant="sunken">
                 <p className="t-caption" style={{ color: 'var(--fg-3)', marginTop: 0 }}>
                   התקבל: {formatShortDate(sub.at)}{sub.actor ? ` · ${sub.actor}` : ''}
                 </p>
@@ -234,29 +242,35 @@ export default function ObligationDetailPage({ params }: { params: { id: string 
               </Card>
             ))}
           </div>
-        </section>
+        </Card>
       ) : null}
 
-      <section>
-        <p className="t-eyebrow" style={{ marginBottom: 'var(--space-3)' }}>ראיות ({data.evidence.length})</p>
+      <Card>
+        <div className="dp-section__head">
+          <h2 className="dp-section__title">ראיות</h2>
+          <span className="dp-section__count">{data.evidence.length}</span>
+        </div>
         {data.evidence.length ? (
-          <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+          <div className="dp-list">
             {data.evidence.map((ev, i) => (
               <div key={i} className="dp-oblig-row">
                 <span className="dp-oblig-row__title">{EVIDENCE_KIND_LABEL[ev.kind] ?? ev.kind}</span>
-                <span className="dp-led-due">{formatShortDate(ev.capturedAt)}</span>
+                <span className="dp-led-due">נאסף: {formatShortDate(ev.capturedAt)}</span>
               </div>
             ))}
           </div>
         ) : (
-          <p className="t-body-sm">אין ראיות עדיין.</p>
+          <p className="dp-section__empty">אין ראיות עדיין.</p>
         )}
-      </section>
+      </Card>
 
-      <section>
-        <p className="t-eyebrow" style={{ marginBottom: 'var(--space-3)' }}>אירועים ({data.events.length})</p>
-        {data.events.length ? <EventTimeline events={data.events} /> : <p className="t-body-sm">אין אירועים עדיין.</p>}
-      </section>
+      <Card>
+        <div className="dp-section__head">
+          <h2 className="dp-section__title">אירועים</h2>
+          <span className="dp-section__count">{data.events.length}</span>
+        </div>
+        {data.events.length ? <EventTimeline events={data.events} /> : <p className="dp-section__empty">אין אירועים עדיין.</p>}
+      </Card>
     </div>
   )
 }
