@@ -1,0 +1,25 @@
+/* ============================================================
+   Incident-report tab warm-brand reskin (visual only).
+
+   Embedded dashboard component, so (like the conflict card) .reskin-incidents
+   applies the brand body font + re-points the one off-brand ACCENT to brand
+   crimson, WITHOUT full .deepo-scope (no sand page-bg into the dashboard).
+
+   The surface's only legacy accent is indigo, confined to the status-update
+   controls (selected-status chip, the "עדכן" submit, the "עדכן סטטוס"
+   trigger). Everything else is semantic and left as-is: red-600 is the
+   incident/danger theme (report button, form header, critical severity),
+   the green/yellow/orange/red severity scale, the amber 24h-duty notice,
+   and the blue info chips. No shared-file edits; global brand tokens only.
+   ============================================================ */
+.reskin-incidents { font-family: var(--font-body); }
+
+/* legacy indigo accent -> brand crimson (this surface only) */
+.reskin-incidents .bg-indigo-600 { background-color: var(--crimson-500); }
+.reskin-incidents .hover\:bg-indigo-700:hover { background-color: var(--crimson-600); }
+.reskin-incidents .bg-indigo-100 { background-color: var(--crimson-100); }
+.reskin-incidents .hover\:bg-indigo-100:hover { background-color: var(--crimson-100); }
+.reskin-incidents .bg-indigo-50 { background-color: var(--crimson-50); }
+.reskin-incidents .border-indigo-400 { border-color: var(--crimson-400); }
+.reskin-incidents .border-indigo-200 { border-color: var(--crimson-200); }
+.reskin-incidents .text-indigo-700 { color: var(--crimson-700); }

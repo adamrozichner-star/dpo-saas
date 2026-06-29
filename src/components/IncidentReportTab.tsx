@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { AlertTriangle, Clock, Shield, Send, ChevronDown, ChevronUp, CheckCircle } from 'lucide-react'
+import './IncidentReportTab.reskin.css'
 
 // =============================================
 // INCIDENT REPORT TAB
@@ -193,7 +194,7 @@ export default function IncidentReportTab({ orgId, incidents, onRefresh }: Incid
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="reskin-incidents space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
