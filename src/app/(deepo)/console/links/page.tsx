@@ -13,6 +13,8 @@ import { useAuth } from '@/lib/auth-context'
 import { useOrg } from '@/lib/org-context'
 import { Badge } from '@/components/brand/Badge'
 import { Button } from '@/components/brand/Button'
+import { Card } from '@/components/brand/Card'
+import { PageHeader } from '@/components/ledger'
 import { formatShortDate } from '@/components/ledger/format'
 import { mapAccessLink, isDsarPassthrough, type AccessLinkDbRow, type AccessLinkView } from '@/lib/console-data'
 import { RequestDsarLink } from './RequestDsarLink'
@@ -64,45 +66,46 @@ export default function LinksPage() {
   if (!org) return <p className="t-body">לא נמצא ארגון משויך לחשבון.</p>
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', maxWidth: 860 }}>
-      <Link href="/console" className="dp-led-link">חזרה לקונסולה</Link>
-      <header>
-        <h1 className="t-h2" style={{ margin: 0 }}>קישורי איסוף</h1>
-        <p className="t-body-sm" style={{ color: 'var(--fg-3)' }}>
-          קישורים מאובטחים שנשלחו לסיסטם או לספקים לאיסוף מידע. כדי ליצור קישור לסיסטם או לספק, פתחו את החובה הרלוונטית.
-        </p>
-        {isDsarPassthrough(org) ? (
-          <div style={{ marginTop: 'var(--space-3)' }}>
-            <RequestDsarLink supabase={supabase!} orgName={org.name} />
-          </div>
-        ) : null}
-      </header>
+    <div className="dp-page">
+      <Link href="/console" className="dp-led-link dp-page__back">חזרה לקונסולה</Link>
+      <PageHeader
+        eyebrow="קונסולת ממונה"
+        title="קישורי איסוף"
+        description="קישורים מאובטחים שנשלחו לסיסטם או לספקים לאיסוף מידע. כדי ליצור קישור לסיסטם או לספק, פתחו את החובה הרלוונטית."
+        actions={isDsarPassthrough(org) ? <RequestDsarLink supabase={supabase!} orgName={org.name} /> : undefined}
+      />
 
-      {links.length === 0 ? (
-        <p className="t-body-sm">עדיין לא נוצרו קישורי איסוף.</p>
-      ) : (
-        <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
-          {links.map((l) => (
-            <div key={l.id} className="dp-oblig-row" style={{ flexWrap: 'wrap', gap: 'var(--space-2)' }}>
-              <span className="dp-oblig-row__title">{l.purposeLabel}</span>
-              <Badge variant={l.statusVariant} data-link-status={l.status}>{l.statusLabel}</Badge>
-              {l.obligationTitle ? (
-                <Link href={`/console/obligations/${l.obligationId}`} className="dp-led-link" style={{ fontSize: 'var(--t-body-sm)' }}>
-                  {l.obligationTitle}
-                </Link>
-              ) : null}
-              <span className="dp-led-due">נוצר: {formatShortDate(l.createdAt)}</span>
-              <span className="dp-led-due">תוקף: {formatShortDate(l.expiresAt)}</span>
-              {l.usedAt ? <span className="dp-led-due">הוגש: {formatShortDate(l.usedAt)}</span> : null}
-              {l.isActive ? (
-                <Button variant="ghost" size="sm" disabled={busyId === l.id} onClick={() => revoke(l.id)}>
-                  {busyId === l.id ? 'מבטל…' : 'ביטול קישור'}
-                </Button>
-              ) : null}
-            </div>
-          ))}
+      <Card>
+        <div className="dp-section__head">
+          <h2 className="dp-section__title">קישורים</h2>
+          <span className="dp-section__count">{links.length}</span>
         </div>
-      )}
+        {links.length === 0 ? (
+          <p className="dp-section__empty">עדיין לא נוצרו קישורי איסוף.</p>
+        ) : (
+          <div className="dp-list">
+            {links.map((l) => (
+              <div key={l.id} className="dp-oblig-row" style={{ flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                <span className="dp-oblig-row__title">{l.purposeLabel}</span>
+                <Badge variant={l.statusVariant} data-link-status={l.status}>{l.statusLabel}</Badge>
+                {l.obligationTitle ? (
+                  <Link href={`/console/obligations/${l.obligationId}`} className="dp-led-link" style={{ fontSize: 'var(--t-body-sm)' }}>
+                    {l.obligationTitle}
+                  </Link>
+                ) : null}
+                <span className="dp-led-due">נוצר: {formatShortDate(l.createdAt)}</span>
+                <span className="dp-led-due">תוקף: {formatShortDate(l.expiresAt)}</span>
+                {l.usedAt ? <span className="dp-led-due">הוגש: {formatShortDate(l.usedAt)}</span> : null}
+                {l.isActive ? (
+                  <Button variant="ghost" size="sm" disabled={busyId === l.id} onClick={() => revoke(l.id)}>
+                    {busyId === l.id ? 'מבטל…' : 'ביטול קישור'}
+                  </Button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </div>
   )
 }

@@ -14,6 +14,8 @@ import { useAuth } from '@/lib/auth-context'
 import { useOrg } from '@/lib/org-context'
 import { Badge } from '@/components/brand/Badge'
 import { Button } from '@/components/brand/Button'
+import { Card } from '@/components/brand/Card'
+import { PageHeader } from '@/components/ledger'
 import { formatShortDate } from '@/components/ledger/format'
 import { mapRuleProvenance, type RuleDbRow } from '@/lib/console-data'
 import {
@@ -130,39 +132,45 @@ export default function AuditPage() {
   const drift = !latest ? 'none' : latest.pack_fingerprint === live.fingerprint ? 'current' : 'drifted'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', maxWidth: 900 }}>
-      <Link href="/console" className="dp-led-link">חזרה לקונסולה</Link>
-      <header>
-        <h1 className="t-h2" style={{ margin: 0 }}>תיק היערכות (Certify)</h1>
-        <p className="t-body-sm" style={{ color: 'var(--fg-3)' }}>
-          הספר רנדר כראיה: כל חובה, מקורה, שרשרת הראיות, לוח הבקרות והמסמכים המאושרים - תיק אחד שניתן להגיש לרגולטור.
-        </p>
-      </header>
+    <div className="dp-page">
+      <Link href="/console" className="dp-led-link dp-page__back">חזרה לקונסולה</Link>
+      <PageHeader
+        eyebrow="קונסולת ממונה"
+        title="תיק היערכות (Certify)"
+        description="הספר רנדר כראיה: כל חובה, מקורה, שרשרת הראיות, לוח הבקרות והמסמכים המאושרים - תיק אחד שניתן להגיש לרגולטור."
+      />
 
-      <section className="dp-oblig-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 'var(--space-2)' }}>
-        <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span className="dp-oblig-row__title">התיק הנוכחי</span>
+      <Card>
+        <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap', marginBlockEnd: 'var(--space-4)' }}>
+          <h2 className="dp-section__title">התיק הנוכחי</h2>
           {drift === 'none' ? <Badge variant="neutral">טרם הופק תיק</Badge> : null}
           {drift === 'current' ? <Badge variant="ok">תואם לתיק האחרון</Badge> : null}
           {drift === 'drifted' ? <Badge variant="warn" dot>מצב הציות השתנה מאז התיק האחרון</Badge> : null}
         </div>
-        <p className="t-body-sm" style={{ margin: 0, color: 'var(--fg-3)' }}>
-          {live.summary.obligations} חובות · {live.summary.evidence} ראיות · {live.summary.controls} בקרות · {live.summary.documents} מסמכים · טביעת אצבע {live.fingerprint}
-        </p>
-        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+        <div className="dp-stats">
+          <div className="dp-stat"><span className="dp-stat__num">{live.summary.obligations}</span><span className="dp-stat__label">חובות</span></div>
+          <div className="dp-stat"><span className="dp-stat__num">{live.summary.evidence}</span><span className="dp-stat__label">ראיות</span></div>
+          <div className="dp-stat"><span className="dp-stat__num">{live.summary.controls}</span><span className="dp-stat__label">בקרות</span></div>
+          <div className="dp-stat"><span className="dp-stat__num">{live.summary.documents}</span><span className="dp-stat__label">מסמכים</span></div>
+        </div>
+        <p className="dp-led-prov" style={{ marginBlockStart: 'var(--space-3)' }}>טביעת אצבע: {live.fingerprint}</p>
+        <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginBlockStart: 'var(--space-4)' }}>
           <Button variant="primary" size="sm" disabled={busy} onClick={certify}>{busy ? 'מפיק…' : 'הפקת תיק (Certify)'}</Button>
           <Button variant="ghost" size="sm" onClick={() => setShowContent((s) => !s)}>{showContent ? 'הסתרה' : 'תצוגה'}</Button>
           <Button variant="ghost" size="sm" onClick={() => exportPdf(live.content)}>הדפסה / PDF</Button>
         </div>
-        {showContent ? <pre className="t-body-sm" style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', background: 'var(--bg-surface)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', margin: 0 }}>{live.content}</pre> : null}
-      </section>
+        {showContent ? <pre className="t-body-sm" style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', background: 'var(--bg-sunken)', padding: 'var(--space-4)', borderRadius: 'var(--radius-md)', margin: 'var(--space-3) 0 0' }}>{live.content}</pre> : null}
+      </Card>
 
-      <section>
-        <p className="t-eyebrow" style={{ marginBottom: 'var(--space-3)' }}>תיקים שהופקו ({packs.length})</p>
+      <Card>
+        <div className="dp-section__head">
+          <h2 className="dp-section__title">תיקים שהופקו</h2>
+          <span className="dp-section__count">{packs.length}</span>
+        </div>
         {packs.length === 0 ? (
-          <p className="t-body-sm">עדיין לא הופקו תיקים.</p>
+          <p className="dp-section__empty">עדיין לא הופקו תיקים.</p>
         ) : (
-          <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+          <div className="dp-list">
             {packs.map((p) => (
               <div key={p.id} className="dp-oblig-row" style={{ flexWrap: 'wrap', gap: 'var(--space-2)' }}>
                 <span className="dp-oblig-row__title">{formatShortDate(p.generated_at)}</span>
@@ -172,7 +180,7 @@ export default function AuditPage() {
             ))}
           </div>
         )}
-      </section>
+      </Card>
     </div>
   )
 }
