@@ -112,7 +112,7 @@ async function main() {
   check('buildLedgerSummary: 4 ledger tasks, titles match /console rows', ledgerSummary.tasks.length === 4 && ledgerSummary.tasks.every((t) => t.title.length > 0))
   check('buildLedgerSummary: tasks are read-only (actionType doc_review)', ledgerSummary.tasks.every((t) => t.actionType === 'doc_review'))
   check('buildLedgerSummary: checking obligation -> needs_action task', ledgerSummary.tasks.every((t) => t.status === 'needs_action' || t.status === 'completed'))
-  check('buildLedgerSummary: score 42, ancillaries neutral (not ledger-backed)', ledgerSummary.score === 42 && ledgerSummary.securityLevel === 'basic' && ledgerSummary.needsReporting === false && ledgerSummary.dbCount === 0)
+  check('buildLedgerSummary: score 42; ancillaries safe-default with no source-rule/descriptor (PR12 derivation tested in verify-pr12)', ledgerSummary.score === 42 && ledgerSummary.securityLevel === 'basic' && ledgerSummary.needsReporting === false && ledgerSummary.dbCount === 0)
 
   const sentinel = buildLedgerSummary([], 99) // a distinct object to detect the legacy path
   let fetchCalled = false

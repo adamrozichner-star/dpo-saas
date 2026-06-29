@@ -907,3 +907,48 @@ Hebrew. Verified 27/27 pure (incl owner mapper) + 10/10 auth-gate (incl /home) +
   hardcoded "exactly 4 provisional" assertion went stale (found 6). Made it
   count-robust (all active templates under the set are provisional, and >= 4) -
   an expectation update, not a regression (legacy hash unchanged throughout).
+
+# PR12 - ledger-back the ancillary compliance stats (migration 047)
+
+## The insight: the gap-rules already made the determinations
+- The legacy engine re-computes securityLevel/needsReporting/needsCiso from raw
+  onboarding (v3Answers thresholds). The B2 gap-rules ALREADY evaluated those
+  thresholds and minted obligations. So PR12 derives the stats from obligation
+  PROVENANCE, not by re-running the math: deriveLedgerStats(obligations, descriptor)
+  + a RULE_STAT_IMPACT map (templateId -> {needsReporting|securityHigh|needsCiso}),
+  co-located in seed-rules.ts (revising a rule means revising the map - visible).
+  needsReporting reasons = the registration obligation titles. Safe default: an
+  obligation whose rule has no impact entry contributes nothing (basic/false).
+- securityLevel is high|basic by design; the legacy 'medium' count-heuristic is NOT
+  reconstructed (queued for Amir: "should there be a medium-security gap rule?").
+  The fix for medium is a rule, not a heuristic that re-introduces what we retire.
+- dbCount/totalRecords had no clean ledger home (assets is sparse), so 047 extends
+  org_descriptors (F2d) with db_count + total_records; the F2d migrate copy
+  populates them from organization_profiles (db array length; total best-effort
+  from profile_data.totalRecords - inherently fuzzy, a ledger-consistent home is
+  the point). All current orgs are 0 (empty onboarding) - accurate, ledger-sourced,
+  not the old hardcoded-0 neutral default.
+
+## Flag-path discipline (the 3-dashboard-site risk)
+- buildLedgerSummary gains an optional descriptor arg + calls deriveLedgerStats (no
+  more neutral hardcoding). loadComplianceSummary gains an OPTIONAL fetchDescriptor;
+  the flag-OFF branch returns legacy() verbatim and NEVER touches fetchObligations/
+  fetchDescriptor (proven: both injected fetchers uncalled when ledgerRead=false).
+  LedgerSummaryObligation gained sourceRuleId (optional); fetchLedgerObligations
+  selects source_rule_id + maps it - so the 3 call sites only ADD fetchDescriptor
+  (legacy() unchanged -> flag-OFF byte-identical).
+
+## Retiring = dormant-first (no deletion)
+- PR12 completes the ledger-backing so the legacy engine CAN be retired. It deletes
+  nothing. Once all orgs flip to LEDGER_READ on, the dead code is compliance-engine's
+  computeComplianceSummary math + the loadComplianceSummary legacy() callback + the
+  3 sites' legacy fetch; deletion is a later PR (reversible while any org is flag-off).
+
+## Verify (15 PR12; regressions intact)
+- Pure deriveLedgerStats (rule->stat, safe default); flag-OFF byte-identical
+  (ledger untouched); flag-ON all 5 ledger-derived, zero neutral defaults; דiפו
+  derived (basic / needsReporting=true [2 reasons] / no CISO / dbCount 0) matches
+  its obligations; obligations.source_rule_id populated (map can fire); legacy
+  organization_profiles byte-identical. C4 mapping 27/27 (label updated, assertion
+  intact), F1 21, F2a 20, F2b 10, F2c 14, F2d 12, E 37/26/29/27, /shell-demo 13/13,
+  tsc clean, no em-dashes. 047 reproducible.
