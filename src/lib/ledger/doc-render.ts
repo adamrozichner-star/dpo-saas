@@ -17,7 +17,12 @@
 // collision-resistance for change-detection, not cryptographic strength.
 // =============================================================================
 
-export type DocType = 'ropa' | 'processor_agreement' | 'dpo_appointment' | 'asset_db_definition'
+export type DocType = 'ropa' | 'processor_agreement' | 'dpo_appointment' | 'asset_db_definition' | 'privacy_policy' | 'security_procedures'
+
+// F2c: a visible marker for sections that need Roy/Amir legal prose (the AI draft
+// scaffolds the structure; the lawyer supplies the wording). Constant, so it is
+// excluded from the fingerprint inputs - a placeholder never causes drift.
+const LEGAL_PLACEHOLDER = '[[ סעיף משפטי - ממתין להשלמת רועי/אמיר ]]'
 
 export interface RenderOrg { name: string }
 export interface RenderDpo { name: string | null; email: string | null; license_number: string | null }
@@ -150,14 +155,56 @@ function bindAssetDbDefinition(ctx: RenderContext): Bound {
   return { tokens, inputs: { org: ctx.org.name, dpo: ctx.dpo, assets, security, dataTypes } }
 }
 
+// F2c bespoke docs. Dynamic sections bind to the post-F2d ledger/descriptive
+// context; legal-prose sections render LEGAL_PLACEHOLDER (Roy supplies). The
+// fingerprint inputs are the ledger-derived values only (placeholders are
+// constant), so a ledger change still flips the fingerprint -> divergence flag works.
+function bindPrivacyPolicy(ctx: RenderContext): Bound {
+  const categories = asList(ctx.profile?.data_types)
+  const purposes = asList(ctx.profile?.processing_purposes)
+  const security = asList(ctx.profile?.security_measures)
+  const recipients = ctx.recipients.map((r) => ({ name: r.name, has_dpa: !!r.has_dpa }))
+  const tokens = {
+    orgName: dash(ctx.org.name),
+    dpoName: dash(ctx.dpo?.name),
+    dpoEmail: dash(ctx.dpo?.email),
+    dpoLicense: dash(ctx.dpo?.license_number),
+    categories: categories.length ? categories.join(', ') : '-',
+    purposes: purposes.length ? purposes.join(', ') : '-',
+    legalBasis: LEGAL_PLACEHOLDER,
+    thirdParties: recipients.length
+      ? recipients.map((r) => `- ${r.name}${r.has_dpa ? ' (הסכם עיבוד קיים)' : ' (ללא הסכם)'}`).join('\n')
+      : 'אין שיתוף מידע עם צדדים שלישיים.',
+    security: security.length ? security.map((m) => `- ${m}`).join('\n') : '-',
+    retention: LEGAL_PLACEHOLDER,
+    crossBorder: LEGAL_PLACEHOLDER,
+  }
+  return { tokens, inputs: { org: ctx.org.name, dpo: ctx.dpo, categories, purposes, security, recipients } }
+}
+
+function bindSecurityProcedures(ctx: RenderContext): Bound {
+  const security = asList(ctx.profile?.security_measures)
+  const systems = ctx.assets.map((a) => ({ name: dash(a.name) }))
+  const tokens = {
+    orgName: dash(ctx.org.name),
+    dpoName: dash(ctx.dpo?.name),
+    security: security.length ? security.map((m) => `- ${m}`).join('\n') : '-',
+    systems: systems.length ? systems.map((s) => `- ${s.name}`).join('\n') : '(אין מערכות מתועדות)',
+    procedures: LEGAL_PLACEHOLDER,
+  }
+  return { tokens, inputs: { org: ctx.org.name, dpo: ctx.dpo, security, systems } }
+}
+
 const BINDERS: Record<DocType, (ctx: RenderContext) => Bound> = {
   ropa: bindRopa,
   processor_agreement: bindDpa,
   dpo_appointment: bindDpoAppointment,
   asset_db_definition: bindAssetDbDefinition,
+  privacy_policy: bindPrivacyPolicy,
+  security_procedures: bindSecurityProcedures,
 }
 
-export const DOC_TYPES: DocType[] = ['ropa', 'processor_agreement', 'dpo_appointment', 'asset_db_definition']
+export const DOC_TYPES: DocType[] = ['ropa', 'processor_agreement', 'dpo_appointment', 'asset_db_definition', 'privacy_policy', 'security_procedures']
 
 export function renderDocument(docType: DocType, template: DocTemplate, ctx: RenderContext): RenderResult {
   const binder = BINDERS[docType]

@@ -123,8 +123,11 @@ async function main() {
     check('anon has ZERO INSERT/UPDATE/DELETE on documents', anonW === null)
 
     // ---- templates PROVISIONAL ----
+    // all seeded doc templates (F1's 4 + F2c's 2) must be PROVISIONAL: count
+    // provisional == total active under the set, and at least the F1 four.
+    const totalT = (await sql<{ n: number }>(`select count(*)::int n from public.hub_document_templates where asset_template_id='d0c00000-0000-4000-8000-000000000000' and active;`))[0].n
     const prov = (await sql<{ n: number }>(`select count(*)::int n from public.hub_document_templates where asset_template_id='d0c00000-0000-4000-8000-000000000000' and active and source_tier='expert_judgment' and confidence=0.5 and reviewed_by is null;`))[0].n
-    check('4 doc templates seeded PROVISIONAL (expert_judgment/0.5, reviewed_by=null)', prov === 4, `n=${prov}`)
+    check('all seeded doc templates are PROVISIONAL (expert_judgment/0.5, reviewed_by=null)', prov === totalT && prov >= 4, `provisional=${prov} total=${totalT}`)
 
   } finally {
     console.log('\n[teardown]')

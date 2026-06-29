@@ -868,3 +868,42 @@ Hebrew. Verified 27/27 pure (incl owner mapper) + 10/10 auth-gate (incl /home) +
   ("Cannot redeclare" / "Duplicate function implementation"). Adding a no-import
   script (migrate-org-descriptors) collided with the pre-existing global verify-dsar.
   Fix: add `export {}` to make each a module (isolated scope). Both needed it.
+
+# F2c - bespoke docs: privacy_policy + security_procedures (no migration)
+
+## The discipline held: AI drafts the template ONCE, render stays deterministic
+- 2 new DocTypes + 2 binders in doc-render.ts (same F1 token-map + fingerprint-
+  input-subset pattern), reading the post-F2d context (org_descriptors profile +
+  contacts.license + data_recipients + assets). AI is NEVER in the render path
+  (asserted: doc-render.ts imports/calls no Anthropic/AI client; render pure).
+- The template BODIES are AI-DRAFTED STARTING POINTS, seeded PROVISIONAL
+  (expert_judgment/0.5, reviewed_by=null) + a "לא לשימוש לקוח עד אישור רועי/אמיר"
+  marker in the body. Roy/Amir redline the prose later; the {{tokens}} + binding
+  are the stable engineering contract. Path (1) per Adam: build now, Roy corrects.
+- Legal-prose sections render a constant LEGAL_PLACEHOLDER marker ('[[ סעיף משפטי
+  - ממתין להשלמת רועי/אמיר ]]') - visible, not empty/broken. It is EXCLUDED from
+  the fingerprint inputs (constant), so it never causes drift; only ledger inputs do.
+- Binding map: data categories/purposes/security <- org_descriptors (F2d); third
+  parties <- data_recipients (incl has_dpa); DPO <- contacts + license; legal
+  basis / retention / cross-border <- LEGAL_PLACEHOLDER; rights/changes <- static
+  canonical text inline. (cross-border is a placeholder, not data_recipients-derived:
+  RenderRecipient has no country field, so it can't be computed deterministically.)
+
+## Reuse: F1 + F2b cover the new docs for free
+- F1 render+approval pin + the F1 divergence flag + the F2b freshness scan all
+  cover privacy_policy + security_procedures automatically (they are in DOC_TYPES
+  and have active templates). Verified: a stale privacy_policy doc is flagged by
+  checkDocFreshnessForOrg; a ledger-input change flips each doc's fingerprint.
+
+## Verify (14; legacy byte-identical; regressions intact)
+- AI-not-in-render (source assertion); both docs deterministic (same ctx -> same
+  bytes); placeholder marker rendered; no unfilled {{tokens}}; PROVISIONAL +
+  not-for-customer marker in the catalog rows; fingerprint flips on ledger change;
+  F2b covers them. Legacy 19 docs + organization_profiles + dpos byte-identical.
+  F1 21, F2a 20, F2b 10, F2d 12, E 37/26/29/27, /shell-demo 13/13, tsc clean.
+
+## Test-expectation note
+- F2c added 2 templates under the doc-template set, so verify-documents.ts's
+  hardcoded "exactly 4 provisional" assertion went stale (found 6). Made it
+  count-robust (all active templates under the set are provisional, and >= 4) -
+  an expectation update, not a regression (legacy hash unchanged throughout).

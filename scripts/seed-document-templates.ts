@@ -29,7 +29,7 @@ function upsertSql(): string {
   const rows = seedDocumentTemplates
     .map((t) =>
       `(${lit(t.templateId)}, 1, true, ${lit(DOC_ORG_LEVEL_ASSET_ID)}, ${lit(t.name)}, ` +
-      `${lit('F1 ' + t.docType + ' (PROVISIONAL)')}, ${lit(t.body)}, ` +
+      `${lit(t.docType + ' (PROVISIONAL - not for customer use until Amir/Roy review)')}, ${lit(t.body)}, ` +
       `${lit(JSON.stringify({ doc_type: t.docType }))}::jsonb, 'markdown', 'expert_judgment', 0.5, '{}', NULL)`)
     .join(',\n    ')
   return `INSERT INTO public.hub_document_templates
