@@ -1,0 +1,26 @@
+/* ============================================================
+   Conflict-of-interest card warm-brand reskin (visual only).
+
+   This is an EMBEDDED component (rendered inside the legacy dashboard),
+   so we do NOT apply full .deepo-scope (its sand page-bg would inject a
+   block into the dashboard). Instead .reskin-conflict applies the brand
+   body font and re-points the surface's only off-brand ACCENT (legacy
+   indigo, the old primary) to brand crimson, scoped to this component.
+
+   Left as-is (semantic, read fine on warm/white): the amber warning card,
+   the 🟢🔵⚪ resolution-path buttons (emerald/blue/stone), rose errors.
+   No shared-file edits; reuses global brand tokens only.
+   ============================================================ */
+.reskin-conflict { font-family: var(--font-body); }
+
+/* legacy indigo accent -> brand crimson (this surface only).
+   Higher specificity than the Tailwind utilities, so no !important. */
+.reskin-conflict .bg-indigo-500 { background-color: var(--crimson-500); }
+.reskin-conflict .hover\:bg-indigo-600:hover { background-color: var(--crimson-600); }
+.reskin-conflict .disabled\:bg-indigo-300:disabled { background-color: var(--crimson-300); }
+.reskin-conflict .bg-indigo-50 { background-color: var(--crimson-50); }
+.reskin-conflict .border-indigo-400 { border-color: var(--crimson-400); }
+.reskin-conflict .text-indigo-700 { color: var(--crimson-700); }
+.reskin-conflict .text-indigo-500 { color: var(--crimson-500); }
+.reskin-conflict .focus\:border-indigo-400:focus { border-color: var(--crimson-400); }
+.reskin-conflict .focus\:ring-indigo-400:focus { --tw-ring-color: var(--crimson-400); }

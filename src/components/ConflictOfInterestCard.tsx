@@ -9,6 +9,7 @@ import {
   type DpoRoleInOrg,
   type DpoConflictStatus,
 } from '@/lib/dpo-conflict'
+import './ConflictOfInterestCard.reskin.css'
 
 interface Props {
   orgId: string
@@ -79,7 +80,7 @@ function LegacyAssessCard({ supabase, onResolved }: { supabase: any; onResolved:
 
   return (
     <>
-      <div className="rounded-xl border border-amber-100 bg-amber-50/60 p-4 mb-4" dir="rtl">
+      <div className="reskin-conflict rounded-xl border border-amber-100 bg-amber-50/60 p-4 mb-4" dir="rtl">
         <div className="flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
@@ -132,7 +133,7 @@ function UnresolvedCard({
 
   return (
     <>
-      <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 mb-4 shadow-sm" dir="rtl">
+      <div className="reskin-conflict rounded-xl border border-amber-200 bg-amber-50/80 p-4 mb-4 shadow-sm" dir="rtl">
         <div className="flex items-start gap-3 mb-3">
           <ShieldAlert className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
@@ -238,7 +239,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   return (
     <>
       <div className="fixed inset-0 bg-black/40 z-50" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
+      <div className="reskin-conflict fixed inset-0 z-50 flex items-center justify-center p-4" dir="rtl">
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col overflow-hidden max-h-[90vh]">
           <div className="px-5 py-4 border-b border-stone-200 flex items-center justify-between">
             <h3 className="font-semibold text-stone-800">{title}</h3>
