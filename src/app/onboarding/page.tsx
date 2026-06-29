@@ -1462,13 +1462,18 @@ function OnboardingContent() {
       localStorage.setItem('dpo_recommended_tier', autoTier)
 
       setGenerationProgress(100)
-      setStatus('הכל מוכן! מעבירים לבחירת חבילה...')
+      setStatus('הכל מוכן! מעבירים לקונסולה...')
 
       // Welcome email is dispatched server-side by /api/complete-onboarding.
-      // Pass completeness so the subscribe page can swap to "partial-data" copy
-      // when the user skipped critical questions (industry, databases, totalSize).
-      const dataComplete = isOnboardingDataComplete(finalV3)
-      setTimeout(() => router.push(`/subscribe?dataComplete=${dataComplete}`), 1500)
+      // v3 landing: a new customer lands in the v3 console - the home for a v3
+      // customer (Adam, 2026-06-29). This replaces the legacy /subscribe -> legacy
+      // /dashboard funnel, which retires with the legacy engine.
+      // OPEN (owner-vs-DPO): onboarding is completed by the business owner
+      // (users.role='admin'); /console is themed as the DPO surface while /home is
+      // the owner light app. Routing everyone to /console per the decision; revisit
+      // whether owners should land on /home instead. The payment (/subscribe) step
+      // is also dropped from this path - intended for the pilot.
+      setTimeout(() => router.push('/console'), 1500)
     } catch (err: any) {
       console.error('[Onboarding] handleComplete error:', err)
       setError(err.message || 'אירעה שגיאה בתהליך ההרשמה')
