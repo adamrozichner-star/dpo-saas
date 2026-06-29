@@ -1,0 +1,25 @@
+/* ============================================================
+   ROPA / data-assets tab warm-brand reskin (visual only).
+
+   Embedded dashboard component. Its only off-brand accent is the shadcn
+   --primary (legacy navy, HSL 224), used as bg-primary / text-primary /
+   bg-primary/10 / bg-primary/90 / border-primary / primary-foreground
+   across the stats, the add button, the wizard, and the detail modal.
+
+   .reskin-ropa applies the brand body font and re-points --primary /
+   --ring / --primary-foreground to brand crimson for this surface only.
+   This single var remap recolors every `primary` utility (including the
+   /10 and /90 opacity variants) at once. The ActivityWizard and
+   ActivityDetail modals are DOM descendants of the scoped root, so they
+   inherit the remapped vars even though they're position:fixed.
+
+   No full .deepo-scope (no sand page-bg into the dashboard). Semantic
+   status colors (red/amber/green/blue/orange/yellow/purple) left as-is.
+   No shared-file edits; global brand tokens only.
+   ============================================================ */
+.reskin-ropa {
+  font-family: var(--font-body);
+  --primary: 347 97% 42%;            /* crimson-500 #D10331 */
+  --primary-foreground: 21 78% 96%;  /* warm near-white #FDF4EF */
+  --ring: 347 97% 42%;               /* crimson focus ring */
+}

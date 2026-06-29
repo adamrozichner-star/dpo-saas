@@ -22,6 +22,7 @@ import {
   Building,
   X
 } from 'lucide-react'
+import './ROPATab.reskin.css'
 
 // =============================================
 // Types
@@ -203,14 +204,14 @@ export default function ROPATab({ orgId, authFetch }: ROPATabProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
+      <div className="reskin-ropa flex items-center justify-center py-12">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="reskin-ropa space-y-6">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
