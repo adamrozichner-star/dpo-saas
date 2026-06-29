@@ -13,7 +13,7 @@ import { DeepoIcon } from '@/brand/icons'
 import { Button } from '@/components/brand/Button'
 import { Badge } from '@/components/brand/Badge'
 import {
-  RadarMotif, SecHead, Eyebrow, FeatureGrid, Steps, FinalCta, FaqItem,
+  RadarMotif, SecHead, Eyebrow, FeatureGrid, StepsFlow, FinalCta, FaqItem,
   type FeatureItem, type StepItem,
 } from '@/components/marketing/sections'
 import { signupHref } from '@/lib/signup-flag'
@@ -249,7 +249,7 @@ export default function HomePage() {
       <section className="mk-section mk-band--dark" id="how">
         <div className="mk-wrap">
           <SecHead eyebrow="איך מתחילים" title="ארבעה צעדים. חמש דקות." sub="חמש דקות. פחות זמן ממה שלוקח להסביר לאמא מה זה DPO." />
-          <Steps items={STEPS} />
+          <StepsFlow items={STEPS} />
         </div>
       </section>
 
