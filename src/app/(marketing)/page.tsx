@@ -253,12 +253,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* NOTE(review): the EXPERTS section was removed - it was a near-duplicate
-          of the "איך זה עובד" pillar block above, which carries the accurate copy.
-          NOTE(review): the shared ResponsibilityBand and the security teaser
-          (hp-security) were removed from the homepage per the redesign brief.
-          ResponsibilityBand stays available in the shared module for reuse
-          (e.g. /about). */}
+      {/* NOTE(review): the EXPERTS section + the security teaser (hp-security)
+          were removed - the EXPERTS block duplicated the "איך זה עובד" pillar
+          block above, which carries the accurate copy. */}
 
       {/* 9a - COMPARISON (shared dark ember-glow band) */}
       <section className="hp-compare mk-band--dark">

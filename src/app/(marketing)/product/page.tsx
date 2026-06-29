@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { DeepoIcon, type DeepoIconId } from '@/brand/icons'
 import { Badge } from '@/components/brand/Badge'
 import {
-  RadarMotif, Eyebrow, SecHead, Steps, FeatureGrid, ResponsibilityBand, FinalCta,
+  RadarMotif, Eyebrow, SecHead, Steps, FeatureGrid, FinalCta,
   type StepItem, type FeatureItem,
 } from '@/components/marketing/sections'
 import { signupHref } from '@/lib/signup-flag'
@@ -109,10 +109,7 @@ export default function ProductPage() {
         </div>
       </section>
 
-      {/* 5 - RESPONSIBILITY BAND (shared) */}
-      <ResponsibilityBand />
-
-      {/* 6 - FINAL CTA -> /lead-signup */}
+      {/* 5 - FINAL CTA -> /lead-signup */}
       <FinalCta
         title={<>כל זה, <span className="mk-grad">עובד בשבילכם.</span></>}
         sub="נתחיל בכמה שאלות קצרות. את השאר אנחנו כבר יודעים לעשות."

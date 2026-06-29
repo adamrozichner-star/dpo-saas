@@ -68,26 +68,6 @@ export function Steps({ items }: { items: StepItem[] }) {
   )
 }
 
-// The responsibility band - identical wording on every page (spec 2.9), so
-// the copy lives here. Overridable via props if a page ever needs to.
-export function ResponsibilityBand({
-  eyebrow = 'באחריות',
-  title = 'התוכנה לא מחליפה אדם. היא מאיצה אותו.',
-  body = 'האחריות המקצועית והמשפטית נשארת אצל הממונה האנושי. Deepo נותן לו לעבוד מהר, מדויק ובלי לפספס. אנחנו לא הסמכות המשפטית, אנחנו הכלי שמייעל אותה.',
-}: { eyebrow?: string; title?: React.ReactNode; body?: React.ReactNode } = {}) {
-  return (
-    <section className="mk-resp">
-      <div className="mk-wrap">
-        <div className="mk-resp__inner">
-          <Eyebrow icon="dp-seal">{eyebrow}</Eyebrow>
-          <h2>{title}</h2>
-          <p>{body}</p>
-        </div>
-      </div>
-    </section>
-  )
-}
-
 // Dark ember-glow closing CTA. title may include a <span className="mk-grad">.
 export function FinalCta({
   title, sub, cta, href, micro,
