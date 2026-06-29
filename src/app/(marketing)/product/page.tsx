@@ -104,7 +104,7 @@ export default function ProductPage() {
       {/* 4 - FEATURE DEEP-DIVE */}
       <section className="mk-section mk-band--sand">
         <div className="mk-wrap">
-          <SecHead eyebrow="מה יש בפנים" title="כל מה שצריך כדי להיות מסודרים." sub="אותן יכולות שמופיעות בדף הבית, קצת יותר לעומק." />
+          <SecHead eyebrow="מה יש בפנים" title="כל מה שצריך כדי להיות מסודרים." sub="אותן יכולות שמופיעות בדף הבית, קצת יותר לעומק (למי שאוהב לקרוא עד הסוף)." />
           <FeatureGrid items={PRODUCT_FEATURES} />
         </div>
       </section>
@@ -112,7 +112,7 @@ export default function ProductPage() {
       {/* 5 - FINAL CTA -> /lead-signup */}
       <FinalCta
         title={<>כל זה, <span className="mk-grad">עובד בשבילכם.</span></>}
-        sub="נתחיל בכמה שאלות קצרות. את השאר אנחנו כבר יודעים לעשות."
+        sub="נתחיל בכמה שאלות קצרות. את השאר אנחנו כבר יודעים לעשות (זה בערך כל הקטע שלנו)."
         cta="התחילו"
         href="/lead-signup"
         micro="בלי עלות הקמה · בלי התחייבות · הקמה בחמש דקות"
