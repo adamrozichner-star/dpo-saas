@@ -244,7 +244,7 @@ export default function HomePage() {
       {/* 4 - WHAT YOU GET (light, on the hero backdrop: .mk-mesh dot-grid +
           a corner RadarMotif at low opacity behind the white cards) */}
       <section className="mk-section mk-mesh hp-feat">
-        <RadarMotif className="hp-feat__radar" size={720} />
+        <RadarMotif className="hp-feat__radar" size={820} />
         <div className="mk-wrap">
           <SecHead eyebrow="מה מקבלים" title="כל מה שתיקון 13 דורש, במקום אחד." sub="אנחנו עושים הכול ברקע, בלי קבלנים חיצוניים ובלי הטמעה ארוכה, ובשפה שמבינים." />
           <FeatureGrid items={FEATURES} />

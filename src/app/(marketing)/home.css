@@ -135,14 +135,16 @@
 
 /* ── Features section backdrop (hero treatment) ─────────────────
    The 6-card "מה מקבלים" section reuses the hero backdrop: .mk-mesh
-   dot-grid (from the section class) + a corner RadarMotif at low opacity,
-   behind the cards. .mk-mesh already sets position:relative + overflow:
-   hidden, so the radar is clipped to the section. The white cards sit
-   above via the content z-index. */
+   dot-grid (from the section class) + a CENTERED RadarMotif halo behind
+   the card grid. .mk-mesh already sets position:relative + overflow:
+   hidden, so the rings are clipped to the section. The white cards are
+   fully opaque and sit above via the content z-index, so legibility is
+   unaffected. */
 .hp-feat > .mk-wrap { position: relative; z-index: 1; }
-/* Physical `left` (not inset-inline-start) so the rings sit lower-LEFT in
-   RTL, mirroring the hero radar. Low opacity keeps it a faint backdrop. */
-.hp-feat__radar { left: -320px; bottom: -340px; opacity: 0.5; }
+/* Centered halo (mirrors the reference .quote radar-rings): rings + the
+   gradient core node behind the grid, opacity raised to read as an
+   intentional backdrop without competing with the foreground cards. */
+.hp-feat__radar { left: 50%; top: 50%; bottom: auto; transform: translate(-50%, -50%); opacity: 0.7; }
 
 /* ── Experts ────────────────────────────────────────────────── */
 .hp-experts__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5); }
