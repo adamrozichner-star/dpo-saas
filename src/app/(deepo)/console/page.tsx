@@ -16,6 +16,7 @@ import type { ControlScheduleItemProps } from '@/components/ledger'
 import {
   mapObligation,
   mapControls,
+  scoreFromObligations,
   type ObligationDbRow,
   type ControlDbRow,
   type PlaybookDbRow,
@@ -74,6 +75,9 @@ export default function ConsolePage() {
   const compliant = obs.filter((o) => o.status === 'compliant').length
   const needsAttention = total - compliant
   const controlCount = controls?.length ?? 0
+  // Live, ledger-derived: the dial moves as obligations become compliant (not the
+  // stored org.compliance_score, which is never recomputed).
+  const score = scoreFromObligations(obs)
   const actionLink = 'dp-btn dp-btn--secondary dp-btn--sm'
 
   return (
@@ -93,7 +97,7 @@ export default function ConsolePage() {
 
       <Card>
         <div style={{ display: 'flex', gap: 'var(--space-8)', flexWrap: 'wrap', alignItems: 'center' }}>
-          <ComplianceScoreCard score={org.compliance_score ?? 0} total={total} compliant={compliant} />
+          <ComplianceScoreCard score={score} total={total} compliant={compliant} />
           <div className="dp-stats" style={{ flex: 1, minWidth: 240 }}>
             <div className="dp-stat">
               <span className="dp-stat__num">{total}</span>

@@ -484,6 +484,31 @@ export function deriveLedgerStats(obligations: LedgerSummaryObligation[], descri
   }
 }
 
+// Ledger-derived compliance score (0-100). The score is the share of obligation
+// "weight" already in order, weighted by severity so an open critical hurts more
+// than an open warning. PURE - derived live from the obligations, so the dial
+// MOVES as the loop runs (an obligation turning 'compliant' raises it). No org
+// with zero obligations is penalised (nothing to comply with -> 100).
+// NOTE: the severity weights are a PROVISIONAL engineering default (Amir/Roy own
+// the real scoring), mirroring the dial's PROVISIONAL band thresholds.
+export interface ScoreObligation {
+  status: ObligationStatus
+  severity: Severity | null
+}
+const SEVERITY_WEIGHT: Record<Severity, number> = { critical: 3, warning: 2, info: 1 }
+
+export function scoreFromObligations(obligations: ScoreObligation[]): number {
+  if (obligations.length === 0) return 100
+  let total = 0
+  let met = 0
+  for (const o of obligations) {
+    const w = o.severity ? SEVERITY_WEIGHT[o.severity] : 1
+    total += w
+    if (o.status === 'compliant') met += w
+  }
+  return total === 0 ? 100 : Math.round((met / total) * 100)
+}
+
 // UI renders unchanged. Ancillary stats are ledger-derived (PR12).
 export function buildLedgerSummary(obligations: LedgerSummaryObligation[], score: number, descriptor: LedgerDescriptorCounts | null = null): ComplianceSummary {
   const stats = deriveLedgerStats(obligations, descriptor)
