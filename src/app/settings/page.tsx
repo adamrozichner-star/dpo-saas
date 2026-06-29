@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import './settings-reskin.css'
 import { 
   Shield, 
   User,
@@ -185,7 +186,7 @@ export default function SettingsPage() {
 
   if (loading || isChecking || !isAuthorized) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center deepo-scope reskin-settings">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
@@ -200,7 +201,7 @@ export default function SettingsPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
+    <div className="min-h-screen deepo-scope reskin-settings" dir="rtl">
       <header className="bg-white border-b">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-2">

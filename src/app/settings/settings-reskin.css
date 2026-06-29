@@ -1,0 +1,20 @@
+/* ============================================================
+   /settings warm-brand reskin (visual only).
+
+   The page is shadcn-based (Button/Card/Input/Badge) on the legacy navy
+   --primary (HSL 224, from globals.css :root). We do NOT touch globals.css
+   or any shared token file. Instead the page root carries .deepo-scope
+   (warm sand bg + Rubik/Assistant fonts + brand base, the same opt-in
+   /console uses) plus the .reskin-settings scope below, which re-points
+   shadcn's --primary / --ring to brand crimson for this surface only.
+
+   No markup/logic changes beyond adding these scope classes + this import.
+   ============================================================ */
+.reskin-settings {
+  --primary: 347 97% 42%;            /* crimson-500 #D10331 */
+  --primary-foreground: 21 78% 96%;  /* warm near-white #FDF4EF */
+  --ring: 347 97% 42%;               /* crimson focus ring */
+}
+
+/* The active nav pill uses `bg-primary text-white`; with --primary now
+   crimson it reads on-brand. Keep the white label (AA on crimson). */
