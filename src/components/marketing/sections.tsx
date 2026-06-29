@@ -121,6 +121,34 @@ export function StepsFlow({ items }: { items: StepItem[] }) {
   )
 }
 
+// Media / press roller: a horizontal scroll-snap rail of external links.
+// Categories are open-ended; 'about' ("כתבו עלינו") seeds empty now and
+// fills in later with zero structural change. Links open in a new tab.
+export type PressItem = { category: 'official' | 'amendment' | 'about'; source: string; title: string; href: string }
+const PRESS_TAGS: Record<PressItem['category'], string> = {
+  official: 'מקור רשמי',
+  amendment: 'תיקון 13',
+  about: 'כתבו עלינו',
+}
+export function PressRoller({ items }: { items: PressItem[] }) {
+  return (
+    <div className="mk-roller">
+      <ul className="mk-roller__track">
+        {items.map((it) => (
+          <li className="mk-roller__card" key={it.href}>
+            <a href={it.href} target="_blank" rel="noopener noreferrer">
+              <span className={`mk-roller__tag mk-roller__tag--${it.category}`}>{PRESS_TAGS[it.category]}</span>
+              <span className="mk-roller__source">{it.source}</span>
+              <span className="mk-roller__title">{it.title}</span>
+              <span className="mk-roller__cta">קראו עוד ↗</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 // Dark ember-glow closing CTA. title may include a <span className="mk-grad">.
 export function FinalCta({
   title, sub, cta, href, micro,

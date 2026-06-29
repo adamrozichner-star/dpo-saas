@@ -13,15 +13,23 @@ import { DeepoIcon } from '@/brand/icons'
 import { Button } from '@/components/brand/Button'
 import { Badge } from '@/components/brand/Badge'
 import {
-  RadarMotif, SecHead, Eyebrow, FeatureGrid, StepsFlow, FinalCta, FaqItem,
-  type FeatureItem, type StepItem,
+  RadarMotif, SecHead, Eyebrow, FeatureGrid, StepsFlow, PressRoller, FinalCta, FaqItem,
+  type FeatureItem, type StepItem, type PressItem,
 } from '@/components/marketing/sections'
 import { signupHref } from '@/lib/signup-flag'
 import './home.css'
 
-// Slots that ship empty until real content is cleared (spec 2.11 / 12).
-const PRESS_ITEMS: Array<{ outlet: string; headline: string; href: string }> = []
-const SHOW_TESTIMONIAL_SLOT = true
+// Press / media roller: official PPA (gov.il) sources + neutral תיקון 13
+// coverage. The 'about' category ("כתבו עלינו") is intentionally empty for
+// now - drop in { category: 'about', source, title, href } items as press
+// about Deepo lands; no other change needed.
+const PRESS: PressItem[] = [
+  { category: 'official', source: 'הרשות להגנת הפרטיות', title: 'שאלות ותשובות: תיקון 13 לחוק הגנת הפרטיות', href: 'https://www.gov.il/he/pages/tikun13_qa' },
+  { category: 'official', source: 'הרשות להגנת הפרטיות', title: 'תיקון 13 לחוק הגנת הפרטיות אושר בכנסת', href: 'https://www.gov.il/he/pages/13_amendment_news' },
+  { category: 'official', source: 'הרשות להגנת הפרטיות', title: 'מדריך מקצועי להיערכות לתיקון 13 (PDF)', href: 'https://www.gov.il/BlobFolder/reports/guide_tikon13_professional/he/tikun%2013%20_170825.pdf' },
+  { category: 'amendment', source: 'N12', title: 'תיקון 13 לחוק הגנת הפרטיות: מה השתנה ואיך להיערך', href: 'https://www.mako.co.il/news-law_guide/2025_q4/Article-f69f6fe00413a91026.htm' },
+  { category: 'amendment', source: 'Tech Policy Institute', title: 'סקירה של תיקון מס׳ 13 לחוק הגנת הפרטיות', href: 'https://techpolicy.org.il/blog/overview-of-amendment-no-13-to-the-israeli-privacy-law/' },
+]
 
 // ============================================================
 // MINI CALCULATOR - illustrative DPO check (logic gated on Roy)
@@ -321,19 +329,15 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 10 - TESTIMONIALS SLOT (clearly marked, hideable) */}
-      {SHOW_TESTIMONIAL_SLOT && (
-        <section className="mk-section--tight">
-          <div className="mk-wrap">
-            {/* NOTE(review): real testimonials pending (spec 12). Flip SHOW_TESTIMONIAL_SLOT
-                to hide, or replace this slot with a testimonials grid when content lands. */}
-            <div className="mk-slot">
-              <span className="mk-slot__lab">ממליצים</span>
-              עוד רגע יהיו פה לקוחות מרוצים. בינתיים, אתם מוזמנים להיות הראשונים.
-            </div>
-          </div>
-        </section>
-      )}
+      {/* 10 - MEDIA / PRESS ROLLER (official PPA sources + תיקון 13 coverage;
+          the 'about' category fills "כתבו עלינו" later). Replaces the old
+          testimonials slot. */}
+      <section className="mk-section--tight" id="press">
+        <div className="mk-wrap">
+          <SecHead eyebrow="בתקשורת ובמקורות רשמיים" title="אל תאמינו רק לנו." sub="הנה מה שהרשות להגנת הפרטיות והתקשורת אומרים על תיקון 13. ממקור ראשון." />
+          <PressRoller items={PRESS} />
+        </div>
+      </section>
 
       {/* 11 - FAQ */}
       <section className="mk-section mk-band--sand">
@@ -352,16 +356,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 12 - PRESS STRIP (hidden while empty) */}
-      {PRESS_ITEMS.length > 0 && (
-        <section className="mk-section--tight">
-          <div className="mk-wrap">
-            <SecHead eyebrow="בתקשורת" title="מדברים עלינו." />
-          </div>
-        </section>
-      )}
-
-      {/* 13 - FINAL CTA (shared, dark ember-glow) */}
+      {/* 11 - FINAL CTA (shared, dark ember-glow) */}
       <FinalCta
         title={<>אתם בעסק. <span className="mk-grad">אנחנו על המשמר.</span></>}
         sub="אנחנו דואגים שתעמדו בתיקון 13, בלי כאב ראש ובמחיר שכל עסק יכול. נתחיל?"

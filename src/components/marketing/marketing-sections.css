@@ -148,9 +148,24 @@
   font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em;
 }
 
-/* ── Marked / hideable slot (testimonials, press, ...) ──────── */
-.mk-slot { border: 1px dashed var(--sand-400); border-radius: var(--radius-xl); padding: var(--space-10); text-align: center; color: var(--fg-2); }
-.mk-slot__lab { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-3); display: block; margin-bottom: var(--space-3); }
+/* ── Press / media roller (horizontal scroll-snap rail of links) ─── */
+.mk-roller { overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; margin-top: var(--space-6); padding-block: var(--space-2); }
+.mk-roller__track { display: flex; gap: var(--space-5); list-style: none; margin: 0; padding: 0; }
+.mk-roller__card { scroll-snap-align: start; flex: 0 0 clamp(240px, 78vw, 300px); }
+.mk-roller__card a {
+  display: flex; flex-direction: column; gap: var(--space-2); height: 100%;
+  padding: var(--space-5); border: 1px solid var(--sand-300); border-radius: var(--radius-xl);
+  background: #fff; text-decoration: none; transition: border-color .2s, transform .2s, box-shadow .2s;
+}
+.mk-roller__card a:hover { border-color: var(--crimson-300); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06); }
+.mk-roller__tag { align-self: flex-start; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 8px; border-radius: var(--radius-pill); }
+.mk-roller__tag--official { background: var(--crimson-50); color: var(--crimson-700); }
+.mk-roller__tag--amendment { background: var(--sand-200); color: var(--garnet-700); }
+.mk-roller__tag--about { background: var(--amber-100); color: var(--amber-600); }
+.mk-roller__source { font-family: var(--font-mono); font-size: 12px; color: var(--fg-3); }
+.mk-roller__title { font-family: var(--font-display); font-weight: 600; font-size: 16px; line-height: 1.4; color: var(--fg-1); flex: 1; }
+.mk-roller__cta { font-size: 13px; font-weight: 600; color: var(--crimson-600); }
+@media (prefers-reduced-motion: reduce) { .mk-roller__card a:hover { transform: none; } }
 
 /* ── FAQ accordion ──────────────────────────────────────────── */
 .mk-faq { max-width: 52rem; margin-inline: auto; }
