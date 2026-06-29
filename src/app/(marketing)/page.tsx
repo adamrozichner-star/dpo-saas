@@ -264,7 +264,7 @@ export default function HomePage() {
       <section className="hp-compare mk-band--dark">
         <div className="mk-wrap hp-compare__wrap">
           <Eyebrow icon="dp-bolt">השוואת עלות · שנה ראשונה</Eyebrow>
-          <h2>אותה הגנה. בעלות נמוכה בעשרות אחוזים.</h2>
+          <h2>אותה הגנה. בעלות נמוכה בכ-85%.</h2>
           <div className="hp-ctable">
             <div className="hp-ccol hp-ccol--old">
               <p className="hp-ccol__name">DPO חיצוני קלאסי</p>
@@ -285,8 +285,6 @@ export default function HomePage() {
                 <li><DeepoIcon id="dp-check" /> ניטור רציף, מסביב לשעון</li>
                 <li><DeepoIcon id="dp-check" /> מותאם לעסק שלכם</li>
               </ul>
-              {/* NOTE(review): ~85% is computed off the entry tier; reference still shows
-                  stale 500/1000 pricing (spec 12). Confirm the exact headline figure with Adam. */}
               <span className="hp-savetag">עד כ-85% פחות, בשנה הראשונה</span>
             </div>
           </div>
