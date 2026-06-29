@@ -62,7 +62,7 @@ import WebsiteScanner from '@/components/WebsiteScanner'
 import NotificationsBell from '@/components/NotificationsBell'
 import TrustPageSettings from '@/components/TrustPageSettings'
 import { deriveComplianceActions, ComplianceSummary, ActionOverride } from '@/lib/compliance-engine'
-import { isLedgerRead, loadComplianceSummary, type LedgerSummaryObligation } from '@/lib/console-data'
+import { isLedgerRead, loadComplianceSummary, type LedgerSummaryObligation, type LedgerDescriptorCounts } from '@/lib/console-data'
 import { isOnboardingDataComplete } from '@/lib/onboarding-validation'
 
 // ============================================
@@ -120,10 +120,20 @@ function DashboardContent() {
     if (!supabase) return []
     const { data } = await supabase
       .from('obligations')
-      .select('id, title, status, severity, description')
+      .select('id, title, status, severity, description, source_rule_id')
       .eq('org_id', orgId)
       .order('severity', { ascending: true })
-    return (data ?? []) as LedgerSummaryObligation[]
+    return ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+      id: r.id as string, title: r.title as string, status: r.status as LedgerSummaryObligation['status'],
+      severity: (r.severity as LedgerSummaryObligation['severity']) ?? null, description: (r.description as string) ?? null,
+      sourceRuleId: (r.source_rule_id as string) ?? null, // PR12: drives RULE_STAT_IMPACT
+    }))
+  }
+  // PR12: ledger descriptor counts (db_count/total_records) for the flag-ON summary.
+  const fetchLedgerDescriptor = async (orgId: string): Promise<LedgerDescriptorCounts | null> => {
+    if (!supabase || !orgId) return null
+    const { data } = await supabase.from('org_descriptors').select('db_count, total_records').eq('org_id', orgId).maybeSingle()
+    return data ? { db_count: (data.db_count as number) ?? 0, total_records: (data.total_records as number) ?? 0 } : null
   }
   const [actionOverrides, setActionOverrides] = useState<Record<string, ActionOverride>>({})
 
@@ -312,6 +322,7 @@ function DashboardContent() {
         const summary = await loadComplianceSummary({
           ledgerRead: isLedgerRead(org),
           fetchObligations: () => fetchLedgerObligations(org.id),
+          fetchDescriptor: () => fetchLedgerDescriptor(org.id),
           score: org?.compliance_score ?? 0,
           legacy: () => deriveComplianceActions(v3, docs || [], incidentData || [], overrides, org?.tier),
         })
@@ -396,6 +407,7 @@ function DashboardContent() {
     const newSummary = await loadComplianceSummary({
       ledgerRead: isLedgerRead(organization),
       fetchObligations: () => fetchLedgerObligations(organization?.id ?? ''),
+      fetchDescriptor: () => fetchLedgerDescriptor(organization?.id ?? ''),
       score: organization?.compliance_score ?? 0,
       legacy: () => deriveComplianceActions(v3, documents, incidents, newOverrides, organization?.tier),
     })
@@ -453,6 +465,7 @@ function DashboardContent() {
     const newSummary = await loadComplianceSummary({
       ledgerRead: isLedgerRead(organization),
       fetchObligations: () => fetchLedgerObligations(organization?.id ?? ''),
+      fetchDescriptor: () => fetchLedgerDescriptor(organization?.id ?? ''),
       score: organization?.compliance_score ?? 0,
       legacy: () => deriveComplianceActions(v3, documents, incidents, newOverrides, organization?.tier),
     })

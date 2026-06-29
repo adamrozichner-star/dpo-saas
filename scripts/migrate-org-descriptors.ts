@@ -20,13 +20,23 @@ async function sql<T = unknown>(query: string): Promise<T[]> {
   return body as T[]
 }
 
-const COPY = `INSERT INTO public.org_descriptors (org_id, data_categories, processing_purposes, security_measures)
-SELECT org_id, coalesce(data_types, '[]'::jsonb), coalesce(processing_purposes, '[]'::jsonb), coalesce(security_measures, '[]'::jsonb)
+// db_count from the databases array length; total_records best-effort from a
+// profile_data.totalRecords key if present (else 0 - inherently fuzzy, a
+// ledger-consistent home is the point). Legacy organization_profiles read-only.
+const COPY = `INSERT INTO public.org_descriptors (org_id, data_categories, processing_purposes, security_measures, db_count, total_records)
+SELECT org_id,
+  coalesce(data_types, '[]'::jsonb),
+  coalesce(processing_purposes, '[]'::jsonb),
+  coalesce(security_measures, '[]'::jsonb),
+  coalesce(jsonb_array_length(case when jsonb_typeof(databases) = 'array' then databases else '[]'::jsonb end), 0),
+  coalesce((profile_data->>'totalRecords')::int, 0)
 FROM public.organization_profiles WHERE org_id IS NOT NULL
 ON CONFLICT (org_id) DO UPDATE SET
   data_categories = EXCLUDED.data_categories,
   processing_purposes = EXCLUDED.processing_purposes,
   security_measures = EXCLUDED.security_measures,
+  db_count = EXCLUDED.db_count,
+  total_records = EXCLUDED.total_records,
   updated_at = now();`
 
 async function run() {

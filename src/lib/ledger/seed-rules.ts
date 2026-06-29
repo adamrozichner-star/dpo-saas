@@ -23,6 +23,20 @@ const ASSET = {
   security_cameras: 'ffc7ae0a-d500-4cf7-be37-b6965243ed4d',
 } as const
 
+// PR12: ledger-backed compliance stats. Maps a gap-rule templateId to the legacy
+// ancillary stat its obligation implies (securityLevel/needsReporting/needsCiso).
+// The rules ALREADY evaluated these thresholds and minted the obligations; this
+// lets buildLedgerSummary derive the stats from obligation provenance instead of
+// re-running the legacy engine. CO-LOCATED with the rules ON PURPOSE: revising a
+// rule's regulatory meaning means revising this map. A rule with no entry has no
+// stat impact (safe default: basic / false). Keyed by templateId (== obligations.source_rule_id).
+export const RULE_STAT_IMPACT: Record<string, { needsReporting?: boolean; securityHigh?: boolean; needsCiso?: boolean }> = {
+  'b1000001-0000-4000-8000-000000000001': { securityHigh: true },   // medical + significant volume -> high security level
+  'b1000002-0000-4000-8000-000000000002': { needsReporting: true }, // over 100,000 subjects -> database registration
+  'b1000006-0000-4000-8000-000000000006': { needsCiso: true },      // access too broad to sensitive data -> CISO consideration
+  'b1000008-0000-4000-8000-000000000008': { needsReporting: true }, // processing activity -> database registration
+}
+
 export const seedGapRules: GapRuleInput[] = [
   {
     templateId: 'b1000001-0000-4000-8000-000000000001',

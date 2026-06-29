@@ -405,6 +405,7 @@ export function buildResolveWrite(p: ResolveInput): ResolveWrite {
 // replacement for the legacy engine (see tasks/lessons.md / PR12).
 // ---------------------------------------------------------------------------
 import type { ComplianceSummary, ComplianceTask } from '@/lib/compliance-engine'
+import { RULE_STAT_IMPACT } from '@/lib/ledger/seed-rules'
 
 export function isLedgerRead(org: { feature_flags?: Record<string, unknown> | null } | null | undefined): boolean {
   return org?.feature_flags?.LEDGER_READ === true
@@ -424,6 +425,14 @@ export interface LedgerSummaryObligation {
   status: ObligationStatus
   severity: Severity | null
   description?: string | null
+  sourceRuleId?: string | null // PR12: which gap rule minted it (-> RULE_STAT_IMPACT)
+}
+
+// PR12: db/record counts the legacy engine derived from onboarding, now read from
+// the v3 ledger (org_descriptors, populated by the F2d copy).
+export interface LedgerDescriptorCounts {
+  db_count: number
+  total_records: number
 }
 
 const SEVERITY_TO_PRIORITY: Record<Severity, ComplianceTask['priority']> = {
@@ -447,20 +456,49 @@ function obligationToTask(o: LedgerSummaryObligation, index: number): Compliance
 }
 
 // Pure: ledger obligations + score -> a ComplianceSummary the existing dashboard
-// UI renders unchanged. Ancillary stats are neutral defaults (see header note).
-export function buildLedgerSummary(obligations: LedgerSummaryObligation[], score: number): ComplianceSummary {
+// PR12: derive the ancillary stats from the ledger - securityLevel / needsReporting
+// / needsCiso from obligation provenance (RULE_STAT_IMPACT), db/record counts from
+// org_descriptors. An obligation whose source rule has no impact entry, or no
+// descriptor row, yields the safe default (basic / false / 0). No neutral
+// hardcoding - all five are ledger-derived. (securityLevel is high|basic by
+// design; the legacy 'medium' count-heuristic is intentionally not reconstructed.)
+export function deriveLedgerStats(obligations: LedgerSummaryObligation[], descriptor: LedgerDescriptorCounts | null) {
+  let securityHigh = false
+  let needsCiso = false
+  const reportingReasons: string[] = []
+  for (const o of obligations) {
+    const impact = o.sourceRuleId ? RULE_STAT_IMPACT[o.sourceRuleId] : undefined
+    if (!impact) continue
+    if (impact.securityHigh) securityHigh = true
+    if (impact.needsCiso) needsCiso = true
+    if (impact.needsReporting) reportingReasons.push(o.title)
+  }
+  return {
+    securityLevel: (securityHigh ? 'high' : 'basic') as 'basic' | 'medium' | 'high',
+    securityLevelHe: securityHigh ? 'גבוהה' : 'בסיסית',
+    needsReporting: reportingReasons.length > 0,
+    reportingReasons,
+    needsCiso,
+    dbCount: descriptor?.db_count ?? 0,
+    totalRecords: descriptor?.total_records ?? 0,
+  }
+}
+
+// UI renders unchanged. Ancillary stats are ledger-derived (PR12).
+export function buildLedgerSummary(obligations: LedgerSummaryObligation[], score: number, descriptor: LedgerDescriptorCounts | null = null): ComplianceSummary {
+  const stats = deriveLedgerStats(obligations, descriptor)
   return {
     tasks: obligations.map(obligationToTask),
     actions: [],
     guidelines: [],
     score,
-    securityLevel: 'basic',
-    securityLevelHe: 'בסיסית',
-    totalRecords: 0,
-    dbCount: 0,
-    needsReporting: false,
-    reportingReasons: [],
-    needsCiso: false,
+    securityLevel: stats.securityLevel,
+    securityLevelHe: stats.securityLevelHe,
+    totalRecords: stats.totalRecords,
+    dbCount: stats.dbCount,
+    needsReporting: stats.needsReporting,
+    reportingReasons: stats.reportingReasons,
+    needsCiso: stats.needsCiso,
   }
 }
 
@@ -472,9 +510,13 @@ export async function loadComplianceSummary(opts: {
   fetchObligations: () => Promise<LedgerSummaryObligation[]>
   score: number
   legacy: () => ComplianceSummary
+  // PR12: optional ledger descriptor counts (db_count/total_records) for the
+  // flag-ON path. Absent -> 0 (safe). The flag-OFF path never touches it.
+  fetchDescriptor?: () => Promise<LedgerDescriptorCounts | null>
 }): Promise<ComplianceSummary> {
   if (opts.ledgerRead) {
-    return buildLedgerSummary(await opts.fetchObligations(), opts.score)
+    const descriptor = opts.fetchDescriptor ? await opts.fetchDescriptor() : null
+    return buildLedgerSummary(await opts.fetchObligations(), opts.score, descriptor)
   }
   return opts.legacy()
 }
