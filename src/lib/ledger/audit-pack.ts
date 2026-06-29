@@ -51,7 +51,11 @@ export interface AuditDoc {
   fingerprint: string | null
 }
 export interface AuditPackInput {
-  org: { name: string }
+  // ② Controller identity: the audit pack is the report-to-the-Authority context,
+  // so it MUST carry the controller's details (Roy, 2026-06-29). name is always
+  // present; businessId (organizations.business_id) + address (org_descriptors)
+  // render when set, else a clear missing-marker. Kept OUT of public/marketing copy.
+  org: { name: string; businessId?: string | null; address?: string | null }
   score: number | null
   dpoName: string | null
   generatedAtIso: string // shown in the header; NOT in the fingerprint (volatile)
@@ -93,12 +97,17 @@ function canonical(v: unknown): string {
 
 const d = (s: string | null | undefined) => (s && String(s).trim() ? String(s) : '-')
 
+// Controller identity fields show a clear missing-marker when absent (same pattern
+// as the legal placeholders), so a gap is visible rather than silently blank.
+const CONTROLLER_MISSING = '[[ חסר - יש להשלים פרטי בעל המאגר ]]'
+const ctrl = (s: string | null | undefined) => (s && String(s).trim() ? String(s) : CONTROLLER_MISSING)
+
 export function buildAuditPack(input: AuditPackInput): AuditPack {
   const obs = input.obligations.slice().sort((a, b) => a.id.localeCompare(b.id))
 
   // ---- fingerprint inputs: the assembled ledger facts, NOT the generated-at ----
   const fpInputs = {
-    org: input.org.name,
+    org: { name: input.org.name, businessId: input.org.businessId ?? null, address: input.org.address ?? null },
     score: input.score,
     obligations: obs.map((o) => ({
       id: o.id, status: o.status, severity: o.severity,
@@ -116,7 +125,10 @@ export function buildAuditPack(input: AuditPackInput): AuditPack {
   const lines: string[] = []
   lines.push(`# תיק היערכות (Audit Pack)`)
   lines.push('')
-  lines.push(`**ארגון:** ${d(input.org.name)}`)
+  lines.push(`## בעל המאגר`)
+  lines.push(`**שם:** ${d(input.org.name)}`)
+  lines.push(`**מספר ארגון (ח.פ./ע.מ.):** ${ctrl(input.org.businessId)}`)
+  lines.push(`**כתובת:** ${ctrl(input.org.address)}`)
   if (input.dpoName) lines.push(`**ממונה הגנת הפרטיות:** ${d(input.dpoName)}`)
   lines.push(`**ציון ציות:** ${input.score == null ? '-' : input.score}`)
   lines.push(`**הופק:** ${d(input.generatedAtIso)}`)

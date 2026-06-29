@@ -36,7 +36,7 @@ export default function AuditPage() {
 
   const load = useCallback(async () => {
     if (!supabase || !org) return
-    const [obRes, evRes, ctRes, pbRes, dpoRes, docRes, packRes] = await Promise.all([
+    const [obRes, evRes, ctRes, pbRes, dpoRes, docRes, packRes, orgRes, descRes] = await Promise.all([
       supabase.from('obligations').select('id, title, status, severity, source_rule_id, source_version, status_changed_at, fulfilled_by_control_id').eq('org_id', org.id),
       supabase.from('evidence').select('obligation_id, kind, captured_at, captured_via, answer_ref').eq('org_id', org.id),
       supabase.from('controls').select('id, source_playbook_id, source_playbook_version, cadence, next_due_at, last_completed_at').eq('org_id', org.id),
@@ -44,6 +44,9 @@ export default function AuditPage() {
       supabase.from('contacts').select('name').eq('org_id', org.id).eq('role', 'dpo').limit(1),
       supabase.from('documents').select('type, title, version, approved_at, render_fingerprint').eq('org_id', org.id).eq('source', 'ledger_render').eq('status', 'active'),
       supabase.from('audit_packs').select('id, generated_at, pack_fingerprint, summary').eq('org_id', org.id).order('generated_at', { ascending: false }),
+      // ② controller identity for the regulator-facing header
+      supabase.from('organizations').select('business_id').eq('id', org.id).maybeSingle(),
+      supabase.from('org_descriptors').select('address').eq('org_id', org.id).maybeSingle(),
     ])
 
     // provenance: fetch the rules referenced by the obligations
@@ -86,7 +89,9 @@ export default function AuditPage() {
     }))
     const dpoName = ((dpoRes.data?.[0] as { name: string | null } | undefined)?.name) ?? null
 
-    const input: AuditPackInput = { org: { name: org.name }, score: org.compliance_score ?? null, dpoName, generatedAtIso: new Date().toISOString(), obligations, documents }
+    const businessId = (orgRes.data as { business_id: string | null } | null)?.business_id ?? null
+    const address = (descRes.data as { address: string | null } | null)?.address ?? null
+    const input: AuditPackInput = { org: { name: org.name, businessId, address }, score: org.compliance_score ?? null, dpoName, generatedAtIso: new Date().toISOString(), obligations, documents }
     setLive(buildAuditPack(input))
     setPacks((packRes.data ?? []) as PackRow[])
   }, [supabase, org])

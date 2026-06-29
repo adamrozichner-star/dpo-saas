@@ -34,7 +34,8 @@ const legacyDocsHash = async () => (await sql<{ h: string }>(`select md5(string_
 const profileHash = async () => (await sql<{ h: string }>(`select coalesce(md5(string_agg(id::text||coalesce(profile_data::text,''), '~~' order by id)),'(empty)') h from public.organization_profiles;`))[0].h
 
 async function buildLiveInput(generatedAtIso: string): Promise<AuditPackInput> {
-  const org = (await sql<{ name: string; compliance_score: number | null }>(`select name, compliance_score from public.organizations where id=${lit(ORG)};`))[0]
+  const org = (await sql<{ name: string; compliance_score: number | null; business_id: string | null }>(`select name, compliance_score, business_id from public.organizations where id=${lit(ORG)};`))[0]
+  const desc = (await sql<{ address: string | null }>(`select address from public.org_descriptors where org_id=${lit(ORG)};`))[0]
   const obRows = await sql<Record<string, unknown>>(`select id, title, status, severity, source_rule_id, source_version, status_changed_at, fulfilled_by_control_id from public.obligations where org_id=${lit(ORG)};`)
   const evRows = await sql<{ obligation_id: string; kind: string; captured_at: string | null; captured_via: string | null; answer_ref: string | null }>(`select obligation_id, kind, captured_at::text, captured_via, answer_ref from public.evidence where org_id=${lit(ORG)};`)
   const ctRows = await sql<{ id: string; cadence: string; next_due_at: string | null; last_completed_at: string | null }>(`select id, cadence, next_due_at::text, last_completed_at::text from public.controls where org_id=${lit(ORG)};`)
@@ -50,7 +51,7 @@ async function buildLiveInput(generatedAtIso: string): Promise<AuditPackInput> {
     control: o.fulfilled_by_control_id ? ctById.get(o.fulfilled_by_control_id as string) ?? null : null,
   }))
   const documents: AuditDoc[] = docRows.map((x) => ({ type: x.type as string, title: x.title as string, version: (x.version as number) ?? null, approvedAt: (x.approved_at as string) ?? null, fingerprint: (x.render_fingerprint as string) ?? null }))
-  return { org: { name: org.name }, score: org.compliance_score, dpoName: null, generatedAtIso, obligations, documents }
+  return { org: { name: org.name, businessId: org.business_id ?? null, address: desc?.address ?? null }, score: org.compliance_score, dpoName: null, generatedAtIso, obligations, documents }
 }
 
 async function main() {
@@ -70,6 +71,15 @@ async function main() {
   check('changed obligation state -> fingerprint flips', p3.fingerprint !== p1.fingerprint)
   check('summary counts correct', p1.summary.obligations === 1 && p1.summary.evidence === 1 && p1.summary.controls === 1 && p1.summary.documents === 1)
 
+  // ---- ② controller identity in the regulator-facing header ----
+  console.log('\n[controller identity] name + business_id + address, placeholder when absent')
+  const idIn: AuditPackInput = { ...inA, org: { name: 'דיפו', businessId: '54454446', address: 'רחוב הדוגמה 1, תל אביב' } }
+  const idPack = buildAuditPack(idIn)
+  check('header renders business_id + address when present', idPack.content.includes('54454446') && idPack.content.includes('רחוב הדוגמה 1, תל אביב'))
+  check('header shows a clear missing-marker when identity absent', buildAuditPack(inA).content.includes('יש להשלים פרטי בעל המאגר'))
+  check('controller identity is in the fingerprint (address change flips it)', buildAuditPack({ ...idIn, org: { ...idIn.org, address: 'אחרת 2' } }).fingerprint !== idPack.fingerprint)
+  check('controller identity is in the fingerprint (business_id change flips it)', buildAuditPack({ ...idIn, org: { ...idIn.org, businessId: '99999999' } }).fingerprint !== idPack.fingerprint)
+
   let evId = '', docId = '', eventId = ''
   try {
     // ---- fixtures: an obligation-linked evidence (tracing to an event) + an active F1 doc ----
@@ -85,6 +95,7 @@ async function main() {
     check('pack includes the active F1 doc', live.summary.documents >= 1 && live.content.includes('fpdoc123'))
     check('provenance: obligation title appears in the pack', live.content.includes(ob.title))
     check('evidence trace: the source event id (answer_ref) appears in the pack', live.content.includes(eventId))
+    check('live header carries דיפו controller business_id (54454446)', live.content.includes('54454446'))
 
     // ---- reproducible: same ledger state -> same fingerprint ----
     const liveAgain = buildAuditPack(await buildLiveInput(new Date(Date.now() + 99999).toISOString()))
