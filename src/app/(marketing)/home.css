@@ -126,6 +126,31 @@
 .mk-band--dark .hp-mini__reset { color: var(--garnet-300); }
 .mk-band--dark .hp-mini__reset:hover { color: #fff; }
 
+/* ── Exposure calculator (Roy-gated; reuses .hp-mini shell) ───── */
+.hp-num { width: 100%; padding: var(--space-3); border: 1px solid var(--sand-300); border-radius: var(--radius-lg); font-family: var(--font-body); font-size: 16px; color: var(--fg-1); background: #fff; }
+.hp-num:focus { outline: none; border-color: var(--crimson-500); }
+.hp-exp__head { text-align: center; margin-bottom: var(--space-3); }
+.hp-exp__lab { display: block; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; color: var(--fg-3); margin-bottom: 4px; }
+.hp-exp__range { font-family: var(--font-display); font-weight: 700; font-size: clamp(24px, 4vw, 32px); color: var(--crimson-600); }
+.hp-exp__note { font-size: 12px; color: var(--fg-3); text-align: center; margin: 0 0 var(--space-3); }
+.hp-exp__brk { list-style: none; margin: 0 0 var(--space-4); padding: 0; font-size: 13px; color: var(--fg-2); }
+.hp-exp__brk li { padding: 2px 0; }
+.hp-exp__band, .hp-exp__civil { border-radius: var(--radius-lg); padding: var(--space-4); margin-bottom: var(--space-3); }
+.hp-exp__band { background: var(--status-warn-bg); border: 1px solid var(--amber-200); }
+.hp-exp__civil { background: var(--crimson-50); border: 1px solid var(--crimson-200); }
+.hp-exp__band span, .hp-exp__civil span { display: block; font-size: 13px; font-weight: 600; color: var(--fg-1); }
+.hp-exp__band strong, .hp-exp__civil strong { display: block; font-family: var(--font-display); font-size: 18px; margin: 2px 0; color: var(--fg-1); }
+.hp-exp__civil strong { color: var(--crimson-600); }
+.hp-exp__band small, .hp-exp__civil small { font-size: 12px; line-height: 1.45; color: var(--fg-2); }
+.hp-exp__disclaimer { font-size: 12px; color: var(--fg-3); text-align: center; margin: var(--space-2) 0 var(--space-4); }
+.mk-band--dark .hp-num { background: var(--garnet-900); border-color: var(--border-on-dark); color: var(--fg-on-dark-1); }
+.mk-band--dark .hp-exp__lab, .mk-band--dark .hp-exp__brk, .mk-band--dark .hp-exp__note, .mk-band--dark .hp-exp__disclaimer { color: var(--garnet-300); }
+.mk-band--dark .hp-exp__range { color: var(--amber-400); }
+.mk-band--dark .hp-exp__band, .mk-band--dark .hp-exp__civil { background: var(--garnet-900); border-color: rgba(255, 178, 77, 0.45); }
+.mk-band--dark .hp-exp__band span, .mk-band--dark .hp-exp__civil span { color: #fff; }
+.mk-band--dark .hp-exp__band strong, .mk-band--dark .hp-exp__civil strong { color: var(--amber-400); }
+.mk-band--dark .hp-exp__band small, .mk-band--dark .hp-exp__civil small { color: var(--garnet-300); }
+
 /* ── Trust strip ────────────────────────────────────────────── */
 .hp-trust { border-block: 1px solid var(--sand-300); padding-block: var(--space-8); }
 .hp-trust .hp-trust__row { max-width: 1320px; gap: var(--space-12); display: flex; align-items: center; flex-wrap: wrap; justify-content: center; }

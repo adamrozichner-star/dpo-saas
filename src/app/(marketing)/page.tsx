@@ -34,6 +34,14 @@ const PRESS: PressItem[] = [
 // ============================================================
 // MINI CALCULATOR - illustrative DPO check (logic gated on Roy)
 // ============================================================
+// ROY-GATE: the exposure calculator uses exact shekel penalty figures from
+// Roy's slides (Privacy Authority formulas). It MUST NOT ship to prod until
+// Roy signs off the numbers + framing. Keep this false; flipping it swaps the
+// "do you need a DPO" mini-calc for the exposure calc on the homepage.
+const SHOW_EXPOSURE_CALC = false
+
+const ils = (n: number) => '₪' + Math.round(n).toLocaleString('en-US')
+
 function MiniCalculator() {
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [showResult, setShowResult] = useState(false)
@@ -104,6 +112,101 @@ function MiniCalculator() {
       <Q q="q2" label="אתם מחזיקים מידע על לקוחות?" cols={2} opts={[['yes', 'כן'], ['no', 'לא']]} />
       <Q q="q3" label="יש מידע רגיש (בריאות, ילדים, ביומטרי)?" cols={3} opts={[['yes', 'כן'], ['no', 'לא'], ['maybe', 'לא בטוח']]} />
       <Button variant="primary" onClick={calculate} disabled={!answers.q1 || !answers.q2}>בדיקה</Button>
+    </div>
+  )
+}
+
+// ROY-GATED exposure / penalty calculator (מחשבון חשיפה). All figures are
+// from Roy's slides (Privacy Authority formulas) and stay illustrative until
+// he signs off. Gated by SHOW_EXPOSURE_CALC; rendered only when on.
+//   Administrative range = sum of triggered FLOORS .. max(floors, sum of
+//   N x per-subject rate), all x2 when N > 1,000,000.
+//   C4 (security regs) is shown as an illustrative tier band, not computed
+//   per-user (the visitor can't self-classify their security level).
+//   Civil/class-action (Amendment 13 statutory) is a separate line.
+function ExposureCalculator() {
+  const [n, setN] = useState('')
+  const [a, setA] = useState<Record<string, string>>({})
+  const [show, setShow] = useState(false)
+  const select = (q: string, v: string) => setA((prev) => ({ ...prev, [q]: v }))
+
+  const subjects = Math.max(0, Math.floor(Number(n) || 0))
+  const ready = subjects > 0 && !!a.sensitive && !!a.consent && !!a.registered
+  const sensitive = a.sensitive === 'yes'
+  const over1M = subjects > 1_000_000
+  const mult = over1M ? 2 : 1
+
+  // Only the components the answers trigger (rates + floors per Roy's slides).
+  const comps: Array<{ floor: number; per: number }> = []
+  if (a.registered === 'no') comps.push({ floor: sensitive ? 40000 : 20000, per: subjects * (sensitive ? 4 : 2) })   // C1 registration / size
+  if (a.consent === 'no') comps.push({ floor: 200000, per: subjects * (sensitive ? 8 : 4) })                          // C2 processing without authorization
+  if (a.consent === 'no') comps.push({ floor: 30000, per: subjects * (sensitive ? 100 : 50) })                        // C3 notice-to-subject breach
+
+  const floorSum = comps.reduce((s, c) => s + c.floor, 0) * mult
+  const perSum = comps.reduce((s, c) => s + c.per, 0) * mult
+  const adminLow = floorSum
+  const adminHigh = Math.max(floorSum, perSum)
+
+  const secLow = 20000 * mult   // C4 band across security levels (illustrative)
+  const secHigh = 320000 * mult
+  const civilAggregate = subjects * 10000
+
+  if (show) {
+    return (
+      <div className="hp-mini">
+        <div className="hp-exp__head">
+          <span className="hp-exp__lab">הערכת חשיפה מנהלית (עיצומים כספיים)</span>
+          <span className="hp-exp__range">{comps.length ? `${ils(adminLow)}–${ils(adminHigh)}` : '₪0'}</span>
+        </div>
+        {over1M && <p className="hp-exp__note">מאגר עם מעל מיליון נושאי מידע: הסכומים המנהליים מוכפלים ×2.</p>}
+        {comps.length > 0 && (
+          <ul className="hp-exp__brk">
+            {a.registered === 'no' && <li>אי-רישום מאגר / חריגת גודל</li>}
+            {a.consent === 'no' && <li>עיבוד ללא הרשאה והפרת חובת היידוע</li>}
+          </ul>
+        )}
+        <div className="hp-exp__band">
+          <span>הפרת תקנות אבטחה</span>
+          <strong>{ils(secLow)}–{ils(secHigh)}</strong>
+          <small>בהתאם לחומרה ולרמת האבטחה</small>
+        </div>
+        <div className="hp-exp__civil">
+          <span>חשיפה אזרחית (תביעה ייצוגית)</span>
+          <strong>עד {ils(10000)} לאדם נפגע</strong>
+          <small>ללא צורך בהוכחת נזק (תיקון 13). תקרה מצרפית תיאורטית: עד {ils(civilAggregate)}.</small>
+        </div>
+        <p className="hp-exp__disclaimer">הערכה בלבד, אינה ייעוץ משפטי.</p>
+        <div className="hp-mini__actions">
+          <Link href={signupHref('/register')} className="dp-btn dp-btn--gradient dp-btn--md">בדקו איך Deepo מוריד את החשיפה הזו</Link>
+          <button type="button" className="hp-mini__reset" onClick={() => setShow(false)}>חישוב מחדש</button>
+        </div>
+      </div>
+    )
+  }
+
+  const Q = ({ q, label }: { q: string; label: string }) => (
+    <div className="hp-q">
+      <span className="hp-q__label">{label}</span>
+      <div className="hp-chips hp-chips--2">
+        {([['yes', 'כן'], ['no', 'לא']] as Array<[string, string]>).map(([v, t]) => (
+          <button key={v} type="button" className="hp-chip" aria-pressed={a[q] === v} onClick={() => select(q, v)}>{t}</button>
+        ))}
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="hp-mini">
+      <h3 className="hp-mini__title">מחשבון חשיפה</h3>
+      <p className="hp-mini__sub">הערכה גסה לחשיפה הכספית האפשרית לפי תיקון 13. הערכה בלבד, אינה ייעוץ משפטי.</p>
+      <div className="hp-q">
+        <span className="hp-q__label">כמה נושאי מידע יש במאגר?</span>
+        <input className="hp-num" type="number" min="0" inputMode="numeric" placeholder="לדוגמה: 25000" value={n} onChange={(e) => setN(e.target.value)} />
+      </div>
+      <Q q="sensitive" label="יש מידע רגיש (בריאות, ילדים, ביומטרי)?" />
+      <Q q="consent" label="נאספה הסכמה מנושאי המידע?" />
+      <Q q="registered" label="המאגר רשום ברשות?" />
+      <Button variant="primary" onClick={() => { if (ready) setShow(true) }} disabled={!ready}>חשבו חשיפה</Button>
     </div>
   )
 }
@@ -232,15 +335,27 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3 - CALCULATOR (shared dark ember-glow band) */}
+      {/* 3 - CALCULATOR (shared dark ember-glow band). SHOW_EXPOSURE_CALC is
+          Roy-gated (off): when on, the "do you need a DPO" mini-calc is
+          swapped for the exposure / penalty calculator. */}
       <section className="mk-section mk-band--dark" id="calculator">
         <div className="mk-wrap hp-calc__grid">
           <div className="hp-calc__copy">
-            <Eyebrow icon="dp-radar">בדיקה מהירה</Eyebrow>
-            <h2>צריך בכלל DPO? בואו נגלה.</h2>
-            <p>שלוש שאלות, שלושים שניות. בלי להשאיר אימייל ובלי התחייבות. אם מסתבר שאתם חייבים, אנחנו כבר כאן.</p>
+            {SHOW_EXPOSURE_CALC ? (
+              <>
+                <Eyebrow icon="dp-radar">מחשבון חשיפה</Eyebrow>
+                <h2>כמה תיקון 13 יכול לעלות לכם?</h2>
+                <p>כמה פרטים, והערכה לחשיפה הכספית האפשרית. הערכה בלבד, אינה ייעוץ משפטי. אנחנו כאן בדיוק כדי להוריד אותה.</p>
+              </>
+            ) : (
+              <>
+                <Eyebrow icon="dp-radar">בדיקה מהירה</Eyebrow>
+                <h2>צריך בכלל DPO? בואו נגלה.</h2>
+                <p>שלוש שאלות, שלושים שניות. בלי להשאיר אימייל ובלי התחייבות. אם מסתבר שאתם חייבים, אנחנו כבר כאן.</p>
+              </>
+            )}
           </div>
-          <MiniCalculator />
+          {SHOW_EXPOSURE_CALC ? <ExposureCalculator /> : <MiniCalculator />}
         </div>
       </section>
 
