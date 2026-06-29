@@ -10,6 +10,7 @@ import {
 import { useAuth } from '@/lib/auth-context'
 import { OnboardingAnswer } from '@/types'
 import { isOnboardingDataComplete, getMissingOnboardingFields } from '@/lib/onboarding-validation'
+import './onboarding-reskin.css'
 
 // ═══════════════════════════════════════════════════════
 // CARD DATA CONSTANTS
@@ -1065,7 +1066,7 @@ function ClassificationReport({ answers, onContinue, isReview }: { answers: V3An
       <button
         onClick={onContinue}
         className="w-full mt-4 mb-20 py-3.5 rounded-xl border-none text-white text-base font-bold cursor-pointer"
-        style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)' }}
+        style={{ background: 'linear-gradient(135deg, var(--crimson-700), var(--crimson-500))' }}
       >
         {isReview ? 'בחירת חבילה ותשלום' : 'המשך לבחירת חבילה ⬅'}
       </button>
@@ -1519,7 +1520,7 @@ function OnboardingContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="reskin-onboarding min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     )
@@ -1534,7 +1535,7 @@ function OnboardingContent() {
     ]
 
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-blue-50/40 flex items-center justify-center p-4" dir="rtl">
+      <div className="reskin-onboarding min-h-screen bg-gradient-to-b from-slate-50 to-blue-50/40 flex items-center justify-center p-4" dir="rtl">
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="text-center mb-8">
@@ -1636,7 +1637,7 @@ function OnboardingContent() {
 
   if (showReport) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white p-4">
+      <div className="reskin-onboarding min-h-screen bg-gradient-to-b from-indigo-50 to-white p-4">
         <div className="max-w-lg mx-auto">
           <div className="flex items-center justify-between mb-4">
               {isReviewMode ? (
@@ -1666,7 +1667,7 @@ function OnboardingContent() {
   const card = step < mainLen ? CARDS[step] : null
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-50 to-white p-4" dir="rtl">
+    <div className="reskin-onboarding min-h-screen bg-gradient-to-b from-amber-50 to-white p-4" dir="rtl">
       <div className="max-w-md mx-auto">
         <div className="flex items-center justify-between mb-3">
           <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={100} height={31} />
@@ -1708,7 +1709,7 @@ function OnboardingContent() {
         <div className="h-1 bg-gray-200 rounded-full mb-5 overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-300"
-            style={{ width: `${progress}%`, background: isDBPhase ? '#6366f1' : '#f59e0b' }}
+            style={{ width: `${progress}%`, background: isDBPhase ? 'var(--crimson-500)' : '#f59e0b' }}
           />
         </div>
 
@@ -1905,7 +1906,7 @@ function OnboardingContent() {
 export default function OnboardingPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="reskin-onboarding min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
     </div>
     }>
