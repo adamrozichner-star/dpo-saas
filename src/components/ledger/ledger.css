@@ -151,6 +151,16 @@
 .dp-list > a { text-decoration: none; display: block; transition: background var(--dur-1) var(--ease-out); }
 .dp-list > a:hover { background: var(--sand-100); }
 
+/* a prominent inline status banner inside a card (e.g. doc needs refresh) */
+.dp-doc-banner {
+  display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
+  margin-block-start: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--status-warn-bg);
+  border-radius: var(--radius-md);
+}
+.dp-doc-banner .t-body-sm { color: var(--fg-1); }
+
 /* compliance score card: framed dial + band label + caption + count */
 .dp-scorecard { display: flex; align-items: center; gap: var(--space-6); flex-wrap: wrap; }
 .dp-scorecard__body { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
