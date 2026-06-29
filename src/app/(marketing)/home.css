@@ -128,9 +128,10 @@
 
 /* ── Trust strip ────────────────────────────────────────────── */
 .hp-trust { border-block: 1px solid var(--sand-300); padding-block: var(--space-8); }
-.hp-trust__row { display: flex; align-items: center; gap: var(--space-8); flex-wrap: wrap; justify-content: center; }
+.hp-trust .hp-trust__row { max-width: 1320px; gap: var(--space-12); display: flex; align-items: center; flex-wrap: wrap; justify-content: center; }
 .hp-trust__lab { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-3); }
 .hp-sector { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-display); font-weight: 600; font-size: 16px; color: var(--fg-2); }
+.hp-trust__more { font-family: var(--font-display); font-weight: 600; font-size: 16px; color: var(--fg-3); }
 .hp-sector .dpi { --dpi-c: var(--crimson-400); font-size: 20px; }
 
 /* ── Features section backdrop (hero treatment) ─────────────────
