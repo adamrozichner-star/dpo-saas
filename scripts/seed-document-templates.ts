@@ -25,10 +25,12 @@ async function sql<T = unknown>(query: string): Promise<T[]> {
 }
 const lit = (s: string) => `'${s.replace(/'/g, "''")}'`
 
+const ver = (t: { version?: number }) => t.version ?? 1
+
 function upsertSql(): string {
   const rows = seedDocumentTemplates
     .map((t) =>
-      `(${lit(t.templateId)}, 1, true, ${lit(DOC_ORG_LEVEL_ASSET_ID)}, ${lit(t.name)}, ` +
+      `(${lit(t.templateId)}, ${ver(t)}, true, ${lit(DOC_ORG_LEVEL_ASSET_ID)}, ${lit(t.name)}, ` +
       `${lit(t.docType + ' (PROVISIONAL - not for customer use until Amir/Roy review)')}, ${lit(t.body)}, ` +
       `${lit(JSON.stringify({ doc_type: t.docType }))}::jsonb, 'markdown', 'expert_judgment', 0.5, '{}', NULL)`)
     .join(',\n    ')
@@ -50,19 +52,40 @@ function upsertSql(): string {
     updated_at = now();`
 }
 
+// Exactly one ACTIVE row per template_id: deactivate any prior version of a seeded
+// template (e.g. privacy_policy v1 after the v2 bump). Scoped to the org-level doc
+// catalog so unrelated templates are never touched. Renderer + freshness both fetch
+// active=true keyed by template_id, so a stale active row would be ambiguous.
+function deactivateOldVersionsSql(): string {
+  const pairs = seedDocumentTemplates.map((t) => `(${lit(t.templateId)}, ${ver(t)})`).join(', ')
+  return `UPDATE public.hub_document_templates
+  SET active = false, updated_at = now()
+  WHERE asset_template_id = ${lit(DOC_ORG_LEVEL_ASSET_ID)}
+    AND active = true
+    AND (template_id, version) NOT IN (${pairs});`
+}
+
 async function run() {
   const stmt = upsertSql()
-  await sql(stmt)
+  const deact = deactivateOldVersionsSql()
+  await sql(stmt); await sql(deact)
   const [{ n: n1 }] = await sql<{ n: number }>(`select count(*)::int as n from hub_document_templates where asset_template_id = ${lit(DOC_ORG_LEVEL_ASSET_ID)} and active`)
   console.log(`PASS 1: active F1 doc templates now: ${n1}`)
-  await sql(stmt)
+  await sql(stmt); await sql(deact)
   const [{ n: n2 }] = await sql<{ n: number }>(`select count(*)::int as n from hub_document_templates where asset_template_id = ${lit(DOC_ORG_LEVEL_ASSET_ID)} and active`)
   console.log(`PASS 2 (idempotent): active F1 doc templates now: ${n2}`)
+  // Exactly one active row per template_id (no ambiguity for the renderer).
+  const dupes = await sql<{ template_id: string; n: number }>(`select template_id, count(*)::int n from hub_document_templates where asset_template_id = ${lit(DOC_ORG_LEVEL_ASSET_ID)} and active group by template_id having count(*) > 1`)
+  if (dupes.length) {
+    console.error(`FAIL: multiple active versions for ${dupes.map((d) => d.template_id).join(', ')}`)
+    process.exit(1)
+  }
   if (n1 !== seedDocumentTemplates.length || n2 !== n1) {
     console.error(`FAIL: expected ${seedDocumentTemplates.length} stable across runs, got ${n1}/${n2}`)
     process.exit(1)
   }
-  console.log(`OK: ${n2} PROVISIONAL F1 doc templates seeded (expert_judgment/0.5, reviewed_by=null), pending Amir/Roy.`)
+  const [{ v: ppv }] = await sql<{ v: number }>(`select version v from hub_document_templates where template_id = 'd0c00005-0000-4000-8000-000000000005' and active`)
+  console.log(`OK: ${n2} PROVISIONAL F1 doc templates seeded; privacy_policy active version = ${ppv}. Pending Amir/Roy.`)
 }
 
 run().catch((e) => { console.error(e); process.exit(1) })

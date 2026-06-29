@@ -142,6 +142,13 @@ async function main() {
   check('owner copy leaks NO obligation title / severity / provenance / banned terms', !jargon.test(ownerCopy), ownerCopy)
   check('owner copy uses Deepo (capital D), warm reassurance', /Deepo/.test(owner.reassurance) && owner.headline.length > 0 && owner.humanTouch.length > 0)
 
+  // ---- ③ vendor-DPA gap surfaced to the owner, in plain language ----
+  check('no gap -> vendorDpaGap 0, no note', buildOwnerHome(ownerObs, ownerTasks, 0).vendorDpaNote === null && buildOwnerHome(ownerObs, ownerTasks, 0).vendorDpaGap === 0)
+  const g1 = buildOwnerHome(ownerObs, ownerTasks, 1)
+  const g3 = buildOwnerHome(ownerObs, ownerTasks, 3)
+  check('gap=1 -> singular note, gap=3 -> "3 ספקים"', g1.vendorDpaNote !== null && !/ספקים/.test(g1.vendorDpaNote!) && /3 ספקים/.test(g3.vendorDpaNote ?? ''), `${g1.vendorDpaNote} | ${g3.vendorDpaNote}`)
+  check('gap note leaks NO banned terms (no הסכם עיבוד / jargon)', !jargon.test(`${g1.vendorDpaNote} ${g3.vendorDpaNote}`), `${g1.vendorDpaNote} | ${g3.vendorDpaNote}`)
+
   const failed = results.filter((r) => !r.pass).length
   console.log(`\n${results.length - failed}/${results.length} checks passed`)
   if (failed) process.exit(1)

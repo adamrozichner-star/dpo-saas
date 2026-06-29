@@ -28,12 +28,15 @@ export default function OwnerHomePage() {
     if (!supabase || !org) return
     let cancelled = false
     ;(async () => {
-      const [obRes, taskRes] = await Promise.all([
+      const [obRes, taskRes, vendorGapRes] = await Promise.all([
         supabase.from('obligations').select('status').eq('org_id', org.id),
         supabase.from('tasks').select('title').eq('org_id', org.id).eq('assignee_actor', 'owner').not('status', 'in', '(done,cancelled)'),
+        // Same gap the DPO sees in the DPA doc: recipients without a signed
+        // processing commitment. Roy: visible to the client too.
+        supabase.from('data_recipients').select('id', { count: 'exact', head: true }).eq('org_id', org.id).eq('has_dpa', false),
       ])
       if (cancelled) return
-      setHome(buildOwnerHome((obRes.data ?? []) as OwnerObligationStatusRow[], (taskRes.data ?? []) as OwnerTaskRow[]))
+      setHome(buildOwnerHome((obRes.data ?? []) as OwnerObligationStatusRow[], (taskRes.data ?? []) as OwnerTaskRow[], vendorGapRes.count ?? 0))
     })()
     return () => {
       cancelled = true
@@ -54,6 +57,12 @@ export default function OwnerHomePage() {
       <Card>
         <p className="t-body" style={{ margin: 0 }}>{home.reassurance}</p>
       </Card>
+
+      {home.vendorDpaNote && (
+        <Card>
+          <p className="t-body" style={{ margin: 0 }}>{home.vendorDpaNote}</p>
+        </Card>
+      )}
 
       <section>
         <p className="t-eyebrow" style={{ marginBottom: 'var(--space-3)' }}>מה מחכה לך</p>

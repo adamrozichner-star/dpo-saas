@@ -17,6 +17,10 @@ import {
   dispatchDocFreshness,
   checkOrgDocFreshness,
 } from '@/inngest/functions/doc-freshness';
+import {
+  dispatchDsarDeadline,
+  checkOrgDsarDeadline,
+} from '@/inngest/functions/dsar-deadline';
 
 // Inngest's Next.js serve handler. Inngest Cloud sends GET (introspect),
 // POST (function invocation), and PUT (register functions on deploy) to this
@@ -33,5 +37,7 @@ export const { GET, POST, PUT } = serve({
     agentInvoke,
     dispatchDocFreshness,
     checkOrgDocFreshness,
+    dispatchDsarDeadline,
+    checkOrgDsarDeadline,
   ],
 });

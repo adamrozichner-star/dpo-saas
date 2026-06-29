@@ -23,7 +23,7 @@ function env(k: string): string {
 const supabase = createClient(env('NEXT_PUBLIC_SUPABASE_URL'), env('SUPABASE_SERVICE_ROLE_KEY'))
 let pass = 0, fail = 0
 const check = (n: string, c: boolean, d?: string) => { if (c) { pass++; console.log(`  PASS  ${n}`) } else { fail++; console.log(`  FAIL  ${n}${d ? '  ::  ' + d : ''}`) } }
-const tpl = (dt: DocType) => { const s = seedDocumentTemplates.find((t) => t.docType === dt)!; return { templateId: s.templateId, version: 1, body: s.body } }
+const tpl = (dt: DocType) => { const s = seedDocumentTemplates.find((t) => t.docType === dt)!; return { templateId: s.templateId, version: s.version ?? 1, body: s.body } }
 
 async function main() {
   // ---- AI is NOT in the render path (source assertion) ----
@@ -43,9 +43,17 @@ async function main() {
     check(`${dt}: not-for-customer marker present`, r1.content.includes('לא לשימוש לקוח'))
   }
 
-  // placeholder markers (privacy_policy has the legal-prose placeholders)
+  // ① v2: Roy-grounded PROVISIONAL prose replaced the legal placeholders in
+  // privacy_policy (sections 4/7/9) + a DSAR intake path in section 8.
   const pp = renderDocument('privacy_policy', tpl('privacy_policy'), ctx)
-  check('privacy_policy: Roy/Amir placeholder marker rendered (not empty/broken)', pp.content.includes('ממתין להשלמת רועי/אמיר'))
+  check('privacy_policy: template version bumped to 2', tpl('privacy_policy').version === 2)
+  check('privacy_policy: NO legal placeholder left (prose is in)', !pp.content.includes('ממתין להשלמת רועי/אמיר'))
+  check('privacy_policy §4: legal-basis prose (consent + legitimate activity)', pp.content.includes('הסכמת נושא המידע') && pp.content.includes('פעילותו העסקית השוטפת'))
+  check('privacy_policy §7: per-purpose retention (principle + 7-year tax bucket)', pp.content.includes('אינה אחידה') && pp.content.includes('7 שנים'))
+  check('privacy_policy §9: cross-border vendor-abroad framing', pp.content.includes('נעזר בספקי שירות') && pp.content.includes('מחוץ לישראל'))
+  check('privacy_policy §8: DSAR intake path (how to file a request)', pp.content.includes('להגשת בקשה למימוש זכות'))
+  // security_procedures still carries a legal placeholder (Amir, Thursday).
+  check('security_procedures: still has the legal placeholder (held for Amir)', renderDocument('security_procedures', tpl('security_procedures'), ctx).content.includes('ממתין להשלמת רועי/אמיר'))
 
   // ---- fingerprint sensitivity (divergence flag covers them) ----
   console.log('\n[divergence] a ledger input change flips the fingerprint')
@@ -60,8 +68,19 @@ async function main() {
   const { data: rows } = await supabase.from('hub_document_templates')
     .select('template_id, source_tier, confidence, reviewed_by, body')
     .in('template_id', [tpl('privacy_policy').templateId, tpl('security_procedures').templateId])
-  check('both bespoke templates: expert_judgment / 0.5 / reviewed_by=null', (rows ?? []).length === 2 && (rows ?? []).every((r) => r.source_tier === 'expert_judgment' && r.confidence === 0.5 && r.reviewed_by === null))
+    .eq('active', true)
+  check('both bespoke ACTIVE templates: expert_judgment / 0.5 / reviewed_by=null', (rows ?? []).length === 2 && (rows ?? []).every((r) => r.source_tier === 'expert_judgment' && r.confidence === 0.5 && r.reviewed_by === null))
   check('both bespoke template bodies carry the not-for-customer marker', (rows ?? []).every((r) => (r.body as string).includes('לא לשימוש לקוח')))
+
+  // ① the live catalog reflects the v2 re-seed (active body has the prose).
+  console.log('\n[live] privacy_policy active row is v2 with the new prose')
+  const { data: livePp } = await supabase.from('hub_document_templates')
+    .select('version, body').eq('template_id', tpl('privacy_policy').templateId).eq('active', true).single()
+  check('live privacy_policy active version = 2', (livePp as { version: number } | null)?.version === 2)
+  check('live privacy_policy body has Roy prose, no placeholder', !!livePp && (livePp.body as string).includes('להגשת בקשה למימוש זכות') && !(livePp.body as string).includes('ממתין להשלמת רועי/אמיר'))
+  const { count: oldActive } = await supabase.from('hub_document_templates')
+    .select('template_id', { count: 'exact', head: true }).eq('template_id', tpl('privacy_policy').templateId).eq('active', true)
+  check('exactly one active privacy_policy row (v1 deactivated)', oldActive === 1)
 
   let docId = ''
   try {
@@ -70,7 +89,7 @@ async function main() {
     await supabase.from('notifications').delete().eq('org_id', ORG).eq('type', 'document_stale')
     const ins = await supabase.from('documents').insert({
       org_id: ORG, type: 'privacy_policy', title: 'מדיניות פרטיות test', content: '# x', status: 'active',
-      version: 1, source: 'ledger_render', template_id: tpl('privacy_policy').templateId, template_version: 1,
+      version: 1, source: 'ledger_render', template_id: tpl('privacy_policy').templateId, template_version: tpl('privacy_policy').version,
       render_fingerprint: 'STALE_' + pp.fingerprint,
     }).select('id').single()
     docId = (ins.data as { id: string }).id

@@ -156,9 +156,11 @@ function bindAssetDbDefinition(ctx: RenderContext): Bound {
 }
 
 // F2c bespoke docs. Dynamic sections bind to the post-F2d ledger/descriptive
-// context; legal-prose sections render LEGAL_PLACEHOLDER (Roy supplies). The
-// fingerprint inputs are the ledger-derived values only (placeholders are
-// constant), so a ledger change still flips the fingerprint -> divergence flag works.
+// context. As of template v2 the legal-prose sections (legal basis, retention,
+// cross-border) carry Roy-grounded PROVISIONAL prose inline in the body, so they
+// no longer bind LEGAL_PLACEHOLDER here. The fingerprint inputs remain the
+// ledger-derived values only, so a ledger change still flips the fingerprint;
+// a template-body change is captured by the template version (also in the hash).
 function bindPrivacyPolicy(ctx: RenderContext): Bound {
   const categories = asList(ctx.profile?.data_types)
   const purposes = asList(ctx.profile?.processing_purposes)
@@ -171,13 +173,10 @@ function bindPrivacyPolicy(ctx: RenderContext): Bound {
     dpoLicense: dash(ctx.dpo?.license_number),
     categories: categories.length ? categories.join(', ') : '-',
     purposes: purposes.length ? purposes.join(', ') : '-',
-    legalBasis: LEGAL_PLACEHOLDER,
     thirdParties: recipients.length
       ? recipients.map((r) => `- ${r.name}${r.has_dpa ? ' (הסכם עיבוד קיים)' : ' (ללא הסכם)'}`).join('\n')
       : 'אין שיתוף מידע עם צדדים שלישיים.',
     security: security.length ? security.map((m) => `- ${m}`).join('\n') : '-',
-    retention: LEGAL_PLACEHOLDER,
-    crossBorder: LEGAL_PLACEHOLDER,
   }
   return { tokens, inputs: { org: ctx.org.name, dpo: ctx.dpo, categories, purposes, security, recipients } }
 }
