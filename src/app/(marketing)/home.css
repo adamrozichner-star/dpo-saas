@@ -146,14 +146,6 @@
    intentional backdrop without competing with the foreground cards. */
 .hp-feat__radar { left: 50%; top: 50%; bottom: auto; transform: translate(-50%, -50%); opacity: 0.7; }
 
-/* ── Experts ────────────────────────────────────────────────── */
-.hp-experts__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5); }
-.hp-expert { background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-xl); padding: var(--space-6); }
-.hp-expert__ic { width: 44px; height: 44px; border-radius: var(--radius-md); background: var(--crimson-50); display: grid; place-items: center; margin-bottom: var(--space-3); }
-.hp-expert__ic .dpi { font-size: 24px; --dpi-c: var(--crimson-500); }
-.hp-expert h3 { font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--fg-1); margin: 0 0 var(--space-1); }
-.hp-expert p { font-size: 14px; line-height: 1.55; color: var(--fg-2); margin: 0; }
-
 /* ── Comparison band (dark, ember-glow) ─────────────────────── */
 /* Surface + corner ember glow + scanlines now come from the shared
    .mk-band--dark (default --mk-glow-x:92%, the RTL start corner), set on
@@ -205,7 +197,7 @@
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 940px) {
   /* vision: single-column hero + 44px headline below 940 */
-  .hp-hero__grid, .hp-calc__grid, .hp-experts__grid, .hp-ctable, .hp-pcards { grid-template-columns: 1fr; }
+  .hp-hero__grid, .hp-calc__grid, .hp-ctable, .hp-pcards { grid-template-columns: 1fr; }
   .hp-pcards { grid-template-columns: 1fr 1fr; }
   .hp-hero h1 { font-size: 44px; }
   .hp-hero__radar { left: -380px; bottom: -380px; }

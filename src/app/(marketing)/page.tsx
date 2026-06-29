@@ -13,7 +13,7 @@ import { DeepoIcon } from '@/brand/icons'
 import { Button } from '@/components/brand/Button'
 import { Badge } from '@/components/brand/Badge'
 import {
-  RadarMotif, SecHead, Eyebrow, FeatureGrid, Steps, FinalCta, FaqItem, TrustSlot,
+  RadarMotif, SecHead, Eyebrow, FeatureGrid, Steps, FinalCta, FaqItem,
   type FeatureItem, type StepItem,
 } from '@/components/marketing/sections'
 import { signupHref } from '@/lib/signup-flag'
@@ -123,12 +123,6 @@ const STEPS: StepItem[] = [
   { n: '2', title: 'אנחנו בונים', desc: 'את כל המסמכים, מותאמים לעסק שלכם.' },
   { n: '3', title: 'ממנים ממונה', desc: 'אדם מוסמך שנושא באחריות.' },
   { n: '4', title: 'אנחנו שומרים', desc: 'מנטרים, מזכירים ומעדכנים. אתם רגועים.' },
-]
-
-const EXPERTS: Array<{ id: 'dp-seal' | 'dp-shield' | 'dp-sparkle'; title: string; desc: string }> = [
-  { id: 'dp-seal', title: 'ממונים מוסמכים', desc: 'ממונה הגנת פרטיות שמתמנה על העסק ונושא באחריות המקצועית.' },
-  { id: 'dp-shield', title: 'ליווי משפטי', desc: 'עורכי דין מנוסים שעומדים מאחורי התוכן והנהלים.' },
-  { id: 'dp-sparkle', title: 'צוות מוצר', desc: 'בונים את הכלים שעושים את העבודה הקשה במקומכם.' },
 ]
 
 const PLANS = [
@@ -259,27 +253,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6 - EXPERTS */}
-      <section className="mk-section">
-        <div className="mk-wrap">
-          <SecHead eyebrow="מי על המשמר" title="אנשים אמיתיים מאחורי הטכנולוגיה." sub="צוות של עורכי דין ויועצי פרטיות מנוסים, וממונים מוסמכים שנכנסים לתפקיד אצלכם." />
-          <div className="hp-experts__grid">
-            {EXPERTS.map((e) => (
-              <div className="hp-expert" key={e.id}>
-                <span className="hp-expert__ic"><DeepoIcon id={e.id} /></span>
-                <h3>{e.title}</h3>
-                <p>{e.desc}</p>
-              </div>
-            ))}
-          </div>
-          <div style={{ textAlign: 'center', marginTop: 'var(--space-8)' }}>
-            {/* NOTE(review): partner/expert names + logos pending Adam's clearance (spec 2.11). */}
-            <TrustSlot>שמות ולוגואים של שותפים · בקרוב</TrustSlot>
-          </div>
-        </div>
-      </section>
-
-      {/* NOTE(review): the shared ResponsibilityBand and the security teaser
+      {/* NOTE(review): the EXPERTS section was removed - it was a near-duplicate
+          of the "איך זה עובד" pillar block above, which carries the accurate copy.
+          NOTE(review): the shared ResponsibilityBand and the security teaser
           (hp-security) were removed from the homepage per the redesign brief.
           ResponsibilityBand stays available in the shared module for reuse
           (e.g. /about). */}
