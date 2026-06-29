@@ -545,9 +545,20 @@ export interface OwnerHomeView {
   headline: string
   reassurance: string
   humanTouch: string
+  vendorDpaGap: number
+  vendorDpaNote: string | null
 }
 
-export function buildOwnerHome(obligations: OwnerObligationStatusRow[], ownerTasks: OwnerTaskRow[]): OwnerHomeView {
+// vendorDpaGap = count of the org's recipients without a signed processing
+// commitment (data_recipients.has_dpa = false) - the SAME gap the DPO sees in the
+// DPA document. Roy (2026-06-29): this gap must be visible to the client too, so we
+// surface it plainly here. Plain language only: no jargon may leak to the owner
+// (the term הסכם עיבוד is banned in owner copy), hence "התחייבות לשמירה על המידע".
+export function buildOwnerHome(
+  obligations: OwnerObligationStatusRow[],
+  ownerTasks: OwnerTaskRow[],
+  vendorDpaGap = 0,
+): OwnerHomeView {
   const handlingCount = obligations.length
   const sortedCount = obligations.filter((o) => o.status === 'compliant').length
   const needsYou: OwnerActionItem[] = ownerTasks.map((t) => ({ title: t.title }))
@@ -565,5 +576,13 @@ export function buildOwnerHome(obligations: OwnerObligationStatusRow[], ownerTas
         : `Deepo מטפלת ב-${handlingCount} נושאי פרטיות עבורך.`
   const humanTouch = 'קחו נשימה, אנחנו על זה.'
 
-  return { handlingCount, sortedCount, needsYou, allClear, headline, reassurance, humanTouch }
+  // DRAFT COPY - Adam to tune. Warm, plain, no jargon (no הסכם עיבוד).
+  const vendorDpaNote =
+    vendorDpaGap <= 0
+      ? null
+      : vendorDpaGap === 1
+        ? 'יש ספק אחד שעדיין לא הסדיר התחייבות לשמירה על המידע שלך. אנחנו עוקבים אחרי זה.'
+        : `יש ${vendorDpaGap} ספקים שעדיין לא הסדירו התחייבות לשמירה על המידע שלך. אנחנו עוקבים אחרי זה.`
+
+  return { handlingCount, sortedCount, needsYou, allClear, headline, reassurance, humanTouch, vendorDpaGap, vendorDpaNote }
 }
