@@ -6,7 +6,7 @@
 // global.
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabase, authenticateCurator, unauthorizedResponse, forbiddenResponse } from '@/lib/api-auth'
-import { scoreFromObligations, type ScoreObligation } from '@/lib/console-data'
+import { scoreFromObligations, isUnassessed, type ScoreObligation } from '@/lib/console-data'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,14 +51,18 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const clients = orgs.map((o) => ({
-    id: o.id,
-    name: o.name,
-    status: o.status,
-    score: scoreFromObligations(obsByOrg[o.id] ?? []),
-    openGaps: gapByOrg[o.id] ?? 0,
-    awaitingReview: reviewByOrg[o.id] ?? 0,
-  }))
+  const clients = orgs.map((o) => {
+    const obs = obsByOrg[o.id] ?? []
+    return {
+      id: o.id,
+      name: o.name,
+      status: o.status,
+      score: scoreFromObligations(obs),
+      unassessed: isUnassessed(obs), // display: show "בתהליך מיפוי" instead of the score
+      openGaps: gapByOrg[o.id] ?? 0,
+      awaitingReview: reviewByOrg[o.id] ?? 0,
+    }
+  })
 
   const metrics = {
     activeClients: orgs.filter((o) => o.status === 'active').length,

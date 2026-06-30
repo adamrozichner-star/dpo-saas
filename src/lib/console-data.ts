@@ -497,6 +497,15 @@ export interface ScoreObligation {
 }
 const SEVERITY_WEIGHT: Record<Severity, number> = { critical: 3, warning: 2, info: 1 }
 
+// DISPLAY predicate (not scoring): an org is "not yet assessed" when it has
+// obligations but every one is still un-decided (unknown/checking). Such a client
+// shows a "בתהליך מיפוי" placeholder instead of a score. A genuinely-assessed
+// client - any obligation in_treatment/compliant/expired - keeps its real score
+// (including a real 0). An org with zero obligations is NOT unassessed.
+export function isUnassessed(obligations: ScoreObligation[]): boolean {
+  return obligations.length > 0 && obligations.every((o) => o.status === 'unknown' || o.status === 'checking')
+}
+
 export function scoreFromObligations(obligations: ScoreObligation[]): number {
   if (obligations.length === 0) return 100
   let total = 0

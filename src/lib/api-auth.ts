@@ -148,6 +148,9 @@ export async function authenticateDpo(
 export interface CuratorAuth {
   authUserId: string
   dpoId: string
+  userId: string | null // public.users.id (for created_by / generated_by)
+  userName: string | null
+  userRole: string | null
 }
 
 /**
@@ -179,11 +182,46 @@ export async function authenticateCurator(
       .maybeSingle()
     if (!dpo) return null
 
-    return { authUserId: user.id, dpoId: (dpo as { id: string }).id }
+    const { data: u } = await sb
+      .from('users')
+      .select('id, name, role')
+      .eq('auth_user_id', user.id)
+      .maybeSingle()
+    const urow = u as { id: string; name: string | null; role: string | null } | null
+
+    return {
+      authUserId: user.id,
+      dpoId: (dpo as { id: string }).id,
+      userId: urow?.id ?? null,
+      userName: urow?.name ?? null,
+      userRole: urow?.role ?? null,
+    }
   } catch (e) {
     console.error('Curator auth error:', e)
     return null
   }
+}
+
+/**
+ * Route preamble for every per-client curator WRITE: authenticate the curator,
+ * then run the book-verification chokepoint BEFORE the route reads or mutates the
+ * target. Returns the curator on success, or a ready NextResponse (401/403) to
+ * return immediately. Centralised so no write route can mutate before the check.
+ */
+export async function requireCuratorForOrg(
+  request: NextRequest,
+  orgId: string,
+  supabase?: SupabaseClient
+): Promise<{ ok: true; curator: CuratorAuth } | { ok: false; response: NextResponse }> {
+  const sb = supabase || getServiceSupabase()
+  const curator = await authenticateCurator(request, sb)
+  if (!curator) {
+    const hasToken = request.headers.get('authorization')?.startsWith('Bearer ')
+    return { ok: false, response: hasToken ? forbiddenResponse('not a curator') : unauthorizedResponse() }
+  }
+  const inBook = await curatorOwnsOrg(curator, orgId, sb)
+  if (!inBook) return { ok: false, response: forbiddenResponse('org not in your book') }
+  return { ok: true, curator }
 }
 
 /**

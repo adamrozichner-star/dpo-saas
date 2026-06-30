@@ -13,7 +13,7 @@ import { Card } from '@/components/brand/Card'
 import { Badge } from '@/components/brand/Badge'
 import { PageHeader } from '@/components/ledger'
 
-interface ClientRow { id: string; name: string; status: string | null; score: number; openGaps: number; awaitingReview: number }
+interface ClientRow { id: string; name: string; status: string | null; score: number; unassessed: boolean; openGaps: number; awaitingReview: number }
 interface Overview { clients: ClientRow[]; metrics: { activeClients: number; stuckInOnboarding: number; awaitingReview: number; openGaps: number } }
 
 const STATUS: Record<string, { label: string; variant: 'ok' | 'warn' | 'neutral' }> = {
@@ -86,7 +86,7 @@ export default function ConsoleOverviewPage() {
                   <div className="dp-oblig-row" style={{ flexWrap: 'wrap', gap: 'var(--space-2)' }}>
                     <span className="dp-oblig-row__title">{c.name}</span>
                     <Badge variant={st.variant}>{st.label}</Badge>
-                    <span className="dp-led-due">ציון {c.score} · {c.openGaps} פערים פתוחים</span>
+                    <span className="dp-led-due">{c.unassessed ? 'בתהליך מיפוי' : `ציון ${c.score}`} · {c.openGaps} פערים פתוחים</span>
                     {c.awaitingReview > 0 ? <Badge variant="warn" dot>{c.awaitingReview} לאישור</Badge> : null}
                   </div>
                 </Link>
