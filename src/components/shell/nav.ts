@@ -17,6 +17,8 @@ export interface NavItem {
   id: string
   label: string
   icon: DeepoIconId
+  /** Real route. When present the item renders as a <Link>; demo items omit it. */
+  href?: string
   count?: number
 }
 
@@ -25,19 +27,26 @@ export interface NavSection {
   items: NavItem[]
 }
 
-export const SHELL_NAV: NavSection[] = [
+// DPO console nav - real routes to the v3 console surfaces (the cross-client
+// overview at /console grows in the overview task; the sub-pages exist today).
+export const DPO_NAV: NavSection[] = [
   {
-    heading: 'ניהול פרטיות',
+    heading: 'קונסולת ממונה',
     items: [
-      { id: 'dashboard', label: 'לוח בקרה', icon: 'dp-radar' },
-      { id: 'vendors', label: 'ספקים', icon: 'dp-link', count: 3 },
-      { id: 'tasks', label: 'משימות', icon: 'dp-bell', count: 2 },
-      { id: 'documents', label: 'מסמכים', icon: 'dp-doc' },
-      { id: 'data', label: 'נכסי מידע', icon: 'dp-database' },
+      { id: 'overview', label: 'מבט כללי', icon: 'dp-radar', href: '/console' },
+      { id: 'queue', label: 'ממתין לאישור', icon: 'dp-bell', href: '/console/queue' },
+      { id: 'documents', label: 'מסמכים', icon: 'dp-doc', href: '/console/documents' },
+      { id: 'audit', label: 'תיק היערכות', icon: 'dp-seal', href: '/console/audit' },
+      { id: 'links', label: 'קישורי איסוף', icon: 'dp-link', href: '/console/links' },
     ],
   },
+]
+
+// Owner home nav - kept minimal for now; Documents + Profile arrive with the
+// owner-home task. Plain, light, no DPO jargon.
+export const OWNER_NAV: NavSection[] = [
   {
-    heading: 'חשבון',
-    items: [{ id: 'settings', label: 'הגדרות ופרטיות', icon: 'dp-lock' }],
+    heading: '',
+    items: [{ id: 'home', label: 'דף הבית', icon: 'dp-shield', href: '/home' }],
   },
 ]

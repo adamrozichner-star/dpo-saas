@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Shield, ArrowRight, Loader2 } from 'lucide-react'
 import { useAuth } from '@/lib/auth-context'
 import { signupHref, isSignupEnabled } from '@/lib/signup-flag'
+import { landingPathForUser } from '@/lib/actor'
 
 // Google Icon Component
 const GoogleIcon = () => (
@@ -47,6 +48,24 @@ export default function LoginPage() {
   const [mfaCode, setMfaCode] = useState('')
   const [mfaLoading, setMfaLoading] = useState(false)
 
+  // Route by role after auth: DPO (expert_curator) -> /console, owner -> /home,
+  // no org yet -> /onboarding. Replaces the old unconditional /chat.
+  const routeAfterAuth = async () => {
+    try {
+      const { data: { user: authUser } } = await supabase!.auth.getUser()
+      if (!authUser) { router.push('/home'); return }
+      const { data: u } = await supabase!
+        .from('users')
+        .select('role, org_id')
+        .eq('auth_user_id', authUser.id)
+        .maybeSingle()
+      const row = u as { role: string | null; org_id: string | null } | null
+      router.push(landingPathForUser(row?.role ?? null, !!row?.org_id))
+    } catch {
+      router.push('/home')
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -71,7 +90,7 @@ export default function LoginPage() {
       } else if (mfaRequired) {
         setMfaStep(true)
       } else {
-        router.push('/chat')
+        await routeAfterAuth()
       }
     } catch (err) {
       setError('אירעה שגיאה, נסו שוב')
@@ -110,7 +129,7 @@ export default function LoginPage() {
       if (verifyErr) {
         setError('קוד שגוי, נסו שוב')
       } else {
-        router.push('/chat')
+        await routeAfterAuth()
       }
     } catch (err) {
       setError('שגיאה באימות')

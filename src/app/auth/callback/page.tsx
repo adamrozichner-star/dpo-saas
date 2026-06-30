@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Loader2 } from 'lucide-react';
+import { landingPathForUser } from '@/lib/actor';
 
 export default function AuthCallbackPage() {
   const [status, setStatus] = useState('מתחבר...');
@@ -125,41 +126,19 @@ export default function AuthCallbackPage() {
           await new Promise(resolve => setTimeout(resolve, 300));
           window.location.href = '/onboarding';
         } else {
-          // Existing user - check if they have an active subscription
-          setStatus('בודק מנוי...');
-          
-          // Get user's org_id
+          // Existing user - route by role (DPO -> /console, owner -> /home),
+          // or to onboarding if they have no org yet. The legacy
+          // subscription -> /dashboard / /subscribe funnel retires with the
+          // legacy engine; v3 surfaces are auth-gated.
+          setStatus('מעביר...');
           const { data: fullUser } = await supabase
             .from('users')
-            .select('org_id')
+            .select('role, org_id')
             .eq('auth_user_id', session.user.id)
             .single();
-          
-          let hasSubscription = false;
-          if (fullUser?.org_id) {
-            const { data: sub } = await supabase
-              .from('subscriptions')
-              .select('id')
-              .eq('org_id', fullUser.org_id)
-              .in('status', ['active', 'past_due'])
-              .maybeSingle();
-            hasSubscription = !!sub;
-          }
-          
+          const row = fullUser as { role: string | null; org_id: string | null } | null;
           await new Promise(resolve => setTimeout(resolve, 300));
-          
-          if (hasSubscription) {
-            setStatus('מעביר ללוח הבקרה...');
-            window.location.href = '/dashboard';
-          } else if (fullUser?.org_id) {
-            // Has org but no subscription — needs to pay
-            setStatus('מעביר לתשלום...');
-            window.location.href = '/subscribe';
-          } else {
-            // No org — needs onboarding
-            setStatus('מעביר לשאלון...');
-            window.location.href = '/onboarding';
-          }
+          window.location.href = landingPathForUser(row?.role ?? null, !!row?.org_id);
         }
       } catch (err) {
         console.error('Callback error:', err);

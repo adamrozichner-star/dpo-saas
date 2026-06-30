@@ -6,7 +6,7 @@ import { DeepoIcon } from '@/brand/icons'
 import { useOrg } from '@/lib/org-context'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
-import { SHELL_NAV, type Actor, type ShellOrg, type NavSection } from './nav'
+import { DPO_NAV, OWNER_NAV, type Actor, type ShellOrg, type NavSection } from './nav'
 
 export interface AppShellProps {
   children: React.ReactNode
@@ -37,18 +37,21 @@ function initialsOf(name: string): string {
  * tokens, Duotone icons. Desktop sidebar on the right; below 1024px a top bar +
  * slide-in drawer from the right.
  */
-export function AppShell({ children, title = 'לוח בקרה', initialActor = 'dpo', org, sections = SHELL_NAV }: AppShellProps) {
+export function AppShell({ children, title = 'לוח בקרה', initialActor = 'dpo', org, sections }: AppShellProps) {
   const orgCtx = useOrg()
   const pathname = usePathname()
   const [actorOverride, setActorOverride] = React.useState<Actor | null>(null)
   const [drawerOpen, setDrawerOpen] = React.useState(false)
-  const [activeId, setActiveId] = React.useState('dashboard')
 
   // The owner home (/home) is the owner surface: always owner-themed (light),
   // regardless of the viewer's role. Other (deepo) routes follow the role-derived
   // actor. The demo toggle still overrides.
   const routeActor: Actor | null = pathname?.startsWith('/home') ? 'owner' : null
   const actor: Actor = actorOverride ?? routeActor ?? (orgCtx.org ? orgCtx.actor : initialActor)
+
+  // Per-actor nav (no more shared placeholder bleeding across both surfaces).
+  // An explicit prop still wins (e.g. /shell-demo).
+  const navSections: NavSection[] = sections ?? (actor === 'dpo' ? DPO_NAV : OWNER_NAV)
   const shellOrg: ShellOrg = orgCtx.org
     ? { name: orgCtx.org.name, plan: TIER_LABEL[orgCtx.org.tier ?? ''] ?? 'חשבון', initials: initialsOf(orgCtx.org.name) }
     : org ?? PLACEHOLDER_ORG
@@ -72,13 +75,9 @@ export function AppShell({ children, title = 'לוח בקרה', initialActor = '
 
       <Sidebar
         actor={actor}
-        sections={sections}
-        activeId={activeId}
+        sections={navSections}
         org={shellOrg}
-        onNavigate={(id) => {
-          setActiveId(id)
-          setDrawerOpen(false)
-        }}
+        onNavigate={() => setDrawerOpen(false)}
       />
 
       <main className="dp-shell__main">
