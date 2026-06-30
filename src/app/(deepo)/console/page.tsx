@@ -14,7 +14,7 @@ import { Badge } from '@/components/brand/Badge'
 import { PageHeader } from '@/components/ledger'
 
 interface ClientRow { id: string; name: string; status: string | null; score: number; unassessed: boolean; openGaps: number; awaitingReview: number }
-interface Overview { clients: ClientRow[]; metrics: { activeClients: number; stuckInOnboarding: number; awaitingReview: number; openGaps: number } }
+interface Overview { clients: ClientRow[]; metrics: { activeClients: number; stuckInOnboarding: number; awaitingReview: number; openGaps: number; dsarOpen: number; dsarDeadline: string | null } }
 
 const STATUS: Record<string, { label: string; variant: 'ok' | 'warn' | 'neutral' }> = {
   active: { label: 'פעיל', variant: 'ok' },
@@ -70,6 +70,11 @@ export default function ConsoleOverviewPage() {
           <div className="dp-stat"><span className="dp-stat__num dp-stat__num--accent">{m.openGaps}</span><span className="dp-stat__label">פערים פתוחים</span></div>
           <div className="dp-stat"><span className="dp-stat__num">{m.stuckInOnboarding}</span><span className="dp-stat__label">בתהליך הצטרפות</span></div>
         </div>
+        {m.dsarOpen > 0 ? (
+          <p className="t-body-sm" style={{ margin: 'var(--space-4) 0 0', color: 'var(--fg-2)' }}>
+            {m.dsarOpen} בקשות נושא מידע פתוחות{m.dsarDeadline ? ` · היעד הקרוב: ${new Date(m.dsarDeadline).toLocaleDateString('he-IL')}` : ''}
+          </p>
+        ) : null}
       </Card>
 
       <Card>

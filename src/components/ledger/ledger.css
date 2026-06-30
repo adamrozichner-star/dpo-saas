@@ -129,12 +129,19 @@
 .dp-section__count { font-family: var(--font-mono); font-size: var(--t-caption); color: var(--fg-3); }
 .dp-section__empty { font-size: var(--t-body-sm); color: var(--fg-3); margin: 0; }
 
-/* stat cluster */
-.dp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(116px, 1fr)); gap: var(--space-4); }
-.dp-stat { display: flex; flex-direction: column; gap: 2px; }
-.dp-stat__num { font-family: var(--font-display); font-weight: 700; font-size: var(--t-h1); color: var(--fg-1); line-height: 1; }
+/* stat cluster - tiles (the approved mockup treatment): each stat is a sunken
+   tile with a hairline, the number reads as a display numeral well above body. */
+.dp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: var(--space-3); }
+.dp-stat {
+  display: flex; flex-direction: column; gap: var(--space-1);
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-1);
+  border-radius: var(--radius-lg);
+}
+.dp-stat__num { font-family: var(--font-display); font-weight: 700; font-size: var(--t-display-m); color: var(--fg-1); line-height: 1; letter-spacing: var(--tr-tight); }
 .dp-stat__num--accent { color: var(--fg-accent); }
-.dp-stat__label { font-size: var(--t-caption); color: var(--fg-3); }
+.dp-stat__label { font-size: var(--t-caption); color: var(--fg-2); }
 
 /* flush row list: rows inside a card share one surface (divider-separated),
    so they don't each carry a competing border (brand rule: status via chips).

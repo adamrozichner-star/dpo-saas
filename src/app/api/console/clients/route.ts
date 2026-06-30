@@ -51,6 +51,18 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // DSAR (data-subject requests) glue: open count + nearest deadline across the
+  // book - the regulator clock the DPO must watch (D4 pilot scope).
+  let dsarOpen = 0
+  let dsarDeadline: string | null = null
+  if (ids.length) {
+    const { data: dsar } = await sb.from('dsar_requests').select('deadline, status').in('org_id', ids).not('status', 'in', '(completed,rejected)')
+    for (const d of (dsar ?? []) as { deadline: string | null; status: string }[]) {
+      dsarOpen += 1
+      if (d.deadline && (dsarDeadline === null || d.deadline < dsarDeadline)) dsarDeadline = d.deadline
+    }
+  }
+
   const clients = orgs.map((o) => {
     const obs = obsByOrg[o.id] ?? []
     return {
@@ -69,6 +81,8 @@ export async function GET(request: NextRequest) {
     stuckInOnboarding: orgs.filter((o) => o.status === 'onboarding').length,
     awaitingReview: clients.reduce((n, c) => n + c.awaitingReview, 0),
     openGaps: clients.reduce((n, c) => n + c.openGaps, 0),
+    dsarOpen,
+    dsarDeadline,
   }
 
   return NextResponse.json({ clients, metrics })
