@@ -142,6 +142,51 @@ export async function authenticateDpo(
 }
 
 // ============================================
+// CURATOR AUTH (v3 DPO console, per-curator scoping)
+// ============================================
+
+export interface CuratorAuth {
+  authUserId: string
+  dpoId: string
+}
+
+/**
+ * Authenticate an expert_curator (DPO) and resolve the orgs they may see.
+ *
+ * The curator credential is a `dpos` row whose `auth_user_id` matches the JWT's
+ * user. The dpoId is derived ENTIRELY server-side from the verified token - a
+ * client-supplied org/dpo id is never trusted. Callers must scope every cross-org
+ * read with the returned dpoId (organizations.dpo_id = dpoId). Returns null when
+ * the token is missing/invalid or the user has no dpos row (-> caller 401/403).
+ */
+export async function authenticateCurator(
+  request: NextRequest,
+  supabase?: SupabaseClient
+): Promise<CuratorAuth | null> {
+  try {
+    const sb = supabase || getServiceSupabase()
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null
+    if (!token) return null
+
+    const { data: { user }, error } = await sb.auth.getUser(token)
+    if (error || !user) return null
+
+    const { data: dpo } = await sb
+      .from('dpos')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .maybeSingle()
+    if (!dpo) return null
+
+    return { authUserId: user.id, dpoId: (dpo as { id: string }).id }
+  } catch (e) {
+    console.error('Curator auth error:', e)
+    return null
+  }
+}
+
+// ============================================
 // CRON AUTH
 // ============================================
 
