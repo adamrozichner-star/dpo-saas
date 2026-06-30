@@ -151,6 +151,18 @@
 .dp-list > a { text-decoration: none; display: block; transition: background var(--dur-1) var(--ease-out); }
 .dp-list > a:hover { background: var(--sand-100); }
 
+/* confirm modal for side-effectful DPO actions */
+.dp-confirm { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: var(--space-4); }
+.dp-confirm__backdrop { position: absolute; inset: 0; background: rgba(18, 11, 3, 0.45); }
+.dp-confirm__card {
+  position: relative; width: 100%; max-width: 440px;
+  background: var(--bg-surface); border: 1px solid var(--border-1);
+  border-radius: var(--radius-xl); box-shadow: var(--shadow-lift-3); padding: var(--space-6);
+}
+.dp-confirm__title { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: var(--t-h4); color: var(--fg-1); }
+.dp-confirm__body { margin-block: var(--space-3); color: var(--fg-2); }
+.dp-confirm__actions { display: flex; gap: var(--space-2); justify-content: flex-start; margin-block-start: var(--space-4); }
+
 /* a prominent inline status banner inside a card (e.g. doc needs refresh) */
 .dp-doc-banner {
   display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;

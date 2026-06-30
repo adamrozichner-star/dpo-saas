@@ -41,6 +41,20 @@ async function main() {
     }
     const obligationId = ((await svc.from('obligations').select('id').eq('org_id', SHUTAF).limit(1).maybeSingle()).data as { id: string }).id
 
+    // ============= E. BOOK-WIDE APPROVALS ISOLATION =============
+    // The new cross-client read surface: must show ONLY assigned clients' pending
+    // items. The שותף item (assigned, != own org) appears; אמיר (unassigned) and
+    // קרסטון (other-dpo) NEVER appear. Run before [A] resolves the שותף item.
+    console.log('\n[E] book-wide Approvals inbox isolation')
+    const appRes = await fetch(`${BASE}/api/console/approvals`, { headers: { Authorization: `Bearer ${token}` } })
+    const appItems = appRes.ok ? (await appRes.json()).items as { id: string; orgName: string }[] : []
+    const clients = new Set(appItems.map((i) => i.orgName))
+    console.log(`  approvals inbox clients: ${JSON.stringify(Array.from(clients))}`)
+    check('approvals: HTTP 200', appRes.status === 200, String(appRes.status))
+    check('approvals: shows the ASSIGNED client (בדיקה-שותף, != own org)', clients.has('בדיקה-שותף'))
+    check('approvals: does NOT show the unassigned client (אמיר)', !clients.has('אמיר פסטרנק פתרונות פרטיות'))
+    check('approvals: does NOT show the other-dpo client (קרסטון)', !clients.has('קרסטון יועצים'))
+
     // ================= A. QUEUE RESOLVE =================
     console.log('\n[A] queue resolve')
     const qStatus = async (k: string) => ((await svc.from('dpo_queue').select('status').eq('id', queueId[k]).single()).data as { status: string }).status

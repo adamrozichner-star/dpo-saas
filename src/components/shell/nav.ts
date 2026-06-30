@@ -27,17 +27,18 @@ export interface NavSection {
   items: NavItem[]
 }
 
-// DPO console nav - real routes to the v3 console surfaces (the cross-client
-// overview at /console grows in the overview task; the sub-pages exist today).
+// DPO console nav - the multi-client IA: top level is the cross-client Overview +
+// the book-wide Approvals inbox. The per-client surfaces (queue / documents / audit
+// / links) are NOT top-level any more - they live under the client drill-down
+// (/console/clients/[orgId]), reached by clicking a client. This replaces the flat
+// five-item own-org nav (the IA confusion the respec kills); the screen-1 mockup
+// nav is now stale on this point.
 export const DPO_NAV: NavSection[] = [
   {
     heading: 'קונסולת ממונה',
     items: [
       { id: 'overview', label: 'מבט כללי', icon: 'dp-radar', href: '/console' },
-      { id: 'queue', label: 'ממתין לאישור', icon: 'dp-bell', href: '/console/queue' },
-      { id: 'documents', label: 'מסמכים', icon: 'dp-doc', href: '/console/documents' },
-      { id: 'audit', label: 'תיק היערכות', icon: 'dp-seal', href: '/console/audit' },
-      { id: 'links', label: 'קישורי איסוף', icon: 'dp-link', href: '/console/links' },
+      { id: 'approvals', label: 'ממתין לאישור', icon: 'dp-bell', href: '/console/approvals' },
     ],
   },
 ]
