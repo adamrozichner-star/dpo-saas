@@ -1,5 +1,9 @@
 // v3 ledger components - the building blocks the DPO console (C) assembles.
 // Status/label color mapping is single-sourced in ./status.
+// Load the component CSS here so every surface importing from this barrel gets the
+// dp-* styles (stat tiles, sections, lists, dial, confirm modal). Without this the
+// console rendered the dp-* classes unstyled.
+import './ledger.css'
 export { ObligationStatusChip } from './ObligationStatusChip'
 export { SeverityBadge } from './SeverityBadge'
 export { DocumentLifecycleBadge } from './DocumentLifecycleBadge'
