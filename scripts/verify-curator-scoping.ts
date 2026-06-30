@@ -79,6 +79,31 @@ async function main() {
   check('unassigned (אמיר, dpo_id null) -> 403', (await ownsByName('אמיר פסטרנק פתרונות פרטיות')) === false)
   check('assigned to OTHER dpo (קרסטון -> דנה) -> 403 (curator A cannot read curator B client)', (await ownsByName('קרסטון יועצים')) === false)
 
+  console.log('\n[route gate] REAL HTTP GET /api/console/clients/[orgId] with the curator bearer token')
+  // This proves the ROUTE invokes the chokepoint (not just that the helper works).
+  const BASE = process.env.BASE_URL || 'http://localhost:3000'
+  const idByName = async (name: string): Promise<string | null> => {
+    const { data } = await svc.from('organizations').select('id').eq('name', name).maybeSingle()
+    return data ? (data as { id: string }).id : null
+  }
+  const routeStatus = async (orgId: string): Promise<number> => {
+    const r = await fetch(`${BASE}/api/console/clients/${orgId}`, { headers: { Authorization: `Bearer ${curatorToken}` } })
+    return r.status
+  }
+  const partnerId = (await idByName('בדיקה-שותף'))!
+  const amirId = (await idByName('אמיר פסטרנק פתרונות פרטיות'))!
+  const krestonId = (await idByName('קרסטון יועצים'))!
+  const sPartner = await routeStatus(partnerId)
+  const sAmir = await routeStatus(amirId)
+  const sKreston = await routeStatus(krestonId)
+  const listRes = await fetch(`${BASE}/api/console/clients`, { headers: { Authorization: `Bearer ${curatorToken}` } })
+  const listJson = listRes.ok ? await listRes.json() : { clients: [] }
+  console.log(`  route status: שותף=${sPartner} אמיר=${sAmir} קרסטון=${sKreston} ; list=${listRes.status} (${listJson.clients?.length} clients)`)
+  check('ROUTE: client != own-org (בדיקה-שותף) -> 200', sPartner === 200, String(sPartner))
+  check('ROUTE: unassigned (אמיר) -> 403', sAmir === 403, String(sAmir))
+  check('ROUTE: assigned to OTHER dpo (קרסטון) -> 403', sKreston === 403, String(sKreston))
+  check('ROUTE: list -> 200 with the 2-client book', listRes.status === 200 && listJson.clients?.length === 2, `${listRes.status}/${listJson.clients?.length}`)
+
   console.log('\n[idor] scope is by derived dpo_id only (no client-supplied org id path)')
   // The route selects .eq('dpo_id', curator.dpoId) and reads no org id from input;
   // structurally a client cannot widen scope. Asserted by code; here we confirm the

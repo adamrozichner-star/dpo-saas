@@ -86,8 +86,7 @@ export default function ConsoleOverviewPage() {
                   <div className="dp-oblig-row" style={{ flexWrap: 'wrap', gap: 'var(--space-2)' }}>
                     <span className="dp-oblig-row__title">{c.name}</span>
                     <Badge variant={st.variant}>{st.label}</Badge>
-                    <span className="dp-led-due">ציון {c.score}</span>
-                    <span className="dp-led-due">{c.openGaps} פערים</span>
+                    <span className="dp-led-due">ציון {c.score} · {c.openGaps} פערים פתוחים</span>
                     {c.awaitingReview > 0 ? <Badge variant="warn" dot>{c.awaitingReview} לאישור</Badge> : null}
                   </div>
                 </Link>
