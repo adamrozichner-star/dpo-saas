@@ -9,6 +9,8 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
+import { useOrg } from '@/lib/org-context'
+import { landingPathForUser } from '@/lib/actor'
 import { Card } from '@/components/brand/Card'
 import { Badge } from '@/components/brand/Badge'
 import { PageHeader } from '@/components/ledger'
@@ -24,6 +26,7 @@ const STATUS: Record<string, { label: string; variant: 'ok' | 'warn' | 'neutral'
 
 export default function ConsoleOverviewPage() {
   const { user, supabase, loading: authLoading } = useAuth()
+  const { profile, org, loading: orgLoading } = useOrg()
   const router = useRouter()
   const [data, setData] = useState<Overview | null>(null)
   const [forbidden, setForbidden] = useState(false)
@@ -32,6 +35,16 @@ export default function ConsoleOverviewPage() {
   useEffect(() => {
     if (!authLoading && !user) router.replace('/login')
   }, [authLoading, user, router])
+
+  // A non-curator who reaches /console (e.g. an owner whose session is still active
+  // in this browser) is correctly forbidden by the API, but the console is not their
+  // surface. Bounce them to their real landing instead of leaving a dead-end card.
+  // The redirect is keyed on the authoritative 403, not just the client-side role,
+  // so a genuine curator never gets pushed away.
+  useEffect(() => {
+    if (!forbidden || orgLoading) return
+    router.replace(landingPathForUser(profile?.role, !!org))
+  }, [forbidden, orgLoading, profile?.role, org, router])
 
   useEffect(() => {
     if (!supabase || !user) return
@@ -49,9 +62,9 @@ export default function ConsoleOverviewPage() {
 
   if (authLoading || !loaded) return <p className="t-body">טוען…</p>
   if (!user) return null
-  if (forbidden) return (
-    <div className="dp-page"><Card><p className="t-body" style={{ margin: 0 }}>קונסולת הממונה זמינה למשתמשי ממונה בלבד.</p></Card></div>
-  )
+  // Forbidden = not a curator. We redirect (effect above) to the user's own surface;
+  // render a quiet transitional line meanwhile rather than a dead-end card.
+  if (forbidden) return <p className="t-body">מעבירים אותך לאזור שלך…</p>
   if (!data) return <p className="t-body">לא נמצאו נתונים.</p>
 
   const m = data.metrics
