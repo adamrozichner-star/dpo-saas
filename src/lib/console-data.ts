@@ -576,11 +576,73 @@ export interface OwnerHomeView {
   sortedCount: number
   needsYou: OwnerActionItem[]
   allClear: boolean
+  unassessed: boolean
   headline: string
   reassurance: string
   humanTouch: string
   vendorDpaGap: number
   vendorDpaNote: string | null
+}
+
+// ---- owner gap translation (jargon-free) ----------------------------------
+// The ONLY bridge from an obligation to owner-facing words. Keyed by source_rule_id
+// so a raw obligation title/severity NEVER reaches the owner; an unknown rule falls
+// back to a generic line, never the title. DRAFT COPY - Adam wordsmiths.
+const RULE_OWNER_WHAT: Record<string, string> = {
+  'b1000001-0000-4000-8000-000000000001': 'אתם מחזיקים מידע רפואי שמחייב הגנה מוגברת',
+  'b1000002-0000-4000-8000-000000000002': 'יש לכם מאגר מידע גדול שצריך להירשם אצל הרשות',
+  'b1000003-0000-4000-8000-000000000003': 'יש לכם מצלמות אבטחה שצריכות שילוט וניהול הקלטות תקין',
+  'b1000004-0000-4000-8000-000000000004': 'הדיוור השיווקי שלכם צריך מנגנון הסכמה מסודר',
+  'b1000005-0000-4000-8000-000000000005': 'יש ספקים שנוגעים במידע שלכם וצריך להסדיר מולם התחייבות לשמירה עליו',
+  'b1000006-0000-4000-8000-000000000006': 'יותר מדי אנשים יכולים לגשת אצלכם למידע רגיש',
+  'b1000007-0000-4000-8000-000000000007': 'אחת הפעילויות שלכם דורשת בדיקת השפעה על הפרטיות',
+  'b1000008-0000-4000-8000-000000000008': 'יש לכם פעילות שמחייבת רישום מאגר אצל הרשות',
+}
+const RULE_OWNER_WHAT_FALLBACK = 'יש נושא פרטיות שאנחנו בודקים עבורכם'
+
+export type OwnerGapStatus = 'handling' | 'waiting_vendor' | 'waiting_it' | 'needs_you'
+const GAP_STATUS_LABEL: Record<OwnerGapStatus, string> = {
+  handling: 'Deepo מטפלת בזה',
+  waiting_vendor: 'ממתין לספק',
+  waiting_it: 'ממתין לאיש ה-IT שלכם',
+  needs_you: 'צריך אתכם',
+}
+
+export interface OwnerGapObligation {
+  status: ObligationStatus
+  sourceRuleId: string | null
+  /** assignee_actor of this obligation's OPEN tasks (open/in_progress). */
+  openTaskActors: string[]
+}
+export interface OwnerGap {
+  what: string
+  status: OwnerGapStatus
+  statusLabel: string
+  action: string | null
+}
+
+// WHICH gaps + HOW, in plain language. Only non-compliant obligations are gaps.
+// STATUS comes from who we're waiting on (the open tasks' actor), never severity.
+// Deduped by the owner-facing WHAT so two obligations of the same kind read as one.
+export function buildOwnerGaps(obligations: OwnerGapObligation[]): OwnerGap[] {
+  const byWhat = new Map<string, OwnerGap>()
+  const rank: Record<OwnerGapStatus, number> = { needs_you: 3, waiting_it: 2, waiting_vendor: 2, handling: 1 }
+  for (const o of obligations) {
+    if (o.status === 'compliant') continue // not a gap
+    const what = (o.sourceRuleId && RULE_OWNER_WHAT[o.sourceRuleId]) || RULE_OWNER_WHAT_FALLBACK
+    const actors = o.openTaskActors
+    const status: OwnerGapStatus = actors.includes('owner')
+      ? 'needs_you'
+      : actors.includes('vendor')
+        ? 'waiting_vendor'
+        : actors.includes('sysadmin')
+          ? 'waiting_it'
+          : 'handling'
+    const gap: OwnerGap = { what, status, statusLabel: GAP_STATUS_LABEL[status], action: status === 'needs_you' ? 'יש פעולה שדורשת אתכם' : null }
+    const prev = byWhat.get(what)
+    if (!prev || rank[status] > rank[prev.status]) byWhat.set(what, gap) // keep the most-actionable status
+  }
+  return Array.from(byWhat.values())
 }
 
 // vendorDpaGap = count of the org's recipients without a signed processing
@@ -597,13 +659,17 @@ export function buildOwnerHome(
   const sortedCount = obligations.filter((o) => o.status === 'compliant').length
   const needsYou: OwnerActionItem[] = ownerTasks.map((t) => ({ title: t.title }))
   const allClear = needsYou.length === 0
+  // Nothing assessed yet (all obligations unknown/checking): owner-VOICED "still
+  // mapping" state - deliberately NOT the DPO's "בתהליך מיפוי" wording.
+  const unassessed = isUnassessed(obligations.map((o) => ({ status: o.status, severity: null })))
 
   // DRAFT COPY - Adam to tune for brand voice. The mechanism is what we verify;
   // the exact wording is a brand-voice call. Rules: warm, first-person Hebrew,
   // no emoji, sentence case, no מערכות/רשומות, Deepo capital-D, one human touch.
-  const headline = allClear ? 'הכל תחת שליטה' : 'יש כמה דברים שמחכים לך'
-  const reassurance =
-    handlingCount === 0
+  const headline = unassessed ? 'אנחנו לומדים את העסק שלכם' : allClear ? 'הכל תחת שליטה' : 'יש כמה דברים שמחכים לך'
+  const reassurance = unassessed
+    ? 'Deepo ממפה כרגע את נושאי הפרטיות שלכם. אין מה לעשות עכשיו, נעדכן אתכם ברגע שיהיה משהו לטפל בו.'
+    : handlingCount === 0
       ? 'אין כרגע נושאי פרטיות פתוחים, הכל מעודכן.'
       : sortedCount > 0
         ? `Deepo מטפלת ב-${handlingCount} נושאי פרטיות עבורך, ${sortedCount} כבר מסודרים.`
@@ -618,5 +684,5 @@ export function buildOwnerHome(
         ? 'יש ספק אחד שעדיין לא הסדיר התחייבות לשמירה על המידע שלך. אנחנו עוקבים אחרי זה.'
         : `יש ${vendorDpaGap} ספקים שעדיין לא הסדירו התחייבות לשמירה על המידע שלך. אנחנו עוקבים אחרי זה.`
 
-  return { handlingCount, sortedCount, needsYou, allClear, headline, reassurance, humanTouch, vendorDpaGap, vendorDpaNote }
+  return { handlingCount, sortedCount, needsYou, allClear, unassessed, headline, reassurance, humanTouch, vendorDpaGap, vendorDpaNote }
 }

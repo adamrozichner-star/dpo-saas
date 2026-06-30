@@ -24,8 +24,10 @@ import {
   isLedgerRead,
   type LedgerSummaryObligation,
   buildOwnerHome,
+  buildOwnerGaps,
   type OwnerObligationStatusRow,
   type OwnerTaskRow,
+  type OwnerGapObligation,
   scoreFromObligations,
 } from '../src/lib/console-data'
 import { OBLIGATION_STATUS, SEVERITY } from '../src/components/ledger/status'
@@ -129,7 +131,7 @@ async function main() {
   )
   // LEDGER_READ is on for the v3 pilot orgs (דיפו + the בדיקה-חדש test org) and
   // off for the legacy customer orgs.
-  const v3Orgs = new Set(['דיפו', 'בדיקה-חדש'])
+  const v3Orgs = new Set(['דיפו', 'בדיקה-חדש', 'בדיקה-שותף'])
   check('live flags: v3 pilot orgs on, legacy customers off', flags.filter((f) => v3Orgs.has(f.name)).every((f) => f.ledger === true) && flags.filter((f) => !v3Orgs.has(f.name)).every((f) => f.ledger === false), JSON.stringify(flags))
 
   // ---- D2: owner home mapper (plain language, no jargon leak) ----
@@ -163,6 +165,33 @@ async function main() {
   // the live דיפו ledger should produce its own derived score (sanity: 0..100)
   const liveScore = scoreFromObligations(ownerObs.map((o) => ({ status: o.status, severity: null })))
   check('live דיפו score is a valid 0..100', liveScore >= 0 && liveScore <= 100, String(liveScore))
+
+  // ---- owner gaps (buildOwnerGaps): the jargon-leak guard (the main risk) ----
+  console.log('\n-- owner gaps (buildOwnerGaps) --')
+  const ruleRows = await sql<{ template_id: string; name: string }>(`select template_id, name from hub_gap_rules where active`)
+  const RULE_IDS = ruleRows.map((r) => r.template_id)
+  const RAW_NAMES = ruleRows.map((r) => r.name)
+  const gapJargon = /הסכם עיבוד|קריטי|אזהרה|b1000|source_rule|severity|provenance/
+  const gapInput: OwnerGapObligation[] = RULE_IDS.map((id) => ({ status: 'checking', sourceRuleId: id, openTaskActors: [] }))
+  const gaps = buildOwnerGaps(gapInput)
+  check(`every active rule -> a plain owner gap (${gaps.length})`, gaps.length === RULE_IDS.length)
+  check('NO gap "what" is the raw obligation title (verbatim)', gaps.every((g) => !RAW_NAMES.includes(g.what)), RAW_NAMES.join(' | '))
+  check('NO gap "what" leaks severity / legal-jargon / rule-id', gaps.every((g) => !gapJargon.test(g.what)), gaps.map((g) => g.what).join(' | '))
+  check('every gap "what" is plain non-empty text', gaps.every((g) => g.what.length > 8))
+  check('owner task -> needs_you', buildOwnerGaps([{ status: 'checking', sourceRuleId: RULE_IDS[0], openTaskActors: ['owner'] }])[0].status === 'needs_you')
+  check('vendor task -> waiting_vendor', buildOwnerGaps([{ status: 'checking', sourceRuleId: RULE_IDS[0], openTaskActors: ['vendor'] }])[0].status === 'waiting_vendor')
+  check('sysadmin task -> waiting_it', buildOwnerGaps([{ status: 'checking', sourceRuleId: RULE_IDS[0], openTaskActors: ['sysadmin'] }])[0].status === 'waiting_it')
+  check('no task -> handling (Deepo)', buildOwnerGaps([{ status: 'checking', sourceRuleId: RULE_IDS[0], openTaskActors: [] }])[0].status === 'handling')
+  const unk = buildOwnerGaps([{ status: 'checking', sourceRuleId: 'unknown-rule', openTaskActors: [] }])[0]
+  check('unknown rule -> generic fallback (not a title, no jargon)', unk.what.length > 8 && !RAW_NAMES.includes(unk.what) && !gapJargon.test(unk.what), unk.what)
+  check('compliant obligation is NOT a gap', buildOwnerGaps([{ status: 'compliant', sourceRuleId: RULE_IDS[0], openTaskActors: [] }]).length === 0)
+
+  // ---- owner unassessed state: owner-VOICED, not the DPO string ----
+  console.log('\n-- owner unassessed state --')
+  const unassessedHome = buildOwnerHome([{ status: 'checking' }, { status: 'checking' }] as OwnerObligationStatusRow[], [], 0)
+  check('all-checking -> unassessed true', unassessedHome.unassessed === true)
+  check('unassessed copy is owner-voiced, NOT the DPO "בתהליך מיפוי"', !/בתהליך מיפוי/.test(`${unassessedHome.headline} ${unassessedHome.reassurance}`) && unassessedHome.headline.includes('לומדים'), unassessedHome.headline)
+  check('mixed (one compliant) -> NOT unassessed', buildOwnerHome([{ status: 'compliant' }, { status: 'checking' }] as OwnerObligationStatusRow[], [], 0).unassessed === false)
 
   const failed = results.filter((r) => !r.pass).length
   console.log(`\n${results.length - failed}/${results.length} checks passed`)

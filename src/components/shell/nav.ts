@@ -42,11 +42,14 @@ export const DPO_NAV: NavSection[] = [
   },
 ]
 
-// Owner home nav - kept minimal for now; Documents + Profile arrive with the
-// owner-home task. Plain, light, no DPO jargon.
+// Owner home nav - plain, light, no DPO jargon. Distinct from DPO_NAV.
 export const OWNER_NAV: NavSection[] = [
   {
     heading: '',
-    items: [{ id: 'home', label: 'דף הבית', icon: 'dp-shield', href: '/home' }],
+    items: [
+      { id: 'home', label: 'דף הבית', icon: 'dp-shield', href: '/home' },
+      { id: 'documents', label: 'המסמכים שלי', icon: 'dp-doc', href: '/home/documents' },
+      { id: 'profile', label: 'הפרטים שלי', icon: 'dp-lock', href: '/home/profile' },
+    ],
   },
 ]
