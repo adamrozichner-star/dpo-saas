@@ -186,6 +186,29 @@ export async function authenticateCurator(
   }
 }
 
+/**
+ * THE book-verification chokepoint. Every per-client curator route (read AND every
+ * Task-3b write) MUST gate a path/body orgId through this - it is the entire IDOR
+ * firewall for cross-org access: an org is in the curator's book iff its dpo_id
+ * equals the curator's dpoId. Centralised so no route can hand-roll a check that
+ * filters by dpo but forgets to verify the supplied orgId.
+ */
+export async function curatorOwnsOrg(
+  curator: CuratorAuth,
+  orgId: string,
+  supabase?: SupabaseClient
+): Promise<boolean> {
+  if (!orgId) return false
+  const sb = supabase || getServiceSupabase()
+  const { data } = await sb
+    .from('organizations')
+    .select('id')
+    .eq('id', orgId)
+    .eq('dpo_id', curator.dpoId)
+    .maybeSingle()
+  return !!data
+}
+
 // ============================================
 // CRON AUTH
 // ============================================

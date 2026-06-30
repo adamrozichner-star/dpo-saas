@@ -1,151 +1,101 @@
 'use client'
 
-// DPO console - the first surface reading the LIVE ledger. Auth-gated (redirect
-// to /login when unauthenticated, like the (expert) layout). Reads the current
-// org's obligations + controls via the authed client (RLS-scoped: the policy
-// org_id = current_user_org_id() returns only this org's rows). No service-role,
-// no cross-org data. Renders via the A4 components + the single-source status map.
+// DPO console HOME = the cross-client overview. A DPO (expert_curator) manages many
+// client orgs; this lists their whole book + the headline counts, all fetched from
+// the curator-scoped /api/console/clients (service-role, scoped by the JWT-derived
+// dpo_id - never global, never client-supplied). Clicking a client opens the
+// per-client read drill-down at /console/clients/[orgId]. A non-curator gets 403.
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
-import { useOrg } from '@/lib/org-context'
 import { Card } from '@/components/brand/Card'
-import { ComplianceScoreCard, ObligationRow, ControlScheduleItem, PageHeader } from '@/components/ledger'
-import type { ControlScheduleItemProps } from '@/components/ledger'
-import {
-  mapObligation,
-  mapControls,
-  scoreFromObligations,
-  type ObligationDbRow,
-  type ControlDbRow,
-  type PlaybookDbRow,
-} from '@/lib/console-data'
+import { Badge } from '@/components/brand/Badge'
+import { PageHeader } from '@/components/ledger'
 
-export default function ConsolePage() {
+interface ClientRow { id: string; name: string; status: string | null; score: number; openGaps: number; awaitingReview: number }
+interface Overview { clients: ClientRow[]; metrics: { activeClients: number; stuckInOnboarding: number; awaitingReview: number; openGaps: number } }
+
+const STATUS: Record<string, { label: string; variant: 'ok' | 'warn' | 'neutral' }> = {
+  active: { label: 'פעיל', variant: 'ok' },
+  onboarding: { label: 'בהצטרפות', variant: 'warn' },
+  suspended: { label: 'מושהה', variant: 'neutral' },
+}
+
+export default function ConsoleOverviewPage() {
   const { user, supabase, loading: authLoading } = useAuth()
-  const { org, loading: orgLoading } = useOrg()
   const router = useRouter()
-  const [obligations, setObligations] = useState<ObligationDbRow[] | null>(null)
-  const [controls, setControls] = useState<ControlScheduleItemProps[] | null>(null)
+  const [data, setData] = useState<Overview | null>(null)
+  const [forbidden, setForbidden] = useState(false)
+  const [loaded, setLoaded] = useState(false)
 
-  // Auth gate: redirect to /login once we know there is no user.
   useEffect(() => {
     if (!authLoading && !user) router.replace('/login')
   }, [authLoading, user, router])
 
-  // Live ledger reads, scoped to the current org (RLS + defensive .eq).
   useEffect(() => {
-    if (!supabase || !org) return
+    if (!supabase || !user) return
     let cancelled = false
     ;(async () => {
-      const [obRes, ctRes, pbRes] = await Promise.all([
-        supabase
-          .from('obligations')
-          .select('id, title, status, severity, source_rule_id, source_version, recurs_at')
-          .eq('org_id', org.id)
-          .order('severity', { ascending: true }),
-        supabase
-          .from('controls')
-          .select('source_playbook_id, source_playbook_version, cadence, next_due_at, owner_role, status')
-          .eq('org_id', org.id),
-        supabase.from('hub_control_playbooks').select('template_id, version, name'),
-      ])
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/console/clients', { headers: { Authorization: `Bearer ${session?.access_token ?? ''}` } })
       if (cancelled) return
-      setObligations((obRes.data ?? []) as ObligationDbRow[])
-      setControls(mapControls((ctRes.data ?? []) as ControlDbRow[], (pbRes.data ?? []) as PlaybookDbRow[], new Date().toISOString()))
+      if (res.status === 403) { setForbidden(true); setLoaded(true); return }
+      if (res.ok) setData((await res.json()) as Overview)
+      setLoaded(true)
     })()
-    return () => {
-      cancelled = true
-    }
-  }, [supabase, org])
+    return () => { cancelled = true }
+  }, [supabase, user])
 
-  if (authLoading || orgLoading) {
-    return <p className="t-body">טוען…</p>
-  }
-  if (!user) {
-    return null // redirecting to /login
-  }
-  if (!org) {
-    return <p className="t-body">לא נמצא ארגון משויך לחשבון.</p>
-  }
+  if (authLoading || !loaded) return <p className="t-body">טוען…</p>
+  if (!user) return null
+  if (forbidden) return (
+    <div className="dp-page"><Card><p className="t-body" style={{ margin: 0 }}>קונסולת הממונה זמינה למשתמשי ממונה בלבד.</p></Card></div>
+  )
+  if (!data) return <p className="t-body">לא נמצאו נתונים.</p>
 
-  const obs = obligations ?? []
-  const total = obs.length
-  const compliant = obs.filter((o) => o.status === 'compliant').length
-  const needsAttention = total - compliant
-  const controlCount = controls?.length ?? 0
-  // Live, ledger-derived: the dial moves as obligations become compliant (not the
-  // stored org.compliance_score, which is never recomputed).
-  const score = scoreFromObligations(obs)
-  const actionLink = 'dp-btn dp-btn--secondary dp-btn--sm'
-
+  const m = data.metrics
   return (
-    <div className="dp-page" data-console-org={org.id}>
+    <div className="dp-page">
       <PageHeader
         eyebrow="קונסולת ממונה"
-        title={org.name}
-        description="מצב הציות החי של הארגון: החובות, הראיות שנאספו, והבקרות המתוזמנות."
-        actions={
-          <>
-            <Link href="/console/audit" className={actionLink}>תיק היערכות</Link>
-            <Link href="/console/documents" className={actionLink}>מסמכים</Link>
-            <Link href="/console/links" className={actionLink}>קישורי איסוף</Link>
-          </>
-        }
+        title="הלקוחות שלך"
+        description="מבט-על על כל הלקוחות שבאחריותך: מי דורש טיפול, מה ממתין לאישורך, ומי עדיין בתהליך הצטרפות."
       />
 
       <Card>
-        <div style={{ display: 'flex', gap: 'var(--space-8)', flexWrap: 'wrap', alignItems: 'center' }}>
-          <ComplianceScoreCard score={score} total={total} compliant={compliant} />
-          <div className="dp-stats" style={{ flex: 1, minWidth: 240 }}>
-            <div className="dp-stat">
-              <span className="dp-stat__num">{total}</span>
-              <span className="dp-stat__label">חובות</span>
-            </div>
-            <div className="dp-stat">
-              <span className="dp-stat__num dp-stat__num--accent">{needsAttention}</span>
-              <span className="dp-stat__label">טעונות טיפול</span>
-            </div>
-            <div className="dp-stat">
-              <span className="dp-stat__num">{controlCount}</span>
-              <span className="dp-stat__label">בקרות מתוזמנות</span>
-            </div>
-          </div>
+        <div className="dp-stats">
+          <div className="dp-stat"><span className="dp-stat__num">{m.activeClients}</span><span className="dp-stat__label">לקוחות פעילים</span></div>
+          <div className="dp-stat"><span className="dp-stat__num dp-stat__num--accent">{m.awaitingReview}</span><span className="dp-stat__label">ממתין לאישורך</span></div>
+          <div className="dp-stat"><span className="dp-stat__num dp-stat__num--accent">{m.openGaps}</span><span className="dp-stat__label">פערים פתוחים</span></div>
+          <div className="dp-stat"><span className="dp-stat__num">{m.stuckInOnboarding}</span><span className="dp-stat__label">בתהליך הצטרפות</span></div>
         </div>
       </Card>
 
       <Card>
         <div className="dp-section__head">
-          <h2 className="dp-section__title">חובות</h2>
-          <span className="dp-section__count">{total}</span>
+          <h2 className="dp-section__title">לקוחות</h2>
+          <span className="dp-section__count">{data.clients.length}</span>
         </div>
-        {total ? (
+        {data.clients.length ? (
           <div className="dp-list">
-            {obs.map((r) => (
-              <Link key={r.id} href={`/console/obligations/${r.id}`}>
-                <ObligationRow {...mapObligation(r)} />
-              </Link>
-            ))}
+            {data.clients.map((c) => {
+              const st = STATUS[c.status ?? ''] ?? { label: c.status ?? '-', variant: 'neutral' as const }
+              return (
+                <Link key={c.id} href={`/console/clients/${c.id}`}>
+                  <div className="dp-oblig-row" style={{ flexWrap: 'wrap', gap: 'var(--space-2)' }}>
+                    <span className="dp-oblig-row__title">{c.name}</span>
+                    <Badge variant={st.variant}>{st.label}</Badge>
+                    <span className="dp-led-due">ציון {c.score}</span>
+                    <span className="dp-led-due">{c.openGaps} פערים</span>
+                    {c.awaitingReview > 0 ? <Badge variant="warn" dot>{c.awaitingReview} לאישור</Badge> : null}
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         ) : (
-          <p className="dp-section__empty">אין חובות פתוחות כרגע.</p>
-        )}
-      </Card>
-
-      <Card>
-        <div className="dp-section__head">
-          <h2 className="dp-section__title">בקרות מתוזמנות</h2>
-          <span className="dp-section__count">{controlCount}</span>
-        </div>
-        {controlCount ? (
-          <div className="dp-list">
-            {controls?.map((c, i) => (
-              <ControlScheduleItem key={`${c.name}-${i}`} {...c} />
-            ))}
-          </div>
-        ) : (
-          <p className="dp-section__empty">אין בקרות מתוזמנות.</p>
+          <p className="dp-section__empty">עדיין לא משויכים אליך לקוחות.</p>
         )}
       </Card>
     </div>
