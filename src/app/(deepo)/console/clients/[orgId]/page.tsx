@@ -11,7 +11,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/lib/auth-context'
 import { Card } from '@/components/brand/Card'
-import { Button } from '@/components/brand/Button'
 import { ComplianceScoreCard, ObligationRow, ControlScheduleItem, PageHeader } from '@/components/ledger'
 import type { ControlScheduleItemProps } from '@/components/ledger'
 import { mapObligation, mapControls, scoreFromObligations, isUnassessed, type ObligationDbRow, type ControlDbRow, type PlaybookDbRow } from '@/lib/console-data'
@@ -29,21 +28,6 @@ export default function ClientDetailPage({ params }: { params: { orgId: string }
   const [data, setData] = useState<Detail | null>(null)
   const [forbidden, setForbidden] = useState(false)
   const [loaded, setLoaded] = useState(false)
-  const [certifyBusy, setCertifyBusy] = useState(false)
-  const [certifyMsg, setCertifyMsg] = useState<string | null>(null)
-
-  async function certify() {
-    if (!supabase) return
-    setCertifyBusy(true)
-    setCertifyMsg(null)
-    const { data: { session } } = await supabase.auth.getSession()
-    const res = await fetch(`/api/console/clients/${params.orgId}/certify`, {
-      method: 'POST', headers: { Authorization: `Bearer ${session?.access_token ?? ''}`, 'Content-Type': 'application/json' }, body: '{}',
-    })
-    const j = await res.json().catch(() => ({}))
-    setCertifyMsg(res.ok ? `תיק היערכות הופק (טביעת אצבע ${j.fingerprint})` : 'הפקת התיק נכשלה')
-    setCertifyBusy(false)
-  }
 
   useEffect(() => {
     if (!authLoading && !user) router.replace('/login')
@@ -93,10 +77,6 @@ export default function ClientDetailPage({ params }: { params: { orgId: string }
             <div className="dp-stat"><span className="dp-stat__num dp-stat__num--accent">{total - compliant}</span><span className="dp-stat__label">טעונות טיפול</span></div>
             <div className="dp-stat"><span className="dp-stat__num">{controls.length}</span><span className="dp-stat__label">בקרות מתוזמנות</span></div>
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap', marginBlockStart: 'var(--space-4)' }}>
-          <Button variant="primary" size="sm" disabled={certifyBusy} onClick={certify}>{certifyBusy ? 'מפיק…' : 'הפקת תיק היערכות'}</Button>
-          {certifyMsg ? <span className="t-body-sm" style={{ color: 'var(--fg-2)' }}>{certifyMsg}</span> : null}
         </div>
       </Card>
 
