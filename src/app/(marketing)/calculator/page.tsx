@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -20,7 +19,6 @@ import {
   Clock
 } from 'lucide-react'
 import DpoCalculator from '@/components/DpoCalculator'
-import Footer from '@/components/Footer'
 
 interface CalculatorResult {
   required: boolean
@@ -74,25 +72,6 @@ export default function CalculatorPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Navigation */}
-      <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center">
-              <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} priority />
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link href="/login">
-                <Button variant="ghost">התחברות</Button>
-              </Link>
-              <Link href={signupHref('/onboarding')}>
-                <Button className="text-white" style={{backgroundColor: '#10b981'}}>התחל עכשיו</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
       <div className="max-w-4xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-8">
@@ -309,8 +288,6 @@ export default function CalculatorPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <Footer />
     </div>
   )
 }

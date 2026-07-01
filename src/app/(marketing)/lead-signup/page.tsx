@@ -11,12 +11,11 @@
 
 import { useState, FormEvent } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ArrowRight, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react'
+import { CheckCircle2, Loader2, AlertTriangle } from 'lucide-react'
 
 type Status = 'idle' | 'submitting' | 'success' | 'error'
 
@@ -78,20 +77,6 @@ export default function LeadSignupPage() {
 
   return (
     <div className="min-h-screen bg-gray-50" dir="rtl">
-      <header className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
-          </Link>
-          <Link href="/">
-            <Button variant="ghost" className="gap-2">
-              <ArrowRight className="h-4 w-4" />
-              חזרה לדף הבית
-            </Button>
-          </Link>
-        </div>
-      </header>
-
       <main className="container mx-auto px-4 py-12 max-w-xl">
         {status === 'success' ? (
           <SuccessState />

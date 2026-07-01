@@ -1,23 +1,6 @@
-'use client'
-
-import Link from 'next/link'
-import Image from 'next/image'
-import Footer from '@/components/Footer'
-
 export default function AccessibilityPage() {
   return (
     <div className="min-h-screen bg-stone-50" dir="rtl">
-      <header className="bg-white border-b border-stone-200">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center">
-            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
-          </Link>
-          <Link href="/" className="text-sm text-indigo-600 hover:text-indigo-700">
-            ← חזרה לדף הבית
-          </Link>
-        </div>
-      </header>
-
       <main className="container mx-auto px-4 py-12 max-w-3xl">
         <h1 className="text-3xl font-bold text-stone-800 mb-2">♿ הצהרת נגישות</h1>
         <p className="text-stone-500 mb-8">עודכן לאחרונה: פברואר 2026</p>
@@ -70,7 +53,6 @@ export default function AccessibilityPage() {
           </section>
         </div>
       </main>
-      <Footer />
     </div>
   )
 }

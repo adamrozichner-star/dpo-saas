@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<!-- @dsCard group="Brand" name="עלון איגוד השמאים" subtitle="A4 לאורך - הטבת השקה מוקדמת לחברי איגוד השמאים" viewport="794x1123" --><html lang="he" dir="rtl"><head>
+
+
+
+
+
+
+<meta charset="utf-8">
+<title>Deepo · עלון הטבה לחברי איגוד השמאים</title>
+<link rel="stylesheet" href="colors_and_type.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&amp;display=swap">
+<style>
+  :root { --he: "Assistant", "Rubik", ui-sans-serif, sans-serif; --he-head: "Rubik", "Assistant", ui-sans-serif, sans-serif; }
+
+  html, body { background: var(--slate-100); }
+  body {
+    margin: 0; padding: 32px 0;
+    display: flex; justify-content: center;
+    font-family: var(--he);
+    direction: rtl;
+  }
+
+  /* ─── A4 page ─── */
+  .page {
+    width: 210mm; min-height: 297mm;
+    background: var(--parchment-100);
+    position: relative; overflow: hidden;
+    box-shadow: 0 30px 80px rgba(27,19,8,0.22);
+    display: flex; flex-direction: column;
+  }
+
+  /* ════════ HERO BAND ════════ */
+  .hero {
+    background: var(--vault-900);
+    color: var(--fg-on-dark-1);
+    padding: 11mm 16mm 8mm;
+    position: relative; overflow: hidden;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 64% 96% at 2% 122%, rgba(209,3,49,0.52) 0%, rgba(244,39,31,0.30) 30%, rgba(255,157,33,0.16) 52%, transparent 80%),
+      radial-gradient(ellipse 34% 54% at 8% 106%, rgba(255,157,33,0.26) 0%, transparent 60%);
+  }
+  .hero-rings { position: absolute; left: -160px; bottom: -220px; width: 520px; height: 520px; pointer-events: none; }
+  .hero-rings .r { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(255,157,33,0.14); }
+  .hero-rings .r:nth-child(2) { inset: 70px; }
+  .hero-rings .r:nth-child(3) { inset: 140px; border-color: rgba(209,3,49,0.16); }
+
+  .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; position: relative; }
+  .hero-top img { height: 54px; width: auto; }
+  .assoc {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+    letter-spacing: 0.16em; color: var(--signal-500);
+    border: 1px solid rgba(255,157,33,0.45);
+    border-radius: var(--radius-pill);
+    padding: 7px 14px; white-space: nowrap; direction: rtl;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.18em; color: var(--signal-500);
+    display: inline-flex; align-items: center; gap: 8px;
+    margin-top: 26px; position: relative;
+  }
+  .eyebrow .spark { width: 13px; height: 13px; display: inline-block; }
+
+  .hero h1 {
+    font-family: var(--he-head); font-weight: 700;
+    font-size: 40px; line-height: 1.1; letter-spacing: -0.01em;
+    margin: 12px 0 0; max-width: 16em; text-wrap: balance; position: relative;
+    color: var(--fg-on-dark-1);
+  }
+  .hero h1 .grad {
+    background: var(--brand-gradient); -webkit-background-clip: text;
+    background-clip: text; color: transparent;
+  }
+  .hero .lede {
+    font-family: var(--he); font-size: 14.5px; font-weight: 400;
+    line-height: 1.62; color: var(--vault-300);
+    max-width: none; margin: 14px 0 0; position: relative; text-wrap: pretty;
+  }
+  .hero .lede strong { color: var(--fg-on-dark-1); font-weight: 600; }
+
+  /* ════════ OFFER ════════ */
+  .body { padding: 9mm 16mm 7mm; flex: 1; display: flex; flex-direction: column; }
+
+  .section-label {
+    font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+    letter-spacing: 0.2em; text-transform: uppercase; color: var(--iris-500);
+    display: flex; align-items: center; gap: 10px; margin-bottom: 11px;
+  }
+  .section-label::after { content: ""; flex: 1; height: 1px; background: var(--border-2); }
+
+  .offer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .offer {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-1);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lift-2);
+    padding: 18px 20px 17px;
+    display: flex; flex-direction: column;
+    position: relative; overflow: hidden;
+  }
+  .offer .tag {
+    font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--fg-3); direction: ltr; text-align: right;
+  }
+  .offer h3 {
+    font-family: var(--he-head); font-weight: 700; font-size: 19px;
+    color: var(--fg-1); margin: 8px 0 0; line-height: 1.25; text-wrap: balance;
+  }
+  .offer p {
+    font-family: var(--he); font-size: 12.5px; line-height: 1.55;
+    color: var(--fg-2); margin: 8px 0 0;
+  }
+  .price-row {
+    margin-top: auto; padding-top: 16px;
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  }
+  .price-now {
+    font-family: var(--font-display); font-weight: 600;
+    font-size: 38px; line-height: 1; letter-spacing: -0.02em;
+    color: var(--vault-900); direction: ltr;
+    display: inline-flex; flex-direction: row-reverse; align-items: baseline;
+  }
+  .price-now .unit { font-size: 15px; font-weight: 500; color: var(--fg-3); margin-inline-end: 3px; }
+  .price-was {
+    font-family: var(--font-display); font-weight: 500; font-size: 18px;
+    color: var(--slate-300); text-decoration: line-through;
+    text-decoration-color: var(--status-risk); direction: ltr;
+  }
+  .free-pill {
+    font-family: var(--he-head); font-weight: 700; font-size: 38px; line-height: 1;
+    color: var(--signal-600); letter-spacing: -0.01em;
+  }
+  .save {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em;
+    color: var(--status-ok); background: var(--status-ok-bg);
+    border-radius: var(--radius-pill); padding: 5px 11px; margin-top: 12px;
+    align-self: flex-start; direction: rtl;
+  }
+  .offer .topbar { position: absolute; top: 0; right: 0; left: 0; height: 4px; background: var(--brand-gradient); }
+
+  /* combined annual line */
+  .bundle {
+    margin-top: 12px;
+    background: var(--vault-900); color: var(--fg-on-dark-1);
+    border-radius: var(--radius-xl); padding: 16px 22px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    position: relative; overflow: hidden;
+  }
+  .bundle::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 60% 140% at 0% 60%, rgba(209,3,49,0.34) 0%, rgba(255,157,33,0.14) 45%, transparent 74%);
+  }
+  .bundle .txt { position: relative; }
+  .bundle .txt .k { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--signal-500); }
+  .bundle .txt .v { font-family: var(--he-head); font-weight: 600; font-size: 15px; margin-top: 4px; color: var(--fg-on-dark-1); }
+  .bundle .total { position: relative; text-align: left; direction: ltr; }
+  .bundle .total .big { font-family: var(--font-display); font-weight: 600; font-size: 30px; letter-spacing: -0.02em; color: var(--signal-500); line-height: 1; display: inline-flex; flex-direction: row-reverse; align-items: baseline; gap: 6px; }
+  .bundle .total .sm { font-family: var(--font-mono); font-size: 10px; color: var(--vault-300); margin-top: 5px; }
+
+  /* ════════ WHY / VALUES STRIP ════════ */
+  .why { margin-top: 16px; }
+  .vals { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .val {
+    border: 1px solid var(--border-1); border-radius: var(--radius-lg);
+    background: var(--parchment-200); padding: 12px 15px;
+  }
+  .val .n { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em; color: var(--iris-500); direction: ltr; flex-shrink: 0; }
+  .val-head { display: flex; align-items: center; gap: 8px; }
+  .val .ic { width: 22px; height: 22px; flex-shrink: 0; }
+  .val h4 { font-family: var(--he-head); font-weight: 700; font-size: 14px; color: var(--fg-1); margin: 0; }
+  .val p { font-family: var(--he); font-size: 11.5px; line-height: 1.5; color: var(--fg-2); margin: 5px 0 0; }
+
+  /* ════════ CONDITIONS ════════ */
+  .terms {
+    margin-top: 16px;
+    border-top: 1px dashed var(--border-2);
+    padding-top: 12px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+  }
+  .term { display: flex; flex-direction: row; gap: 9px; align-items: flex-start; }
+  .term .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--iris-500); flex-shrink: 0; margin-top: 6px; }
+  .term p { font-family: var(--he); font-size: 11px; line-height: 1.5; color: var(--fg-2); margin: 0; }
+  .term p strong { color: var(--fg-1); font-weight: 600; }
+
+  /* ════════ CTA FOOTER ════════ */
+  .cta {
+    margin-top: auto;
+    background: var(--vault-1000); color: var(--fg-on-dark-1);
+    padding: 18px 16mm 18px;
+    display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    position: relative; overflow: hidden;
+  }
+  .cta::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse 64% 150% at 0% 60%, rgba(209,3,49,0.5) 0%, rgba(244,39,31,0.26) 36%, rgba(255,157,33,0.14) 62%, transparent 78%);
+  }
+  .cta-left { position: relative; }
+  .cta-left .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--signal-500); }
+  .cta-left .h { font-family: var(--he-head); font-weight: 700; font-size: 20px; margin-top: 8px; line-height: 1.22; color: var(--fg-on-dark-1); }
+  .cta-left .h .sub { font-weight: 400; font-size: 13px; color: var(--vault-300); display: block; margin-top: 4px; }
+  .cta-url {
+    position: relative; flex-shrink: 0;
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--signal-500); color: var(--vault-1000);
+    font-family: var(--font-display); font-weight: 600; font-size: 18px;
+    letter-spacing: -0.01em; direction: ltr;
+    padding: 14px 22px; border-radius: var(--radius-md);
+  }
+  .cta-url .arrow { width: 18px; height: 18px; }
+
+  .colophon {
+    background: var(--vault-1000); color: var(--vault-500);
+    padding: 0 16mm 9px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    border-top: 1px solid var(--vault-800);
+  }
+  .colophon img { height: 18px; opacity: 0.9; }
+  .colophon span { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.14em; color: var(--vault-500); direction: rtl; }
+
+  /* ─── Print ─── */
+  @page { size: A4 portrait; margin: 0; }
+  @media print {
+    html, body { background: #fff; padding: 0; }
+    .page { box-shadow: none; width: 210mm; min-height: 297mm; }
+  }
+</style>
+</head>
+<body data-new-gr-c-s-check-loaded="14.1297.0" data-gr-ext-installed="" style="" data-new-gr-c-s-loaded="14.1297.0">
+  <div class="page" data-screen-label="עלון A4">
+
+    <!-- ════════ HERO ════════ -->
+    <header class="hero">
+      <div class="hero-rings"><div class="r"></div><div class="r"></div><div class="r"></div></div>
+      <div class="hero-top">
+        <img src="assets/logo-on-dark.png" alt="Deepo">
+        <span class="assoc">בלעדי · חברי איגוד השמאים בלבד</span>
+      </div>
+
+      <span class="eyebrow">
+        <svg class="spark" viewBox="0 0 100 100" aria-hidden="true"><defs><linearGradient id="sg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9B0140"></stop><stop offset="0.5" stop-color="#F4271F"></stop><stop offset="1" stop-color="#FF9D21"></stop></linearGradient></defs><path d="M50 0C53 35 65 47 100 50C65 53 53 65 50 100C47 65 35 53 0 50C35 47 47 35 50 0Z" fill="url(#sg)"></path></svg>
+        השקה מוקדמת</span>
+
+      <h1 style="">הצטרפו להשקה המוקדמת של Deepo - שירות DPO מבוסס סוכני AI ייעודיים</h1>
+      <p class="lede" style=""><span style="color: rgb(193, 178, 152); font-size: 16px">תיקון 13 לחוק הגנת הפרטיות כבר כאן ואיתו כבר מנגנון קנסות ועיצומים. במסגרת העבודה נאלצים השמאים להחזיק מידע אישי ורגיש של לקוחותיהם.</span><div><span style="color: rgb(255, 255, 255);">Deepo </span><span style="color: rgb(193, 178, 152);">תאפשר לכם לעמוד בדרישות החוק, בעזרת פלטפורמה מתקדמת משולבת AI ביחד עם צוות DPOs מנוסה - שיעזרו לכם בלי תהליך הטמעה ארוך ובליווי יועץ קבוע.</span>&nbsp;&nbsp;</div><div><span style="color: rgb(255, 255, 255);">בלעדית לחברי האיגוד</span><span style="color: rgb(193, 178, 152);">, פתחנו רישום מוקדם בתנאים שלא יחזרו.</span></div></p>
+    </header>
+
+    <!-- ════════ BODY ════════ -->
+    <main class="body">
+      <div class="section-label">ההטבה לחברי האיגוד</div>
+
+      <div class="offer-grid">
+        <!-- Onboarding free -->
+        <div class="offer">
+          <div class="topbar"></div>
+          <span class="tag">Onboarding · הטמעה מלאה</span>
+          <h3>הטמעה מלאה - ללא תשלום</h3>
+          <p style="">הקמה והטמעה של המערכת בעסק שלכם, מקצה לקצה - כדי שתוכלו לעמוד באופן מלא בדרישות החוק.</p>
+          <div class="price-row">
+            <span class="free-pill">חינם</span>
+            <span class="price-was" style="">₪ 10,000</span>
+          </div>
+          <span class="save">שווי ההטבה · ₪10,000</span>
+        </div>
+
+        <!-- Discounted license -->
+        <div class="offer">
+          <div class="topbar"></div>
+          <span class="tag">License · רישיון שנתי</span>
+          <h3>רישיון שנתי מוזל למערכת Deepo</h3>
+          <p>גישה מלאה לפלטפורמה: ניטור רציף, מסמכים אוטומטיים והיערכות פרואקטיבית לכל מה שהרגולציה דורשת, כל זאת תחת ליווי ובקרה מקצועית של מומחה פרטיות.</p>
+          <div class="price-row">
+            <span class="price-now" style="">₪ 899<span class="unit">&nbsp;חודש&nbsp;/&nbsp;</span></span>
+            <span class="price-was" style="">₪ 1,499</span>
+          </div>
+          <span class="save">חיסכון של ₪7,200 בשנה</span>
+        </div>
+      </div>
+
+      <!-- Bundle line -->
+      <div class="bundle">
+        <div class="txt">
+          <div class="k">החבילה לחברי האיגוד</div>
+          <div class="v">הטמעה חינם + רישיון שנתי במחיר מוזל - ברכישת מנוי שנתי.</div>
+        </div>
+        <div class="total">
+          <div class="big" style=""><span>₪ 899</span><span>חודש&nbsp;/</span></div>
+          <div class="sm">במקום ₪1,499 · הטמעה ב‑₪0</div>
+        </div>
+      </div>
+
+      <!-- Why DeePO -->
+      <div class="why">
+        <div class="section-label">למה Deepo</div>
+        <div class="vals">
+          <div class="val">
+            <div class="val-head">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.4 19.4 5.2v6c0 4.7-3.1 8-7.4 9.8C7.7 19.2 4.6 15.9 4.6 11.2v-6z" fill="#D10331" opacity="0.18"/><path d="M12 2.4 19.4 5.2v6c0 4.7-3.1 8-7.4 9.8C7.7 19.2 4.6 15.9 4.6 11.2v-6z" stroke="#D10331" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.8 11.4l2.2 2.2 4.2-4.6" stroke="#D10331" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <h4>שומרים עליכם</h4>
+            </div>
+            <p>מה שהחוק דורש מהעסק שלכם - כבר טופל. מוגנים מול הרשות ומול תביעות.</p>
+          </div>
+          <div class="val">
+            <div class="val-head">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="9" fill="#D10331" opacity="0.18"/><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z" stroke="#D10331" stroke-width="1.7"/><path d="M8.2 12.2l2.6 2.6 5-5.2" stroke="#D10331" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <h4>פשטות</h4>
+            </div>
+            <p>שפה אנושית, בלי ז׳רגון. עולים לאוויר בתוך אחר צהריים, לא רבעון.</p>
+          </div>
+          <div class="val">
+            <div class="val-head">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5 14 9.2 20.5 12 14 14.8 12 21.5 10 14.8 3.5 12 10 9.2z" fill="#D10331" opacity="0.18"/><path d="M12 2.5 14 9.2 20.5 12 14 14.8 12 21.5 10 14.8 3.5 12 10 9.2z" stroke="#D10331" stroke-width="1.7" stroke-linejoin="round"/></svg>
+              <h4>סוכני AI ייעודיים</h4>
+            </div>
+            <p>עושים את העבודה הכבדה - סריקה, ניסוח וניטור. אתם רק מאשרים.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conditions -->
+      <div class="terms">
+        <div class="term"><span class="dot"></span><p><strong>חברי האיגוד בלבד.</strong> ההטבה מותנית בחברות פעילה באיגוד השמאים.</p></div>
+        <div class="term"><span class="dot"></span><p><strong>ל‑50 הנרשמים הראשונים.</strong> הרישום המוקדם מוגבל במספר המקומות.</p></div>
+        <div class="term"><span class="dot"></span><p>אישית ואינה ניתנת להעברה. ההטבה אישית לנרשם ואינה ניתנת להסבה לגורם אחר.</p></div>
+      </div>
+    </main>
+
+    <!-- ════════ CTA ════════ -->
+    <section class="cta" data-screen-label="קריאה לפעולה">
+      <div class="cta-left">
+        <div class="k">להרשמה להשקה המוקדמת</div>
+        <div class="h" style="font-size: 18px;">השאירו פרטים באתר ונחזור אליכם למימוש ההטבה.&nbsp;<div>המקומות מוגבלים - כל הקודם זוכה.</div></div>
+      </div>
+      <a class="cta-url" href="https://deepo.co.il/">
+        deepo.co.il
+        <svg class="arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      </a>
+    </section>
+
+  </div>
+
+
+<grammarly-desktop-integration data-grammarly-shadow-root="true"></grammarly-desktop-integration></body></html>

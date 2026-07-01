@@ -1,0 +1,42 @@
+/* /contact page-specific styles (ct-). Warm brand tokens under .deepo-scope,
+   matching the rest of the marketing site (not the legacy shadcn theme). */
+
+.ct-box { max-width: 620px; margin-inline: auto; }
+.ct-head { text-align: center; margin-bottom: var(--space-10); }
+.ct-head h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(30px, 5vw, 44px); letter-spacing: -0.02em; color: var(--fg-1); margin: 0 0 var(--space-3); }
+.ct-head p { font-size: 18px; color: var(--fg-2); margin: 0; }
+
+.ct-card { background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-2xl); box-shadow: var(--shadow-lift-2); padding: var(--space-8); }
+.ct-card h2 { font-family: var(--font-display); font-weight: 600; font-size: 20px; color: var(--fg-1); margin: 0 0 var(--space-5); }
+
+.ct-form { display: flex; flex-direction: column; gap: var(--space-4); }
+.ct-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); }
+.ct-field { display: flex; flex-direction: column; gap: var(--space-2); }
+.ct-field label { font-size: 14px; font-weight: 600; color: var(--fg-1); }
+.ct-field input,
+.ct-field textarea {
+  font-family: var(--font-body); font-size: 15px; color: var(--fg-1);
+  background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-md);
+  padding: 11px var(--space-4); width: 100%; box-sizing: border-box;
+  transition: border-color var(--dur-1, 120ms) ease, box-shadow var(--dur-1, 120ms) ease;
+}
+.ct-field input::placeholder,
+.ct-field textarea::placeholder { color: var(--fg-3); }
+.ct-field input:focus,
+.ct-field textarea:focus { outline: none; border-color: var(--crimson-400); box-shadow: 0 0 0 3px var(--crimson-50); }
+.ct-field textarea { resize: vertical; min-height: 140px; line-height: 1.55; }
+
+.ct-error { color: var(--crimson-600); font-size: 14px; margin: 0; }
+.ct-submit.dp-btn { width: 100%; justify-content: center; margin-top: var(--space-2); }
+
+/* success state */
+.ct-success { max-width: 480px; margin-inline: auto; text-align: center; background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-2xl); box-shadow: var(--shadow-lift-2); padding: var(--space-10) var(--space-8); }
+.ct-success__ic { width: 64px; height: 64px; border-radius: 50%; background: var(--status-ok-bg); display: grid; place-items: center; margin: 0 auto var(--space-4); }
+.ct-success__ic .dpi { --dpi-c: var(--status-ok); font-size: 34px; }
+.ct-success h1 { font-family: var(--font-display); font-weight: 600; font-size: 24px; color: var(--fg-1); margin: 0 0 var(--space-2); }
+.ct-success p { font-size: 16px; color: var(--fg-2); margin: 0 0 var(--space-6); }
+.ct-success .dp-btn { justify-content: center; }
+
+@media (max-width: 560px) {
+  .ct-row { grid-template-columns: 1fr; }
+}
