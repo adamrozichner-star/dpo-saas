@@ -123,28 +123,90 @@ const EXPERTS: Array<{ id: 'dp-seal' | 'dp-shield' | 'dp-sparkle'; title: string
   { id: 'dp-sparkle', title: 'צוות מוצר', desc: 'בונים את הכלים שעושים את העבודה הקשה במקומכם.' },
 ]
 
-const PLANS = [
+// Pricing: monthly + annual (annual = two months free, ~17% off; placeholder
+// figures pending Adam/Roy sign-off, same gate as the comparison numbers).
+type Plan = {
+  tier: string; desc: string; monthly: string; annual: string; custom?: boolean;
+  was: string; featured: boolean; cta: string; href: string;
+  variant: 'secondary' | 'gradient'; feats: string[];
+}
+const PLANS: Plan[] = [
   {
-    tier: 'בסיסית', desc: 'ניהול פרטיות עצמאי, בלי ממונה.', amt: '₪1,000', unit: ' / חודש',
-    was: 'במקום ₪8,000+ אצל עו"ד', featured: false, cta: 'זה מתאים לי', href: signupHref('/register?plan=basic'), variant: 'secondary' as const,
+    tier: 'בסיסית', desc: 'ניהול פרטיות עצמאי, בלי ממונה.', monthly: '₪1,000', annual: '₪833',
+    was: 'במקום ₪8,000+ אצל עו"ד', featured: false, cta: 'זה מתאים לי', href: signupHref('/register?plan=basic'), variant: 'secondary',
     feats: ['כל היכולות של Deepo', 'מסמכים אוטומטיים', 'עוזר חכם מסביב לשעון', 'לוח וציון עמידה', 'המלצות עמידה (לא מחייבות)', 'תמיכה במייל'],
   },
   {
-    tier: 'מומלצת', desc: 'כולל ממונה מוסמך. מתאימה לרוב העסקים.', amt: '₪1,499', unit: ' / חודש',
-    was: 'במקום ₪3,000-8,000 אצל יועץ', featured: true, cta: 'יאללה, מתחילים', href: signupHref('/register?plan=recommended'), variant: 'gradient' as const,
+    tier: 'מומלצת', desc: 'כולל ממונה מוסמך. מומלצת לעסקים קטנים ובינוניים.', monthly: '₪1,499', annual: '₪1,249',
+    was: 'במקום ₪3,000-8,000 אצל יועץ', featured: true, cta: 'יאללה, מתחילים', href: signupHref('/register?plan=recommended'), variant: 'gradient',
     feats: ['כל מה שבבסיסית', 'ממונה מוסמך שמתמנה עליכם', 'סקירה רבעונית מהממונה', 'עד 2 פניות לממונה בחודש', 'ליווי באירוע אבטחה', 'תמיכה טלפונית'],
   },
   {
-    tier: 'פרימיום', desc: 'לארגונים עם דרישות מורכבות.', amt: '₪7,500', unit: ' / חודש',
-    was: 'ליווי מקצועי צמוד', featured: false, cta: 'זה מתאים לי', href: signupHref('/register?plan=premium'), variant: 'secondary' as const,
+    tier: 'פרימיום', desc: 'לארגונים עם דרישות מורכבות.', monthly: '₪7,500', annual: '₪6,250',
+    was: 'ליווי מקצועי צמוד', featured: false, cta: 'זה מתאים לי', href: signupHref('/register?plan=premium'), variant: 'secondary',
     feats: ['כל מה שבמומלצת', 'שעתיים ממונה בחודש', 'סקירה חודשית', 'הדרכת עובדים רבעונית', 'DPIA מלא כלול', 'זמן תגובה: 4 שעות'],
   },
   {
-    tier: 'ארגונית', desc: 'למספר חברות או דרישות רגולציה מורכבות.', amt: 'בהתאמה', unit: '',
-    was: 'תמחור מותאם אישית', featured: false, cta: 'דברו איתנו', href: '/contact', variant: 'secondary' as const,
+    tier: 'ארגונית', desc: 'למספר חברות או דרישות רגולציה מורכבות.', monthly: 'בהתאמה', annual: 'בהתאמה', custom: true,
+    was: 'תמחור מותאם אישית', featured: false, cta: 'דברו איתנו', href: '/contact', variant: 'secondary',
     feats: ['כל מה שבפרימיום', 'SLA מובטח', 'הטמעה ייעודית', 'התאמה מלאה לארגון'],
   },
 ]
+
+// Pricing block with a monthly/annual billing toggle, the struck-through
+// (now free) setup fee, and the partnerships / member-discount bar (B3).
+function PricingBlock() {
+  const [annual, setAnnual] = useState(true)
+  return (
+    <>
+      <div className="hp-billtoggle" role="group" aria-label="בחירת מחזור חיוב">
+        <button type="button" className={`hp-billtoggle__opt${!annual ? ' is-active' : ''}`} aria-pressed={!annual} onClick={() => setAnnual(false)}>חודשי</button>
+        <button type="button" className={`hp-billtoggle__opt${annual ? ' is-active' : ''}`} aria-pressed={annual} onClick={() => setAnnual(true)}>
+          שנתי <span className="hp-billtoggle__save">חודשיים במתנה</span>
+        </button>
+      </div>
+
+      <p className="hp-setupfee">
+        דמי הקמה חד-פעמיים: <s>₪30,000</s> <b>חינם, תמיד.</b>
+      </p>
+
+      <div className="hp-pcards">
+        {PLANS.map((p) => (
+          <div className={`hp-pcard${p.featured ? ' hp-pcard--featured' : ''}`} key={p.tier}>
+            {p.featured && <span className="hp-pcard__flag">הכי פופולרי</span>}
+            <span className="hp-pcard__tier">{p.tier}</span>
+            <p className="hp-pcard__desc">{p.desc}</p>
+            <div>
+              <span className="hp-pcard__amt">{annual ? p.annual : p.monthly}{!p.custom && <small> / חודש</small>}</span>
+            </div>
+            {!p.custom && (
+              <p className="hp-pcard__bill">{annual ? 'בחיוב שנתי · חסכון של חודשיים' : 'בחיוב חודשי · בלי התחייבות'}</p>
+            )}
+            <p className="hp-pcard__was">{p.was}</p>
+            <ul>
+              {p.feats.map((f) => (
+                <li key={f}><DeepoIcon id="dp-check" /> {f}</li>
+              ))}
+            </ul>
+            <Link href={p.href} className={`dp-btn dp-btn--${p.variant} dp-btn--md`}>{p.cta}</Link>
+          </div>
+        ))}
+      </div>
+
+      {/* Partnerships / member-discount bar (B3). Names as text placeholders;
+          logos pending clearance (same gate as press clippings). */}
+      <div className="hp-partners">
+        <span className="hp-partners__lab">בשיתוף</span>
+        <div className="hp-partners__row">
+          <span className="hp-partner">איגוד השמאים</span>
+          <span className="hp-partner">איגוד רואי החשבון</span>
+          <span className="hp-partner">Morning</span>
+        </div>
+        <p className="hp-partners__code">חברי הארגונים מקבלים קוד הנחה ייעודי בהרשמה.</p>
+      </div>
+    </>
+  )
+}
 
 // ============================================================
 // PAGE
@@ -323,23 +385,7 @@ export default function HomePage() {
       <section className="mk-section" id="pricing">
         <div className="mk-wrap">
           <SecHead title="תמחור הוגן, בלי הפתעות." sub="החוק שווה לכולם, אז הכלים לעמוד בו צריכים להיות נגישים לכולם." />
-          <div className="hp-pcards">
-            {PLANS.map((p) => (
-              <div className={`hp-pcard${p.featured ? ' hp-pcard--featured' : ''}`} key={p.tier}>
-                {p.featured && <span className="hp-pcard__flag">הכי פופולרי</span>}
-                <span className="hp-pcard__tier">{p.tier}</span>
-                <p className="hp-pcard__desc">{p.desc}</p>
-                <div><span className="hp-pcard__amt">{p.amt}<small>{p.unit}</small></span></div>
-                <p className="hp-pcard__was">{p.was}</p>
-                <ul>
-                  {p.feats.map((f) => (
-                    <li key={f}><DeepoIcon id="dp-check" /> {f}</li>
-                  ))}
-                </ul>
-                <Link href={p.href} className={`dp-btn dp-btn--${p.variant} dp-btn--md`}>{p.cta}</Link>
-              </div>
-            ))}
-          </div>
+          <PricingBlock />
         </div>
       </section>
 

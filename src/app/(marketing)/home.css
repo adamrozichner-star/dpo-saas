@@ -228,8 +228,30 @@ html:has(.deepo-scope) { scroll-behavior: smooth; }
 .hp-ccol--new li .dpi { --dpi-c: #4ED38A; }
 .hp-savetag { display: inline-block; margin-top: var(--space-5); font-family: var(--font-mono); font-size: 12px; font-weight: 600; letter-spacing: 0.04em; color: var(--garnet-900); background: var(--amber-500); padding: 7px var(--space-4); border-radius: var(--radius-pill); }
 
+/* ── Billing toggle (monthly / annual) ──────────────────────── */
+.hp-billtoggle {
+  display: flex; width: max-content; gap: 4px; margin: 0 auto var(--space-4); padding: 4px;
+  background: var(--sand-100); border: 1px solid var(--sand-300); border-radius: var(--radius-pill);
+}
+.hp-billtoggle__opt {
+  display: inline-flex; align-items: center; gap: var(--space-2); border: 0; cursor: pointer;
+  background: transparent; color: var(--fg-2); font-family: var(--font-body); font-weight: 600; font-size: 14px;
+  padding: 8px var(--space-5); border-radius: var(--radius-pill); transition: background var(--dur-1) ease, color var(--dur-1) ease;
+}
+.hp-billtoggle__opt.is-active { background: #fff; color: var(--fg-1); box-shadow: var(--shadow-lift-1); }
+.hp-billtoggle__save {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--crimson-600); background: var(--crimson-50); border-radius: var(--radius-pill); padding: 2px 8px;
+}
+
+/* Struck-through (now free) one-time setup fee. */
+.hp-setupfee { text-align: center; font-size: 15px; color: var(--fg-2); margin: 0 auto var(--space-8); }
+.hp-setupfee s { color: var(--fg-3); text-decoration-thickness: 2px; }
+.hp-setupfee b { color: var(--status-ok); font-weight: 700; }
+
 /* ── Pricing cards ──────────────────────────────────────────── */
 .hp-pcards { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4); align-items: stretch; }
+.hp-pcard__bill { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.02em; color: var(--fg-3); margin: var(--space-2) 0 0; }
 .hp-pcard { background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-xl); padding: var(--space-6); display: flex; flex-direction: column; }
 .hp-pcard--featured { border-color: var(--crimson-300); box-shadow: var(--shadow-lift-3); position: relative; }
 .hp-pcard__flag { position: absolute; top: -12px; inset-inline-start: var(--space-6); font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.06em; color: #fff; background: var(--crimson-500); padding: 5px var(--space-3); border-radius: var(--radius-pill); }
@@ -242,6 +264,16 @@ html:has(.deepo-scope) { scroll-behavior: smooth; }
 .hp-pcard li { display: flex; align-items: flex-start; gap: var(--space-2); font-size: 14px; line-height: 1.4; color: var(--fg-2); }
 .hp-pcard li .dpi { --dpi-c: var(--status-ok); font-size: 18px; flex: none; margin-top: 1px; }
 .hp-pcard .dp-btn { width: 100%; justify-content: center; }
+
+/* ── Partnerships / member-discount bar ─────────────────────── */
+.hp-partners { margin-top: var(--space-12); text-align: center; }
+.hp-partners__lab { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--fg-3); }
+.hp-partners__row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-6); margin: var(--space-4) 0; }
+.hp-partner {
+  font-family: var(--font-display); font-weight: 600; font-size: 18px; color: var(--fg-2);
+  padding: var(--space-2) var(--space-4); border: 1px solid var(--sand-300); border-radius: var(--radius-lg); background: #fff;
+}
+.hp-partners__code { font-size: 14px; color: var(--fg-2); margin: 0; }
 .hp-addons { margin-top: var(--space-8); text-align: center; }
 .hp-addons p { font-size: 14px; color: var(--fg-3); margin: 0 0 var(--space-3); }
 .hp-addons__row { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); }
