@@ -52,7 +52,6 @@ export default function PrivacyIsraelPage() {
       <section className="pi-hero pi-hero--dark mk-mesh">
         <RadarMotif className="pi-hero__radar" size={640} node={false} />
         <div className="mk-wrap pi-hero__inner">
-          <Eyebrow icon="dp-shield" pill>פרטיות בישראל</Eyebrow>
           <h1>הפרטיות בישראל גדלה<br /><span className="mk-grad">עכשיו יש לה שיניים</span><br />אמאל׳ה</h1>
           <p className="pi-hero__lede">
             מאיפה הגיע החוק, מה המושגים שחשוב להכיר, ומה בדיוק נדרש מכם כבעלי עסק. הכול בשפה פשוטה, בלי משפטית מיותרת.
@@ -108,7 +107,7 @@ export default function PrivacyIsraelPage() {
       {/* 5 - AUTHORITY HAS TEETH (dark ember band) */}
       <section className="pi-teeth">
         <div className="mk-wrap pi-teeth__inner">
-          <Eyebrow icon="dp-bolt">אכיפה</Eyebrow>
+          <Eyebrow icon="dp-bolt">האכיפה התחילה</Eyebrow>
           <h2>לרשות יש שיניים</h2>
           <p>
             עד לא מזמן, אכיפה הייתה נדירה. תיקון 13 שינה את זה: לרשות להגנת הפרטיות יש עכשיו סמכויות חקירה ועיצומים כספיים משמעותיים.
