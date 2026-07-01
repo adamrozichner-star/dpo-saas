@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { DeepoIcon, type DeepoIconId } from '@/brand/icons'
 import { Badge } from '@/components/brand/Badge'
 import {
-  RadarMotif, Eyebrow, SecHead, FeatureGrid, FinalCta,
+  RadarMotif, SecHead, FeatureGrid, FinalCta,
   type FeatureItem,
 } from '@/components/marketing/sections'
 import { signupHref } from '@/lib/signup-flag'
@@ -56,8 +56,7 @@ export default function ProductPage() {
       <section className="pp-hero mk-mesh">
         <RadarMotif className="pp-hero__radar" size={720} />
         <div className="mk-wrap pp-hero__inner">
-          <Eyebrow icon="dp-radar" pill>המוצר</Eyebrow>
-          <h1>כל מה שתיקון 13 דורש, <span className="mk-grad">קורה מעצמו</span></h1>
+          <h1>לעמוד בדרישות חוק הפרטיות, <span className="mk-grad">בלי מאמץ</span></h1>
           <p className="pp-hero__lede">
             אנחנו מוצאים מה צריך, אוספים את החומר, סוגרים את הפערים ושומרים שהכול יישאר מעודכן. אתם רק מאשרים.
             סוכני AI ייעודיים עושים את העבודה הקשה, ומאחוריהם צוות מומחי פרטיות ואבטחת מידע מנוסה.
@@ -86,7 +85,7 @@ export default function ProductPage() {
       {/* 3 - OWNER EXPERIENCE + BACKGROUND ENGINE (dark visual system flow) */}
       <section className="mk-section pp-flowsec">
         <div className="mk-wrap">
-          <SecHead title="אתם מאשרים. אנחנו עושים את כל השאר" sub="כמעט לא תרגישו שזה קורה. אתם עונים על כמה שאלות ומאשרים כשצריך, ואנחנו עובדים ברקע." />
+          <SecHead title={<>אתם מאשרים,<br />אנחנו עושים את כל השאר</>} sub="כמעט לא תרגישו שזה קורה. אתם עונים על כמה שאלות ומאשרים כשצריך, ואנחנו עובדים ברקע." />
           <div className="pp-flow">
             <div className="pp-flow__you">
               <span className="pp-flow__tag">מה שאתם עושים</span>
@@ -152,10 +151,10 @@ export default function ProductPage() {
       {/* 6 - FINAL CTA -> /lead-signup */}
       <FinalCta
         title={<>כל זה, <span className="mk-grad">עובד בשבילכם</span></>}
-        sub="נתחיל בכמה שאלות קצרות. את השאר אנחנו כבר יודעים לעשות."
+        sub={<>נתחיל בכמה שאלות קצרות.<br />את השאר אנחנו כבר יודעים לעשות.</>}
         cta="התחילו"
         href="/lead-signup"
-        micro="בלי עלות הקמה · בלי התחייבות · הקמה בחמש דקות"
+        micro="בלי עלות הקמה · הקמה בחמש דקות"
       />
 
     </div>
