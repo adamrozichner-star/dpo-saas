@@ -8,7 +8,7 @@ import Link from 'next/link'
 import { DeepoIcon, type DeepoIconId } from '@/brand/icons'
 import { Badge } from '@/components/brand/Badge'
 import {
-  RadarMotif, SecHead, FeatureGrid, FinalCta,
+  RadarMotif, SecHead, FinalCta,
   type FeatureItem,
 } from '@/components/marketing/sections'
 import { signupHref } from '@/lib/signup-flag'
@@ -140,11 +140,22 @@ export default function ProductPage() {
         </div>
       </section>
 
-      {/* 5 - FEATURE DEEP-DIVE */}
-      <section className="mk-section">
+      {/* 5 - FEATURE DEEP-DIVE (spec panel: one card, divided 2-col list -
+          deliberately distinct texture from the "people" card grid above) */}
+      <section className="mk-section mk-band--sand-2">
         <div className="mk-wrap">
           <SecHead title="כל מה שצריך כדי להיות מסודרים" />
-          <FeatureGrid items={PRODUCT_FEATURES} />
+          <div className="pp-caps">
+            {PRODUCT_FEATURES.map((f) => (
+              <div className="pp-cap" key={f.id + f.title}>
+                <span className="pp-cap__ic"><DeepoIcon id={f.id} /></span>
+                <span className="pp-cap__body">
+                  <b>{f.title}</b>
+                  <span>{f.desc}</span>
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 

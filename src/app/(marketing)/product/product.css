@@ -101,6 +101,28 @@
   .pp-flow__pipe::before { display: none; }
 }
 
+/* ── Capabilities spec panel (one card, divided 2-col list) ─── */
+.pp-caps {
+  max-width: 880px; margin-inline: auto; background: #fff;
+  border: 1px solid var(--sand-300); border-radius: var(--radius-2xl); box-shadow: var(--shadow-lift-1);
+  padding: var(--space-2) var(--space-8); display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-10);
+}
+.pp-cap { display: flex; align-items: flex-start; gap: var(--space-4); padding: var(--space-5) 0; border-bottom: 1px solid var(--sand-200); }
+/* drop the divider on the bottom row of each column (last two items) */
+.pp-cap:nth-last-child(-n+2) { border-bottom: 0; }
+.pp-cap__ic { width: 40px; height: 40px; border-radius: var(--radius-md); background: var(--crimson-50); display: grid; place-items: center; flex: none; }
+.pp-cap__ic .dpi { font-size: 21px; --dpi-c: var(--crimson-500); }
+.pp-cap__body { display: flex; flex-direction: column; gap: 2px; }
+.pp-cap__body b { font-family: var(--font-display); font-weight: 600; font-size: 16px; color: var(--fg-1); }
+.pp-cap__body span { font-size: 14px; line-height: 1.5; color: var(--fg-2); }
+
+@media (max-width: 720px) {
+  .pp-caps { grid-template-columns: 1fr; column-gap: 0; padding-inline: var(--space-6); }
+  /* single column: only the very last item loses its divider */
+  .pp-cap:nth-last-child(-n+2) { border-bottom: 1px solid var(--sand-200); }
+  .pp-cap:last-child { border-bottom: 0; }
+}
+
 /* ── The four people Deepo serves ───────────────────────────── */
 .pp-people { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-5); }
 .pp-person { background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-xl); padding: var(--space-8); box-shadow: var(--shadow-lift-1); }
