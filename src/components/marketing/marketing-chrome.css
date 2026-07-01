@@ -88,17 +88,32 @@
   padding: var(--space-4) var(--space-5) var(--space-6);
 }
 .mkt-drawer.is-open { display: block; }
-.mkt-drawer a {
-  display: block;
-  padding: var(--space-3) 0;
+/* nav rows: real links AND the inert "בקרוב" span share one consistent
+   row style, so they line up as an even list (the span is not an <a>). */
+.mkt-drawer a:not(.dp-btn),
+.mkt-drawer .mkt-nav__soon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: var(--space-4) 0;
   font-family: var(--font-body);
   font-size: 16px;
   font-weight: 500;
   color: var(--fg-1);
   border-bottom: 1px solid var(--border-1);
 }
-.mkt-drawer a:last-child { border-bottom: 0; }
-.mkt-drawer__cta { margin-top: var(--space-4); }
+.mkt-drawer a:not(.dp-btn):hover { color: var(--crimson-600); }
+.mkt-drawer .mkt-nav__soon { color: var(--fg-3); cursor: default; }
+/* the login row sits directly above the CTA: drop its divider for a clean gap */
+.mkt-drawer a:not(.dp-btn):nth-last-child(2) { border-bottom: 0; }
+/* CTA is a full-width centred button, not a list row */
+.mkt-drawer__cta.dp-btn {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  margin-top: var(--space-5);
+}
 
 @media (max-width: 860px) {
   .mkt-nav__links { display: none; }
