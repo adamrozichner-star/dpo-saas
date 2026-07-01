@@ -331,7 +331,7 @@ export default function HomePage() {
       {/* 4 - HOW IT WORKS (hero "איך זה עובד" CTA anchors here) */}
       <section className="mk-section mk-band--sand" id="how">
         <div className="mk-wrap">
-          <SecHead title="איך מתחילים? 5 דקות, פחות ממה שלוקח לילד להסביר לאמא על פרטיות" />
+          <SecHead title={<>איך מתחילים?<br />נרשמים ב 5 דקות<br />(פחות ממה שלוקח לילד להסביר לאמא על פרטיות)</>} />
           <Steps items={STEPS} />
           <p className="hp-afterline">בשעות הקרובות תקבלו קפיצה מאוד גדולה בהגנת הפרטיות</p>
         </div>
