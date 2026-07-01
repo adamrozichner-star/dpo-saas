@@ -13,3 +13,9 @@ node_modules/
 # Supabase CLI local state
 supabase/.temp/
 supabase/.branches/
+
+# Design-system reference archive (the extracted deepo-brand/design-system/
+# folder is kept locally and left untracked; the raw zip is never committed)
+Deepo_Design_System.zip
+.DS_Store
+**/.DS_Store

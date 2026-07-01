@@ -1,0 +1,28 @@
+<!-- @dsCard group="Brand" viewport="700x340" subtitle="Layered shield + spark · light & dark surfaces" name="Logo system" -->
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8"/>
+<link rel="stylesheet" href="../colors_and_type.css"/>
+<style>
+  html,body{margin:0;background:var(--bg-page);}
+  .card{padding:24px 26px;font-family:var(--font-body);}
+  .lbl{font-family:var(--font-mono);font-size:10px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--stone-400);}
+  
+  .grid{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;}
+  .tile{border-radius:var(--radius-xl);min-height:148px;display:flex;align-items:center;justify-content:center;position:relative;}
+  .tile .tag{position:absolute;top:13px;inset-inline-start:15px;font-family:var(--font-mono);font-size:9px;letter-spacing:.14em;text-transform:uppercase;}
+  .light{background:#fff;border:1px solid var(--border-1);} .light .tag{color:var(--stone-400);}
+  .dark{background:var(--garnet-900);} .dark .tag{color:var(--garnet-300);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;}
+  .mt{min-height:108px;}
+  .note{margin-top:14px;font-family:var(--font-mono);font-size:10px;color:var(--stone-400);letter-spacing:.03em;}
+</style></head><body><div class="card">
+  <div class="grid">
+    <div class="tile light"><span class="tag">Primary · light</span><img src="../assets/logo-full.png" alt="Deepo" style="max-width:80%;max-height:88px"/></div>
+    <div class="tile dark"><span class="tag">Reverse · dark</span><img src="../assets/logo-reverse.png" alt="Deepo" style="max-width:84%;max-height:72px"/></div>
+  </div>
+  <div class="row2">
+    <div class="tile light mt"><span class="tag">Mark · light</span><img src="../assets/logo-mark.png" alt="mark" style="height:78px"/></div>
+    <div class="tile dark mt"><span class="tag">Mark · dark</span><img src="../assets/logo-mark.png" alt="mark" style="height:78px"/></div>
+  </div>
+  <div class="note">Shield = the letter D with an inner spark. Spark + magenta dot always stay. Do not rotate, stretch, or recolor the gradient.</div>
+</div></body></html>

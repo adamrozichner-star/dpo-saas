@@ -8,15 +8,19 @@
 // links to /privacy. On submit it POSTs to /api/leads, which inserts
 // to public.leads and emails Adam. On success the entire form is
 // replaced with the success message from spec.
+//
+// Styling note (brand pass): controls render on the warm brand, not the
+// legacy shadcn periwinkle/emerald defaults. The submit button is the
+// hero gradient (dp-btn--gradient), inputs use .dp-input, and the
+// checkboxes/links/states use brand tokens via lead-signup.css. Fields,
+// copy and logic are unchanged.
 
 import { useState, FormEvent } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Button } from '@/components/brand/Button'
 import { Label } from '@/components/ui/label'
-import { Checkbox } from '@/components/ui/checkbox'
-import { ArrowRight, CheckCircle2, Loader2, AlertTriangle } from 'lucide-react'
+import { CheckCircle2, Loader2, AlertTriangle } from 'lucide-react'
+import '../lead-signup.css'
 
 type Status = 'idle' | 'submitting' | 'success' | 'error'
 
@@ -77,47 +81,30 @@ export default function LeadSignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50" dir="rtl">
-      <header className="bg-white border-b">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} />
-          </Link>
-          <Link href="/">
-            <Button variant="ghost" className="gap-2">
-              <ArrowRight className="h-4 w-4" />
-              חזרה לדף הבית
-            </Button>
-          </Link>
-        </div>
-      </header>
-
+    <div className="lead-page min-h-screen" dir="rtl">
       <main className="container mx-auto px-4 py-12 max-w-xl">
         {status === 'success' ? (
           <SuccessState />
         ) : (
           <>
-            <h1 className="text-3xl font-bold mb-2">הצטרפות לגישה מוקדמת</h1>
-            <p className="text-gray-600 mb-8">
-              ההרשמה לשירות תיפתח בקרוב. השאירו פרטים ונעדכן אתכם ראשונים — כולל
+            <h1 className="lead-title text-3xl font-bold mb-2">הצטרפות לגישה מוקדמת</h1>
+            <p className="lead-sub mb-8">
+              ההרשמה לשירות תיפתח בקרוב. השאירו פרטים ונעדכן אתכם ראשונים, כולל
               מחיר מיוחד למצטרפים מוקדמים.
             </p>
 
             {status === 'error' && (
               <div
                 role="alert"
-                className="mb-6 rounded-lg border border-red-300 bg-red-50 p-4 flex items-start gap-3"
+                className="lead-alert mb-6 rounded-lg border p-4 flex items-start gap-3"
               >
-                <AlertTriangle className="h-5 w-5 text-red-700 flex-shrink-0 mt-0.5" />
+                <AlertTriangle className="lead-alert__icon h-5 w-5 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-red-900">שליחה נכשלה</p>
-                  <p className="text-sm text-red-800 mt-1">
+                  <p className="lead-alert__title font-semibold">שליחה נכשלה</p>
+                  <p className="lead-alert__text text-sm mt-1">
                     אירעה תקלה. נסו שוב בעוד מספר רגעים, או פנו בדוא&quot;ל
                     ל-
-                    <a
-                      href="mailto:adamrozichner@gmail.com"
-                      className="underline"
-                    >
+                    <a href="mailto:adamrozichner@gmail.com">
                       adamrozichner@gmail.com
                     </a>
                     .
@@ -127,11 +114,12 @@ export default function LeadSignupPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-lg p-6 space-y-5">
+            <form onSubmit={handleSubmit} className="lead-card border rounded-lg p-6 space-y-5">
 
               <div>
-                <Label htmlFor="firstName">שם פרטי <span className="text-red-500">*</span></Label>
-                <Input
+                <Label htmlFor="firstName">שם פרטי <span className="lead-req">*</span></Label>
+                <input
+                  className="dp-input"
                   id="firstName"
                   type="text"
                   value={firstName}
@@ -143,8 +131,9 @@ export default function LeadSignupPage() {
               </div>
 
               <div>
-                <Label htmlFor="phone">טלפון נייד <span className="text-red-500">*</span></Label>
-                <Input
+                <Label htmlFor="phone">טלפון נייד <span className="lead-req">*</span></Label>
+                <input
+                  className="dp-input"
                   id="phone"
                   type="tel"
                   inputMode="tel"
@@ -158,15 +147,16 @@ export default function LeadSignupPage() {
                   style={{ textAlign: 'right' }}
                 />
                 {phone.length > 0 && !phoneValid && (
-                  <p className="text-xs text-amber-700 mt-1">
+                  <p className="lead-hint text-xs mt-1">
                     אנא הזינו מספר טלפון תקין.
                   </p>
                 )}
               </div>
 
               <div>
-                <Label htmlFor="association">שם איגוד מקצועי <span className="text-red-500">*</span></Label>
-                <Input
+                <Label htmlFor="association">שם איגוד מקצועי <span className="lead-req">*</span></Label>
+                <input
+                  className="dp-input"
                   id="association"
                   type="text"
                   value={association}
@@ -181,7 +171,8 @@ export default function LeadSignupPage() {
               {/* Optional company / business name. NOT in the required-gate. */}
               <div>
                 <Label htmlFor="companyName">שם החברה / העסק</Label>
-                <Input
+                <input
+                  className="dp-input"
                   id="companyName"
                   type="text"
                   value={companyName}
@@ -201,7 +192,9 @@ export default function LeadSignupPage() {
                 htmlFor="consent"
                 className="flex items-start gap-3 pt-2 text-sm font-normal leading-relaxed cursor-pointer"
               >
-                <Checkbox
+                <input
+                  type="checkbox"
+                  className="lead-check"
                   id="consent"
                   checked={consent}
                   onChange={e => setConsent(e.target.checked)}
@@ -211,7 +204,7 @@ export default function LeadSignupPage() {
                 <span>
                   אני מסכים/ה שדיפו תיצור איתי קשר בנושא השירות ולשמירת הפרטים שלי
                   בהתאם ל
-                  <Link href="/privacy" target="_blank" rel="noopener" className="text-emerald-600 hover:underline mx-1">
+                  <Link href="/privacy" target="_blank" rel="noopener" className="lead-link mx-1">
                     מדיניות הפרטיות
                   </Link>
                   .
@@ -226,7 +219,9 @@ export default function LeadSignupPage() {
                   htmlFor="marketingConsent"
                   className="flex items-start gap-3 text-sm font-normal leading-relaxed cursor-pointer"
                 >
-                  <Checkbox
+                  <input
+                    type="checkbox"
+                    className="lead-check"
                     id="marketingConsent"
                     checked={marketingConsent}
                     onChange={e => setMarketingConsent(e.target.checked)}
@@ -241,9 +236,10 @@ export default function LeadSignupPage() {
 
               <Button
                 type="submit"
+                variant="gradient"
+                size="lg"
                 disabled={!canSubmit}
-                className="w-full py-5 rounded-xl text-base font-semibold"
-                style={canSubmit ? { backgroundColor: '#059669' } : undefined}
+                className="w-full"
               >
                 {status === 'submitting' ? (
                   <>
@@ -255,7 +251,7 @@ export default function LeadSignupPage() {
                 )}
               </Button>
 
-              <p className="text-xs text-gray-500 text-center">
+              <p className="lead-fine text-xs text-center">
                 הצטרפות אינה מהווה התחייבות לרכישה. ניתן לבקש הסרה בכל עת.
               </p>
             </form>
@@ -268,17 +264,15 @@ export default function LeadSignupPage() {
 
 function SuccessState() {
   return (
-    <div className="bg-white border border-emerald-200 rounded-2xl p-8 text-center">
-      <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-5">
-        <CheckCircle2 className="h-7 w-7 text-emerald-600" />
+    <div className="lead-success border rounded-2xl p-8 text-center">
+      <div className="lead-success__badge w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5">
+        <CheckCircle2 className="lead-success__icon h-7 w-7" />
       </div>
-      <h1 className="text-2xl font-bold mb-3">נרשמת לגישה מוקדמת ל-Deepo</h1>
-      <p className="text-gray-700 leading-relaxed mb-6">
+      <h1 className="lead-title text-2xl font-bold mb-3">נרשמת לגישה מוקדמת ל-Deepo</h1>
+      <p className="lead-sub leading-relaxed mb-6">
         כמצטרפים מוקדמים תקבלו מחיר מיוחד כשנפתח לרישום. נעדכן אתכם בקרוב.
       </p>
-      <Link href="/">
-        <Button variant="outline">חזרה לדף הבית</Button>
-      </Link>
+      <Link href="/" className="dp-btn dp-btn--secondary dp-btn--md">חזרה לדף הבית</Link>
     </div>
   )
 }

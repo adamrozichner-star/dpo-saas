@@ -1,0 +1,15 @@
+/* ============================================================
+   /contact page brand pass (ct-). Pairs with _brand-shadcn.css (which
+   re-points the shadcn --primary/--ring to crimson under .deepo-scope).
+   This sheet maps the page surfaces and the success state onto brand
+   tokens. Active under .deepo-scope. No field/copy/logic changes.
+   ============================================================ */
+
+/* Page background (was bg-gray-50) */
+.ct-page { background: var(--bg-page); }
+
+/* Required-field asterisk */
+.ct-req { color: var(--crimson-500); }
+
+/* Submitted-successfully state -> brand status-ok tokens (was green-500) */
+.ct-success__icon { color: var(--status-ok); }

@@ -74,12 +74,18 @@ export default function AccessibilityMenu() {
       {/* Floating button — always on top, never affected by body filters */}
       <button
         onClick={() => setOpen(!open)}
-        className="fixed bottom-20 sm:bottom-4 left-4 z-[9999] w-12 h-12 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-700 transition-all flex items-center justify-center text-xl"
+        className="fixed bottom-20 sm:bottom-4 left-4 z-[9999] w-12 h-12 rounded-full bg-stone-800 text-white shadow-lg hover:bg-stone-900 transition-all flex items-center justify-center"
         aria-label="תפריט נגישות"
         title="נגישות"
         style={{ isolation: 'isolate' }}
       >
-        ♿
+        {/* neutral accessibility figure (no emoji) */}
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <circle cx="12" cy="4.5" r="1.6" />
+          <path d="M4.5 8.5h15" />
+          <path d="M12 8.5v6" />
+          <path d="M8.5 20l3.5-5.5 3.5 5.5" />
+        </svg>
       </button>
 
       {/* Menu panel */}
@@ -90,8 +96,8 @@ export default function AccessibilityMenu() {
           style={{ isolation: 'isolate' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-stone-800 text-sm">♿ נגישות</h3>
-            <button onClick={() => setOpen(false)} className="text-stone-400 hover:text-stone-600 text-lg">✕</button>
+            <h3 className="font-semibold text-stone-800 text-sm">נגישות</h3>
+            <button onClick={() => setOpen(false)} className="text-stone-400 hover:text-stone-600 text-lg" aria-label="סגירה">×</button>
           </div>
 
           <div className="space-y-3">
@@ -124,20 +130,20 @@ export default function AccessibilityMenu() {
             <button 
               onClick={() => setHighContrast(!highContrast)}
               className={`w-full py-2 rounded-lg text-sm font-medium transition ${
-                highContrast ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                highContrast ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
               }`}
             >
-              {highContrast ? '✓ ' : ''}ניגודיות גבוהה
+              ניגודיות גבוהה
             </button>
 
             {/* Link highlight */}
             <button 
               onClick={() => setLinkHighlight(!linkHighlight)}
               className={`w-full py-2 rounded-lg text-sm font-medium transition ${
-                linkHighlight ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                linkHighlight ? 'bg-stone-800 text-white' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
               }`}
             >
-              {linkHighlight ? '✓ ' : ''}הדגשת קישורים
+              הדגשת קישורים
             </button>
 
             {/* Reset */}
@@ -149,11 +155,11 @@ export default function AccessibilityMenu() {
             </button>
 
             {/* Declaration link */}
-            <a 
+            <a
               href="/accessibility"
-              className="block text-center text-xs text-indigo-600 hover:text-indigo-700 mt-1"
+              className="block text-center text-xs text-stone-600 underline hover:text-stone-800 mt-1"
             >
-              הצהרת נגישות →
+              הצהרת נגישות
             </a>
           </div>
         </div>

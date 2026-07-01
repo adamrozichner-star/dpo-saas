@@ -1,0 +1,485 @@
+'use client'
+
+// Homepage body. Warm-brand v3 voice. Chrome, scope, fonts and the brand
+// layer come from PR1/PR2 and are not touched here. Page-agnostic section
+// primitives come from the shared marketing module (PR4 refactor); only the
+// homepage-bespoke pieces (split hero, dashboard preview, inline calculator,
+// trust strip, experts, security teaser, comparison + pricing tables) live
+// in this file + home.css. Section order follows spec section 9.
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { DeepoIcon } from '@/brand/icons'
+import { Button } from '@/components/brand/Button'
+import { Badge } from '@/components/brand/Badge'
+import {
+  RadarMotif, SecHead, Eyebrow, FeatureGrid, StepsFlow, PressRoller, FinalCta, FaqItem,
+  type FeatureItem, type StepItem, type PressItem,
+} from '@/components/marketing/sections'
+import { signupHref } from '@/lib/signup-flag'
+import './home.css'
+
+// Press / media roller: official PPA (gov.il) sources + neutral תיקון 13
+// coverage. The 'about' category ("כתבו עלינו") is intentionally empty for
+// now - drop in { category: 'about', source, title, href } items as press
+// about Deepo lands; no other change needed.
+const PRESS: PressItem[] = [
+  { category: 'official', source: 'הרשות להגנת הפרטיות', title: 'שאלות ותשובות: תיקון 13 לחוק הגנת הפרטיות', href: 'https://www.gov.il/he/pages/tikun13_qa' },
+  { category: 'official', source: 'הרשות להגנת הפרטיות', title: 'תיקון 13 לחוק הגנת הפרטיות אושר בכנסת', href: 'https://www.gov.il/he/pages/13_amendment_news' },
+  { category: 'official', source: 'הרשות להגנת הפרטיות', title: 'מדריך מקצועי להיערכות לתיקון 13 (PDF)', href: 'https://www.gov.il/BlobFolder/reports/guide_tikon13_professional/he/tikun%2013%20_170825.pdf' },
+  { category: 'amendment', source: 'N12', title: 'תיקון 13 לחוק הגנת הפרטיות: מה השתנה ואיך להיערך', href: 'https://www.mako.co.il/news-law_guide/2025_q4/Article-f69f6fe00413a91026.htm' },
+  { category: 'amendment', source: 'Tech Policy Institute', title: 'סקירה של תיקון מס׳ 13 לחוק הגנת הפרטיות', href: 'https://techpolicy.org.il/blog/overview-of-amendment-no-13-to-the-israeli-privacy-law/' },
+]
+
+// ============================================================
+// MINI CALCULATOR - illustrative DPO check (logic gated on Roy)
+// ============================================================
+// ROY-GATE: the exposure calculator uses exact shekel penalty figures from
+// Roy's slides (Privacy Authority formulas). It MUST NOT ship to prod until
+// Roy signs off the numbers + framing. Keep this false; flipping it swaps the
+// "do you need a DPO" mini-calc for the exposure calc on the homepage.
+const SHOW_EXPOSURE_CALC = false
+
+const ils = (n: number) => '₪' + Math.round(n).toLocaleString('en-US')
+
+function MiniCalculator() {
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [showResult, setShowResult] = useState(false)
+
+  const select = (q: string, val: string) => setAnswers((prev) => ({ ...prev, [q]: val }))
+  const calculate = () => { if (answers.q1 && answers.q2) setShowResult(true) }
+
+  // TODO(roy-gate): provisional heuristic only. The real תיקון 13 decision
+  // tree is owned by Roy and not finalized; this stays illustrative and must
+  // not be presented as a definitive legal determination (spec 2.10).
+  const isRequired = () => {
+    const hasData = answers.q2 === 'yes'
+    const hasSensitive = answers.q3 === 'yes' || answers.q3 === 'maybe'
+    const bigTeam = answers.q1 === '51-250' || answers.q1 === '250+'
+    return hasData || hasSensitive || bigTeam
+  }
+
+  if (showResult) {
+    const required = isRequired()
+    return (
+      <div className="hp-mini">
+        <div className={`hp-mini__result ${required ? 'hp-mini__result--yes' : 'hp-mini__result--no'}`}>
+          <DeepoIcon id={required ? 'dp-seal' : 'dp-check'} />
+          {required ? (
+            <>
+              <h3>סביר שאתם צריכים למנות ממונה</h3>
+              <p>לפי התשובות, תיקון 13 כנראה חל עליכם. זה לא אסון, זו רשימת מטלות מסודרת. בואו נסמן וי.</p>
+            </>
+          ) : (
+            <>
+              <h3>ייתכן שאתם פטורים כרגע</h3>
+              <p>כדאי לאמת עם הבדיקה המלאה, שלוקחת עוד כמה דקות.</p>
+            </>
+          )}
+        </div>
+        <div className="hp-mini__actions">
+          {required ? (
+            <Link href={signupHref('/register')} className="dp-btn dp-btn--primary dp-btn--md">יאללה, מתחילים</Link>
+          ) : (
+            <Link href="/calculator" className="dp-btn dp-btn--primary dp-btn--md">לבדיקה המלאה</Link>
+          )}
+          <button type="button" className="hp-mini__reset" onClick={() => { setShowResult(false); setAnswers({}) }}>
+            בדיקה מחדש
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const Q = ({ q, label, opts, cols }: { q: string; label: string; opts: Array<[string, string]>; cols: 2 | 3 }) => (
+    <div className="hp-q">
+      <span className="hp-q__label">{label}</span>
+      <div className={`hp-chips hp-chips--${cols}`}>
+        {opts.map(([val, text]) => (
+          <button key={val} type="button" className="hp-chip" aria-pressed={answers[q] === val} onClick={() => select(q, val)}>
+            {text}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="hp-mini">
+      <h3 className="hp-mini__title">בדיקת חובת DPO</h3>
+      <p className="hp-mini__sub">שלוש שאלות קצרות, בלי להשאיר פרטים.</p>
+      <Q q="q1" label="כמה עובדים בעסק?" cols={2} opts={[['עד 10', 'עד 10'], ['11-50', '11-50'], ['51-250', '51-250'], ['250+', '250+']]} />
+      <Q q="q2" label="אתם מחזיקים מידע על לקוחות?" cols={2} opts={[['yes', 'כן'], ['no', 'לא']]} />
+      <Q q="q3" label="יש מידע רגיש (בריאות, ילדים, ביומטרי)?" cols={3} opts={[['yes', 'כן'], ['no', 'לא'], ['maybe', 'לא בטוח']]} />
+      <Button variant="primary" onClick={calculate} disabled={!answers.q1 || !answers.q2}>בדיקה</Button>
+    </div>
+  )
+}
+
+// ROY-GATED exposure / penalty calculator (מחשבון חשיפה). All figures are
+// from Roy's slides (Privacy Authority formulas) and stay illustrative until
+// he signs off. Gated by SHOW_EXPOSURE_CALC; rendered only when on.
+//   Administrative range = sum of triggered FLOORS .. max(floors, sum of
+//   N x per-subject rate), all x2 when N > 1,000,000.
+//   C4 (security regs) is shown as an illustrative tier band, not computed
+//   per-user (the visitor can't self-classify their security level).
+//   Civil/class-action (Amendment 13 statutory) is a separate line.
+function ExposureCalculator() {
+  const [n, setN] = useState('')
+  const [a, setA] = useState<Record<string, string>>({})
+  const [show, setShow] = useState(false)
+  const select = (q: string, v: string) => setA((prev) => ({ ...prev, [q]: v }))
+
+  const subjects = Math.max(0, Math.floor(Number(n) || 0))
+  const ready = subjects > 0 && !!a.sensitive && !!a.consent && !!a.registered
+  const sensitive = a.sensitive === 'yes'
+  const over1M = subjects > 1_000_000
+  const mult = over1M ? 2 : 1
+
+  // Only the components the answers trigger (rates + floors per Roy's slides).
+  const comps: Array<{ floor: number; per: number }> = []
+  if (a.registered === 'no') comps.push({ floor: sensitive ? 40000 : 20000, per: subjects * (sensitive ? 4 : 2) })   // C1 registration / size
+  if (a.consent === 'no') comps.push({ floor: 200000, per: subjects * (sensitive ? 8 : 4) })                          // C2 processing without authorization
+  if (a.consent === 'no') comps.push({ floor: 30000, per: subjects * (sensitive ? 100 : 50) })                        // C3 notice-to-subject breach
+
+  const floorSum = comps.reduce((s, c) => s + c.floor, 0) * mult
+  const perSum = comps.reduce((s, c) => s + c.per, 0) * mult
+  const adminLow = floorSum
+  const adminHigh = Math.max(floorSum, perSum)
+
+  const secLow = 20000 * mult   // C4 band across security levels (illustrative)
+  const secHigh = 320000 * mult
+  const civilAggregate = subjects * 10000
+
+  if (show) {
+    return (
+      <div className="hp-mini">
+        <div className="hp-exp__head">
+          <span className="hp-exp__lab">הערכת חשיפה מנהלית (עיצומים כספיים)</span>
+          <span className="hp-exp__range">{comps.length ? `${ils(adminLow)}–${ils(adminHigh)}` : '₪0'}</span>
+        </div>
+        {over1M && <p className="hp-exp__note">מאגר עם מעל מיליון נושאי מידע: הסכומים המנהליים מוכפלים ×2.</p>}
+        {comps.length > 0 && (
+          <ul className="hp-exp__brk">
+            {a.registered === 'no' && <li>אי-רישום מאגר / חריגת גודל</li>}
+            {a.consent === 'no' && <li>עיבוד ללא הרשאה והפרת חובת היידוע</li>}
+          </ul>
+        )}
+        <div className="hp-exp__band">
+          <span>הפרת תקנות אבטחה</span>
+          <strong>{ils(secLow)}–{ils(secHigh)}</strong>
+          <small>בהתאם לחומרה ולרמת האבטחה</small>
+        </div>
+        <div className="hp-exp__civil">
+          <span>חשיפה אזרחית (תביעה ייצוגית)</span>
+          <strong>עד {ils(10000)} לאדם נפגע</strong>
+          <small>ללא צורך בהוכחת נזק (תיקון 13). תקרה מצרפית תיאורטית: עד {ils(civilAggregate)}.</small>
+        </div>
+        <p className="hp-exp__disclaimer">הערכה בלבד, אינה ייעוץ משפטי.</p>
+        <div className="hp-mini__actions">
+          <Link href={signupHref('/register')} className="dp-btn dp-btn--gradient dp-btn--md">בדקו איך Deepo מוריד את החשיפה הזו</Link>
+          <button type="button" className="hp-mini__reset" onClick={() => setShow(false)}>חישוב מחדש</button>
+        </div>
+      </div>
+    )
+  }
+
+  const Q = ({ q, label }: { q: string; label: string }) => (
+    <div className="hp-q">
+      <span className="hp-q__label">{label}</span>
+      <div className="hp-chips hp-chips--2">
+        {([['yes', 'כן'], ['no', 'לא']] as Array<[string, string]>).map(([v, t]) => (
+          <button key={v} type="button" className="hp-chip" aria-pressed={a[q] === v} onClick={() => select(q, v)}>{t}</button>
+        ))}
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="hp-mini">
+      <h3 className="hp-mini__title">מחשבון חשיפה</h3>
+      <p className="hp-mini__sub">הערכה גסה לחשיפה הכספית האפשרית לפי תיקון 13. הערכה בלבד, אינה ייעוץ משפטי.</p>
+      <div className="hp-q">
+        <span className="hp-q__label">כמה נושאי מידע יש במאגר?</span>
+        <input className="hp-num" type="number" min="0" inputMode="numeric" placeholder="לדוגמה: 25000" value={n} onChange={(e) => setN(e.target.value)} />
+      </div>
+      <Q q="sensitive" label="יש מידע רגיש (בריאות, ילדים, ביומטרי)?" />
+      <Q q="consent" label="נאספה הסכמה מנושאי המידע?" />
+      <Q q="registered" label="המאגר רשום ברשות?" />
+      <Button variant="primary" onClick={() => { if (ready) setShow(true) }} disabled={!ready}>חשבו חשיפה</Button>
+    </div>
+  )
+}
+
+// Vision pillar cards - copy lifted verbatim from the reference FEATURES
+// block (deepo-brand/reference/marketing-reference-he.html). DOM order
+// matches the reference exactly (shield -> radar -> sparkle).
+const PILLARS: FeatureItem[] = [
+  { id: 'dp-shield', title: 'שומרים עליכם', desc: 'מגנים מפני חשיפה: מול הרשות להגנת הפרטיות ומול תביעות. כל מה שהחוק דורש מהעסק, כבר טיפלנו בו.' },
+  { id: 'dp-radar', title: 'פרואקטיביים', desc: 'תמיד צעד לפני הרגולציה. עובדים ברקע ומטפלים בדברים לפני שאתם בכלל מרגישים בהם.' },
+  { id: 'dp-sparkle', title: 'סוכני AI ייעודיים', desc: 'סוכני AI ייעודיים עובדים 24/7. אתם רק מחליטים, ומאשרים בלחיצה.' },
+]
+
+const FEATURES: FeatureItem[] = [
+  { id: 'dp-seal', title: 'ממונה אנושי שאחראי עליכם', desc: 'אנחנו ממנים עליכם ממונה הגנת פרטיות מוסמך (מחבילה מומלצת ומעלה). הוא נושא באחריות, אתם ישנים בשקט.' },
+  { id: 'dp-doc', title: 'המסמכים, מוכנים', desc: 'אנחנו מכינים לכם מדיניות פרטיות, נוהלי אבטחה וכתב מינוי, ומעדכנים אותם כשמשהו משתנה. אתם רק מאשרים.' },
+  { id: 'dp-sparkle', title: 'עוזר חכם, מסביב לשעון', desc: 'שואלים אותי בשפה רגילה, ואני עונה ומכין את המסמך. מה שצריך אדם, אני מעביר לממונה בלחיצה.' },
+  { id: 'dp-bell', title: 'תזכורות לפני שצריך', desc: 'אנחנו שמים לב למה שמתקרב - חידושים, ספקים חדשים, בקרות - ומזכירים לכם בזמן.' },
+  { id: 'dp-radar', title: 'ציון עמידה, בזמן אמת', desc: 'אנחנו מראים לכם בדיוק מה כבר מסודר ומה נשאר, עם קישור ישיר לכל פעולה.' },
+  { id: 'dp-database', title: 'יומן מסודר לכל פעולה', desc: 'אנחנו מתעדים כל שינוי אוטומטית. אם הרשות שואלת, התשובה כבר מוכנה.' },
+]
+
+const STEPS: StepItem[] = [
+  { n: '1', title: 'נרשמים', desc: 'אתם עונים על כמה שאלות. זה כל מה שצריך מכם.' },
+  { n: '2', title: 'אנחנו בונים', desc: 'את כל המסמכים, מותאמים לעסק שלכם.' },
+  { n: '3', title: 'ממנים ממונה', desc: 'אדם מוסמך שנושא באחריות.' },
+  { n: '4', title: 'אנחנו שומרים', desc: 'מנטרים, מזכירים ומעדכנים. אתם רגועים.' },
+]
+
+const PLANS = [
+  {
+    tier: 'בסיסית', desc: 'ניהול פרטיות עצמאי, בלי ממונה.', amt: '₪1,000', unit: ' / חודש',
+    was: 'במקום ₪8,000+ אצל עו"ד', featured: false, cta: 'זה מתאים לי', href: signupHref('/register?plan=basic'), variant: 'secondary' as const,
+    feats: ['כל היכולות של Deepo', 'מסמכים אוטומטיים', 'עוזר חכם מסביב לשעון', 'לוח וציון עמידה', 'המלצות עמידה (לא מחייבות)', 'תמיכה במייל'],
+  },
+  {
+    tier: 'מומלצת', desc: 'כולל ממונה מוסמך. מתאימה לרוב העסקים.', amt: '₪1,499', unit: ' / חודש',
+    was: 'במקום ₪3,000-8,000 אצל יועץ', featured: true, cta: 'יאללה, מתחילים', href: signupHref('/register?plan=recommended'), variant: 'gradient' as const,
+    feats: ['כל מה שבבסיסית', 'ממונה מוסמך שמתמנה עליכם', 'סקירה רבעונית מהממונה', 'עד 2 פניות לממונה בחודש', 'ליווי באירוע אבטחה', 'תמיכה טלפונית'],
+  },
+  {
+    tier: 'פרימיום', desc: 'לארגונים עם דרישות מורכבות.', amt: '₪7,500', unit: ' / חודש',
+    was: 'ליווי מקצועי צמוד', featured: false, cta: 'זה מתאים לי', href: signupHref('/register?plan=premium'), variant: 'secondary' as const,
+    feats: ['כל מה שבמומלצת', 'שעתיים ממונה בחודש', 'סקירה חודשית', 'הדרכת עובדים רבעונית', 'DPIA מלא כלול', 'זמן תגובה: 4 שעות'],
+  },
+  {
+    tier: 'ארגונית', desc: 'למספר חברות או דרישות רגולציה מורכבות.', amt: 'בהתאמה', unit: '',
+    was: 'תמחור מותאם אישית', featured: false, cta: 'דברו איתנו', href: '/contact', variant: 'secondary' as const,
+    feats: ['כל מה שבפרימיום', 'SLA מובטח', 'הטמעה ייעודית', 'התאמה מלאה לארגון'],
+  },
+]
+
+// ============================================================
+// PAGE
+// ============================================================
+export default function HomePage() {
+  return (
+    <div className="hp">
+
+      {/* 1 - RADAR HERO (vision index-he.html): .mk-mesh dot-grid + lower-LEFT
+          RadarMotif (rings + visible 135deg core node, behind the dashboard). */}
+      <section className="hp-hero mk-mesh">
+        <RadarMotif className="hp-hero__radar" size={820} />
+        <div className="mk-wrap hp-hero__grid">
+          <div>
+            <Eyebrow icon="dp-shield" pill>תיקון 13 כבר כאן</Eyebrow>
+            <h1>הגנת פרטיות מקצועית, <span className="mk-grad">במחיר נגיש לכולם.</span></h1>
+            <p className="hp-hero__lede">
+              Deepo מגן על העסק שלכם מחשיפה לרשות להגנת הפרטיות ולתביעות. סוכני AI ייעודיים עובדים 24/7,
+              ומאחוריהם צוות DPOs מנוסה. אנחנו שומרים עליכם, בלי שתצטרכו להבין בחוק.
+            </p>
+            <div className="mk-ctas">
+              <Link href={signupHref('/register')} className="dp-btn dp-btn--gradient dp-btn--lg">התחילו עכשיו</Link>
+              <a href="#how" className="dp-btn dp-btn--secondary dp-btn--lg">איך זה עובד</a>
+            </div>
+            <p className="hp-hero__micro">החל מ-1,000₪ לחודש · בלי עלות הקמה · עומדים בדרישות תוך ימים</p>
+          </div>
+
+          {/* dashboard preview (illustrative, not a screenshot) */}
+          <div className="hp-preview">
+            <div className="hp-dash" role="img" aria-label="תצוגה של לוח הגנת הפרטיות עם ציון עמידה">
+              <div className="hp-dash__head">
+                <span className="hp-dash__dot"><DeepoIcon id="dp-shield" /></span>
+                <b>לוח הגנת הפרטיות</b>
+                <Badge variant="ok" dot>מוגן</Badge>
+              </div>
+              <div className="hp-score">
+                <span className="hp-score__n">98%</span>
+                <span className="hp-score__lab">ציון עמידה בדרישות<br />עודכן לפני 4 דקות</span>
+              </div>
+              <div className="hp-rows">
+                <div className="hp-drow"><DeepoIcon id="dp-doc" style={{ '--dpi-c': 'var(--status-ok)' } as React.CSSProperties} /><span className="hp-drow__t">מדיניות פרטיות</span><Badge variant="ok">פעיל</Badge></div>
+                <div className="hp-drow"><DeepoIcon id="dp-link" style={{ '--dpi-c': 'var(--status-warn)' } as React.CSSProperties} /><span className="hp-drow__t">2 ספקים חדשים</span><Badge variant="warn">בטיפול</Badge></div>
+                <div className="hp-drow"><DeepoIcon id="dp-radar" style={{ '--dpi-c': 'var(--status-ok)' } as React.CSSProperties} /><span className="hp-drow__t">בקרה רבעונית</span><Badge variant="ok">מתוזמן</Badge></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 2 - TRUST / SECTOR STRIP (vision places it directly under the hero) */}
+      <section className="hp-trust">
+        <div className="mk-wrap hp-trust__row">
+          <span className="hp-trust__lab">מגנים על עסקים ב:</span>
+          <span className="hp-sector"><DeepoIcon id="dp-health" /> בריאות</span>
+          <span className="hp-sector"><DeepoIcon id="dp-education" /> חינוך</span>
+          <span className="hp-sector"><DeepoIcon id="dp-doc" /> ראיית חשבון</span>
+          <span className="hp-sector"><DeepoIcon id="dp-finance" /> פיננסים</span>
+          <span className="hp-trust__more">ועוד</span>
+        </div>
+      </section>
+
+      {/* 2b - PILLARS (vision FEATURES block, copy verbatim from the
+          reference). Placed right after the hero/trust strip and above the
+          existing 6-card "מה מקבלים" section, per the redesign brief.
+          FLAG(review): confirm this order (trust -> pillars -> calculator
+          -> 6-card features). */}
+      <section className="mk-section">
+        <div className="mk-wrap">
+          <SecHead
+            eyebrow="איך זה עובד"
+            title="אתם מתרכזים בעסק שלכם. אנחנו דואגים שתעמדו בחוקי הגנת הפרטיות."
+            sub="אתם בעסק, אנחנו על המשמר. הכל קורה ברקע ובשפה שבן אדם מבין, בלי קבלנים חיצוניים ובלי הטמעה ארוכה (ובלי לומר 'יישור קו רגולטורי' אפילו פעם אחת)."
+          />
+          <FeatureGrid items={PILLARS} />
+        </div>
+      </section>
+
+      {/* 3 - CALCULATOR (shared dark ember-glow band). SHOW_EXPOSURE_CALC is
+          Roy-gated (off): when on, the "do you need a DPO" mini-calc is
+          swapped for the exposure / penalty calculator. */}
+      <section className="mk-section mk-band--dark" id="calculator">
+        <div className="mk-wrap hp-calc__grid">
+          <div className="hp-calc__copy">
+            {SHOW_EXPOSURE_CALC ? (
+              <>
+                <Eyebrow icon="dp-radar">מחשבון חשיפה</Eyebrow>
+                <h2>כמה תיקון 13 יכול לעלות לכם?</h2>
+                <p>כמה פרטים, והערכה לחשיפה הכספית האפשרית. הערכה בלבד, אינה ייעוץ משפטי. אנחנו כאן בדיוק כדי להוריד אותה.</p>
+              </>
+            ) : (
+              <>
+                <Eyebrow icon="dp-radar">בדיקה מהירה</Eyebrow>
+                <h2>צריך בכלל DPO? בואו נגלה.</h2>
+                <p>שלוש שאלות, שלושים שניות. בלי להשאיר אימייל ובלי התחייבות. אם מסתבר שאתם חייבים, אנחנו כבר כאן.</p>
+              </>
+            )}
+          </div>
+          {SHOW_EXPOSURE_CALC ? <ExposureCalculator /> : <MiniCalculator />}
+        </div>
+      </section>
+
+      {/* 4 - WHAT YOU GET (light, on the hero backdrop: .mk-mesh dot-grid +
+          a corner RadarMotif at low opacity behind the white cards) */}
+      <section className="mk-section mk-mesh hp-feat">
+        <RadarMotif className="hp-feat__radar" size={820} />
+        <div className="mk-wrap">
+          <SecHead eyebrow="מה מקבלים" title="כל מה שתיקון 13 דורש, במקום אחד." sub="אנחנו עושים הכול ברקע, בלי קבלנים חיצוניים ובלי הטמעה ארוכה, ובשפה שמבינים (כן, גם את הסעיפים הקטנים. את אלה במיוחד)." />
+          <FeatureGrid items={FEATURES} />
+        </div>
+      </section>
+
+      {/* 5 - HOW IT WORKS (shared dark band; hero "איך זה עובד" CTA anchors here) */}
+      <section className="mk-section mk-band--dark" id="how">
+        <div className="mk-wrap">
+          <SecHead eyebrow="איך מתחילים" title="ארבעה צעדים. חמש דקות." sub="חמש דקות. פחות זמן ממה שלוקח להסביר לאמא מה זה DPO." />
+          <StepsFlow items={STEPS} />
+        </div>
+      </section>
+
+      {/* NOTE(review): the EXPERTS section + the security teaser (hp-security)
+          were removed - the EXPERTS block duplicated the "איך זה עובד" pillar
+          block above, which carries the accurate copy. */}
+
+      {/* 9a - COMPARISON (shared dark ember-glow band) */}
+      <section className="hp-compare mk-band--dark">
+        <div className="mk-wrap hp-compare__wrap">
+          <Eyebrow icon="dp-bolt">השוואת עלות · שנה ראשונה</Eyebrow>
+          <h2>אותה הגנה. בעלות נמוכה בכ-85%.</h2>
+          <div className="hp-ctable">
+            <div className="hp-ccol hp-ccol--old">
+              <p className="hp-ccol__name">DPO חיצוני קלאסי</p>
+              <p className="hp-ccol__price">~₪66,000<small> / שנה ראשונה</small></p>
+              <ul>
+                <li><DeepoIcon id="dp-x" /> ~₪30,000 עלות הקמה</li>
+                <li><DeepoIcon id="dp-x" /> ₪3,000-6,000 לחודש</li>
+                <li><DeepoIcon id="dp-x" /> פגישות תקופתיות בלבד</li>
+                <li><DeepoIcon id="dp-x" /> תבניות גנריות</li>
+              </ul>
+            </div>
+            <div className="hp-ccol hp-ccol--new">
+              <p className="hp-ccol__name">Deepo</p>
+              <p className="hp-ccol__price">החל מ-₪12,000<small> / שנה ראשונה</small></p>
+              <ul>
+                <li><DeepoIcon id="dp-check" /> ₪0 עלות הקמה</li>
+                <li><DeepoIcon id="dp-check" /> החל מ-₪1,000 לחודש</li>
+                <li><DeepoIcon id="dp-check" /> ניטור רציף, מסביב לשעון</li>
+                <li><DeepoIcon id="dp-check" /> מותאם לעסק שלכם</li>
+              </ul>
+              <span className="hp-savetag">עד כ-85% פחות, בשנה הראשונה</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 9b - PRICING (live tiers, spec 11) */}
+      <section className="mk-section">
+        <div className="mk-wrap">
+          <SecHead eyebrow="מחירים" title="תמחור הוגן, בלי הפתעות." sub="החוק שווה לכולם, אז הכלים לעמוד בו צריכים להיות נגישים לכולם." />
+          <div className="hp-pcards">
+            {PLANS.map((p) => (
+              <div className={`hp-pcard${p.featured ? ' hp-pcard--featured' : ''}`} key={p.tier}>
+                {p.featured && <span className="hp-pcard__flag">הכי פופולרי</span>}
+                <span className="hp-pcard__tier">{p.tier}</span>
+                <p className="hp-pcard__desc">{p.desc}</p>
+                <div><span className="hp-pcard__amt">{p.amt}<small>{p.unit}</small></span></div>
+                <p className="hp-pcard__was">{p.was}</p>
+                <ul>
+                  {p.feats.map((f) => (
+                    <li key={f}><DeepoIcon id="dp-check" /> {f}</li>
+                  ))}
+                </ul>
+                <Link href={p.href} className={`dp-btn dp-btn--${p.variant} dp-btn--md`}>{p.cta}</Link>
+              </div>
+            ))}
+          </div>
+          <div className="hp-addons">
+            <p>שירותים נוספים לפי דרישה:</p>
+            <div className="hp-addons__row">
+              {['DPIA - הערכת השפעה', 'חוות דעת משפטית', 'הדרכות לעובדים', 'ביקורת תאימות', 'ליווי אירוע אבטחה'].map((s) => (
+                <Badge key={s} variant="neutral">{s}</Badge>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 10 - MEDIA / PRESS ROLLER (official PPA sources + תיקון 13 coverage;
+          the 'about' category fills "כתבו עלינו" later). Replaces the old
+          testimonials slot. */}
+      <section className="mk-section--tight" id="press">
+        <div className="mk-wrap">
+          <SecHead eyebrow="בתקשורת ובמקורות רשמיים" title="אל תאמינו רק לנו." sub="הנה מה שהרשות להגנת הפרטיות והתקשורת אומרים על תיקון 13. ממקור ראשון." />
+          <PressRoller items={PRESS} />
+        </div>
+      </section>
+
+      {/* 11 - FAQ */}
+      <section className="mk-section mk-band--sand">
+        <div className="mk-wrap">
+          <SecHead eyebrow="שאלות ותשובות" title="מה שכולם שואלים (וכמה דברים שמתביישים לשאול)." />
+          <div className="mk-faq">
+            <FaqItem question="מה זה DPO, ולמה שיהיה לי אחד?" answer="DPO הוא ממונה הגנת הפרטיות - האדם שאחראי על שמירת המידע בעסק. תיקון 13 מחייב מינוי ממונה לעסקים שמחזיקים מידע על הרבה אנשים, מטפלים במידע רגיש, או עוקבים אחרי משתמשים. נשמע מסובך, זו בעצם רשימת דברים מסודרת שצריך לעשות - ואנחנו עושים אותם." />
+            <FaqItem question="הממונה הוא באמת בן אדם?" answer="כן, לגמרי. אדם מוסמך שמתמנה רשמית על העסק שלכם. Deepo עושה את רוב העבודה השוטפת, והממונה זמין לשאלות המורכבות ונושא באחריות המקצועית." />
+            <FaqItem question="ומה אם פשוט לא ממנים ממונה?" answer="יש אכיפה ויש קנסות, לא נפרט אותם פה כדי להלחיץ. נפרט דווקא מה צריך לעשות כדי להיות בצד הנכון - וזה לוקח חמש דקות להתחיל." />
+            <FaqItem question="המסמכים באמת מספיקים לרשות?" answer="הם נכתבים לפי דרישות תיקון 13 ונבדקים על ידי הממונה המוסמך: מדיניות פרטיות, נוהלי אבטחה, כתב מינוי וכל מה שצריך להציג בבדיקה." />
+            <FaqItem question="אפשר לבטל?" answer="בכל רגע, בלי דמי ביטול ובלי התחייבות. (כן, באמת.)" />
+            <FaqItem question="זה מחליף עורך דין?" answer="לא. Deepo מסדר את העמידה השוטפת בתיקון 13, ולצדו ממונה מוסמך. לסוגיות משפטיות נקודתיות תמיד אפשר להיעזר בעורך דין, ואנחנו גם מציעים חוות דעת משפטית כתוספת." />
+            <FaqItem question="מה אתם עושים עם המידע שלי?" answer={<>כמה שפחות. אנחנו לא שומרים את פרטי הלקוחות שלכם, ניגשים רק למה שנדרש, ומתעדים הכול. <Link href="/privacy">כך אנחנו שומרים על המידע</Link>.</>} />
+            <FaqItem question="אני רואה חשבון. איך זה עובד מול הלקוחות שלי?" answer={<>אפשר להציע את Deepo ללקוחות שלכם וליהנות מקו הכנסה חוזר, בזמן שהם נשארים מסודרים. <Link href="/contact">לרואי חשבון ושותפים</Link>.</>} />
+          </div>
+        </div>
+      </section>
+
+      {/* 11 - FINAL CTA (shared, dark ember-glow) */}
+      <FinalCta
+        title={<>אתם בעסק. <span className="mk-grad">אנחנו על המשמר.</span></>}
+        sub="אנחנו דואגים שתעמדו בתיקון 13, בלי כאב ראש ובמחיר שכל עסק יכול. נתחיל?"
+        cta="התחילו"
+        href={signupHref('/register')}
+        micro="ביטול בכל עת · בלי התחייבות · הקמה בחמש דקות"
+      />
+
+    </div>
+  )
+}

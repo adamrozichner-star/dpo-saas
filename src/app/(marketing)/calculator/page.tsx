@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
-import { Button } from '@/components/ui/button'
+import { Button } from '@/components/brand/Button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { signupHref } from '@/lib/signup-flag'
+import '../_brand-shadcn.css'
+import '../calculator.css'
 import { 
   Shield, 
   ArrowLeft,
@@ -20,7 +20,6 @@ import {
   Clock
 } from 'lucide-react'
 import DpoCalculator from '@/components/DpoCalculator'
-import Footer from '@/components/Footer'
 
 interface CalculatorResult {
   required: boolean
@@ -73,26 +72,7 @@ export default function CalculatorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
-      {/* Navigation */}
-      <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link href="/" className="flex items-center">
-              <Image src="/logos/deepo-logo-navy-512.png" alt="Deepo" width={120} height={37} priority />
-            </Link>
-            <div className="flex items-center gap-4">
-              <Link href="/login">
-                <Button variant="ghost">התחברות</Button>
-              </Link>
-              <Link href={signupHref('/onboarding')}>
-                <Button className="text-white" style={{backgroundColor: '#10b981'}}>התחל עכשיו</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
-
+    <div className="calc-page min-h-screen">
       <div className="max-w-4xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-8">
@@ -108,11 +88,11 @@ export default function CalculatorPage() {
         </div>
 
         {/* Urgency Banner */}
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8 flex items-center gap-3">
-          <Clock className="h-6 w-6 text-red-600 flex-shrink-0" />
+        <div className="calc-alert border rounded-lg p-4 mb-8 flex items-center gap-3">
+          <Clock className="calc-alert__icon h-6 w-6 flex-shrink-0" />
           <div>
-            <p className="font-semibold text-red-800">האכיפה כבר התחילה</p>
-            <p className="text-sm text-red-600">תיקון 13 נכנס לתוקף באוגוסט 2025. קנסות של אלפי שקלים לכל הפרה.</p>
+            <p className="calc-alert__title font-semibold">האכיפה כבר התחילה</p>
+            <p className="calc-alert__sub text-sm">תיקון 13 נכנס לתוקף באוגוסט 2025. קנסות של אלפי שקלים לכל הפרה.</p>
           </div>
         </div>
 
@@ -195,12 +175,12 @@ export default function CalculatorPage() {
 
                 {/* Penalty - Only show if DPO is required */}
                 {result?.required && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                  <div className="calc-alert border rounded-lg p-4 mb-6">
                     <div className="flex items-center gap-2 mb-1">
-                      <AlertTriangle className="h-5 w-5 text-red-600" />
-                      <h4 className="font-semibold text-red-800">חשיפה פוטנציאלית לקנסות</h4>
+                      <AlertTriangle className="calc-alert__icon h-5 w-5" />
+                      <h4 className="calc-alert__title font-semibold">חשיפה פוטנציאלית לקנסות</h4>
                     </div>
-                    <p className="text-3xl font-bold text-red-700">{result?.penaltyExposure}</p>
+                    <p className="calc-alert__amount text-3xl font-bold">{result?.penaltyExposure}</p>
                   </div>
                 )}
               </CardContent>
@@ -224,16 +204,17 @@ export default function CalculatorPage() {
                     </div>
 
                     <form onSubmit={handleEmailSubmit} className="flex gap-2">
-                      <Input
+                      <input
+                        className="dp-input"
+                        style={{ flex: 1, minWidth: 0 }}
                         type="email"
                         placeholder="הזינו אימייל..."
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="flex-1"
                         required
                         dir="ltr"
                       />
-                      <Button type="submit" disabled={isSubmitting}>
+                      <Button type="submit" variant="primary" disabled={isSubmitting}>
                         {isSubmitting ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
@@ -247,8 +228,8 @@ export default function CalculatorPage() {
                   </>
                 ) : (
                   <div className="text-center py-4">
-                    <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-2" />
-                    <h3 className="font-bold text-green-700">הדוח נשלח!</h3>
+                    <CheckCircle2 className="calc-success__icon h-12 w-12 mx-auto mb-2" />
+                    <h3 className="calc-success__title font-bold">הדוח נשלח!</h3>
                     <p className="text-sm text-gray-600">בדקו את תיבת האימייל שלכם</p>
                   </div>
                 )}
@@ -260,11 +241,9 @@ export default function CalculatorPage() {
               <p className="text-gray-600">
                 רוצים לפתור את זה עכשיו?
               </p>
-              <Link href={signupHref('/onboarding')}>
-                <Button size="lg" className="text-lg px-8">
-                  מינוי DPO + מערכת מלאה ב-₪1,000/חודש
-                  <ArrowLeft className="mr-2 h-5 w-5" />
-                </Button>
+              <Link href={signupHref('/onboarding')} className="dp-btn dp-btn--gradient dp-btn--lg">
+                מינוי DPO + מערכת מלאה ב-₪1,000/חודש
+                <ArrowLeft className="mr-2 h-5 w-5" />
               </Link>
               <p className="text-sm text-gray-500">
                 14 ימי ניסיון חינם • ללא התחייבות
@@ -273,8 +252,8 @@ export default function CalculatorPage() {
 
             {/* Back to calculator */}
             <div className="text-center">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={() => {
                   setShowEmailCapture(false)
                   setResult(null)
@@ -309,8 +288,6 @@ export default function CalculatorPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <Footer />
     </div>
   )
 }
