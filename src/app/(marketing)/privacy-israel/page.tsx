@@ -123,6 +123,7 @@ export default function PrivacyIsraelPage() {
         cta="לבדיקת החשיפה"
         href="/#calculator"
         micro="רק כדי לתת לכם כיוון, לא חוות דעת משפטית"
+        light
       />
 
     </div>

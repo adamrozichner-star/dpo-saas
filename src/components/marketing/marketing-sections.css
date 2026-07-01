@@ -117,6 +117,17 @@
 /* garnet-300 (8.3:1), not garnet-500 (3.6:1) - AA at this small size */
 .mk-finalcta__micro { margin-top: var(--space-5); font-family: var(--font-mono); font-size: 12px; color: var(--garnet-300); }
 
+/* Light variant (e.g. after a dark band, for rhythm). Two-class selectors so
+   these win over the dark base regardless of source order. */
+.mk-finalcta.mk-finalcta--light { background: var(--sand-50); color: var(--fg-1); border-top: 1px solid var(--sand-300); }
+.mk-finalcta.mk-finalcta--light::before {
+  background: radial-gradient(ellipse 80% 90% at 50% 116%, rgba(209,3,49,.14) 0%, rgba(255,157,33,.10) 44%, transparent 74%);
+}
+.mk-finalcta.mk-finalcta--light h2 { color: var(--fg-1); }
+.mk-finalcta.mk-finalcta--light h2 .mk-grad { background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.mk-finalcta.mk-finalcta--light p { color: var(--fg-2); }
+.mk-finalcta.mk-finalcta--light .mk-finalcta__micro { color: var(--fg-3); }
+
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .mk-cards, .mk-steps__grid { grid-template-columns: 1fr; }

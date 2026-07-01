@@ -90,10 +90,10 @@ export function ResponsibilityBand({
 
 // Dark ember-glow closing CTA. title may include a <span className="mk-grad">.
 export function FinalCta({
-  title, sub, cta, href, micro,
-}: { title: React.ReactNode; sub: React.ReactNode; cta: string; href: string; micro?: React.ReactNode }) {
+  title, sub, cta, href, micro, light,
+}: { title: React.ReactNode; sub: React.ReactNode; cta: string; href: string; micro?: React.ReactNode; light?: boolean }) {
   return (
-    <section className="mk-finalcta">
+    <section className={`mk-finalcta${light ? ' mk-finalcta--light' : ''}`}>
       <div className="mk-finalcta__wrap">
         <h2>{title}</h2>
         <p>{sub}</p>
