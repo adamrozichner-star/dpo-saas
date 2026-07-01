@@ -14,7 +14,8 @@ import { useAuth } from '@/lib/auth-context'
 import { useOrg } from '@/lib/org-context'
 import { Badge } from '@/components/brand/Badge'
 import { Button } from '@/components/brand/Button'
-import { DocumentLifecycleBadge } from '@/components/ledger'
+import { Card } from '@/components/brand/Card'
+import { DocumentLifecycleBadge, PageHeader } from '@/components/ledger'
 import { DOC_TYPE_LABEL, type DocumentStatus } from '@/components/ledger/status'
 import { formatShortDate } from '@/components/ledger/format'
 import {
@@ -146,18 +147,19 @@ export default function DocumentsPage() {
   const creatable = DOC_TYPES.filter((t) => templates.has(t) && !existingTypes.has(t))
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)', maxWidth: 900 }}>
-      <Link href="/console" className="dp-led-link">חזרה לקונסולה</Link>
-      <header>
-        <h1 className="t-h2" style={{ margin: 0 }}>מסמכים</h1>
-        <p className="t-body-sm" style={{ color: 'var(--fg-3)' }}>
-          מסמכים הנגזרים אוטומטית ממצב הציות. מסמך מאושר נשמר כפי שאושר; אם מצב הציות השתנה, תופיע התראה לרענון.
-        </p>
-      </header>
+    <div className="dp-page">
+      <Link href="/console" className="dp-led-link dp-page__back">חזרה לקונסולה</Link>
+      <PageHeader
+        eyebrow="קונסולת ממונה"
+        title="מסמכים"
+        description="מסמכים הנגזרים אוטומטית ממצב הציות. מסמך מאושר נשמר כפי שאושר; אם מצב הציות השתנה, תופיע התראה לרענון."
+      />
 
       {creatable.length ? (
-        <section>
-          <p className="t-eyebrow" style={{ marginBottom: 'var(--space-2)' }}>יצירת מסמך</p>
+        <Card>
+          <div className="dp-section__head">
+            <h2 className="dp-section__title">יצירת מסמך</h2>
+          </div>
           <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
             {creatable.map((t) => (
               <Button key={t} variant="secondary" size="sm" disabled={busy === t} onClick={() => createDoc(t)}>
@@ -165,26 +167,33 @@ export default function DocumentsPage() {
               </Button>
             ))}
           </div>
-        </section>
+        </Card>
       ) : null}
 
       {docs.length === 0 ? (
-        <p className="t-body-sm">עדיין לא נוצרו מסמכים.</p>
+        <Card><p className="dp-section__empty" style={{ margin: 0 }}>עדיין לא נוצרו מסמכים.</p></Card>
       ) : (
-        <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
+        <div style={{ display: 'grid', gap: 'var(--space-4)' }}>
           {docs.map((doc) => {
             const live = liveRender(doc.type as DocType)
             const diverged = doc.status === 'active' && live != null && live.fingerprint !== doc.render_fingerprint
             const isOpen = openId === doc.id
             return (
-              <div key={doc.id} className="dp-oblig-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 'var(--space-2)' }}>
+              <Card key={doc.id}>
                 <div style={{ display: 'flex', gap: 'var(--space-2)', alignItems: 'center', flexWrap: 'wrap' }}>
-                  <span className="dp-oblig-row__title">{DOC_TYPE_LABEL[doc.type] ?? doc.title}</span>
+                  <span className="dp-section__title">{DOC_TYPE_LABEL[doc.type] ?? doc.title}</span>
                   <DocumentLifecycleBadge status={doc.status} />
-                  {diverged ? <Badge variant="warn" dot>ממתין לרענון</Badge> : null}
                   <span className="dp-led-due" style={{ marginInlineStart: 'auto' }}>גרסה {doc.version ?? 1}</span>
                 </div>
-                <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+
+                {diverged ? (
+                  <div className="dp-doc-banner">
+                    <Badge variant="warn" dot>ממתין לרענון</Badge>
+                    <span className="t-body-sm">מצב הציות השתנה מאז האישור. רעננו ואשרו מחדש כדי לעדכן את המסמך.</span>
+                  </div>
+                ) : null}
+
+                <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', marginBlockStart: 'var(--space-3)' }}>
                   <Button variant="ghost" size="sm" onClick={() => setOpenId(isOpen ? null : doc.id)}>{isOpen ? 'הסתרה' : 'תצוגה'}</Button>
                   {(doc.status === 'pending_review' || doc.status === 'pending_approval') ? (
                     <Button variant="primary" size="sm" disabled={busy === doc.id} onClick={() => approve(doc)}>אישור</Button>
@@ -195,17 +204,17 @@ export default function DocumentsPage() {
                   <Button variant="ghost" size="sm" onClick={() => downloadPdf(doc)}>הדפסה / PDF</Button>
                 </div>
                 {isOpen ? (
-                  <div style={{ display: 'grid', gap: 'var(--space-3)' }}>
-                    <pre className="t-body-sm" style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', background: 'var(--bg-surface)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', margin: 0 }}>{doc.content}</pre>
+                  <div style={{ display: 'grid', gap: 'var(--space-3)', marginBlockStart: 'var(--space-3)' }}>
+                    <pre className="t-body-sm" style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', background: 'var(--bg-sunken)', padding: 'var(--space-4)', borderRadius: 'var(--radius-md)', margin: 0 }}>{doc.content}</pre>
                     {diverged && live ? (
                       <div>
                         <p className="t-caption" style={{ color: 'var(--status-warn)', marginTop: 0 }}>הרינדור העדכני (יוחל באישור מחדש):</p>
-                        <pre className="t-body-sm" style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', background: 'var(--status-warn-bg)', padding: 'var(--space-3)', borderRadius: 'var(--radius-md)', margin: 0 }}>{live.content}</pre>
+                        <pre className="t-body-sm" style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', background: 'var(--status-warn-bg)', padding: 'var(--space-4)', borderRadius: 'var(--radius-md)', margin: 0 }}>{live.content}</pre>
                       </div>
                     ) : null}
                   </div>
                 ) : null}
-              </div>
+              </Card>
             )
           })}
         </div>

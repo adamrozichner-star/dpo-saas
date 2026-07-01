@@ -13,3 +13,7 @@ node_modules/
 # Supabase CLI local state
 supabase/.temp/
 supabase/.branches/
+
+# macOS + local design-asset drops
+.DS_Store
+Deepo_Design_System.zip

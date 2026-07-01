@@ -22,7 +22,7 @@ export function ControlScheduleItem({ name, cadence, nextDueAt, ownerRole, statu
         <div className="dp-control-item__meta">
           <span>{CADENCE_LABEL[cadence]}</span>
           {nextDueAt ? (
-            <span className={overdue ? 'dp-led-due dp-led-due--over' : ''}>הבא: {formatShortDate(nextDueAt)}</span>
+            <span className={overdue ? 'dp-led-due dp-led-due--over' : ''}>מועד הבא: {formatShortDate(nextDueAt)}</span>
           ) : null}
           {ownerRole ? <span>אחראי: {ownerRole}</span> : null}
         </div>

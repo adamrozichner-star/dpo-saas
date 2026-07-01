@@ -45,8 +45,26 @@
 }
 .dp-shell__sidebar > * { position: relative; } /* sit above the glow */
 
-.dp-shell__brand { padding: var(--space-5) var(--space-5) var(--space-4); }
-.dp-shell__brand img { height: 30px; width: auto; display: block; }
+/* brand block: more top breathing room so the wordmark clears the ember glow that
+   blooms from the top corner of the Onyx sidebar, and a slightly larger, balanced
+   logo. A hairline divider separates it from the nav. */
+.dp-shell__brand {
+  padding: var(--space-6) var(--space-5) var(--space-5);
+  border-block-end: 1px solid var(--border-1);
+  margin-block-end: var(--space-2);
+}
+.dp-shell--dpo .dp-shell__brand { border-block-end-color: var(--border-on-dark); }
+/* The brand logos ship as black-matted JPEGs (no alpha channel), so a raw <img>
+   shows a rectangle. Two theme-specific treatments, no SVG required:
+   - DPO (dark Onyx sidebar): screen-blend drops the black matte into the garnet so
+     the wordmark floats; clip-path trims the JPEG's light edge pixels (otherwise
+     screen lights them into a faint fringe).
+   - Owner (light surface): a black matte cannot blend into a light background, so
+     contain the mark in a rounded chip instead — clip-path rounds the matte into an
+     intentional badge so there is no sharp black box. */
+.dp-shell__logo { height: 34px; width: auto; display: block; }
+.dp-shell--dpo .dp-shell__logo { mix-blend-mode: screen; clip-path: inset(2px 2px 4px 2px round 6px); }
+.dp-shell--owner .dp-shell__logo { clip-path: inset(1px round 8px); }
 
 .dp-shell__nav { flex: 1; padding: var(--space-2) var(--space-3); overflow-y: auto; }
 .dp-shell__sec {
@@ -195,7 +213,8 @@
     top: 0;
     z-index: 30;
   }
-  .dp-mobilebar__logo { height: 26px; width: auto; display: block; }
+  /* logofull on the light mobile bar — rounded chip, same as the owner sidebar. */
+  .dp-mobilebar__logo { height: 26px; width: auto; display: block; clip-path: inset(1px round 6px); }
   .dp-mobilebar__actions { display: flex; align-items: center; gap: var(--space-2); }
 
   .dp-shell__content { padding: var(--space-5); }

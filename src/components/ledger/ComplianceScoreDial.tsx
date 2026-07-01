@@ -3,16 +3,28 @@
 // engineering default. The real bands are a later product decision (Amir/Roy).
 import * as React from 'react'
 
-export interface ComplianceScoreDialProps {
-  score: number
-  label?: string
-  size?: number
+export type ScoreBand = 'risk' | 'warn' | 'ok'
+
+export interface ScoreBandInfo {
+  band: ScoreBand
+  token: string // a CSS var() for the band colour
+  label: string // Hebrew band label
 }
 
-function bandToken(score: number): string {
-  if (score >= 80) return 'var(--status-ok)'
-  if (score >= 50) return 'var(--status-warn)'
-  return 'var(--status-risk)'
+// Single source of truth for the band thresholds + their colour/label, reused by
+// the dial and the score card so they never drift apart.
+export function scoreBand(score: number): ScoreBandInfo {
+  const s = Math.max(0, Math.min(100, Math.round(score)))
+  if (s >= 80) return { band: 'ok', token: 'var(--status-ok)', label: 'מוגן' }
+  if (s >= 50) return { band: 'warn', token: 'var(--status-warn)', label: 'דורש תשומת לב' }
+  return { band: 'risk', token: 'var(--status-risk)', label: 'טעון טיפול' }
+}
+
+export interface ComplianceScoreDialProps {
+  score: number
+  /** Small label under the number inside the ring. Pass '' to hide (e.g. inside the score card). */
+  label?: string
+  size?: number
 }
 
 export function ComplianceScoreDial({ score, label = 'ציון ציות', size = 132 }: ComplianceScoreDialProps) {
@@ -21,12 +33,12 @@ export function ComplianceScoreDial({ score, label = 'ציון ציות', size =
   const r = (size - stroke) / 2
   const circ = 2 * Math.PI * r
   const arc = (clamped / 100) * circ
-  const color = bandToken(clamped)
+  const { token: color, band } = scoreBand(clamped)
 
   return (
     <div className="dp-dial">
       <div className="dp-dial__wrap" style={{ width: size, height: size }}>
-        <svg className="dp-dial__svg" width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`${label}: ${clamped}`}>
+        <svg className="dp-dial__svg" width={size} height={size} viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`${label || 'ציון ציות'}: ${clamped}`}>
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} style={{ stroke: 'var(--sand-300)' }} />
           <circle
             className="dp-dial__value"
@@ -38,12 +50,12 @@ export function ComplianceScoreDial({ score, label = 'ציון ציות', size =
             strokeLinecap="round"
             strokeDasharray={`${arc} ${circ}`}
             style={{ stroke: color }}
-            data-band={clamped >= 80 ? 'ok' : clamped >= 50 ? 'warn' : 'risk'}
+            data-band={band}
           />
         </svg>
         <div className="dp-dial__center">
           <span className="dp-dial__num">{clamped}</span>
-          <span className="dp-dial__label">{label}</span>
+          {label ? <span className="dp-dial__label">{label}</span> : null}
         </div>
       </div>
     </div>

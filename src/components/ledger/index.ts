@@ -1,5 +1,9 @@
 // v3 ledger components - the building blocks the DPO console (C) assembles.
 // Status/label color mapping is single-sourced in ./status.
+// Load the component CSS here so every surface importing from this barrel gets the
+// dp-* styles (stat tiles, sections, lists, dial, confirm modal). Without this the
+// console rendered the dp-* classes unstyled.
+import './ledger.css'
 export { ObligationStatusChip } from './ObligationStatusChip'
 export { SeverityBadge } from './SeverityBadge'
 export { DocumentLifecycleBadge } from './DocumentLifecycleBadge'
@@ -8,6 +12,9 @@ export { ObligationCard, type ObligationCardProps } from './ObligationCard'
 export { TaskRow, type TaskRowProps } from './TaskRow'
 export { ControlScheduleItem, type ControlScheduleItemProps } from './ControlScheduleItem'
 export { EventTimeline, type TimelineEvent } from './EventTimeline'
-export { ComplianceScoreDial, type ComplianceScoreDialProps } from './ComplianceScoreDial'
+export { ComplianceScoreDial, scoreBand, type ComplianceScoreDialProps, type ScoreBand, type ScoreBandInfo } from './ComplianceScoreDial'
+export { ComplianceScoreCard, type ComplianceScoreCardProps } from './ComplianceScoreCard'
+export { PageHeader, type PageHeaderProps } from './PageHeader'
+export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog'
 export { TokenizedFormShell, type TokenizedFormShellProps } from './TokenizedFormShell'
 export * from './status'

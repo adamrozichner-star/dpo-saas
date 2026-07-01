@@ -17,6 +17,8 @@ export interface NavItem {
   id: string
   label: string
   icon: DeepoIconId
+  /** Real route. When present the item renders as a <Link>; demo items omit it. */
+  href?: string
   count?: number
 }
 
@@ -25,19 +27,30 @@ export interface NavSection {
   items: NavItem[]
 }
 
-export const SHELL_NAV: NavSection[] = [
+// DPO console nav - the multi-client IA: top level is the cross-client Overview +
+// the book-wide Approvals inbox. The per-client surfaces (queue / documents / audit
+// / links) are NOT top-level any more - they live under the client drill-down
+// (/console/clients/[orgId]), reached by clicking a client. This replaces the flat
+// five-item own-org nav (the IA confusion the respec kills); the screen-1 mockup
+// nav is now stale on this point.
+export const DPO_NAV: NavSection[] = [
   {
-    heading: 'ניהול פרטיות',
+    heading: 'קונסולת ממונה',
     items: [
-      { id: 'dashboard', label: 'לוח בקרה', icon: 'dp-radar' },
-      { id: 'vendors', label: 'ספקים', icon: 'dp-link', count: 3 },
-      { id: 'tasks', label: 'משימות', icon: 'dp-bell', count: 2 },
-      { id: 'documents', label: 'מסמכים', icon: 'dp-doc' },
-      { id: 'data', label: 'נכסי מידע', icon: 'dp-database' },
+      { id: 'overview', label: 'מבט כללי', icon: 'dp-radar', href: '/console' },
+      { id: 'approvals', label: 'ממתין לאישור', icon: 'dp-bell', href: '/console/approvals' },
     ],
   },
+]
+
+// Owner home nav - plain, light, no DPO jargon. Distinct from DPO_NAV.
+export const OWNER_NAV: NavSection[] = [
   {
-    heading: 'חשבון',
-    items: [{ id: 'settings', label: 'הגדרות ופרטיות', icon: 'dp-lock' }],
+    heading: '',
+    items: [
+      { id: 'home', label: 'דף הבית', icon: 'dp-shield', href: '/home' },
+      { id: 'documents', label: 'המסמכים שלי', icon: 'dp-doc', href: '/home/documents' },
+      { id: 'profile', label: 'הפרטים שלי', icon: 'dp-lock', href: '/home/profile' },
+    ],
   },
 ]

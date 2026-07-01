@@ -22,7 +22,11 @@ export function getServiceSupabase(): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) throw new Error('Missing Supabase env vars')
-  return createClient(url, key)
+  // no-store fetch: Next.js otherwise caches supabase queries inside route handlers
+  // (even force-dynamic ones), which served stale rows from the curator read routes.
+  return createClient(url, key, {
+    global: { fetch: (input: RequestInfo | URL, init?: RequestInit) => fetch(input, { ...init, cache: 'no-store' }) },
+  })
 }
 
 /**
@@ -139,6 +143,112 @@ export async function authenticateDpo(
     // Table doesn't exist = NOT authenticated (fail closed)
     return false
   }
+}
+
+// ============================================
+// CURATOR AUTH (v3 DPO console, per-curator scoping)
+// ============================================
+
+export interface CuratorAuth {
+  authUserId: string
+  dpoId: string
+  userId: string | null // public.users.id (for created_by / generated_by)
+  userName: string | null
+  userRole: string | null
+}
+
+/**
+ * Authenticate an expert_curator (DPO) and resolve the orgs they may see.
+ *
+ * The curator credential is a `dpos` row whose `auth_user_id` matches the JWT's
+ * user. The dpoId is derived ENTIRELY server-side from the verified token - a
+ * client-supplied org/dpo id is never trusted. Callers must scope every cross-org
+ * read with the returned dpoId (organizations.dpo_id = dpoId). Returns null when
+ * the token is missing/invalid or the user has no dpos row (-> caller 401/403).
+ */
+export async function authenticateCurator(
+  request: NextRequest,
+  supabase?: SupabaseClient
+): Promise<CuratorAuth | null> {
+  try {
+    const sb = supabase || getServiceSupabase()
+    const authHeader = request.headers.get('authorization')
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null
+    if (!token) return null
+
+    const { data: { user }, error } = await sb.auth.getUser(token)
+    if (error || !user) return null
+
+    const { data: dpo } = await sb
+      .from('dpos')
+      .select('id')
+      .eq('auth_user_id', user.id)
+      .maybeSingle()
+    if (!dpo) return null
+
+    const { data: u } = await sb
+      .from('users')
+      .select('id, name, role')
+      .eq('auth_user_id', user.id)
+      .maybeSingle()
+    const urow = u as { id: string; name: string | null; role: string | null } | null
+
+    return {
+      authUserId: user.id,
+      dpoId: (dpo as { id: string }).id,
+      userId: urow?.id ?? null,
+      userName: urow?.name ?? null,
+      userRole: urow?.role ?? null,
+    }
+  } catch (e) {
+    console.error('Curator auth error:', e)
+    return null
+  }
+}
+
+/**
+ * Route preamble for every per-client curator WRITE: authenticate the curator,
+ * then run the book-verification chokepoint BEFORE the route reads or mutates the
+ * target. Returns the curator on success, or a ready NextResponse (401/403) to
+ * return immediately. Centralised so no write route can mutate before the check.
+ */
+export async function requireCuratorForOrg(
+  request: NextRequest,
+  orgId: string,
+  supabase?: SupabaseClient
+): Promise<{ ok: true; curator: CuratorAuth } | { ok: false; response: NextResponse }> {
+  const sb = supabase || getServiceSupabase()
+  const curator = await authenticateCurator(request, sb)
+  if (!curator) {
+    const hasToken = request.headers.get('authorization')?.startsWith('Bearer ')
+    return { ok: false, response: hasToken ? forbiddenResponse('not a curator') : unauthorizedResponse() }
+  }
+  const inBook = await curatorOwnsOrg(curator, orgId, sb)
+  if (!inBook) return { ok: false, response: forbiddenResponse('org not in your book') }
+  return { ok: true, curator }
+}
+
+/**
+ * THE book-verification chokepoint. Every per-client curator route (read AND every
+ * Task-3b write) MUST gate a path/body orgId through this - it is the entire IDOR
+ * firewall for cross-org access: an org is in the curator's book iff its dpo_id
+ * equals the curator's dpoId. Centralised so no route can hand-roll a check that
+ * filters by dpo but forgets to verify the supplied orgId.
+ */
+export async function curatorOwnsOrg(
+  curator: CuratorAuth,
+  orgId: string,
+  supabase?: SupabaseClient
+): Promise<boolean> {
+  if (!orgId) return false
+  const sb = supabase || getServiceSupabase()
+  const { data } = await sb
+    .from('organizations')
+    .select('id')
+    .eq('id', orgId)
+    .eq('dpo_id', curator.dpoId)
+    .maybeSingle()
+  return !!data
 }
 
 // ============================================
