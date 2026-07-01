@@ -12,7 +12,7 @@ import Link from 'next/link'
 import { DeepoIcon } from '@/brand/icons'
 import { Badge } from '@/components/brand/Badge'
 import {
-  RadarMotif, SecHead, Eyebrow, FeatureGrid, Steps, FinalCta, FaqItem, TrustSlot,
+  RadarMotif, SecHead, Eyebrow, FeatureGrid, Steps, FinalCta, FaqItem,
   type FeatureItem, type StepItem,
 } from '@/components/marketing/sections'
 import { SectionNav, scrollToId } from '@/components/marketing/SectionNav'
@@ -388,10 +388,6 @@ export default function HomePage() {
                 <p>{e.desc}</p>
               </div>
             ))}
-          </div>
-          <div style={{ textAlign: 'center', marginTop: 'var(--space-8)' }}>
-            {/* NOTE(review): partner/expert names + logos pending Adam's clearance (spec 2.11). */}
-            <TrustSlot>שמות ולוגואים של שותפים · בקרוב</TrustSlot>
           </div>
         </div>
       </section>
