@@ -214,7 +214,7 @@ function PricingBlock() {
       </div>
 
       <p className="hp-setupfee">
-        דמי הקמה חד-פעמיים: <s>₪30,000</s> <b>חינם, תמיד.</b>
+        דמי הקמה חד-פעמיים: <s>₪30,000</s> <b>חינם.</b>
       </p>
 
       <div className="hp-pcards">
