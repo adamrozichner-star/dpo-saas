@@ -249,6 +249,24 @@ html:has(.deepo-scope) { scroll-behavior: smooth; }
   .hp-teaser { flex-direction: column; align-items: flex-start; gap: var(--space-4); text-align: start; }
 }
 
+/* ── Experts section, dark variant ──────────────────────────── */
+.hp-experts-dark { position: relative; overflow: hidden; background: var(--bg-inverse); }
+.hp-experts-dark::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 116%, rgba(209,3,49,.32) 0%, rgba(255,157,33,.14) 44%, transparent 74%),
+    repeating-linear-gradient(0deg, transparent 0 6px, rgba(255,255,255,.025) 6px 7px);
+}
+.hp-experts-dark .mk-wrap { position: relative; z-index: 1; }
+.hp-experts-dark .mk-sechead h2 { color: #fff; }
+.hp-experts-dark .mk-sechead p { color: var(--garnet-300); }
+.hp-experts-dark .hp-expert { background: var(--garnet-800); border-color: var(--border-on-dark); }
+.hp-experts-dark .hp-expert h3 { color: #fff; }
+.hp-experts-dark .hp-expert p { color: var(--garnet-300); }
+.hp-experts-dark .hp-expert__ic { background: rgba(209,3,49,0.16); }
+.hp-experts-dark .hp-expert__ic .dpi { --dpi-c: var(--crimson-300); }
+.hp-experts-dark .mk-trustslot { color: var(--garnet-300); border-color: var(--border-on-dark); }
+
 /* ── Experts ────────────────────────────────────────────────── */
 .hp-experts__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5); }
 .hp-expert { background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-xl); padding: var(--space-6); }

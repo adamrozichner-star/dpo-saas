@@ -376,8 +376,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6 - EXPERTS */}
-      <section className="mk-section">
+      {/* 6 - EXPERTS (dark) */}
+      <section className="mk-section hp-experts-dark">
         <div className="mk-wrap">
           <SecHead title="אנשים אמיתיים מאחורי הטכנולוגיה" sub="צוות של עורכי דין ויועצי פרטיות מנוסים, וממונים מוסמכים שנכנסים לתפקיד אצלכם." />
           <div className="hp-experts__grid">
