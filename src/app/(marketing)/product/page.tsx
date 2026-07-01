@@ -59,7 +59,7 @@ export default function ProductPage() {
           <h1>כל מה שתיקון 13 דורש, <span className="mk-grad">קורה מעצמו.</span></h1>
           <p className="pp-hero__lede">
             אנחנו מוצאים מה צריך, אוספים את החומר, סוגרים את הפערים ושומרים שהכול יישאר מעודכן. אתם רק מאשרים.
-            סוכני AI ייעודיים עושים את העבודה הקשה, ומאחוריהם צוות DPOs מנוסה.
+            סוכני AI ייעודיים עושים את העבודה הקשה, ומאחוריהם צוות מומחי פרטיות ואבטחת מידע מנוסה.
           </p>
           <div className="mk-ctas">
             <Link href={signupHref('/register')} className="dp-btn dp-btn--gradient dp-btn--lg">התחילו</Link>
