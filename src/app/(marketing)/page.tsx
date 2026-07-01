@@ -362,6 +362,20 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* 5b - TEASER STRIP -> /privacy-israel (links OUT to the page) */}
+      <section className="mk-section--tight">
+        <div className="mk-wrap">
+          <Link href="/privacy-israel" className="hp-teaser">
+            <span className="hp-teaser__ic"><DeepoIcon id="dp-shield" /></span>
+            <span className="hp-teaser__text">
+              <b>פרטיות בישראל: מאיפה זה בא, ולמה עכשיו יש לזה שיניים.</b>
+              <span>ההיסטוריה, המושגים והחובות שלכם, בשפה פשוטה.</span>
+            </span>
+            <span className="hp-teaser__more">לפרטים נוספים ←</span>
+          </Link>
+        </div>
+      </section>
+
       {/* 6 - EXPERTS */}
       <section className="mk-section">
         <div className="mk-wrap">
@@ -379,6 +393,20 @@ export default function HomePage() {
             {/* NOTE(review): partner/expert names + logos pending Adam's clearance (spec 2.11). */}
             <TrustSlot>שמות ולוגואים של שותפים · בקרוב</TrustSlot>
           </div>
+        </div>
+      </section>
+
+      {/* 6b - TEASER STRIP -> /product (links OUT to the page) */}
+      <section className="mk-section--tight">
+        <div className="mk-wrap">
+          <Link href="/product" className="hp-teaser">
+            <span className="hp-teaser__ic"><DeepoIcon id="dp-sparkle" /></span>
+            <span className="hp-teaser__text">
+              <b>איך Deepo עובד, לעומק.</b>
+              <span>הלולאה המלאה, מי נוגע במה, וכל היכולות במקום אחד.</span>
+            </span>
+            <span className="hp-teaser__more">לפרטים נוספים ←</span>
+          </Link>
         </div>
       </section>
 

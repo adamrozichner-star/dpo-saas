@@ -22,6 +22,26 @@
 .pp-hero__lede { font-size: 20px; line-height: 1.6; color: var(--fg-2); max-width: 56ch; margin: 0 auto var(--space-8); }
 .pp-hero .mk-ctas { justify-content: center; }
 
+/* ── Video deep-dive (branded placeholder) ──────────────────── */
+.pp-video { max-width: 900px; margin-inline: auto; }
+.pp-video__frame {
+  position: relative; aspect-ratio: 16 / 9; border-radius: var(--radius-2xl); overflow: hidden;
+  border: 1px solid rgba(255,157,33,0.28); box-shadow: var(--shadow-lift-3); display: grid; place-items: center;
+  background:
+    radial-gradient(ellipse 70% 80% at 30% 110%, rgba(209,3,49,0.5) 0%, rgba(244,39,31,0.3) 34%, rgba(255,157,33,0.18) 58%, transparent 82%),
+    var(--bg-inverse);
+}
+.pp-video__play {
+  width: 76px; height: 76px; border-radius: 50%; background: var(--brand-gradient);
+  display: grid; place-items: center; box-shadow: var(--shadow-glow-amber);
+}
+.pp-video__play svg { width: 30px; height: 30px; fill: #fff; margin-inline-start: 4px; }
+.pp-video__label {
+  position: absolute; bottom: var(--space-4); inset-inline-start: 50%; transform: translateX(-50%);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--garnet-300); background: rgba(0,0,0,0.35); border-radius: var(--radius-pill); padding: 5px 14px;
+}
+
 /* ── The four people Deepo serves ───────────────────────────── */
 .pp-people { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-5); }
 .pp-person { background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-xl); padding: var(--space-8); box-shadow: var(--shadow-lift-1); }

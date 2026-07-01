@@ -75,6 +75,21 @@ export default function ProductPage() {
         </div>
       </section>
 
+      {/* 2b - VIDEO DEEP-DIVE (branded placeholder; real film pending clearance) */}
+      <section className="mk-section">
+        <div className="mk-wrap">
+          <SecHead title="ראו את Deepo עובד." sub="שתי דקות שמראות איך זה נראה מבפנים, מהרישום ועד ההוכחה לרשות." />
+          <div className="pp-video">
+            <div className="pp-video__frame" role="img" aria-label="וידאו הדגמה, בקרוב">
+              <span className="pp-video__play" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg>
+              </span>
+              <span className="pp-video__label">וידאו הדגמה · בקרוב</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* 3 - the four people Deepo serves */}
       <section className="mk-section">
         <div className="mk-wrap">

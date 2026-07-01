@@ -25,7 +25,7 @@ const NAV: Array<{ href: string; label: string }> = [
 
 // Routes not built yet: shown but non-navigating (quiet "בקרוב") so a
 // preview reviewer never hits a 404. Remove an entry once its page ships.
-const COMING_SOON = new Set<string>(['/privacy-israel', '/about', '/security', '/press', '/faq'])
+const COMING_SOON = new Set<string>(['/about', '/security', '/press', '/faq'])
 
 // Render a nav item: a real Link if its page exists, else an inert
 // "בקרוב" label that does not navigate.

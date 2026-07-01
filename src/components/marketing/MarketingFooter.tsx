@@ -12,7 +12,7 @@ import Image from 'next/image'
 
 type FooterLink = { href: string; label: string }
 
-const COMING_SOON = new Set<string>(['/privacy-israel', '/about', '/security', '/press', '/faq'])
+const COMING_SOON = new Set<string>(['/about', '/security', '/press', '/faq'])
 
 const GROUPS: Array<{ title: string; links: FooterLink[] }> = [
   {
