@@ -8,8 +8,8 @@ import Link from 'next/link'
 import { DeepoIcon, type DeepoIconId } from '@/brand/icons'
 import { Badge } from '@/components/brand/Badge'
 import {
-  RadarMotif, Eyebrow, SecHead, Steps, FeatureGrid, ResponsibilityBand, FinalCta,
-  type StepItem, type FeatureItem,
+  RadarMotif, Eyebrow, SecHead, FeatureGrid, FinalCta,
+  type FeatureItem,
 } from '@/components/marketing/sections'
 import { signupHref } from '@/lib/signup-flag'
 import './product.css'
@@ -19,13 +19,14 @@ export const metadata: Metadata = {
   description: 'כל מה שתיקון 13 דורש, קורה מעצמו. Deepo מוצא מה צריך, אוסף, סוגר פערים ושומר על עדכניות, עם ממונה אנושי שאחראי עליכם.',
 }
 
-// The loop, in human language (no internal jargon).
-const LOOP: StepItem[] = [
-  { n: '1', title: 'מגלים מה צריך', desc: 'אנחנו בודקים מה בדיוק תיקון 13 דורש מהעסק שלכם.' },
-  { n: '2', title: 'אוספים את החומר', desc: 'מבקשים רק את מה שחסר - מכם, מצוות ה-IT ומהספקים - בקישורים פשוטים.' },
-  { n: '3', title: 'סוגרים פערים', desc: 'מנסחים את המסמכים והנהלים, וסוגרים כל פער מול הדרישות.' },
-  { n: '4', title: 'שומרים על עדכניות', desc: 'ספק חדש, עובד חדש או חוק חדש? אנחנו מעדכנים ומזכירים בזמן.' },
-  { n: '5', title: 'מוכיחים עמידה', desc: 'מתעדים כל פעולה, כך שתמיד יש לכם תשובה מסודרת לרשות.' },
+// The background engine, as a visual flow. What Deepo does on its own, while
+// the owner only answers a few questions and approves.
+const FLOW: Array<{ id: DeepoIconId; title: string; desc: string }> = [
+  { id: 'dp-radar', title: 'מגלים', desc: 'מה תיקון 13 דורש מכם.' },
+  { id: 'dp-link', title: 'אוספים', desc: 'רק את מה שחסר, בקישורים.' },
+  { id: 'dp-doc', title: 'סוגרים', desc: 'מנסחים מסמכים ונהלים.' },
+  { id: 'dp-bell', title: 'מרעננים', desc: 'מעדכנים ומזכירים בזמן.' },
+  { id: 'dp-seal', title: 'מוכיחים', desc: 'מתעדים הכול לרשות.' },
 ]
 
 // Who touches what, without the headache. sysadmin + vendor reach Deepo
@@ -67,16 +68,8 @@ export default function ProductPage() {
         </div>
       </section>
 
-      {/* 2 - THE LOOP, IN PLAIN WORDS */}
+      {/* 2 - VIDEO DEEP-DIVE (branded placeholder; real film pending clearance) */}
       <section className="mk-section mk-band--sand">
-        <div className="mk-wrap">
-          <SecHead eyebrow="איך זה עובד" title="מוצאים, אוספים, סוגרים, מרעננים, מוכיחים." sub="זה כל הסיפור. חמישה דברים שקורים שוב ושוב ברקע, כדי שאתם לא תצטרכו לחשוב עליהם." />
-          <Steps items={LOOP} />
-        </div>
-      </section>
-
-      {/* 2b - VIDEO DEEP-DIVE (branded placeholder; real film pending clearance) */}
-      <section className="mk-section">
         <div className="mk-wrap">
           <SecHead title="ראו את Deepo עובד." sub="שתי דקות שמראות איך זה נראה מבפנים, מהרישום ועד ההוכחה לרשות." />
           <div className="pp-video">
@@ -90,10 +83,42 @@ export default function ProductPage() {
         </div>
       </section>
 
-      {/* 3 - the four people Deepo serves */}
+      {/* 3 - OWNER EXPERIENCE + BACKGROUND ENGINE (visual system flow) */}
       <section className="mk-section">
         <div className="mk-wrap">
-          <SecHead eyebrow="מי נוגע במה" title="מי נוגע במה, בלי כאב ראש." sub="לכל אחד יש בדיוק את מה שהוא צריך - לא יותר. ככה שומרים גם על סדר וגם על פרטיות." />
+          <SecHead title="אתם מאשרים. אנחנו עושים את כל השאר." sub="כמעט לא תרגישו שזה קורה. אתם עונים על כמה שאלות ומאשרים כשצריך, וכל המכונה עובדת ברקע." />
+          <div className="pp-flow">
+            <div className="pp-flow__you">
+              <span className="pp-flow__tag">מה שאתם עושים</span>
+              <div className="pp-flow__chips">
+                <span className="pp-flow__chip"><DeepoIcon id="dp-doc" /> עונים על כמה שאלות</span>
+                <span className="pp-flow__chip"><DeepoIcon id="dp-check" /> מאשרים כשצריך</span>
+              </div>
+            </div>
+            <div className="pp-flow__engine">
+              <span className="pp-flow__tag pp-flow__tag--eng">מה שקורה ברקע, בלעדיכם</span>
+              <div className="pp-flow__pipe">
+                {FLOW.map((s) => (
+                  <div className="pp-flow__node" key={s.title}>
+                    <span className="pp-flow__node-ic"><DeepoIcon id={s.id} /></span>
+                    <b>{s.title}</b>
+                    <p>{s.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="pp-flow__out">
+              <span className="pp-flow__out-ic"><DeepoIcon id="dp-seal" /></span>
+              <b>התוצאה:</b> עמידה מוכחת בתיקון 13, בלי כאב ראש.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4 - the four people Deepo serves */}
+      <section className="mk-section mk-band--sand">
+        <div className="mk-wrap">
+          <SecHead title="מי נוגע במה, בלי כאב ראש." sub="לכל אחד יש בדיוק את מה שהוא צריך - לא יותר. ככה שומרים גם על סדר וגם על פרטיות." />
           <div className="pp-people">
             {PEOPLE.map((p) => (
               <div className="pp-person" key={p.role}>
@@ -116,16 +141,13 @@ export default function ProductPage() {
         </div>
       </section>
 
-      {/* 4 - FEATURE DEEP-DIVE */}
-      <section className="mk-section mk-band--sand">
+      {/* 5 - FEATURE DEEP-DIVE */}
+      <section className="mk-section">
         <div className="mk-wrap">
-          <SecHead eyebrow="מה יש בפנים" title="כל מה שצריך כדי להיות מסודרים." sub="אותן יכולות שמופיעות בדף הבית, קצת יותר לעומק." />
+          <SecHead title="כל מה שצריך כדי להיות מסודרים." sub="אותן יכולות שמופיעות בדף הבית, קצת יותר לעומק." />
           <FeatureGrid items={PRODUCT_FEATURES} />
         </div>
       </section>
-
-      {/* 5 - RESPONSIBILITY BAND (shared) */}
-      <ResponsibilityBand />
 
       {/* 6 - FINAL CTA -> /lead-signup */}
       <FinalCta

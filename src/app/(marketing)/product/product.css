@@ -42,6 +42,54 @@
   color: var(--garnet-300); background: rgba(0,0,0,0.35); border-radius: var(--radius-pill); padding: 5px 14px;
 }
 
+/* ── Owner experience + background engine (visual flow) ─────── */
+.pp-flow { max-width: 960px; margin-inline: auto; display: flex; flex-direction: column; align-items: center; gap: var(--space-6); }
+
+/* what the owner does */
+.pp-flow__you {
+  width: 100%; max-width: 560px; text-align: center; background: #fff;
+  border: 1px solid var(--sand-300); border-radius: var(--radius-xl); padding: var(--space-5) var(--space-6); box-shadow: var(--shadow-lift-1);
+}
+.pp-flow__tag { display: inline-block; font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); margin-bottom: var(--space-3); }
+.pp-flow__chips { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); }
+.pp-flow__chip { display: inline-flex; align-items: center; gap: var(--space-2); font-size: 15px; font-weight: 500; color: var(--fg-1); background: var(--sand-50); border: 1px solid var(--sand-300); border-radius: var(--radius-pill); padding: 8px var(--space-4); }
+.pp-flow__chip .dpi { --dpi-c: var(--crimson-500); font-size: 18px; }
+
+/* the background engine */
+.pp-flow__engine {
+  position: relative; width: 100%; border-radius: var(--radius-2xl); padding: var(--space-8) var(--space-6) var(--space-6);
+  border: 1px solid var(--crimson-100); box-shadow: var(--shadow-lift-2); text-align: center;
+  background: radial-gradient(ellipse 120% 100% at 50% 0%, var(--crimson-50), transparent 62%), #fff;
+}
+.pp-flow__tag--eng { color: var(--crimson-600); }
+.pp-flow__pipe { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--space-3); position: relative; margin-top: var(--space-5); }
+/* connecting rail behind the nodes */
+.pp-flow__pipe::before { content: ""; position: absolute; top: 27px; inset-inline: 10%; height: 2px; background: linear-gradient(90deg, var(--crimson-300), var(--amber-400)); z-index: 0; }
+.pp-flow__node { position: relative; z-index: 1; text-align: center; }
+.pp-flow__node-ic { width: 54px; height: 54px; border-radius: 50%; background: #fff; border: 2px solid var(--crimson-300); display: grid; place-items: center; margin: 0 auto var(--space-2); box-shadow: var(--shadow-lift-1); }
+.pp-flow__node-ic .dpi { --dpi-c: var(--crimson-500); font-size: 24px; }
+.pp-flow__node b { display: block; font-family: var(--font-display); font-weight: 600; font-size: 15px; color: var(--fg-1); }
+.pp-flow__node p { font-size: 12.5px; line-height: 1.4; color: var(--fg-2); margin: 2px 0 0; }
+
+/* the outcome */
+.pp-flow__out {
+  position: relative; width: 100%; max-width: 560px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: var(--space-2);
+  text-align: center; background: var(--status-ok-bg); border: 1px solid #BFE6CF; border-radius: var(--radius-xl); padding: var(--space-4) var(--space-5); font-size: 16px; color: var(--fg-1);
+}
+.pp-flow__out b { color: var(--status-ok); }
+.pp-flow__out-ic { display: inline-grid; place-items: center; }
+.pp-flow__out-ic .dpi { --dpi-c: var(--status-ok); font-size: 22px; }
+/* down chevrons that tie the three blocks into one flow */
+.pp-flow__engine::before, .pp-flow__out::before {
+  content: ""; position: absolute; top: calc(-1 * var(--space-6) + 4px); inset-inline-start: 50%; transform: translateX(-50%) rotate(45deg);
+  width: 10px; height: 10px; border-inline-end: 2px solid var(--crimson-300); border-block-end: 2px solid var(--crimson-300);
+}
+
+@media (max-width: 640px) {
+  .pp-flow__pipe { grid-template-columns: 1fr; gap: var(--space-4); }
+  .pp-flow__pipe::before { display: none; }
+}
+
 /* ── The four people Deepo serves ───────────────────────────── */
 .pp-people { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-5); }
 .pp-person { background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-xl); padding: var(--space-8); box-shadow: var(--shadow-lift-1); }
