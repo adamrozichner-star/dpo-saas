@@ -42,7 +42,18 @@
   color: var(--garnet-300); background: rgba(0,0,0,0.35); border-radius: var(--radius-pill); padding: 5px 14px;
 }
 
-/* ── Owner experience + background engine (visual flow) ─────── */
+/* ── Owner experience + background engine (dark visual flow) ── */
+.pp-flowsec { position: relative; overflow: hidden; background: var(--bg-inverse); }
+.pp-flowsec::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 118%, rgba(209,3,49,.5) 0%, rgba(244,39,31,.28) 32%, rgba(255,157,33,.16) 56%, transparent 82%),
+    repeating-linear-gradient(0deg, transparent 0 6px, rgba(255,255,255,.025) 6px 7px);
+}
+.pp-flowsec .mk-wrap { position: relative; z-index: 1; }
+.pp-flowsec .mk-sechead h2 { color: #fff; }
+.pp-flowsec .mk-sechead p { color: var(--garnet-300); }
+
 .pp-flow { max-width: 960px; margin-inline: auto; display: flex; flex-direction: column; align-items: center; gap: var(--space-6); }
 
 /* what the owner does */

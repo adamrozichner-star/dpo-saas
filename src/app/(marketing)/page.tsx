@@ -270,7 +270,7 @@ export default function HomePage() {
         <div className="mk-wrap hp-hero__grid">
           <div>
             <Eyebrow icon="dp-shield" pill>תיקון 13 כבר כאן</Eyebrow>
-            <h1>הגנת פרטיות מקצועית, <span className="mk-grad">במחיר נגיש לכולם.</span></h1>
+            <h1>הגנת פרטיות מקצועית, <span className="mk-grad">במחיר נגיש לכולם</span></h1>
             <p className="hp-hero__lede">
               אנחנו עוזרים לך לעמוד בדרישות חוק הפרטיות. סוכני AI ייעודיים עובדים 24/7,
               ומאחוריהם צוות מומחי פרטיות ואבטחת מידע מנוסה. אתם בעסק, אנחנו על המשמר.
@@ -323,7 +323,7 @@ export default function HomePage() {
       {/* 3 - WHAT YOU GET */}
       <section className="mk-section" id="features">
         <div className="mk-wrap">
-          <SecHead title="אתם מתרכזים בעסק. אנחנו דואגים לפרטיות." sub="כל מה שתיקון 13 דורש קורה ברקע, בשפה שמבינים, בלי קבלנים חיצוניים ובלי הטמעה ארוכה." />
+          <SecHead title="אתם מתרכזים בעסק. אנחנו דואגים לפרטיות" sub="כל מה שתיקון 13 דורש קורה ברקע, בשפה שמבינים, בלי קבלנים חיצוניים ובלי הטמעה ארוכה." />
           <FeatureGrid items={FEATURES} />
         </div>
       </section>
@@ -331,9 +331,9 @@ export default function HomePage() {
       {/* 4 - HOW IT WORKS (hero "איך זה עובד" CTA anchors here) */}
       <section className="mk-section mk-band--sand" id="how">
         <div className="mk-wrap">
-          <SecHead title="איך מתחילים? 5 דקות, פחות ממה שלוקח לילד להסביר לאמא על פרטיות." />
+          <SecHead title="איך מתחילים? 5 דקות, פחות ממה שלוקח לילד להסביר לאמא על פרטיות" />
           <Steps items={STEPS} />
-          <p className="hp-afterline">בשעות הקרובות תקבלו קפיצה מאוד גדולה בהגנת הפרטיות.</p>
+          <p className="hp-afterline">בשעות הקרובות תקבלו קפיצה מאוד גדולה בהגנת הפרטיות</p>
         </div>
       </section>
 
@@ -341,7 +341,7 @@ export default function HomePage() {
       <section className="mk-section">
         <div className="mk-wrap hp-legalese">
           <div className="hp-legalese__copy">
-            <h2>אין לך יועץ משפטי צמוד? הכל טוב.</h2>
+            <h2>אין לך יועץ משפטי צמוד? הכל טוב</h2>
             <p>אנחנו מתרגמים את השפה המשפטית לרשימת פעולות פשוטה, וסוגרים אותה בשבילכם. בקלות.</p>
           </div>
           <div className="hp-legalese__flow">
@@ -368,7 +368,7 @@ export default function HomePage() {
           <Link href="/privacy-israel" className="hp-teaser">
             <span className="hp-teaser__ic"><DeepoIcon id="dp-shield" /></span>
             <span className="hp-teaser__text">
-              <b>פרטיות בישראל: מאיפה זה בא, ולמה עכשיו יש לזה שיניים.</b>
+              <b>פרטיות בישראל: מאיפה זה בא, ולמה עכשיו יש לזה שיניים</b>
               <span>ההיסטוריה, המושגים והחובות שלכם, בשפה פשוטה.</span>
             </span>
             <span className="hp-teaser__more">לפרטים נוספים ←</span>
@@ -379,7 +379,7 @@ export default function HomePage() {
       {/* 6 - EXPERTS */}
       <section className="mk-section">
         <div className="mk-wrap">
-          <SecHead title="אנשים אמיתיים מאחורי הטכנולוגיה." sub="צוות של עורכי דין ויועצי פרטיות מנוסים, וממונים מוסמכים שנכנסים לתפקיד אצלכם." />
+          <SecHead title="אנשים אמיתיים מאחורי הטכנולוגיה" sub="צוות של עורכי דין ויועצי פרטיות מנוסים, וממונים מוסמכים שנכנסים לתפקיד אצלכם." />
           <div className="hp-experts__grid">
             {EXPERTS.map((e) => (
               <div className="hp-expert" key={e.id}>
@@ -402,7 +402,7 @@ export default function HomePage() {
           <Link href="/product" className="hp-teaser">
             <span className="hp-teaser__ic"><DeepoIcon id="dp-sparkle" /></span>
             <span className="hp-teaser__text">
-              <b>איך Deepo עובד, לעומק.</b>
+              <b>איך Deepo עובד, לעומק</b>
               <span>הלולאה המלאה, מי נוגע במה, וכל היכולות במקום אחד.</span>
             </span>
             <span className="hp-teaser__more">לפרטים נוספים ←</span>
@@ -413,7 +413,7 @@ export default function HomePage() {
       {/* 9a - COMPARISON (dark, ember-glow) */}
       <section className="hp-compare" id="compare">
         <div className="mk-wrap hp-compare__wrap">
-          <h2>אותה הגנה.<br />עלות נמוכה ב-85%.</h2>
+          <h2>אותה הגנה<br />עלות נמוכה ב-85%</h2>
           <div className="hp-ctable">
             <div className="hp-ccol hp-ccol--old">
               <p className="hp-ccol__name">מומחה חיצוני קלאסי</p>
@@ -445,7 +445,7 @@ export default function HomePage() {
       {/* 9b - PRICING (live tiers, spec 11) */}
       <section className="mk-section" id="pricing">
         <div className="mk-wrap">
-          <SecHead title="תמחור הוגן, בלי הפתעות." sub="החוק שווה לכולם, אז הכלים לעמוד בו צריכים להיות נגישים לכולם." />
+          <SecHead title="תמחור הוגן, בלי הפתעות" sub="החוק שווה לכולם, אז הכלים לעמוד בו צריכים להיות נגישים לכולם." />
           <PricingBlock />
         </div>
       </section>
@@ -453,7 +453,7 @@ export default function HomePage() {
       {/* 11 - FAQ */}
       <section className="mk-section mk-band--sand" id="faq">
         <div className="mk-wrap">
-          <SecHead title={<>מה שכולם שואלים<br />(וכמה דברים שמתביישים לשאול).</>} />
+          <SecHead title={<>מה שכולם שואלים<br />(וכמה דברים שמתביישים לשאול)</>} />
           <div className="mk-faq">
             <FaqItem question="מה זה מומחה פרטיות ואבטחת מידע, ולמה שיהיה לי אחד?" answer="זה ממונה הגנת הפרטיות - האדם שאחראי על שמירת המידע בעסק. החוק מחייב מינוי ממונה לעסקים שמחזיקים מידע על הרבה אנשים, מטפלים במידע רגיש, או עוקבים אחרי משתמשים. נשמע מסובך, זו בעצם רשימת דברים מסודרת שצריך לעשות - ואנחנו עושים אותם." />
             <FaqItem question="הממונה הוא באמת בן אדם?" answer="כן, לגמרי. אדם מוסמך שמתמנה רשמית על העסק שלכם. Deepo עושה את רוב העבודה השוטפת, והממונה זמין לשאלות המורכבות ונושא באחריות המקצועית." />
@@ -478,7 +478,7 @@ export default function HomePage() {
 
       {/* 13 - FINAL CTA (shared, dark ember-glow) */}
       <FinalCta
-        title={<>אתם בעסק.<br /><span className="mk-grad">אנחנו על המשמר.</span></>}
+        title={<>אתם בעסק<br /><span className="mk-grad">אנחנו על המשמר</span></>}
         sub="אנחנו דואגים שתעמדו בתיקון 13, בלי כאב ראש ובמחיר שכל עסק יכול. נתחיל?"
         cta="התחילו"
         href={signupHref('/register')}

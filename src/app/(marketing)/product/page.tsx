@@ -32,20 +32,20 @@ const FLOW: Array<{ id: DeepoIconId; title: string; desc: string }> = [
 // Who touches what, without the headache. sysadmin + vendor reach Deepo
 // through a secure no-login link that exposes nothing sensitive.
 const PEOPLE: Array<{ id: DeepoIconId; role: string; access: string; desc: string; noLogin: boolean }> = [
-  { id: 'dp-seal', role: 'הממונה', access: 'התצוגה המלאה', desc: 'רואה את כל התמונה: מטלות, מסמכים, אירועים וציון עמידה. כאן מתקבלות ההחלטות, וכאן יושבת האחריות המקצועית.', noLogin: false },
-  { id: 'dp-shield', role: 'בעל העסק', access: 'אפליקציה קלה', desc: 'אנחנו מראים לכם תצוגה פשוטה: מה מצב העמידה, מה מחכה לאישור שלכם, ומה כבר טופל. בלי עומס ובלי ז׳רגון.', noLogin: false },
-  { id: 'dp-lock', role: 'מנהל ה-IT', access: 'קישור מאובטח, בלי התחברות', desc: 'ממלא את הפרטים הטכניים דרך קישור ייעודי. בלי חשבון, בלי סיסמה (ובלי עוד סיסמה לזכור), ובלי גישה למידע רגיש של אף אחד.', noLogin: true },
-  { id: 'dp-link', role: 'הספקים', access: 'קישור מאובטח, בלי התחברות', desc: 'חותמים על הסכם עיבוד מידע דרך קישור. הם לא רואים דבר מעבר למה שצריך בדיוק מהם.', noLogin: true },
+  { id: 'dp-seal', role: 'הממונה', access: 'התצוגה המלאה', desc: 'רואה הכול, מחליט, ונושא באחריות המקצועית.', noLogin: false },
+  { id: 'dp-shield', role: 'בעל העסק', access: 'אפליקציה קלה', desc: 'רואה מה מחכה לאישור, בלי עומס ובלי ז׳רגון.', noLogin: false },
+  { id: 'dp-lock', role: 'מנהל ה-IT', access: 'קישור מאובטח, בלי התחברות', desc: 'ממלא פרטים טכניים דרך קישור, בלי חשבון ובלי סיסמה.', noLogin: true },
+  { id: 'dp-link', role: 'הספקים', access: 'קישור מאובטח, בלי התחברות', desc: 'חותמים על הסכם עיבוד מידע, ולא רואים דבר מעבר.', noLogin: true },
 ]
 
 // Feature deep-dive: the homepage set, expanded. Same DeepoIcon mapping.
 const PRODUCT_FEATURES: FeatureItem[] = [
-  { id: 'dp-seal', title: 'ממונה אנושי שאחראי עליכם', desc: 'אנחנו ממנים עליכם ממונה הגנת פרטיות מוסמך, שנושא באחריות המקצועית והמשפטית. הוא זמין לשאלות, מאשר מהלכים, ונכנס לתמונה בכל פעם שצריך שיקול דעת אנושי.' },
-  { id: 'dp-doc', title: 'מסמכים שנכתבים מעצמם', desc: 'אנחנו כותבים לכם מדיניות פרטיות, נוהלי אבטחה, כתב מינוי וכל מסמך אחר שתיקון 13 דורש - מותאמים לעסק, ומתעדכנים לבד כשמשהו משתנה.' },
-  { id: 'dp-sparkle', title: 'סוכני AI שעושים את העבודה', desc: 'סוכני AI ייעודיים אוספים חומר, מנסחים מסמכים ועונים על שאלות בשפה רגילה, מסביב לשעון. מה שדורש אדם, אנחנו מעבירים לממונה בלחיצה.' },
-  { id: 'dp-bell', title: 'ניטור ותזכורות', desc: 'אנחנו עוקבים אחרי מה שמתקרב - חידושים, ספקים חדשים, בקרות תקופתיות - ומזכירים לכם בזמן, לפני שזה הופך לבעיה.' },
-  { id: 'dp-radar', title: 'ציון עמידה חי', desc: 'בכל רגע אנחנו מראים לכם כמה אתם מסודרים מול הדרישות, מה עוד חסר, וקישור ישיר לכל פעולה שנשארה.' },
-  { id: 'dp-database', title: 'יומן פעולות מלא', desc: 'אנחנו מתעדים כל שינוי וכל אישור אוטומטית. אם הרשות מבקשת הוכחה, היא כבר מוכנה ומחכה.' },
+  { id: 'dp-seal', title: 'ממונה אנושי שאחראי עליכם', desc: 'ממונה מוסמך שמתמנה עליכם ונושא באחריות.' },
+  { id: 'dp-doc', title: 'מסמכים שנכתבים מעצמם', desc: 'מדיניות, נהלים וכתב מינוי, מתעדכנים לבד.' },
+  { id: 'dp-sparkle', title: 'סוכני AI שעושים את העבודה', desc: 'אוספים, מנסחים ועונים, מסביב לשעון.' },
+  { id: 'dp-bell', title: 'ניטור ותזכורות', desc: 'עוקבים אחרי מה שמתקרב, ומזכירים בזמן.' },
+  { id: 'dp-radar', title: 'ציון עמידה חי', desc: 'כמה אתם מסודרים, בזמן אמת, עם קישור לכל פעולה.' },
+  { id: 'dp-database', title: 'יומן פעולות מלא', desc: 'כל פעולה מתועדת. אם הרשות שואלת, התשובה מוכנה.' },
 ]
 
 export default function ProductPage() {
@@ -57,7 +57,7 @@ export default function ProductPage() {
         <RadarMotif className="pp-hero__radar" size={720} />
         <div className="mk-wrap pp-hero__inner">
           <Eyebrow icon="dp-radar" pill>המוצר</Eyebrow>
-          <h1>כל מה שתיקון 13 דורש, <span className="mk-grad">קורה מעצמו.</span></h1>
+          <h1>כל מה שתיקון 13 דורש, <span className="mk-grad">קורה מעצמו</span></h1>
           <p className="pp-hero__lede">
             אנחנו מוצאים מה צריך, אוספים את החומר, סוגרים את הפערים ושומרים שהכול יישאר מעודכן. אתם רק מאשרים.
             סוכני AI ייעודיים עושים את העבודה הקשה, ומאחוריהם צוות מומחי פרטיות ואבטחת מידע מנוסה.
@@ -71,7 +71,7 @@ export default function ProductPage() {
       {/* 2 - VIDEO DEEP-DIVE (branded placeholder; real film pending clearance) */}
       <section className="mk-section mk-band--sand">
         <div className="mk-wrap">
-          <SecHead title="ראו את Deepo עובד." sub="שתי דקות שמראות איך זה נראה מבפנים, מהרישום ועד ההוכחה לרשות." />
+          <SecHead title="ראו את Deepo עובד" sub="שתי דקות, מהרישום ועד ההוכחה לרשות." />
           <div className="pp-video">
             <div className="pp-video__frame" role="img" aria-label="וידאו הדגמה, בקרוב">
               <span className="pp-video__play" aria-hidden="true">
@@ -83,10 +83,10 @@ export default function ProductPage() {
         </div>
       </section>
 
-      {/* 3 - OWNER EXPERIENCE + BACKGROUND ENGINE (visual system flow) */}
-      <section className="mk-section">
+      {/* 3 - OWNER EXPERIENCE + BACKGROUND ENGINE (dark visual system flow) */}
+      <section className="mk-section pp-flowsec">
         <div className="mk-wrap">
-          <SecHead title="אתם מאשרים. אנחנו עושים את כל השאר." sub="כמעט לא תרגישו שזה קורה. אתם עונים על כמה שאלות ומאשרים כשצריך, וכל המכונה עובדת ברקע." />
+          <SecHead title="אתם מאשרים. אנחנו עושים את כל השאר" sub="כמעט לא תרגישו שזה קורה. אתם עונים על כמה שאלות ומאשרים כשצריך, ואנחנו עובדים ברקע." />
           <div className="pp-flow">
             <div className="pp-flow__you">
               <span className="pp-flow__tag">מה שאתם עושים</span>
@@ -118,7 +118,7 @@ export default function ProductPage() {
       {/* 4 - the four people Deepo serves */}
       <section className="mk-section mk-band--sand">
         <div className="mk-wrap">
-          <SecHead title="מי נוגע במה, בלי כאב ראש." sub="לכל אחד יש בדיוק את מה שהוא צריך - לא יותר. ככה שומרים גם על סדר וגם על פרטיות." />
+          <SecHead title="מי נוגע במה, בלי כאב ראש" sub="לכל אחד בדיוק מה שהוא צריך, לא יותר." />
           <div className="pp-people">
             {PEOPLE.map((p) => (
               <div className="pp-person" key={p.role}>
@@ -144,14 +144,14 @@ export default function ProductPage() {
       {/* 5 - FEATURE DEEP-DIVE */}
       <section className="mk-section">
         <div className="mk-wrap">
-          <SecHead title="כל מה שצריך כדי להיות מסודרים." sub="אותן יכולות שמופיעות בדף הבית, קצת יותר לעומק." />
+          <SecHead title="כל מה שצריך כדי להיות מסודרים" sub="היכולות של דף הבית, קצת יותר לעומק." />
           <FeatureGrid items={PRODUCT_FEATURES} />
         </div>
       </section>
 
       {/* 6 - FINAL CTA -> /lead-signup */}
       <FinalCta
-        title={<>כל זה, <span className="mk-grad">עובד בשבילכם.</span></>}
+        title={<>כל זה, <span className="mk-grad">עובד בשבילכם</span></>}
         sub="נתחיל בכמה שאלות קצרות. את השאר אנחנו כבר יודעים לעשות."
         cta="התחילו"
         href="/lead-signup"

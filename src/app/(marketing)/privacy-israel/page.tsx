@@ -22,6 +22,7 @@ const TIMELINE: Array<{ year: string; title: string; desc: string }> = [
   { year: '2017', title: 'תקנות אבטחת מידע', desc: 'לראשונה, חובות אבטחה קונקרטיות לכל מי שמחזיק מאגר מידע: נהלים, בקרות ותיעוד.' },
   { year: '2024', title: 'תיקון 13 מתקבל', desc: 'הכנסת מאשרת את התיקון הגדול ביותר לחוק. הרשות מקבלת סמכויות אכיפה של ממש.' },
   { year: '2025', title: 'תיקון 13 בתוקף', desc: 'העיצומים והסמכויות נכנסים לפעולה. מכאן, אי-עמידה עולה כסף.' },
+  { year: '2026', title: 'הרשות כבר אוכפת', desc: 'הרשות פונה לעסקים, פותחת בדיקות ומטילה עיצומים. זה כאן, עכשיו.' },
 ]
 
 // The words everyone throws around, in human language.
@@ -47,12 +48,12 @@ export default function PrivacyIsraelPage() {
   return (
     <div>
 
-      {/* 1 - HERO */}
-      <section className="pi-hero mk-mesh">
+      {/* 1 - HERO (dark) */}
+      <section className="pi-hero pi-hero--dark mk-mesh">
         <RadarMotif className="pi-hero__radar" size={640} node={false} />
         <div className="mk-wrap pi-hero__inner">
           <Eyebrow icon="dp-shield" pill>פרטיות בישראל</Eyebrow>
-          <h1>הפרטיות בישראל גדלה. <span className="mk-grad">עכשיו יש לה שיניים.</span></h1>
+          <h1>הפרטיות בישראל גדלה<br /><span className="mk-grad">עכשיו יש לה שיניים</span><br />אמאל׳ה</h1>
           <p className="pi-hero__lede">
             מאיפה הגיע החוק, מה המושגים שחשוב להכיר, ומה בדיוק נדרש מכם כבעלי עסק. הכול בשפה פשוטה, בלי משפטית מיותרת.
           </p>
@@ -62,7 +63,7 @@ export default function PrivacyIsraelPage() {
       {/* 2 - TIMELINE */}
       <section className="mk-section mk-band--sand">
         <div className="mk-wrap">
-          <SecHead title="ארבעים שנה של פרטיות, בקצרה." sub="איך הגענו מחוק על הנייר לאכיפה אמיתית." />
+          <SecHead title="ארבעים שנה של פרטיות, בקצרה" sub="איך הגענו מחוק על הנייר לאכיפה אמיתית." />
           <div className="pi-timeline">
             {TIMELINE.map((t) => (
               <div className="pi-tl" key={t.year}>
@@ -77,10 +78,10 @@ export default function PrivacyIsraelPage() {
         </div>
       </section>
 
-      {/* 3 - CONCEPTS */}
-      <section className="mk-section">
+      {/* 3 - CONCEPTS (dark) */}
+      <section className="mk-section pi-concepts-sec">
         <div className="mk-wrap">
-          <SecHead title="המושגים, בלי הז׳רגון." sub="ארבע מילים שחוזרות שוב ושוב, בשפה של בני אדם." />
+          <SecHead title="המושגים, בלי הז׳רגון" sub="ארבע מילים שחוזרות שוב ושוב, בשפה של בני אדם." />
           <div className="pi-concepts">
             {CONCEPTS.map((c) => (
               <div className="pi-concept" key={c.term}>
@@ -95,7 +96,7 @@ export default function PrivacyIsraelPage() {
       {/* 4 - OBLIGATIONS */}
       <section className="mk-section mk-band--sand">
         <div className="mk-wrap">
-          <SecHead title="החובות שלכם, כבעלי עסק ובעלי מאגר." sub="זו לא רשימה מפחידה. זו רשימת מטלות מסודרת, ואנחנו סוגרים אותה איתכם." />
+          <SecHead title="החובות שלכם, כבעלי עסק ובעלי מאגר" sub="זו לא רשימה מפחידה. זו רשימת מטלות מסודרת, ואנחנו סוגרים אותה איתכם." />
           <ul className="pi-oblig">
             {OBLIGATIONS.map((o) => (
               <li key={o}><DeepoIcon id="dp-check" /> {o}</li>
@@ -108,7 +109,7 @@ export default function PrivacyIsraelPage() {
       <section className="pi-teeth">
         <div className="mk-wrap pi-teeth__inner">
           <Eyebrow icon="dp-bolt">אכיפה</Eyebrow>
-          <h2>לרשות יש שיניים.</h2>
+          <h2>לרשות יש שיניים</h2>
           <p>
             עד לא מזמן, אכיפה הייתה נדירה. תיקון 13 שינה את זה: לרשות להגנת הפרטיות יש עכשיו סמכויות חקירה ועיצומים כספיים משמעותיים.
             זה כבר לא רק על הנייר, וכדאי להיות מסודרים.
@@ -118,7 +119,7 @@ export default function PrivacyIsraelPage() {
 
       {/* 6 - CTA -> exposure calculator on the home page */}
       <FinalCta
-        title={<>לא בטוחים איפה אתם עומדים? <span className="mk-grad">בדקו בחצי דקה.</span></>}
+        title={<>לא בטוחים איפה אתם עומדים? <span className="mk-grad">בדקו בחצי דקה</span></>}
         sub="הערכת חשיפה מהירה לפי תיקון 13, בלי להשאיר פרטים. ואם צריך, אנחנו כאן לסגור את הפערים."
         cta="לבדיקת החשיפה"
         href="/#calculator"

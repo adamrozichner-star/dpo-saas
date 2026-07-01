@@ -14,6 +14,20 @@
 }
 .pi-hero__lede { font-size: 19px; line-height: 1.6; color: var(--fg-2); margin: 0 auto; max-width: 54ch; }
 
+/* Dark hero variant */
+.pi-hero--dark { background: var(--bg-inverse); color: var(--fg-on-dark-1); }
+.pi-hero--dark::before {
+  background-image:
+    radial-gradient(ellipse 70% 76% at 50% 116%, rgba(209,3,49,.5) 0%, rgba(244,39,31,.28) 30%, rgba(255,157,33,.15) 56%, transparent 82%),
+    radial-gradient(rgba(255,255,255,.05) 1.2px, transparent 1.3px);
+  background-size: auto, 22px 22px;
+}
+.pi-hero--dark h1 { color: #fff; }
+.pi-hero--dark .mk-grad { background: var(--spark-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.pi-hero--dark .pi-hero__lede { color: var(--garnet-300); }
+.pi-hero--dark .mk-eyebrow--pill { color: #fff; background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.20); }
+.pi-hero--dark .mk-eyebrow--pill .dpi { --dpi-c: var(--amber-400); }
+
 /* ── Timeline ───────────────────────────────────────────────── */
 .pi-timeline { max-width: 720px; margin-inline: auto; }
 .pi-tl { display: grid; grid-template-columns: 64px 1fr; gap: var(--space-5); }
@@ -32,6 +46,19 @@
 .pi-concept { background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-xl); padding: var(--space-5); box-shadow: var(--shadow-lift-1); }
 .pi-concept b { display: block; font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--fg-1); margin-bottom: 6px; }
 .pi-concept p { font-size: 14px; line-height: 1.55; color: var(--fg-2); margin: 0; }
+
+/* Dark concepts section: cohesive dark cards on the ember surface. */
+.pi-concepts-sec { position: relative; overflow: hidden; background: var(--bg-inverse); }
+.pi-concepts-sec::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 90% 70% at 8% 4%, rgba(241,39,22,0.14) 0%, rgba(255,122,60,0.07) 34%, transparent 62%);
+}
+.pi-concepts-sec .mk-wrap { position: relative; z-index: 1; }
+.pi-concepts-sec .mk-sechead h2 { color: #fff; }
+.pi-concepts-sec .mk-sechead p { color: var(--garnet-300); }
+.pi-concepts-sec .pi-concept { background: var(--garnet-800); border-color: var(--border-on-dark); box-shadow: none; }
+.pi-concepts-sec .pi-concept b { color: #fff; }
+.pi-concepts-sec .pi-concept p { color: var(--garnet-300); }
 
 /* ── Obligations checklist ──────────────────────────────────── */
 .pi-oblig { max-width: 640px; margin-inline: auto; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
