@@ -16,6 +16,7 @@ import {
   RadarMotif, SecHead, Eyebrow, FeatureGrid, Steps, ResponsibilityBand, FinalCta, FaqItem, TrustSlot,
   type FeatureItem, type StepItem,
 } from '@/components/marketing/sections'
+import { SectionNav, scrollToId } from '@/components/marketing/SectionNav'
 import { signupHref } from '@/lib/signup-flag'
 import './home.css'
 
@@ -152,9 +153,9 @@ export default function HomePage() {
   return (
     <div className="hp">
 
-      {/* 1 - RADAR HERO (vision index-he.html): .mk-mesh dot-grid + lower-LEFT
-          RadarMotif (rings + visible 135deg core node, behind the dashboard). */}
-      <section className="hp-hero mk-mesh">
+      {/* 1 - RADAR HERO. Dark onyx surface (B2) with ember glow, the lower-LEFT
+          RadarMotif rings, and the white dashboard preview floating on top. */}
+      <section className="hp-hero hp-hero--dark mk-mesh">
         <RadarMotif className="hp-hero__radar" size={820} />
         <div className="mk-wrap hp-hero__grid">
           <div>
@@ -166,7 +167,7 @@ export default function HomePage() {
             </p>
             <div className="mk-ctas">
               <Link href={signupHref('/register')} className="dp-btn dp-btn--gradient dp-btn--lg">התחילו עכשיו</Link>
-              <a href="#how" className="dp-btn dp-btn--secondary dp-btn--lg">איך זה עובד</a>
+              <a href="#how" className="dp-btn dp-btn--secondary dp-btn--lg" onClick={(e) => { e.preventDefault(); scrollToId('how') }}>איך זה עובד</a>
             </div>
             <p className="hp-hero__micro">החל מ-1,000₪ לחודש · בלי עלות הקמה · עומדים בדרישות תוך ימים</p>
           </div>
@@ -193,6 +194,9 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Secondary one-pager anchor nav (B2): smooth-scroll to sections. */}
+      <SectionNav />
+
       {/* 2 - CALCULATOR */}
       <section className="mk-section mk-band--sand" id="calculator">
         <div className="mk-wrap hp-calc__grid">
@@ -205,7 +209,7 @@ export default function HomePage() {
       </section>
 
       {/* 3 - WHAT YOU GET */}
-      <section className="mk-section">
+      <section className="mk-section" id="features">
         <div className="mk-wrap">
           <SecHead title="אתם מתרכזים בעסק. אנחנו דואגים לפרטיות." sub="כל מה שתיקון 13 דורש קורה ברקע, בשפה שמבינים, בלי קבלנים חיצוניים ובלי הטמעה ארוכה." />
           <FeatureGrid items={FEATURES} />
@@ -284,7 +288,7 @@ export default function HomePage() {
       </section>
 
       {/* 9a - COMPARISON (dark, ember-glow) */}
-      <section className="hp-compare">
+      <section className="hp-compare" id="compare">
         <div className="mk-wrap hp-compare__wrap">
           <h2>אותה הגנה. עלות נמוכה ב-85%.</h2>
           <div className="hp-ctable">
@@ -316,7 +320,7 @@ export default function HomePage() {
       </section>
 
       {/* 9b - PRICING (live tiers, spec 11) */}
-      <section className="mk-section">
+      <section className="mk-section" id="pricing">
         <div className="mk-wrap">
           <SecHead title="תמחור הוגן, בלי הפתעות." sub="החוק שווה לכולם, אז הכלים לעמוד בו צריכים להיות נגישים לכולם." />
           <div className="hp-pcards">
@@ -354,7 +358,7 @@ export default function HomePage() {
       )}
 
       {/* 11 - FAQ */}
-      <section className="mk-section mk-band--sand">
+      <section className="mk-section mk-band--sand" id="faq">
         <div className="mk-wrap">
           <SecHead title="מה שכולם שואלים (וכמה דברים שמתביישים לשאול)." />
           <div className="mk-faq">

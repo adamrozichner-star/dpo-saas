@@ -30,6 +30,50 @@
   color: var(--fg-3); letter-spacing: 0.02em;
 }
 
+/* ── Dark hero (B2): onyx surface + ember glow ──────────────── */
+.hp-hero--dark { background: var(--bg-inverse); color: var(--fg-on-dark-1); }
+/* Override the .mk-mesh crimson dot-grid with a dark-friendly warm dot +
+   an ember glow rising from the lower-left, behind the radar rings. */
+.hp-hero--dark::before {
+  background-image:
+    radial-gradient(ellipse 68% 78% at 14% 112%, rgba(209,3,49,.5) 0%, rgba(244,39,31,.28) 30%, rgba(255,157,33,.15) 56%, transparent 82%),
+    radial-gradient(rgba(255,255,255,.05) 1.2px, transparent 1.3px);
+  background-size: auto, 22px 22px;
+}
+.hp-hero--dark h1 { color: #fff; }
+.hp-hero--dark .mk-grad { background: var(--spark-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.hp-hero--dark .hp-hero__lede { color: var(--garnet-300); }
+.hp-hero--dark .hp-hero__micro { color: var(--garnet-300); }
+.hp-hero--dark .mk-eyebrow--pill {
+  color: #fff; background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.20);
+}
+.hp-hero--dark .mk-eyebrow--pill .dpi { --dpi-c: var(--amber-400); }
+.hp-hero--dark .dp-btn--secondary {
+  background: transparent; color: #fff; border-color: rgba(255,255,255,.24);
+}
+.hp-hero--dark .dp-btn--secondary:hover { background: rgba(255,255,255,.09); border-color: rgba(255,255,255,.4); }
+
+/* ── Secondary one-pager anchor nav (B2) ────────────────────── */
+.hp-anchornav {
+  position: sticky; top: 71px; z-index: 40;
+  background: color-mix(in srgb, var(--sand-50) 92%, transparent);
+  backdrop-filter: saturate(1.2) blur(10px); -webkit-backdrop-filter: saturate(1.2) blur(10px);
+  border-bottom: 1px solid var(--sand-300);
+}
+.hp-anchornav__row { display: flex; align-items: center; gap: var(--space-8); height: 48px; overflow-x: auto; scrollbar-width: none; }
+.hp-anchornav__row::-webkit-scrollbar { display: none; }
+.hp-anchornav a {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--fg-2); white-space: nowrap; transition: color var(--dur-1) ease;
+}
+.hp-anchornav a:hover { color: var(--crimson-600); }
+.hp-anchornav a:focus-visible { outline: 2px solid var(--crimson-500); outline-offset: 3px; border-radius: 4px; }
+
+/* Native hash-landing offset so a direct #anchor clears the sticky chrome. */
+#how, #features, #compare, #pricing, #faq, #calculator { scroll-margin-top: 128px; }
+/* Smooth anchor scrolling, scoped to marketing pages (never the app shell). */
+html:has(.deepo-scope) { scroll-behavior: smooth; }
+
 /* dashboard preview card */
 .hp-preview { position: relative; }
 .hp-preview::after {
