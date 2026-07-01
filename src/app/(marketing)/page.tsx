@@ -320,8 +320,8 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* 3 - WHAT YOU GET */}
-      <section className="mk-section" id="features">
+      {/* 3 - WHAT YOU GET (dark) */}
+      <section className="mk-section hp-features-dark" id="features">
         <div className="mk-wrap">
           <SecHead title="אתם מתרכזים בעסק. אנחנו דואגים לפרטיות" sub="כל מה שתיקון 13 דורש קורה ברקע, בשפה שמבינים, בלי קבלנים חיצוניים ובלי הטמעה ארוכה." />
           <FeatureGrid items={FEATURES} />

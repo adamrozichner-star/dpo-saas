@@ -214,6 +214,23 @@ html:has(.deepo-scope) { scroll-behavior: smooth; }
 .hp-sector { display: flex; align-items: center; gap: var(--space-2); font-family: var(--font-display); font-weight: 600; font-size: 16px; color: var(--fg-2); }
 .hp-sector .dpi { --dpi-c: var(--crimson-400); font-size: 20px; }
 
+/* ── Features section, dark variant ─────────────────────────── */
+.hp-features-dark { position: relative; overflow: hidden; background: var(--bg-inverse); }
+.hp-features-dark::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% -10%, rgba(209,3,49,.32) 0%, rgba(244,39,31,.16) 38%, transparent 68%),
+    repeating-linear-gradient(0deg, transparent 0 6px, rgba(255,255,255,.025) 6px 7px);
+}
+.hp-features-dark .mk-wrap { position: relative; z-index: 1; }
+.hp-features-dark .mk-sechead h2 { color: #fff; }
+.hp-features-dark .mk-sechead p { color: var(--garnet-300); }
+.hp-features-dark .mk-fcard { background: var(--garnet-800); border-color: var(--border-on-dark); box-shadow: none; }
+.hp-features-dark .mk-fcard h3 { color: #fff; }
+.hp-features-dark .mk-fcard p { color: var(--garnet-300); }
+.hp-features-dark .mk-fcard__ic { background: rgba(209,3,49,0.16); }
+.hp-features-dark .mk-fcard__ic .dpi { --dpi-c: var(--crimson-300); }
+
 /* ── Teaser strips (link OUT to /privacy-israel, /product) ──── */
 .hp-teaser {
   display: flex; align-items: center; gap: var(--space-5);
