@@ -143,7 +143,7 @@ export default function ProductPage() {
       {/* 5 - FEATURE DEEP-DIVE */}
       <section className="mk-section">
         <div className="mk-wrap">
-          <SecHead title="כל מה שצריך כדי להיות מסודרים" sub="היכולות של דף הבית, קצת יותר לעומק." />
+          <SecHead title="כל מה שצריך כדי להיות מסודרים" />
           <FeatureGrid items={PRODUCT_FEATURES} />
         </div>
       </section>
