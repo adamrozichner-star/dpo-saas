@@ -12,7 +12,7 @@ import Link from 'next/link'
 import { DeepoIcon } from '@/brand/icons'
 import { Badge } from '@/components/brand/Badge'
 import {
-  RadarMotif, SecHead, Eyebrow, FeatureGrid, Steps, FinalCta, FaqItem,
+  RadarMotif, SecHead, FeatureGrid, Steps, FinalCta, FaqItem,
   type FeatureItem, type StepItem,
 } from '@/components/marketing/sections'
 import { SectionNav, scrollToId } from '@/components/marketing/SectionNav'
@@ -269,7 +269,6 @@ export default function HomePage() {
         <RadarMotif className="hp-hero__radar" size={820} />
         <div className="mk-wrap hp-hero__grid">
           <div>
-            <Eyebrow icon="dp-shield" pill>תיקון 13 כבר כאן</Eyebrow>
             <h1>הגנת פרטיות מקצועית, <span className="mk-grad">במחיר נגיש לכולם</span></h1>
             <p className="hp-hero__lede">
               אנחנו עוזרים לך לעמוד בדרישות חוק הפרטיות. סוכני AI ייעודיים עובדים 24/7,
@@ -279,7 +278,7 @@ export default function HomePage() {
               <Link href={signupHref('/register')} className="dp-btn dp-btn--gradient dp-btn--lg">התחילו עכשיו</Link>
               <a href="#how" className="dp-btn dp-btn--secondary dp-btn--lg" onClick={(e) => { e.preventDefault(); scrollToId('how') }}>איך זה עובד</a>
             </div>
-            <p className="hp-hero__micro">החל מ-1,000₪ לחודש · בלי עלות הקמה · עומדים בדרישות תוך ימים</p>
+            <p className="hp-hero__micro">בלי עלות הקמה · עומדים בדרישות תוך ימים</p>
           </div>
 
           {/* dashboard preview (illustrative, not a screenshot) */}
