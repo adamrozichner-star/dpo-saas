@@ -331,7 +331,7 @@ export default function HomePage() {
       {/* 4 - HOW IT WORKS (hero "איך זה עובד" CTA anchors here) */}
       <section className="mk-section mk-band--sand" id="how">
         <div className="mk-wrap">
-          <SecHead title="איך מתחילים, חמש דקות. נרשמים, אנחנו דואגים לכל השאר." sub="5 דקות, פחות ממה שלוקח לילד להסביר לאמא מה זה פרטיות." />
+          <SecHead title="איך מתחילים? 5 דקות, פחות ממה שלוקח לילד להסביר לאמא על פרטיות." />
           <Steps items={STEPS} />
           <p className="hp-afterline">בשעות הקרובות תקבלו קפיצה מאוד גדולה בהגנת הפרטיות.</p>
         </div>
@@ -342,7 +342,7 @@ export default function HomePage() {
         <div className="mk-wrap hp-legalese">
           <div className="hp-legalese__copy">
             <h2>אין לך יועץ משפטי צמוד? הכל טוב.</h2>
-            <p>אנחנו לוקחים את השפה המשפטית של החוק ומתרגמים אותה לרשימת פעולות פשוטה. אתם רואים בדיוק מה צריך, ואנחנו דואגים שזה ייפתר, עכשיו ובקלות.</p>
+            <p>אנחנו מתרגמים את השפה המשפטית לרשימת פעולות פשוטה, וסוגרים אותה בשבילכם. בקלות.</p>
           </div>
           <div className="hp-legalese__flow">
             <div className="hp-legalese__from">
@@ -413,7 +413,7 @@ export default function HomePage() {
       {/* 9a - COMPARISON (dark, ember-glow) */}
       <section className="hp-compare" id="compare">
         <div className="mk-wrap hp-compare__wrap">
-          <h2>אותה הגנה. עלות נמוכה ב-85%.</h2>
+          <h2>אותה הגנה.<br />עלות נמוכה ב-85%.</h2>
           <div className="hp-ctable">
             <div className="hp-ccol hp-ccol--old">
               <p className="hp-ccol__name">מומחה חיצוני קלאסי</p>
@@ -453,7 +453,7 @@ export default function HomePage() {
       {/* 11 - FAQ */}
       <section className="mk-section mk-band--sand" id="faq">
         <div className="mk-wrap">
-          <SecHead title="מה שכולם שואלים (וכמה דברים שמתביישים לשאול)." />
+          <SecHead title={<>מה שכולם שואלים<br />(וכמה דברים שמתביישים לשאול).</>} />
           <div className="mk-faq">
             <FaqItem question="מה זה מומחה פרטיות ואבטחת מידע, ולמה שיהיה לי אחד?" answer="זה ממונה הגנת הפרטיות - האדם שאחראי על שמירת המידע בעסק. החוק מחייב מינוי ממונה לעסקים שמחזיקים מידע על הרבה אנשים, מטפלים במידע רגיש, או עוקבים אחרי משתמשים. נשמע מסובך, זו בעצם רשימת דברים מסודרת שצריך לעשות - ואנחנו עושים אותם." />
             <FaqItem question="הממונה הוא באמת בן אדם?" answer="כן, לגמרי. אדם מוסמך שמתמנה רשמית על העסק שלכם. Deepo עושה את רוב העבודה השוטפת, והממונה זמין לשאלות המורכבות ונושא באחריות המקצועית." />
@@ -478,7 +478,7 @@ export default function HomePage() {
 
       {/* 13 - FINAL CTA (shared, dark ember-glow) */}
       <FinalCta
-        title={<>אתם בעסק. <span className="mk-grad">אנחנו על המשמר.</span></>}
+        title={<>אתם בעסק.<br /><span className="mk-grad">אנחנו על המשמר.</span></>}
         sub="אנחנו דואגים שתעמדו בתיקון 13, בלי כאב ראש ובמחיר שכל עסק יכול. נתחיל?"
         cta="התחילו"
         href={signupHref('/register')}
