@@ -18,10 +18,10 @@ export { RadarMotif } from './RadarMotif'
 // Centred section heading: mono eyebrow (optional icon) + display h2 + sub.
 export function SecHead({
   eyebrow, eyebrowIcon, title, sub,
-}: { eyebrow: string; eyebrowIcon?: DeepoIconId; title: React.ReactNode; sub?: React.ReactNode }) {
+}: { eyebrow?: string; eyebrowIcon?: DeepoIconId; title: React.ReactNode; sub?: React.ReactNode }) {
   return (
     <div className="mk-sechead">
-      <span className="mk-eyebrow">{eyebrowIcon && <DeepoIcon id={eyebrowIcon} />}{eyebrow}</span>
+      {eyebrow && <span className="mk-eyebrow">{eyebrowIcon && <DeepoIcon id={eyebrowIcon} />}{eyebrow}</span>}
       <h2>{title}</h2>
       {sub && <p>{sub}</p>}
     </div>

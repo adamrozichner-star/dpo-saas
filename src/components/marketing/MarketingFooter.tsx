@@ -12,16 +12,15 @@ import Image from 'next/image'
 
 type FooterLink = { href: string; label: string }
 
-const COMING_SOON = new Set<string>(['/pricing', '/partners', '/about', '/security', '/press', '/faq'])
+const COMING_SOON = new Set<string>(['/privacy-israel', '/about', '/security', '/press', '/faq'])
 
 const GROUPS: Array<{ title: string; links: FooterLink[] }> = [
   {
     title: 'ניווט',
     links: [
       { href: '/product', label: 'המוצר' },
-      { href: '/pricing', label: 'מחירים' },
-      { href: '/partners', label: 'לרואי חשבון' },
-      { href: '/about', label: 'מי אנחנו' },
+      { href: '/privacy-israel', label: 'פרטיות בישראל' },
+      { href: '/about', label: 'הצוות האנושי' },
     ],
   },
   {
@@ -52,7 +51,7 @@ export function MarketingFooter() {
           <div className="mkt-footer__brand">
             <Image src="/brand/logos/logoondark.png" alt="Deepo" width={124} height={32} />
             <p className="mkt-footer__tag">
-              הגנת פרטיות מקצועית לכל עסק, במחיר נגיש. אתם בעסק, אנחנו על המשמר. נבנה בישראל.
+              הגנת פרטיות מקצועית לכל עסק, במחיר נגיש. אנחנו דואגים שתעמדו בדרישות החוק. נבנה בישראל.
             </p>
           </div>
 
@@ -76,8 +75,8 @@ export function MarketingFooter() {
 
         <div className="mkt-footer__disclaimer">
           <p>
-            Deepo מספקת כלי תוכנה לתמיכה בעבודת DPO. האחריות המקצועית והמשפטית
-            חלה על ה-DPO האנושי הממונה ועל הלקוח. אין באמור באתר משום ייעוץ משפטי.
+            Deepo מספקת כלי תוכנה לתמיכה בעבודת מומחה פרטיות ואבטחת מידע. האחריות
+            המקצועית והמשפטית חלה על המומחה האנושי הממונה ועל הלקוח. אין באמור באתר משום ייעוץ משפטי.
           </p>
         </div>
 

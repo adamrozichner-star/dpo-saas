@@ -19,14 +19,13 @@ import { signupHref } from '@/lib/signup-flag'
 // Primary nav, spec section 4 (RTL order).
 const NAV: Array<{ href: string; label: string }> = [
   { href: '/product', label: 'המוצר' },
-  { href: '/pricing', label: 'מחירים' },
-  { href: '/partners', label: 'לרואי חשבון' },
-  { href: '/about', label: 'מי אנחנו' },
+  { href: '/privacy-israel', label: 'פרטיות בישראל' },
+  { href: '/about', label: 'הצוות האנושי' },
 ]
 
 // Routes not built yet: shown but non-navigating (quiet "בקרוב") so a
 // preview reviewer never hits a 404. Remove an entry once its page ships.
-const COMING_SOON = new Set<string>(['/pricing', '/partners', '/about', '/security', '/press', '/faq'])
+const COMING_SOON = new Set<string>(['/privacy-israel', '/about', '/security', '/press', '/faq'])
 
 // Render a nav item: a real Link if its page exists, else an inert
 // "בקרוב" label that does not navigate.
