@@ -10,93 +10,143 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { DeepoIcon } from '@/brand/icons'
-import { Button } from '@/components/brand/Button'
 import { Badge } from '@/components/brand/Badge'
 import {
   RadarMotif, SecHead, Eyebrow, FeatureGrid, Steps, ResponsibilityBand, FinalCta, FaqItem, TrustSlot,
   type FeatureItem, type StepItem,
 } from '@/components/marketing/sections'
 import { SectionNav, scrollToId } from '@/components/marketing/SectionNav'
+import { calcExposure, fmtNis, type SizeKey, type Tri } from '@/lib/exposureCalc'
 import { signupHref } from '@/lib/signup-flag'
 import './home.css'
 
 // Slots that ship empty until real content is cleared (spec 2.11 / 12).
 const PRESS_ITEMS: Array<{ outlet: string; headline: string; href: string }> = []
 const SHOW_TESTIMONIAL_SLOT = true
+// Roy-gated: the exposure calculator stays hidden until legal sign-off on the
+// penalty figures. Do NOT flip to true without Roy's OK.
+const SHOW_EXPOSURE_CALC = false
 
 // ============================================================
-// MINI CALCULATOR - illustrative DPO check (logic gated on Roy)
+// EXPOSURE CALCULATOR - תיקון 13 financial exposure (עיצומים).
+// Logic lives in @/lib/exposureCalc (Roy-traced figures). Gated behind
+// SHOW_EXPOSURE_CALC (below) until Roy signs off. Numbers stay LTR inside
+// the RTL layout via <bdi>.
 // ============================================================
-function MiniCalculator() {
-  const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [showResult, setShowResult] = useState(false)
+// LTR-isolated money so ₪ + digits read correctly inside RTL text.
+function Nis({ value }: { value: number }) {
+  return <bdi className="hp-ltr">{fmtNis(value)}</bdi>
+}
 
-  const select = (q: string, val: string) => setAnswers((prev) => ({ ...prev, [q]: val }))
-  const calculate = () => { if (answers.q1 && answers.q2) setShowResult(true) }
+function ExposureCalculator() {
+  const [size, setSize] = useState<SizeKey>('tiny')
+  const [sensitive, setSensitive] = useState(false)
+  const [reg, setReg] = useState<Tri>('none')
+  const [sec, setSec] = useState<Tri>('none')
+  const [show, setShow] = useState(false)
 
-  // TODO(roy-gate): provisional heuristic only. The real תיקון 13 decision
-  // tree is owned by Roy and not finalized; this stays illustrative and must
-  // not be presented as a definitive legal determination (spec 2.10).
-  const isRequired = () => {
-    const hasData = answers.q2 === 'yes'
-    const hasSensitive = answers.q3 === 'yes' || answers.q3 === 'maybe'
-    const bigTeam = answers.q1 === '51-250' || answers.q1 === '250+'
-    return hasData || hasSensitive || bigTeam
-  }
-
-  if (showResult) {
-    const required = isRequired()
+  if (show) {
+    const r = calcExposure({ size, sensitive, reg, sec })
+    const zero = r.headline === 0
     return (
-      <div className="hp-mini">
-        <div className={`hp-mini__result ${required ? 'hp-mini__result--yes' : 'hp-mini__result--no'}`}>
-          <DeepoIcon id={required ? 'dp-seal' : 'dp-check'} />
-          {required ? (
-            <>
-              <h3>סביר שאתם צריכים למנות ממונה</h3>
-              <p>לפי התשובות, תיקון 13 כנראה חל עליכם. זה לא אסון, זו רשימת מטלות מסודרת. בואו נסמן וי.</p>
-            </>
-          ) : (
-            <>
-              <h3>ייתכן שאתם פטורים כרגע</h3>
-              <p>כדאי לאמת עם הבדיקה המלאה, שלוקחת עוד כמה דקות.</p>
-            </>
-          )}
+      <div className="hp-mini hp-exp">
+        <span className="hp-exp__eyebrow">הערכת חשיפה · תיקון 13</span>
+
+        {zero ? (
+          <>
+            <p className="hp-exp__headline hp-exp__headline--ok"><bdi className="hp-ltr">₪0</bdi> חשיפה פתוחה</p>
+            <p className="hp-exp__sub">ככה נראה עסק מוגן. זה בדיוק מה ש-Deepo שומרת עליו.</p>
+          </>
+        ) : (
+          <>
+            <p className="hp-exp__headline"><Nis value={r.headline} /></p>
+            <p className="hp-exp__sub">חשיפה כספית פתוחה בעיצומים מנהליים, כרגע.</p>
+          </>
+        )}
+
+        <p className="hp-exp__ceiling">התקרה החוקית לחשיפה שלכם: <Nis value={r.ceiling} /> (כולל עיצומים לפי מספר אנשים).</p>
+
+        {r.doubled && (
+          <span className="hp-exp__badge">מעל מיליון נושאי מידע · כל העיצומים מוכפלים</span>
+        )}
+
+        <ul className="hp-exp__breakdown">
+          {r.core.map((b) => (
+            <li key={b.id} className="hp-exp__row">
+              <span className={`hp-exp__dot ${b.open ? 'hp-exp__dot--open' : 'hp-exp__dot--ok'}`} aria-hidden="true" />
+              <span className="hp-exp__row-label">{b.label}<small>{b.ref}</small></span>
+              <span className="hp-exp__row-amt">{b.open ? <Nis value={b.amount} /> : <span className="hp-exp__covered">מכוסה</span>}</span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="hp-exp__esc">
+          <p className="hp-exp__esc-head">וזה מטפס לפי מספר האנשים:</p>
+          {r.escalators.map((b) => (
+            <p key={b.id} className="hp-exp__esc-row">{b.label}: עד <Nis value={b.amount} /> · {b.ref}</p>
+          ))}
         </div>
+
+        {r.criminal && (
+          <div className="hp-exp__criminal">
+            וזה לא רק כסף: תיקון 13 קובע גם עבירות פליליות אישיות, עד 3 שנות מאסר, על מי שאחראי במאגר.
+          </div>
+        )}
+
+        <p className="hp-exp__civil">בנוסף, בית משפט רשאי לפסוק פיצוי של עד <Nis value={r.civilPerPerson} /> לכל אדם, ללא הוכחת נזק.</p>
+
+        <p className="hp-exp__disclaimer">הערכה כללית בלבד, מבוססת על סכומי העיצום שפרסמה הרשות להגנת הפרטיות. אינה חוות דעת משפטית.</p>
+
         <div className="hp-mini__actions">
-          {required ? (
-            <Link href={signupHref('/register')} className="dp-btn dp-btn--primary dp-btn--md">יאללה, מתחילים</Link>
-          ) : (
-            <Link href="/calculator" className="dp-btn dp-btn--primary dp-btn--md">לבדיקה המלאה</Link>
-          )}
-          <button type="button" className="hp-mini__reset" onClick={() => { setShowResult(false); setAnswers({}) }}>
-            בדיקה מחדש
-          </button>
+          <Link href="/contact" className="dp-btn dp-btn--gradient dp-btn--md">רוצים לאפס את החשיפה? דברו איתנו ←</Link>
+          <button type="button" className="hp-mini__reset" onClick={() => setShow(false)}>בדיקה מחדש</button>
         </div>
       </div>
     )
   }
 
-  const Q = ({ q, label, opts, cols }: { q: string; label: string; opts: Array<[string, string]>; cols: 2 | 3 }) => (
-    <div className="hp-q">
-      <span className="hp-q__label">{label}</span>
-      <div className={`hp-chips hp-chips--${cols}`}>
-        {opts.map(([val, text]) => (
-          <button key={val} type="button" className="hp-chip" aria-pressed={answers[q] === val} onClick={() => select(q, val)}>
-            {text}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-
   return (
     <div className="hp-mini">
-      <h3 className="hp-mini__title">בדיקת חובת מינוי מומחה</h3>
-      <p className="hp-mini__sub">שלוש שאלות קצרות, בלי להשאיר פרטים.</p>
-      <Q q="q1" label="כמה עובדים בעסק?" cols={2} opts={[['עד 10', 'עד 10'], ['11-50', '11-50'], ['51-250', '51-250'], ['250+', '250+']]} />
-      <Q q="q2" label="אתם מחזיקים מידע על לקוחות?" cols={2} opts={[['yes', 'כן'], ['no', 'לא']]} />
-      <Q q="q3" label="יש מידע רגיש (בריאות, ילדים, ביומטרי)?" cols={3} opts={[['yes', 'כן'], ['no', 'לא'], ['maybe', 'לא בטוח']]} />
-      <Button variant="primary" onClick={calculate} disabled={!answers.q1 || !answers.q2}>בדיקה</Button>
+      <h3 className="hp-mini__title">הערכת חשיפה לפי תיקון 13</h3>
+      <p className="hp-mini__sub">ארבע שאלות קצרות, בלי להשאיר פרטים.</p>
+
+      <div className="hp-q">
+        <span className="hp-q__label">כמה אנשים המידע שלכם נוגע אליהם?</span>
+        <div className="hp-chips hp-chips--1">
+          {([['tiny', 'עד 1,000'], ['small', '1,000–10,000'], ['mid', '10,000–100,000'], ['large', '100,000 עד מיליון'], ['xlarge', 'מעל מיליון']] as Array<[SizeKey, string]>).map(([v, t]) => (
+            <button key={v} type="button" className="hp-chip" aria-pressed={size === v} onClick={() => setSize(v)}>{t}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="hp-q">
+        <span className="hp-q__label">איזה סוג מידע אתם מחזיקים?</span>
+        <div className="hp-chips hp-chips--1">
+          {([[false, 'מידע רגיל (שם, טלפון, כתובת)'], [true, 'מידע רגיש (בריאות, פיננסי, ביומטרי, מיקום ועוד)']] as Array<[boolean, string]>).map(([v, t]) => (
+            <button key={String(v)} type="button" className="hp-chip" aria-pressed={sensitive === v} onClick={() => setSensitive(v)}>{t}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="hp-q">
+        <span className="hp-q__label">מה מצב הרישום והמסמכים שלכם מול הרשות?</span>
+        <div className="hp-chips hp-chips--1">
+          {([['none', 'לא טיפלנו, או לא בטוחים'], ['partial', 'התחלנו, חלק מהמסמכים קיים'], ['full', 'הכל רשום, מסודר ומעודכן']] as Array<[Tri, string]>).map(([v, t]) => (
+            <button key={v} type="button" className="hp-chip" aria-pressed={reg === v} onClick={() => setReg(v)}>{t}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="hp-q">
+        <span className="hp-q__label">מה מצב אבטחת המידע בעסק?</span>
+        <div className="hp-chips hp-chips--1">
+          {([['none', 'אין נהלים ובקרות מסודרים'], ['partial', 'חלקי, לא מתועד במלואו'], ['full', 'נהלים, בקרות ותיעוד מלאים']] as Array<[Tri, string]>).map(([v, t]) => (
+            <button key={v} type="button" className="hp-chip" aria-pressed={sec === v} onClick={() => setSec(v)}>{t}</button>
+          ))}
+        </div>
+      </div>
+
+      <button type="button" className="dp-btn dp-btn--primary dp-btn--md" onClick={() => setShow(true)}>בדיקה</button>
     </div>
   )
 }
@@ -259,16 +309,18 @@ export default function HomePage() {
       {/* Secondary one-pager anchor nav (B2): smooth-scroll to sections. */}
       <SectionNav />
 
-      {/* 2 - CALCULATOR */}
-      <section className="mk-section mk-band--sand" id="calculator">
-        <div className="mk-wrap hp-calc__grid">
-          <div className="hp-calc__copy">
-            <h2>צריך בכלל מומחה פרטיות ואבטחת מידע? בואו נגלה.</h2>
-            <p>שלוש שאלות, שלושים שניות. בלי להשאיר אימייל ובלי התחייבות. אם מסתבר שאתם חייבים, אנחנו כבר כאן.</p>
+      {/* 2 - EXPOSURE CALCULATOR (gated on SHOW_EXPOSURE_CALC, Roy sign-off). */}
+      {SHOW_EXPOSURE_CALC && (
+        <section className="mk-section mk-band--sand" id="calculator">
+          <div className="mk-wrap hp-calc__grid">
+            <div className="hp-calc__copy">
+              <h2>כמה כסף חשוף אצלכם, כרגע?</h2>
+              <p>ארבע שאלות קצרות, והערכת חשיפה כספית לעיצומים לפי תיקון 13. בלי להשאיר פרטים, בלי התחייבות.</p>
+            </div>
+            <ExposureCalculator />
           </div>
-          <MiniCalculator />
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 3 - WHAT YOU GET */}
       <section className="mk-section" id="features">

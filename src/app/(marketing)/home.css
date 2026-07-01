@@ -146,6 +146,43 @@ html:has(.deepo-scope) { scroll-behavior: smooth; }
 .hp-mini__actions { display: flex; flex-direction: column; gap: var(--space-2); }
 .hp-mini__reset { background: none; border: 0; color: var(--fg-3); font-family: var(--font-body); font-size: 14px; cursor: pointer; padding: var(--space-2); }
 .hp-mini__reset:hover { color: var(--fg-1); }
+.hp-chips--1 { grid-template-columns: 1fr; }
+.hp-chips--1 .hp-chip { text-align: start; }
+
+/* ── Exposure calculator result panel ───────────────────────── */
+/* LTR-isolated money inside RTL copy. */
+.hp-ltr { direction: ltr; unicode-bidi: isolate; }
+.hp-exp { text-align: start; }
+.hp-exp__eyebrow { font-family: var(--font-mono); font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--crimson-500); }
+.hp-exp__headline {
+  font-family: var(--font-brand); font-weight: 700; font-size: clamp(38px, 6vw, 52px); line-height: 1; margin: var(--space-2) 0 var(--space-1);
+  background: var(--brand-gradient); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hp-exp__headline--ok { background: none; color: var(--status-ok); -webkit-text-fill-color: currentColor; }
+.hp-exp__sub { font-size: 14px; line-height: 1.5; color: var(--fg-2); margin: 0 0 var(--space-4); }
+.hp-exp__ceiling { font-size: 13px; line-height: 1.5; color: var(--fg-3); margin: 0 0 var(--space-4); }
+.hp-exp__badge {
+  display: inline-block; font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  color: var(--garnet-900); background: var(--amber-500); border-radius: var(--radius-pill); padding: 4px var(--space-3); margin-bottom: var(--space-4);
+}
+.hp-exp__breakdown { list-style: none; margin: 0 0 var(--space-4); padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.hp-exp__row { display: flex; align-items: center; gap: var(--space-3); padding: 10px var(--space-3); background: #fff; border: 1px solid var(--sand-300); border-radius: var(--radius-md); }
+.hp-exp__dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.hp-exp__dot--open { background: var(--crimson-500); }
+.hp-exp__dot--ok { background: var(--status-ok); }
+.hp-exp__row-label { display: flex; flex-direction: column; gap: 1px; font-size: 14px; font-weight: 500; color: var(--fg-1); flex: 1; }
+.hp-exp__row-label small { font-family: var(--font-mono); font-size: 10px; font-weight: 500; color: var(--fg-3); }
+.hp-exp__row-amt { font-family: var(--font-brand); font-weight: 700; font-size: 15px; color: var(--fg-1); }
+.hp-exp__covered { font-family: var(--font-body); font-weight: 600; font-size: 13px; color: var(--status-ok); }
+.hp-exp__esc { margin-bottom: var(--space-4); }
+.hp-exp__esc-head { font-size: 13px; font-weight: 600; color: var(--fg-2); margin: 0 0 var(--space-2); }
+.hp-exp__esc-row { font-size: 12.5px; line-height: 1.5; color: var(--fg-3); margin: 0 0 4px; }
+.hp-exp__criminal {
+  background: var(--garnet-900); color: var(--fg-on-dark-1); border-radius: var(--radius-md);
+  padding: var(--space-4); font-size: 13.5px; line-height: 1.55; margin-bottom: var(--space-4);
+}
+.hp-exp__civil { font-size: 13px; line-height: 1.55; color: var(--fg-2); margin: 0 0 var(--space-4); }
+.hp-exp__disclaimer { font-size: 11px; line-height: 1.5; color: var(--fg-3); margin: 0 0 var(--space-4); }
 
 /* ── Steps afterline (onboarding reassurance) ───────────────── */
 .hp-afterline {
