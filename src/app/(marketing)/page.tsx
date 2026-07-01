@@ -22,9 +22,10 @@ import './home.css'
 
 // Slots that ship empty until real content is cleared (spec 2.11 / 12).
 const PRESS_ITEMS: Array<{ outlet: string; headline: string; href: string }> = []
-// Roy-gated: the exposure calculator stays hidden until legal sign-off on the
-// penalty figures. Do NOT flip to true without Roy's OK.
-const SHOW_EXPOSURE_CALC = false
+// Exposure calculator is live per Adam (2026-07-01); Roy reviews the penalty
+// figures against the live page. Modeling assumptions documented in
+// lib/exposureCalc.ts. Flip to false to pull it if Roy flags a figure.
+const SHOW_EXPOSURE_CALC = true
 
 // ============================================================
 // EXPOSURE CALCULATOR - תיקון 13 financial exposure (עיצומים).
