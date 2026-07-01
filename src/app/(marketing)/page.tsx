@@ -12,7 +12,7 @@ import Link from 'next/link'
 import { DeepoIcon } from '@/brand/icons'
 import { Badge } from '@/components/brand/Badge'
 import {
-  RadarMotif, SecHead, Eyebrow, FeatureGrid, Steps, ResponsibilityBand, FinalCta, FaqItem, TrustSlot,
+  RadarMotif, SecHead, Eyebrow, FeatureGrid, Steps, FinalCta, FaqItem, TrustSlot,
   type FeatureItem, type StepItem,
 } from '@/components/marketing/sections'
 import { SectionNav, scrollToId } from '@/components/marketing/SectionNav'
@@ -22,7 +22,6 @@ import './home.css'
 
 // Slots that ship empty until real content is cleared (spec 2.11 / 12).
 const PRESS_ITEMS: Array<{ outlet: string; headline: string; href: string }> = []
-const SHOW_TESTIMONIAL_SLOT = true
 // Roy-gated: the exposure calculator stays hidden until legal sign-off on the
 // penalty figures. Do NOT flip to true without Roy's OK.
 const SHOW_EXPOSURE_CALC = false
@@ -161,10 +160,8 @@ const FEATURES: FeatureItem[] = [
 ]
 
 const STEPS: StepItem[] = [
-  { n: '1', title: 'נרשמים', desc: 'אתם עונים על כמה שאלות. זה כל מה שצריך מכם.' },
-  { n: '2', title: 'אנחנו בונים', desc: 'את כל המסמכים, מותאמים לעסק שלכם.' },
-  { n: '3', title: 'ממנים ממונה', desc: 'אדם מוסמך שנושא באחריות.' },
-  { n: '4', title: 'אנחנו שומרים', desc: 'מנטרים, מזכירים ומעדכנים. אתם רגועים.' },
+  { n: '1', title: 'נרשמים ועונים על כמה שאלות', desc: 'זה כל מה שצריך מכם. חמש דקות ואתם בפנים.' },
+  { n: '2', title: 'אנחנו דואגים לכל השאר', desc: 'מסמכים, ממונה מוסמך, ניטור ותזכורות. אתם רגועים.' },
 ]
 
 const EXPERTS: Array<{ id: 'dp-seal' | 'dp-shield' | 'dp-sparkle'; title: string; desc: string }> = [
@@ -384,23 +381,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 7 - RESPONSIBILITY BAND (shared) */}
-      <ResponsibilityBand />
-
-      {/* 8 - SECURITY TEASER */}
-      <section className="mk-section--tight">
-        <div className="mk-wrap">
-          <div className="hp-security">
-            <span className="hp-security__ic"><DeepoIcon id="dp-lock" /></span>
-            <div style={{ flex: 1 }}>
-              <h2>המידע שלכם, שמור.</h2>
-              <p>אנחנו לא שומרים את פרטי הלקוחות שלכם, ניגשים רק למה שצריך, ומתעדים הכול. כך בנינו את Deepo מהיסוד.</p>
-            </div>
-            <Link href="/security" className="dp-btn dp-btn--secondary dp-btn--md">איך שומרים על המידע</Link>
-          </div>
-        </div>
-      </section>
-
       {/* 9a - COMPARISON (dark, ember-glow) */}
       <section className="hp-compare" id="compare">
         <div className="mk-wrap hp-compare__wrap">
@@ -440,20 +420,6 @@ export default function HomePage() {
           <PricingBlock />
         </div>
       </section>
-
-      {/* 10 - TESTIMONIALS SLOT (clearly marked, hideable) */}
-      {SHOW_TESTIMONIAL_SLOT && (
-        <section className="mk-section--tight">
-          <div className="mk-wrap">
-            {/* NOTE(review): real testimonials pending (spec 12). Flip SHOW_TESTIMONIAL_SLOT
-                to hide, or replace this slot with a testimonials grid when content lands. */}
-            <div className="mk-slot">
-              <span className="mk-slot__lab">ממליצים</span>
-              עוד רגע יהיו פה לקוחות מרוצים. בינתיים, אתם מוזמנים להיות הראשונים.
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* 11 - FAQ */}
       <section className="mk-section mk-band--sand" id="faq">

@@ -245,7 +245,15 @@ html:has(.deepo-scope) { scroll-behavior: smooth; }
 .hp-compare h2 { font-family: var(--font-display); font-weight: 600; font-size: clamp(26px, 3.6vw, 38px); color: #fff; margin: var(--space-3) 0 var(--space-8); text-wrap: balance; }
 .hp-ctable { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); }
 .hp-ccol { border-radius: var(--radius-xl); padding: var(--space-8); }
-.hp-ccol--old { background: var(--garnet-800); border: 1px solid var(--border-on-dark); }
+/* "Old world" column: cool desaturated grey, flat, faded - reads as the
+   dated/expensive market option next to the glowing Deepo card. */
+.hp-ccol--old {
+  background: #24242A; border: 1px solid rgba(255,255,255,0.07);
+  filter: grayscale(1) saturate(0.6); opacity: 0.92;
+}
+.hp-ccol--old .hp-ccol__price { color: #C6C6CC; }
+.hp-ccol--old .hp-ccol__price small { color: #82828A; }
+.hp-ccol--old li { color: rgba(255,255,255,0.55); }
 .hp-ccol--new {
   position: relative;
   background:
