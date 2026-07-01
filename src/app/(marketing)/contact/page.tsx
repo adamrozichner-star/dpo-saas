@@ -59,7 +59,8 @@ export default function ContactPage() {
 
   return (
     <section className="mk-section">
-      <div className="mk-wrap ct-wrap">
+      <div className="mk-wrap">
+       <div className="ct-box">
         <div className="ct-head">
           <h1>צרו קשר</h1>
           <p>יש לכם שאלות? נשמח לעזור</p>
@@ -96,6 +97,7 @@ export default function ContactPage() {
             </button>
           </form>
         </div>
+       </div>
       </div>
     </section>
   )

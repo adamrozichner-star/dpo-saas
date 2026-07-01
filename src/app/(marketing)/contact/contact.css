@@ -1,7 +1,7 @@
 /* /contact page-specific styles (ct-). Warm brand tokens under .deepo-scope,
    matching the rest of the marketing site (not the legacy shadcn theme). */
 
-.ct-wrap { max-width: 620px; }
+.ct-box { max-width: 620px; margin-inline: auto; }
 .ct-head { text-align: center; margin-bottom: var(--space-10); }
 .ct-head h1 { font-family: var(--font-display); font-weight: 600; font-size: clamp(30px, 5vw, 44px); letter-spacing: -0.02em; color: var(--fg-1); margin: 0 0 var(--space-3); }
 .ct-head p { font-size: 18px; color: var(--fg-2); margin: 0; }
